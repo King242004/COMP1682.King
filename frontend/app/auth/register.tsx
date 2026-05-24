@@ -10,20 +10,45 @@ import { TextField } from "../ui/components/TextField";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { register } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const validate = (): string | null => {
+    if (name.trim().length < 2) return "Name must be at least 2 characters.";
+    if (!/^[a-zA-Z\s]+$/.test(name.trim())) return "Name must not contain numbers or special characters.";
+    if (!email.trim().includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Please enter a valid email address.";
+    if (password.length < 6) return "Password must be at least 6 characters.";
+    if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+    if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+    return null;
+  };
 
   const canSubmit = useMemo(() => {
     const okName = name.trim().length >= 2;
-    const okEmail = email.trim().length >= 3 && email.includes("@");
-    const okPass = password.length >= 6;
-    const match = password === confirmPassword && confirmPassword.length > 0;
-    return okName && okEmail && okPass && match;
-  }, [name, email, password, confirmPassword]);
+    const okEmail = email.trim().includes("@");
+    const okPassword = password.length >= 6;
+    return okName && okEmail && okPassword && !isLoading;
+  }, [name, email, password, isLoading]);
+
+  const handleRegister = async () => {
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
+    setError("");
+    setIsLoading(true);
+    try {
+      await register(name.trim(), email.trim(), password);
+      router.replace("/auth/login");
+    } catch (e: any) {
+      setError(e.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Screen keyboard style={{ justifyContent: "center" }}>
@@ -40,16 +65,17 @@ export default function RegisterScreen() {
             label="Name"
             placeholder="Your name"
             value={name}
-            onChangeText={setName}
+            onChangeText={(t) => { setName(t); setError(""); }}
             textContentType="name"
-            returnKeyType="next"
+            autoCapitalize="words"
             inputProps={{ autoFocus: true }}
+            returnKeyType="next"
           />
           <TextField
             label="Email"
             placeholder="you@example.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(t) => { setEmail(t); setError(""); }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -58,42 +84,32 @@ export default function RegisterScreen() {
           />
           <TextField
             label="Password"
-            placeholder="Create a password"
+            placeholder="••••••••"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(t) => { setPassword(t); setError(""); }}
             secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="newPassword"
-            returnKeyType="next"
-          />
-          <TextField
-            label="Confirm Password"
-            placeholder="Repeat password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
             textContentType="newPassword"
             returnKeyType="done"
           />
 
+          {error ? (
+            <AppText variant="subtle" style={{ color: "red", textAlign: "center" }}>
+              {error}
+            </AppText>
+          ) : null}
+
           <Button
-            title="Create account"
+            title={isLoading ? "Creating account..." : "Create account"}
             disabled={!canSubmit}
             size="lg"
-            onPress={() => {
-              login({ name: name.trim(), email: email.trim() });
-              router.replace("/tabs");
-            }}
+            onPress={handleRegister}
           />
 
           <View style={{ alignItems: "center", marginTop: 4 }}>
             <Pressable>
               <Link href="/auth/login" asChild>
                 <AppText variant="body2" style={{ color: theme.colors.primary }}>
-                  Back to login
+                  Already have an account? Sign in
                 </AppText>
               </Link>
             </Pressable>

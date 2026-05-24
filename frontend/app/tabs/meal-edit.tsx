@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useMeals } from "../context/MealsContext";
 import { theme } from "../ui/theme";
@@ -18,15 +18,6 @@ const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
   { key: "snack", label: "Snacks", icon: "🍎" },
 ];
 
-const QUICK_SUGGESTIONS = [
-  { name: "Oatmeal", calories: 150, protein: 5, carbs: 27, fat: 3, mealType: "breakfast" as MealType },
-  { name: "Chicken Rice", calories: 450, protein: 35, carbs: 48, fat: 8, mealType: "lunch" as MealType },
-  { name: "Greek Salad", calories: 320, protein: 8, carbs: 18, fat: 24, mealType: "lunch" as MealType },
-  { name: "Grilled Salmon", calories: 380, protein: 42, carbs: 0, fat: 22, mealType: "dinner" as MealType },
-  { name: "Banana", calories: 89, protein: 1, carbs: 23, fat: 0, mealType: "snack" as MealType },
-  { name: "Pho Bo", calories: 420, protein: 28, carbs: 52, fat: 10, mealType: "lunch" as MealType },
-];
-
 type Errors = {
   mealName?: string;
   calories?: string;
@@ -43,45 +34,31 @@ function validateNumber(val: string, field: string): string | undefined {
   return undefined;
 }
 
-export default function AddMealScreen() {
+export default function EditMealScreen() {
   const router = useRouter();
-  const { addMeal } = useMeals();
-  const {
-    mealType: defaultType,
-    prefillName,
-    prefillCalories,
-    prefillProtein,
-    prefillCarbs,
-    prefillFat,
-  } = useLocalSearchParams<{
-    mealType: MealType;
-    prefillName?: string;
-    prefillCalories?: string;
-    prefillProtein?: string;
-    prefillCarbs?: string;
-    prefillFat?: string;
-  }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { meals, updateMeal, deleteMeal } = useMeals();
+  const meal = meals.find((m) => m.id === id);
 
-  const [mealName, setMealName] = useState(prefillName ?? "");
-  const [calories, setCalories] = useState(prefillCalories ?? "");
-  const [protein, setProtein] = useState(prefillProtein ?? "");
-  const [carbs, setCarbs] = useState(prefillCarbs ?? "");
-  const [fat, setFat] = useState(prefillFat ?? "");
-  const [mealType, setMealType] = useState<MealType>(defaultType ?? "breakfast");
+  const [mealName, setMealName] = useState(meal?.name ?? "");
+  const [calories, setCalories] = useState(String(meal?.calories ?? ""));
+  const [protein, setProtein] = useState(meal?.protein ? String(meal.protein) : "");
+  const [carbs, setCarbs] = useState(meal?.carbs ? String(meal.carbs) : "");
+  const [fat, setFat] = useState(meal?.fat ? String(meal.fat) : "");
+  const [mealType, setMealType] = useState<MealType>((meal?.mealType as MealType) ?? "breakfast");
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const isFromScan = !!prefillName;
 
   useEffect(() => {
-    setMealName(prefillName ?? "");
-    setCalories(prefillCalories ?? "");
-    setProtein(prefillProtein ?? "");
-    setCarbs(prefillCarbs ?? "");
-    setFat(prefillFat ?? "");
-    setErrors({});
-    setTouched({});
-    setMealType(defaultType ?? "breakfast");
-  }, [defaultType, prefillName]);
+    if (meal) {
+      setMealName(meal.name);
+      setCalories(String(meal.calories));
+      setProtein(meal.protein ? String(meal.protein) : "");
+      setCarbs(meal.carbs ? String(meal.carbs) : "");
+      setFat(meal.fat ? String(meal.fat) : "");
+      setMealType((meal.mealType as MealType) ?? "breakfast");
+    }
+  }, [id]);
 
   const validate = (): Errors => {
     const e: Errors = {};
@@ -107,45 +84,49 @@ export default function AddMealScreen() {
     setErrors(validate());
   };
 
-  const getTodayDate = () => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
-
   const handleSave = async () => {
     const e = validate();
     setTouched({ mealName: true, calories: true, protein: true, carbs: true, fat: true });
     setErrors(e);
     if (Object.keys(e).length > 0) return;
-    try {
-      await addMeal({
-        name: mealName.trim(),
-        calories: Number(calories),
-        protein: protein.trim() ? Number(protein) : 0,
-        carbs: carbs.trim() ? Number(carbs) : 0,
-        fat: fat.trim() ? Number(fat) : 0,
-        mealType,
-        date: getTodayDate(),
-      });
-      router.back();
-    } catch (err: any) {
-      setErrors({ mealName: err.message || "Failed to save meal." });
-    }
+    if (!id) return;
+    await updateMeal(id, {
+      name: mealName.trim(),
+      calories: Number(calories),
+      protein: protein.trim() ? Number(protein) : undefined,
+      carbs: carbs.trim() ? Number(carbs) : undefined,
+      fat: fat.trim() ? Number(fat) : undefined,
+      mealType,
+    });
+    router.replace("/tabs/meal-history");
   };
 
-  const fillSuggestion = (s: typeof QUICK_SUGGESTIONS[0]) => {
-    setMealName(s.name);
-    setCalories(String(s.calories));
-    setProtein(String(s.protein));
-    setCarbs(String(s.carbs));
-    setFat(String(s.fat));
-    setMealType(s.mealType);
-    setErrors({});
-    setTouched({});
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete meal",
+      `Delete "${mealName}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (!id) return;
+            await deleteMeal(id);
+            router.replace("/tabs/meal-history");
+          },
+        },
+      ]
+    );
   };
+
+  if (!meal) {
+    return (
+      <Screen>
+        <AppText variant="muted">Meal not found.</AppText>
+      </Screen>
+    );
+  }
 
   return (
     <Screen padded={false} keyboard>
@@ -159,61 +140,58 @@ export default function AddMealScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ gap: 6 }}>
-          <AppText variant="h1">{isFromScan ? "Confirm scan result" : "Add meal"}</AppText>
-          <AppText variant="muted">
-            {isFromScan
-              ? "AI detected this meal. Review and adjust if needed."
-              : "Log your nutrition for today."}
-          </AppText>
+        {/* Header */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <View style={{ gap: 2 }}>
+            <AppText variant="h1">Edit meal</AppText>
+            <AppText variant="muted">Update or delete this entry.</AppText>
+          </View>
+          <Pressable
+            onPress={handleDelete}
+            style={({ pressed }) => ({
+              paddingHorizontal: 12, paddingVertical: 7,
+              borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
+              backgroundColor: pressed ? "rgba(229,72,77,0.2)" : "rgba(229,72,77,0.1)",
+            })}
+          >
+            <Text style={{ fontSize: 13 }}>🗑️</Text>
+            <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.danger }}>
+              Delete
+            </AppText>
+          </Pressable>
         </View>
 
-        {/* Scan badge */}
-        {isFromScan && (
-          <View style={{
-            flexDirection: "row", alignItems: "center", gap: 8,
-            backgroundColor: "rgba(47,191,113,0.08)",
-            borderColor: "rgba(47,191,113,0.2)",
-            borderWidth: 1, borderRadius: 12,
-            padding: theme.space.md,
-          }}>
-            <AppText style={{ fontSize: 18 }}>🤖</AppText>
-            <View style={{ flex: 1 }}>
-              <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.accent }}>
-                AI detected
-              </AppText>
-              <AppText variant="subtle" style={{ fontSize: 12 }}>
-                You can edit any field before saving.
-              </AppText>
+        {/* Meal type 2x2 */}
+        <View style={{ gap: 8 }}>
+          {[MEAL_TYPES.slice(0, 2), MEAL_TYPES.slice(2, 4)].map((row, ri) => (
+            <View key={ri} style={{ flexDirection: "row", gap: 8 }}>
+              {row.map((mt) => {
+                const active = mealType === mt.key;
+                return (
+                  <Pressable
+                    key={mt.key}
+                    onPress={() => setMealType(mt.key)}
+                    style={({ pressed }) => ({
+                      flex: 1, flexDirection: "row",
+                      alignItems: "center", justifyContent: "center",
+                      paddingVertical: 10, paddingHorizontal: 8,
+                      borderRadius: 12, gap: 6,
+                      borderWidth: 1.5,
+                      borderColor: active ? theme.colors.primary : theme.colors.border,
+                      backgroundColor: active ? theme.colors.primary : theme.colors.surface,
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Text style={{ fontSize: 16 }}>{mt.icon}</Text>
+                    <Text style={{
+                      fontSize: 12, fontWeight: "700",
+                      color: active ? "#FFFFFF" : theme.colors.subtle,
+                    }}>{mt.label}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
-          </View>
-        )}
-
-        {/* Meal type selector */}
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {MEAL_TYPES.map((mt) => {
-            const active = mealType === mt.key;
-            return (
-              <Pressable
-                key={mt.key}
-                onPress={() => setMealType(mt.key)}
-                style={({ pressed }) => ({
-                  flex: 1, alignItems: "center", justifyContent: "center",
-                  paddingVertical: 10, borderRadius: 12, gap: 4,
-                  borderWidth: 1.5,
-                  borderColor: active ? theme.colors.primary : theme.colors.border,
-                  backgroundColor: active ? theme.colors.tint : theme.colors.surface,
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <Text style={{ fontSize: 18 }}>{mt.icon}</Text>
-                <Text style={{
-                  fontSize: 10, fontWeight: "700",
-                  color: active ? theme.colors.primary : theme.colors.subtle,
-                }}>{mt.label}</Text>
-              </Pressable>
-            );
-          })}
+          ))}
         </View>
 
         {/* Form */}
@@ -296,10 +274,10 @@ export default function AddMealScreen() {
           </View>
         </Card>
 
-        <Button title="Save meal" size="lg" disabled={!canSave} onPress={handleSave} />
+        <Button title="Save changes" size="lg" disabled={!canSave} onPress={handleSave} />
 
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace("/tabs/meal-history")}
           style={({ pressed }) => ({
             alignItems: "center", paddingVertical: 8, opacity: pressed ? 0.6 : 1,
           })}
@@ -308,35 +286,6 @@ export default function AddMealScreen() {
             Cancel
           </AppText>
         </Pressable>
-
-        {/* Quick Suggestions — chỉ hiện khi không phải từ scan */}
-        {!isFromScan && (
-          <View style={{ gap: theme.space.sm }}>
-            <AppText variant="h2" style={{ fontSize: 15 }}>Quick Suggestions</AppText>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {QUICK_SUGGESTIONS.map((s) => (
-                <Pressable
-                  key={s.name}
-                  onPress={() => fillSuggestion(s)}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 12, paddingVertical: 8,
-                    borderRadius: 10,
-                    backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
-                    borderWidth: 1, borderColor: theme.colors.border,
-                    gap: 2,
-                  })}
-                >
-                  <AppText style={{ fontSize: 13, fontWeight: "600", color: theme.colors.text }}>
-                    {s.name}
-                  </AppText>
-                  <AppText style={{ fontSize: 11, color: theme.colors.subtle }}>
-                    {s.calories} kcal
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        )}
       </ScrollView>
     </Screen>
   );

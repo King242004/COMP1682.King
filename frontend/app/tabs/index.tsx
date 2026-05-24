@@ -1,155 +1,330 @@
-import { ScrollView, View } from "react-native";
+// HOME SCREEN
+import { useEffect, useState, useMemo } from "react";
+import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import { useMeals } from "../context/MealsContext";
 import { theme } from "../ui/theme";
 import { AppText } from "../ui/components/AppText";
-import { Button } from "../ui/components/Button";
 import { Card } from "../ui/components/Card";
-import { ProgressBar } from "../ui/components/ProgressBar";
 import { Screen } from "../ui/components/Screen";
 
-function greetingForHour(hour: number) {
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+
+const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
+  { key: "breakfast", label: "Breakfast", icon: "☕" },
+  { key: "lunch", label: "Lunch", icon: "🥗" },
+  { key: "dinner", label: "Dinner", icon: "🍽️" },
+  { key: "snack", label: "Snacks", icon: "🍎" },
+];
+
+function getDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
+
+function getLast7Days() {
+  const days = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  // Start from Monday of current week
+  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7)); // Go back to Monday
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+const dayLabelsFixed = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { meals } = useMeals();
+  const { meals, dailyTotals, historyMeals, fetchMealsByDate, fetchMealHistory } = useMeals();
 
-  const now = new Date();
-  const greeting = greetingForHour(now.getHours());
-  const displayName = user?.name ?? "there";
+  const today = new Date();
+  const todayKey = getDateKey(today);
+  const [selectedDate, setSelectedDate] = useState(todayKey);
 
-  // For now: show "No meals yet" until user logs meals.
-  // Later: filter meals by day + user preferences + API totals.
-  const goal = 2000;
-  const eaten = meals.reduce((sum, m) => sum + (Number.isFinite(m.calories) ? m.calories : 0), 0);
+  useEffect(() => {
+    fetchMealsByDate(selectedDate);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    fetchMealHistory();
+  }, []);
+
+  // Streak calculation
+  const streak = useMemo(() => {
+    const loggedDaysSet = new Set(historyMeals.map((m) => m.date));
+    let count = 0;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 365; i++) {
+      const key = getDateKey(d);
+      if (loggedDaysSet.has(key)) {
+        count++;
+        d.setDate(d.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    return count;
+  }, [historyMeals]);
+
+  const goal = user?.calorieGoal ?? 2000;
+  const eaten = dailyTotals.calories;
   const remaining = Math.max(0, goal - eaten);
-  const progress = goal > 0 ? eaten / goal : 0;
-  const hasMeals = meals.length > 0;
+  const progress = Math.min(eaten / goal, 1);
+
+  const totalCarbs = dailyTotals.carbs;
+  const totalFat = dailyTotals.fat;
+  const totalProtein = dailyTotals.protein;
+
+  const last7 = getLast7Days();
+  const loggedDays = new Set(historyMeals.map((m) => m.date));
+
+  const mealsByType = (type: MealType) =>
+    meals.filter((m) => m.mealType === type);
+
+  const isToday = selectedDate === todayKey;
 
   return (
-    <Screen padded={false} style={{ paddingTop: theme.space.lg }}>
+    <Screen padded={false} style={{ paddingTop: 0 }}>
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
-          paddingBottom: theme.space.xxl,
+          paddingTop: theme.space.lg,
+          paddingBottom: 120,
           gap: theme.space.lg,
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ gap: 6 }}>
+        {/* Header */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <AppText variant="h1">
-            {greeting}, {displayName}
+            {isToday ? "Today" : new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
           </AppText>
-          <AppText variant="muted">Your daily intake, at a glance.</AppText>
-        </View>
-
-        <Card style={{ padding: theme.space.xl }}>
-          <View style={{ gap: 14 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <AppText variant="h2">Daily calories</AppText>
-              <AppText variant="caption" style={{ color: theme.colors.muted }}>
-                Goal {goal.toLocaleString()} kcal
+          {streak > 0 && (
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 4,
+              backgroundColor: "rgba(255,160,0,0.12)",
+              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+              borderWidth: 1, borderColor: "rgba(255,160,0,0.25)",
+            }}>
+              <AppText style={{ fontSize: 16 }}>🔥</AppText>
+              <AppText style={{ fontSize: 14, fontWeight: "700", color: "#E67E00" }}>
+                {streak} day{streak > 1 ? "s" : ""}
               </AppText>
             </View>
+          )}
+        </View>
 
-            {!hasMeals ? (
-              <View style={{ gap: 8 }}>
-                <AppText variant="muted">No meals logged yet today.</AppText>
-                <AppText variant="subtle">
-                  Add a meal or scan one to see your calories here.
+        {/* 7-day row - clickable */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          {last7.map((d, i) => {
+            const key = getDateKey(d);
+            const logged = loggedDays.has(key);
+            const isSelected = key === selectedDate;
+            return (
+              <Pressable
+                key={i}
+                onPress={() => setSelectedDate(key)}
+                style={{ alignItems: "center", gap: 6 }}
+              >
+                <AppText variant="subtle" style={{ fontSize: 11 }}>
+                  {dayLabelsFixed[i]}
                 </AppText>
-                <View style={{ marginTop: 8 }}>
-                  <Button
-                    title="Add your first meal"
-                    variant="secondary"
-                    onPress={() => router.push("/tabs/meal-add")}
-                  />
+                <View style={{
+                  width: 32, height: 32, borderRadius: 16,
+                  backgroundColor: isSelected
+                    ? theme.colors.primary
+                    : logged
+                    ? "rgba(11,42,111,0.15)"
+                    : "rgba(11,42,111,0.06)",
+                  borderWidth: isSelected ? 0 : logged ? 1 : 1.5,
+                  borderColor: isSelected ? "transparent" : logged ? theme.colors.primary : "rgba(11,42,111,0.12)",
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  {isSelected ? (
+                    <AppText style={{ fontSize: 11, color: "#fff", fontWeight: "700" }}>
+                      {d.getDate()}
+                    </AppText>
+                  ) : logged ? (
+                    <AppText style={{ fontSize: 14, color: theme.colors.primary }}>✓</AppText>
+                  ) : (
+                    <AppText style={{ fontSize: 11, color: "rgba(11,42,111,0.3)" }}>
+                      {d.getDate()}
+                    </AppText>
+                  )}
                 </View>
-              </View>
-            ) : (
-              <>
-                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-                  <AppText variant="h0" style={{ fontSize: 30 }}>
-                    {eaten.toLocaleString()}
-                  </AppText>
-                  <AppText variant="muted">kcal eaten</AppText>
-                </View>
+              </Pressable>
+            );
+          })}
+        </View>
 
-                <ProgressBar value={progress} />
-
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <AppText variant="subtle">
-                    {remaining.toLocaleString()} kcal left
-                  </AppText>
-                  <AppText variant="subtle">{Math.round(progress * 100)}%</AppText>
-                </View>
-              </>
-            )}
+        {/* Calories card */}
+        <Card style={{ padding: theme.space.lg, gap: theme.space.md }}>
+          <AppText variant="subtle" style={{ fontSize: 12 }}>Calories</AppText>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
+            <AppText variant="h0" style={{ fontSize: 26, color: theme.colors.text }}>
+              {eaten.toLocaleString()}
+            </AppText>
+            <AppText variant="muted" style={{ fontSize: 13 }}>
+              / {goal.toLocaleString()}
+            </AppText>
+            <View style={{ flex: 1 }} />
+            <AppText variant="subtle" style={{ fontSize: 13 }}>
+              {remaining.toLocaleString()} left
+            </AppText>
+          </View>
+          <View style={{
+            height: 8, borderRadius: 99,
+            backgroundColor: "rgba(11,42,111,0.08)",
+            overflow: "hidden",
+          }}>
+            <View style={{
+              height: "100%",
+              width: `${progress * 100}%`,
+              borderRadius: 99,
+              backgroundColor: progress >= 1 ? theme.colors.danger : theme.colors.primary,
+            }} />
           </View>
         </Card>
 
-        <Button
-          title="Scan Meal"
-          size="lg"
-          onPress={() => router.push("/tabs/scan")}
-        />
-
-        <View style={{ flexDirection: "row", gap: theme.space.md }}>
-          <Card style={{ flex: 1, padding: theme.space.lg }}>
-            <View style={{ gap: 6 }}>
-              <AppText variant="h2">Add meal</AppText>
-              <AppText variant="muted">Log a meal manually.</AppText>
-              <View style={{ marginTop: 6 }}>
-                <Button
-                  title="Add"
-                  variant="secondary"
-                  onPress={() => router.push("/tabs/meal-add")}
-                />
+        {/* Macros card */}
+        <Card style={{ padding: theme.space.lg }}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            {[
+              { label: "Carbs", value: totalCarbs, goal: 250, color: theme.colors.accent },
+              { label: "Fat", value: totalFat, goal: 65, color: "#9B59B6" },
+              { label: "Protein", value: totalProtein, goal: 150, color: theme.colors.accent2 },
+            ].map((m, i) => (
+              <View key={m.label} style={{
+                flex: 1, alignItems: "center",
+                borderLeftWidth: i > 0 ? 0.5 : 0,
+                borderLeftColor: theme.colors.border,
+                gap: 6, paddingHorizontal: 4,
+              }}>
+                <AppText variant="subtle" style={{ fontSize: 11 }}>{m.label}</AppText>
+                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 2 }}>
+                  <AppText variant="h2" style={{ fontSize: 15 }}>{Math.round(m.value)}</AppText>
+                  <AppText variant="subtle" style={{ fontSize: 10 }}>g</AppText>
+                </View>
+                <AppText variant="subtle" style={{ fontSize: 10 }}>/ {m.goal}g</AppText>
+                <View style={{
+                  height: 6, width: "80%", borderRadius: 99,
+                  backgroundColor: "rgba(0,0,0,0.06)", overflow: "hidden",
+                }}>
+                  <View style={{
+                    height: "100%",
+                    width: `${Math.min(m.value / m.goal, 1) * 100}%`,
+                    borderRadius: 99,
+                    backgroundColor: m.color,
+                  }} />
+                </View>
               </View>
-            </View>
-          </Card>
+            ))}
+          </View>
+        </Card>
 
-          <Card style={{ flex: 1, padding: theme.space.lg }}>
-            <View style={{ gap: 6 }}>
-              <AppText variant="h2">History</AppText>
-              <AppText variant="muted">See recent meals.</AppText>
-              <View style={{ marginTop: 6 }}>
-                <Button
-                  title="View"
-                  variant="secondary"
-                  onPress={() => router.push("/tabs/meals")}
-                />
-              </View>
-            </View>
-          </Card>
+        {/* Diary */}
+        <View style={{ gap: 4 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <AppText variant="h2">Diary</AppText>
+            <Pressable onPress={() => router.push("/tabs/meal-history")}>
+              <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>View all</AppText>
+            </Pressable>
+          </View>
+
+          {MEAL_TYPES.map((mt) => {
+            const typeMeals = mealsByType(mt.key);
+            const typeCalories = typeMeals.reduce((s, m) => s + m.calories, 0);
+            const typeCarbs = typeMeals.reduce((s, m) => s + (m.carbs ?? 0), 0);
+            const typeFat = typeMeals.reduce((s, m) => s + (m.fat ?? 0), 0);
+            const typeProtein = typeMeals.reduce((s, m) => s + (m.protein ?? 0), 0);
+            const totalMacroG = typeCarbs + typeFat + typeProtein;
+            const carbPct = totalMacroG > 0 ? Math.round((typeCarbs / totalMacroG) * 100) : 0;
+            const fatPct = totalMacroG > 0 ? Math.round((typeFat / totalMacroG) * 100) : 0;
+            const proteinPct = totalMacroG > 0 ? Math.round((typeProtein / totalMacroG) * 100) : 0;
+
+            return (
+              <Card key={mt.key} style={{ padding: theme.space.lg, gap: 8 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <AppText style={{ fontSize: 20 }}>{mt.icon}</AppText>
+                    <View>
+                      <AppText variant="h2" style={{ fontSize: 15 }}>{mt.label}</AppText>
+                      {typeMeals.length > 0 && (
+                        <AppText variant="subtle" style={{ fontSize: 12 }}>
+                          {typeMeals[0].name}{typeMeals.length > 1 ? ` and ${typeMeals.length - 1} more` : ""}
+                        </AppText>
+                      )}
+                    </View>
+                  </View>
+                  {isToday && (
+                    <Pressable
+                      onPress={() => router.push({
+                        pathname: "/tabs/meal-add",
+                        params: { mealType: mt.key },
+                      })}
+                      style={({ pressed }) => ({
+                        paddingHorizontal: 14, paddingVertical: 6,
+                        borderRadius: 8,
+                        backgroundColor: pressed ? theme.colors.tint : "rgba(11,42,111,0.08)",
+                      })}
+                    >
+                      <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.primary }}>
+                        Log
+                      </AppText>
+                    </Pressable>
+                  )}
+                </View>
+
+                {typeMeals.length > 0 ? (
+                  <View style={{ gap: 6 }}>
+                    <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+                      <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.text }}>
+                        {typeCalories} cal
+                      </AppText>
+                      {carbPct > 0 && <AppText variant="subtle" style={{ fontSize: 11 }}>· C {carbPct}%</AppText>}
+                      {fatPct > 0 && <AppText variant="subtle" style={{ fontSize: 11 }}>· F {fatPct}%</AppText>}
+                      {proteinPct > 0 && <AppText variant="subtle" style={{ fontSize: 11 }}>· P {proteinPct}%</AppText>}
+                    </View>
+                    <View style={{ flexDirection: "row", height: 3, borderRadius: 99, overflow: "hidden", gap: 1 }}>
+                      {carbPct > 0 && <View style={{ flex: carbPct, backgroundColor: theme.colors.accent }} />}
+                      {fatPct > 0 && <View style={{ flex: fatPct, backgroundColor: "#9B59B6" }} />}
+                      {proteinPct > 0 && <View style={{ flex: proteinPct, backgroundColor: theme.colors.accent2 }} />}
+                    </View>
+                  </View>
+                ) : (
+                  <AppText variant="subtle" style={{ fontSize: 12 }}>No meals logged</AppText>
+                )}
+              </Card>
+            );
+          })}
         </View>
 
-        <Card
-          style={{
-            padding: theme.space.xl,
-            borderColor: "rgba(47, 191, 113, 0.20)",
-            backgroundColor: "rgba(47, 191, 113, 0.06)",
-          }}
-        >
-          <View style={{ gap: 8 }}>
-            <AppText variant="h2">What should I eat next?</AppText>
-            <AppText variant="muted">
-              Try a balanced plate: lean protein, colorful veggies, and a slow-carb
-              side to stay full.
+        {/* Suggestion */}
+        <Card style={{
+          padding: theme.space.lg,
+          borderColor: "rgba(47,191,113,0.20)",
+          backgroundColor: "rgba(47,191,113,0.06)",
+        }}>
+          <View style={{ gap: 4 }}>
+            <AppText variant="h2" style={{ fontSize: 14 }}>What should I eat next?</AppText>
+            <AppText variant="muted" style={{ fontSize: 13 }}>
+              {meals.length === 0
+                ? "Start with a high-protein breakfast to stay full."
+                : remaining > 600
+                ? "You have room for a balanced meal — lean protein, veggies, slow carbs."
+                : remaining > 250
+                ? "Go lighter — protein and veggies, watch the carbs."
+                : "Almost at your goal. Try a light snack like yogurt or fruit."}
             </AppText>
-            <View style={{ marginTop: 8 }}>
-              <Button
-                title="Get suggestions"
-                variant="ghost"
-                onPress={() => router.push("/tabs/meals")}
-              />
-            </View>
           </View>
         </Card>
       </ScrollView>

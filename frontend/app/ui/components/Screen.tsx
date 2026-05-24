@@ -2,7 +2,6 @@ import { ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StatusBar,
   View,
   type ViewStyle,
@@ -25,24 +24,17 @@ export function Screen({
   style?: ViewStyle;
 }) {
   const content = (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: backgroundColor ?? theme.colors.bg }}
-    >
+    <View style={{ flex: 1, backgroundColor: backgroundColor ?? theme.colors.bg }}>
       <StatusBar barStyle={statusBarStyle} />
-      <View
-        style={[
-          {
-            flex: 1,
-            paddingHorizontal: padded ? theme.space.lg : 0,
-            paddingTop: padded ? theme.space.lg : 0,
-            paddingBottom: padded ? theme.space.lg : 0,
-          },
-          style,
-        ]}
-      >
+      <View style={[{
+        flex: 1,
+        paddingHorizontal: padded ? theme.space.lg : 0,
+        paddingTop: 0,
+        paddingBottom: padded ? theme.space.lg : 0,
+      }, style]}>
         {children}
       </View>
-    </SafeAreaView>
+    </View>
   );
 
   if (!keyboard) return content;
@@ -56,4 +48,3 @@ export function Screen({
     </KeyboardAvoidingView>
   );
 }
-
