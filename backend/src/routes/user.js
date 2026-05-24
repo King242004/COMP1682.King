@@ -1,0 +1,104 @@
+const express = require("express");
+const router = express.Router();
+const multer = require("multer");
+const { uploadAvatar, sendPasswordOTP, resetPassword, changeName } = require("../controllers/userController");
+const protect = require("../middleware/auth");
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
+
+/**
+ * @swagger
+ * /user/avatar:
+ *   post:
+ *     summary: Upload avatar to Cloudinary
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded successfully
+ */
+router.post("/avatar", protect, upload.single("image"), uploadAvatar);
+
+/**
+ * @swagger
+ * /user/name:
+ *   put:
+ *     summary: Change user name
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: John Doe
+ *     responses:
+ *       200:
+ *         description: Name updated successfully
+ */
+router.put("/name", protect, changeName);
+
+/**
+ * @swagger
+ * /user/send-otp:
+ *   post:
+ *     summary: Send OTP to email for password reset
+ *     tags: [User]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: john@example.com
+ *     responses:
+ *       200:
+ *         description: OTP sent to email
+ *       404:
+ *         description: Email not found
+ */
+router.post("/send-otp", sendPasswordOTP);
+
+/**
+ * @swagger
+ * /user/reset-password:
+ *   post:
+ *     summary: Verify OTP and reset password
+ *     tags: [User]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Invalid or expired OTP
+ */
+router.post("/reset-password", resetPassword);
+
+module.exports = router;
