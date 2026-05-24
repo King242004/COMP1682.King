@@ -43,3 +43,8 @@ Thumbs.db
 *.lock
 !package-lock.json
 *.map
+
+# Claude (local AI assistant config)
+CLAUDE.md
+.claudeignore
+.claude/
