@@ -14,12 +14,35 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const validate = (): string | null => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Please enter a valid email address.";
+    if (password.length < 6) return "Password must be at least 6 characters.";
+    return null;
+  };
 
   const canSubmit = useMemo(() => {
-    const okEmail = email.trim().length >= 3 && email.includes("@");
-    const okPass = password.length >= 6;
-    return okEmail && okPass;
-  }, [email, password]);
+    const okEmail = email.trim().includes("@");
+    const okPassword = password.length >= 6;
+    return okEmail && okPassword && !isLoading;
+  }, [email, password, isLoading]);
+
+  const handleLogin = async () => {
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
+    setError("");
+    setIsLoading(true);
+    try {
+      await login(email.trim(), password);
+      router.replace("/tabs");
+    } catch (e: any) {
+      setError(e.message || "Invalid email or password.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Screen keyboard style={{ justifyContent: "center" }}>
@@ -38,10 +61,10 @@ export default function LoginScreen() {
             }}
           >
             <AppText variant="h2" style={{ color: theme.colors.primary }}>
-              MS
+              HS
             </AppText>
           </View>
-          <AppText variant="h0">Meal Snap</AppText>
+          <AppText variant="h0">HealthySnap</AppText>
           <AppText
             variant="muted"
             style={{ textAlign: "center", paddingHorizontal: theme.space.lg }}
@@ -55,7 +78,7 @@ export default function LoginScreen() {
             label="Email"
             placeholder="you@example.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(t) => { setEmail(t); setError(""); }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -64,31 +87,42 @@ export default function LoginScreen() {
           />
           <TextField
             label="Password"
-            placeholder="Your password"
+            placeholder="••••••••"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(t) => { setPassword(t); setError(""); }}
             secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
             textContentType="password"
             returnKeyType="done"
           />
 
+          {error ? (
+            <AppText variant="subtle" style={{ color: "red", textAlign: "center" }}>
+              {error}
+            </AppText>
+          ) : null}
+
           <Button
-            title="Log in"
+            title={isLoading ? "Signing in..." : "Sign in"}
             disabled={!canSubmit}
             size="lg"
-            onPress={() => {
-              login({ name: "Alex", email: email.trim() });
-              router.replace("/tabs");
-            }}
+            onPress={handleLogin}
           />
 
           <View style={{ alignItems: "center", marginTop: 4 }}>
             <Pressable>
               <Link href="/auth/register" asChild>
                 <AppText variant="body2" style={{ color: theme.colors.primary }}>
-                  Create account
+                  Don't have an account? Register
+                </AppText>
+              </Link>
+            </Pressable>
+          </View>
+
+          <View style={{ alignItems: "center" }}>
+            <Pressable>
+              <Link href="/auth/forgot-password" asChild>
+                <AppText variant="body2" style={{ color: theme.colors.subtle }}>
+                  Forgot password?
                 </AppText>
               </Link>
             </Pressable>
