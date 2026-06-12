@@ -12,8 +12,9 @@ export function Card({
         {
           backgroundColor: theme.colors.surface,
           borderRadius: theme.radius.card,
+          // Invisible border by default — accent cards can still pass borderColor
           borderWidth: 1,
-          borderColor: theme.colors.border,
+          borderColor: "transparent",
           padding: theme.space.lg,
           ...shadow(1),
         },
@@ -22,4 +23,3 @@ export function Card({
     />
   );
 }
-

@@ -37,8 +37,9 @@ function validateNumber(val: string, field: string): string | undefined {
 export default function EditMealScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { meals, updateMeal, deleteMeal } = useMeals();
-  const meal = meals.find((m) => m.id === id);
+  const { meals, historyMeals, updateMeal, deleteMeal } = useMeals();
+  // Look in both lists - meal may have been opened from today's view OR meal history
+  const meal = meals.find((m) => m.id === id) || historyMeals.find((m) => m.id === id);
 
   const [mealName, setMealName] = useState(meal?.name ?? "");
   const [calories, setCalories] = useState(String(meal?.calories ?? ""));

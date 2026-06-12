@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { useMeals } from "../context/MealsContext";
-import { theme } from "../ui/theme";
+import { theme, macroGoals } from "../ui/theme";
 import { AppText } from "../ui/components/AppText";
 import { Card } from "../ui/components/Card";
 import { Screen } from "../ui/components/Screen";
@@ -56,8 +56,14 @@ function MacroBar({ label, value, total, color }: {
 
 export default function ProgressScreen() {
   const { user } = useAuth();
-  const { meals } = useMeals();
+  // Use historyMeals (all logged days) — `meals` only holds the single selected date,
+  // so 7-day stats must read from history.
+  const { historyMeals, fetchMealHistory } = useMeals();
   const [activeTab, setActiveTab] = useState<Tab>("calories");
+
+  useEffect(() => {
+    fetchMealHistory();
+  }, []);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -65,15 +71,14 @@ export default function ProgressScreen() {
   const last7 = getLast7Days();
   const goal = user?.calorieGoal ?? 2000;
 
-  // Macro goals từ calorie goal (30% protein, 45% carbs, 25% fat)
-  const proteinGoal = Math.round((goal * 0.30) / 4);
-  const carbsGoal = Math.round((goal * 0.45) / 4);
-  const fatGoal = Math.round((goal * 0.25) / 9);
+  // Macro goals từ calorie goal — dùng helper chung (theme.macroGoals)
+  const { protein: proteinGoal, carbs: carbsGoal, fat: fatGoal } = macroGoals(goal);
 
   // Build daily summaries
   const summaries = last7.map((d) => {
     const key = getLocalDateKey(d);
-    const dayMeals = meals.filter((m) => m.createdAt.slice(0, 10) === key);
+    // Match on meal.date (logged day, YYYY-MM-DD) not createdAt (insertion timestamp)
+    const dayMeals = historyMeals.filter((m) => m.date === key);
     const calories = dayMeals.reduce((s, m) => s + m.calories, 0);
     const ratio = goal > 0 ? calories / goal : 0;
     // On track = ≥ 80% và ≤ 100% goal
@@ -165,7 +170,7 @@ export default function ProgressScreen() {
                 style={({ pressed }) => ({
                   flex: 1, alignItems: "center", paddingVertical: 8,
                   borderRadius: 10,
-                  backgroundColor: active ? theme.colors.primary : "rgba(11,42,111,0.06)",
+                  backgroundColor: active ? theme.colors.primary : "rgba(37,99,235,0.06)",
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
@@ -192,7 +197,7 @@ export default function ProgressScreen() {
                 </AppText>
                 <AppText variant="muted">/ {goal.toLocaleString()} kcal</AppText>
               </View>
-              <View style={{ height: 8, borderRadius: 99, backgroundColor: "rgba(11,42,111,0.08)", overflow: "hidden" }}>
+              <View style={{ height: 8, borderRadius: 99, backgroundColor: "rgba(37,99,235,0.08)", overflow: "hidden" }}>
                 <View style={{
                   height: "100%",
                   width: `${Math.min(todaySummary.ratio, 1) * 100}%`,
@@ -243,7 +248,7 @@ export default function ProgressScreen() {
                       ? theme.colors.accent
                       : day.isToday
                       ? theme.colors.primary
-                      : "rgba(11,42,111,0.15)";
+                      : "rgba(37,99,235,0.15)";
                     return (
                       <View key={day.key} style={{ flex: 1, alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
                         {day.calories > 0 && (
@@ -322,7 +327,7 @@ export default function ProgressScreen() {
                 <View style={{ gap: theme.space.md }}>
                   <MacroBar label="Protein" value={todaySummary.protein} total={proteinGoal} color={theme.colors.accent2} />
                   <MacroBar label="Carbs" value={todaySummary.carbs} total={carbsGoal} color={theme.colors.accent} />
-                  <MacroBar label="Fat" value={todaySummary.fat} total={fatGoal} color="#9B59B6" />
+                  <MacroBar label="Fat" value={todaySummary.fat} total={fatGoal} color={theme.colors.indigo} />
                 </View>
               ) : (
                 <AppText variant="subtle">No macro data logged today.</AppText>
@@ -339,7 +344,7 @@ export default function ProgressScreen() {
                 {[
                   { label: "Protein", value: proteinGoal, color: theme.colors.accent2 },
                   { label: "Carbs", value: carbsGoal, color: theme.colors.accent },
-                  { label: "Fat", value: fatGoal, color: "#9B59B6" },
+                  { label: "Fat", value: fatGoal, color: theme.colors.indigo },
                 ].map((m, i) => (
                   <View key={m.label} style={{
                     flex: 1, alignItems: "center", gap: 4,
@@ -364,7 +369,7 @@ export default function ProgressScreen() {
                 <View style={{ gap: theme.space.md }}>
                   <MacroBar label="Protein" value={avgProtein} total={proteinGoal} color={theme.colors.accent2} />
                   <MacroBar label="Carbs" value={avgCarbs} total={carbsGoal} color={theme.colors.accent} />
-                  <MacroBar label="Fat" value={avgFat} total={fatGoal} color="#9B59B6" />
+                  <MacroBar label="Fat" value={avgFat} total={fatGoal} color={theme.colors.indigo} />
                 </View>
               ) : (
                 <AppText variant="subtle">No macro data this week.</AppText>
@@ -398,7 +403,7 @@ export default function ProgressScreen() {
                         <View style={{ flexDirection: "row", height: 5, borderRadius: 99, overflow: "hidden", gap: 1 }}>
                           <View style={{ flex: pPct, backgroundColor: theme.colors.accent2 }} />
                           <View style={{ flex: cPct, backgroundColor: theme.colors.accent }} />
-                          <View style={{ flex: fPct, backgroundColor: "#9B59B6" }} />
+                          <View style={{ flex: fPct, backgroundColor: theme.colors.indigo }} />
                         </View>
                       ) : (
                         <View style={{ height: 5, borderRadius: 99, backgroundColor: "rgba(0,0,0,0.06)" }} />
@@ -511,7 +516,7 @@ export default function ProgressScreen() {
                         ? theme.colors.danger
                         : day.calories > 0
                         ? theme.colors.primary
-                        : "rgba(11,42,111,0.08)",
+                        : "rgba(37,99,235,0.08)",
                       borderWidth: day.isToday && day.calories === 0 ? 1.5 : 0,
                       borderColor: theme.colors.primary,
                       alignItems: "center", justifyContent: "center",

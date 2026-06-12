@@ -1,10 +1,11 @@
 // HOME SCREEN
 import { useEffect, useState, useMemo } from "react";
 import { Pressable, ScrollView, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import { useMeals } from "../context/MealsContext";
-import { theme } from "../ui/theme";
+import { theme, macroGoals } from "../ui/theme";
 import { AppText } from "../ui/components/AppText";
 import { Card } from "../ui/components/Card";
 import { Screen } from "../ui/components/Screen";
@@ -39,6 +40,36 @@ function getLast7Days() {
 }
 
 const dayLabelsFixed = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// Big friendly progress ring for the hero calorie card
+function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
+  const size = 116;
+  const stroke = 11;
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const progress = goal > 0 ? Math.min(eaten / goal, 1) : 0;
+  const over = eaten > goal;
+  return (
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <Svg width={size} height={size} style={{ position: "absolute" }}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(37,99,235,0.10)" strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2} cy={size / 2} r={r}
+          stroke={over ? theme.colors.danger : theme.colors.primary}
+          strokeWidth={stroke} fill="none"
+          strokeDasharray={`${progress * circ} ${circ}`}
+          strokeLinecap="round"
+          rotation="-90"
+          origin={`${size / 2}, ${size / 2}`}
+        />
+      </Svg>
+      <AppText style={{ fontSize: 22, fontWeight: "800", color: over ? theme.colors.danger : theme.colors.primary }}>
+        {Math.round(progress * 100)}%
+      </AppText>
+      <AppText variant="subtle" style={{ fontSize: 10 }}>of goal</AppText>
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -78,7 +109,6 @@ export default function HomeScreen() {
   const goal = user?.calorieGoal ?? 2000;
   const eaten = dailyTotals.calories;
   const remaining = Math.max(0, goal - eaten);
-  const progress = Math.min(eaten / goal, 1);
 
   const totalCarbs = dailyTotals.carbs;
   const totalFat = dailyTotals.fat;
@@ -133,65 +163,80 @@ export default function HomeScreen() {
               <Pressable
                 key={i}
                 onPress={() => setSelectedDate(key)}
-                style={{ alignItems: "center", gap: 6 }}
-              >
-                <AppText variant="subtle" style={{ fontSize: 11 }}>
-                  {dayLabelsFixed[i]}
-                </AppText>
-                <View style={{
-                  width: 32, height: 32, borderRadius: 16,
+                style={({ pressed }) => ({
+                  width: 42, paddingVertical: 9,
+                  borderRadius: 16,
+                  alignItems: "center", gap: 5,
                   backgroundColor: isSelected
                     ? theme.colors.primary
                     : logged
-                    ? "rgba(11,42,111,0.15)"
-                    : "rgba(11,42,111,0.06)",
-                  borderWidth: isSelected ? 0 : logged ? 1 : 1.5,
-                  borderColor: isSelected ? "transparent" : logged ? theme.colors.primary : "rgba(11,42,111,0.12)",
-                  alignItems: "center", justifyContent: "center",
+                    ? "rgba(37,99,235,0.10)"
+                    : theme.colors.surface,
+                  transform: [{ scale: pressed ? 0.94 : 1 }],
+                  // Subtle lift for unselected chips so they read as tappable
+                  ...(isSelected ? {
+                    shadowColor: theme.colors.primary,
+                    shadowOpacity: 0.35, shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 8, elevation: 4,
+                  } : {}),
+                })}
+              >
+                <AppText style={{
+                  fontSize: 10, fontWeight: "700",
+                  color: isSelected ? "rgba(255,255,255,0.8)" : theme.colors.subtle,
                 }}>
-                  {isSelected ? (
-                    <AppText style={{ fontSize: 11, color: "#fff", fontWeight: "700" }}>
-                      {d.getDate()}
-                    </AppText>
-                  ) : logged ? (
-                    <AppText style={{ fontSize: 14, color: theme.colors.primary }}>✓</AppText>
-                  ) : (
-                    <AppText style={{ fontSize: 11, color: "rgba(11,42,111,0.3)" }}>
-                      {d.getDate()}
-                    </AppText>
-                  )}
-                </View>
+                  {dayLabelsFixed[i]}
+                </AppText>
+                <AppText style={{
+                  fontSize: 14, fontWeight: "800",
+                  color: isSelected ? "#fff" : logged ? theme.colors.primary : theme.colors.muted,
+                }}>
+                  {d.getDate()}
+                </AppText>
+                {/* Tiny dot marks logged days */}
+                <View style={{
+                  width: 5, height: 5, borderRadius: 3,
+                  backgroundColor: isSelected
+                    ? "rgba(255,255,255,0.9)"
+                    : logged ? theme.colors.accent : "transparent",
+                }} />
               </Pressable>
             );
           })}
         </View>
 
-        {/* Calories card */}
-        <Card style={{ padding: theme.space.lg, gap: theme.space.md }}>
-          <AppText variant="subtle" style={{ fontSize: 12 }}>Calories</AppText>
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
-            <AppText variant="h0" style={{ fontSize: 26, color: theme.colors.text }}>
-              {eaten.toLocaleString()}
-            </AppText>
-            <AppText variant="muted" style={{ fontSize: 13 }}>
-              / {goal.toLocaleString()}
-            </AppText>
-            <View style={{ flex: 1 }} />
-            <AppText variant="subtle" style={{ fontSize: 13 }}>
-              {remaining.toLocaleString()} left
-            </AppText>
-          </View>
-          <View style={{
-            height: 8, borderRadius: 99,
-            backgroundColor: "rgba(11,42,111,0.08)",
-            overflow: "hidden",
-          }}>
-            <View style={{
-              height: "100%",
-              width: `${progress * 100}%`,
-              borderRadius: 99,
-              backgroundColor: progress >= 1 ? theme.colors.danger : theme.colors.primary,
-            }} />
+        {/* Hero calorie ring card */}
+        <Card style={{ padding: theme.space.xl }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ gap: 10, flex: 1 }}>
+              <View style={{ gap: 2 }}>
+                <AppText variant="subtle" style={{ fontSize: 12 }}>Eaten</AppText>
+                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
+                  <AppText variant="h0" style={{ fontSize: 34, color: theme.colors.text }}>
+                    {eaten.toLocaleString()}
+                  </AppText>
+                  <AppText variant="muted" style={{ fontSize: 13 }}>
+                    / {goal.toLocaleString()} kcal
+                  </AppText>
+                </View>
+              </View>
+              <View style={{
+                alignSelf: "flex-start",
+                flexDirection: "row", alignItems: "center", gap: 6,
+                backgroundColor: eaten > goal ? "rgba(229,72,77,0.10)" : "rgba(47,191,113,0.12)",
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
+              }}>
+                <AppText style={{
+                  fontSize: 13, fontWeight: "700",
+                  color: eaten > goal ? theme.colors.danger : "#1A9D58",
+                }}>
+                  {eaten > goal
+                    ? `${(eaten - goal).toLocaleString()} over goal`
+                    : `${remaining.toLocaleString()} kcal left`}
+                </AppText>
+              </View>
+            </View>
+            <CalorieRing eaten={eaten} goal={goal} />
           </View>
         </Card>
 
@@ -199,9 +244,9 @@ export default function HomeScreen() {
         <Card style={{ padding: theme.space.lg }}>
           <View style={{ flexDirection: "row", gap: 12 }}>
             {[
-              { label: "Carbs", value: totalCarbs, goal: 250, color: theme.colors.accent },
-              { label: "Fat", value: totalFat, goal: 65, color: "#9B59B6" },
-              { label: "Protein", value: totalProtein, goal: 150, color: theme.colors.accent2 },
+              { label: "Carbs", value: totalCarbs, goal: macroGoals(goal).carbs, color: theme.colors.accent },
+              { label: "Fat", value: totalFat, goal: macroGoals(goal).fat, color: theme.colors.indigo },
+              { label: "Protein", value: totalProtein, goal: macroGoals(goal).protein, color: theme.colors.accent2 },
             ].map((m, i) => (
               <View key={m.label} style={{
                 flex: 1, alignItems: "center",
@@ -254,8 +299,15 @@ export default function HomeScreen() {
             return (
               <Card key={mt.key} style={{ padding: theme.space.lg, gap: 8 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <AppText style={{ fontSize: 20 }}>{mt.icon}</AppText>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    {/* Icon sits in a soft tinted square — friendlier than a bare emoji */}
+                    <View style={{
+                      width: 42, height: 42, borderRadius: 14,
+                      backgroundColor: "rgba(37,99,235,0.08)",
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      <AppText style={{ fontSize: 20 }}>{mt.icon}</AppText>
+                    </View>
                     <View>
                       <AppText variant="h2" style={{ fontSize: 15 }}>{mt.label}</AppText>
                       {typeMeals.length > 0 && (
@@ -274,7 +326,7 @@ export default function HomeScreen() {
                       style={({ pressed }) => ({
                         paddingHorizontal: 14, paddingVertical: 6,
                         borderRadius: 8,
-                        backgroundColor: pressed ? theme.colors.tint : "rgba(11,42,111,0.08)",
+                        backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.08)",
                       })}
                     >
                       <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.primary }}>
@@ -296,7 +348,7 @@ export default function HomeScreen() {
                     </View>
                     <View style={{ flexDirection: "row", height: 3, borderRadius: 99, overflow: "hidden", gap: 1 }}>
                       {carbPct > 0 && <View style={{ flex: carbPct, backgroundColor: theme.colors.accent }} />}
-                      {fatPct > 0 && <View style={{ flex: fatPct, backgroundColor: "#9B59B6" }} />}
+                      {fatPct > 0 && <View style={{ flex: fatPct, backgroundColor: theme.colors.indigo }} />}
                       {proteinPct > 0 && <View style={{ flex: proteinPct, backgroundColor: theme.colors.accent2 }} />}
                     </View>
                   </View>

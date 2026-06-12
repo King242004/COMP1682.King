@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useState } from "react";
-import { apiRequest } from "../utils/api";
+import { apiRequest, BASE_URL } from "../utils/api";
 
 type User = {
   id: string;
@@ -31,9 +31,10 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateUser: (data: Partial<User>) => Promise<void>;
   fetchProfile: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  changeName: (name: string) => Promise<void>;
+  uploadAvatar: (localUri: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -82,13 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.removeItem("meals");
   };
 
-  const updateUser = async (data: Partial<User>) => {
-    if (!user) return;
-    const updated = { ...user, ...data };
-    setUser(updated);
-    await AsyncStorage.setItem("user", JSON.stringify(updated));
-  };
-
   const fetchProfile = async () => {
     if (!token) return;
     const data = await apiRequest("/profile", "GET", undefined, token);
@@ -104,8 +98,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("user", JSON.stringify({ ...user, ...res.user }));
   };
 
+  const changeName = async (name: string) => {
+    if (!token) return;
+    const res = await apiRequest("/user/name", "PUT", { name }, token);
+    setUser((prev) => ({ ...prev, ...res.user, id: res.user._id ?? prev?.id }));
+    await AsyncStorage.setItem("user", JSON.stringify({ ...user, ...res.user }));
+  };
+
+  // Avatar upload uses multipart/form-data (image file), NOT JSON like other endpoints
+  // So we bypass apiRequest helper and call fetch directly
+  const uploadAvatar = async (localUri: string) => {
+    if (!token) return;
+    const formData = new FormData();
+    // Extract filename + mime from local URI (e.g. file:///.../IMG_1234.jpg)
+    const filename = localUri.split("/").pop() || "avatar.jpg";
+    const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
+    const mimeType = ext === "png" ? "image/png" : "image/jpeg";
+    // React Native FormData accepts {uri, name, type} objects for file uploads
+    formData.append("image", {
+      uri: localUri,
+      name: filename,
+      type: mimeType,
+    } as any);
+
+    const res = await fetch(`${BASE_URL}/user/avatar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Don't set Content-Type — let fetch set it with the boundary
+      },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Avatar upload failed");
+    setUser((prev) => (prev ? { ...prev, avatar: data.avatar } : prev));
+    if (user) await AsyncStorage.setItem("user", JSON.stringify({ ...user, avatar: data.avatar }));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, stats, token, isLoading, login, register, logout, updateUser, fetchProfile, updateProfile }}>
+    <AuthContext.Provider value={{ user, stats, token, isLoading, login, register, logout, fetchProfile, updateProfile, changeName, uploadAvatar }}>
       {children}
     </AuthContext.Provider>
   );

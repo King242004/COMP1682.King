@@ -1,4 +1,4 @@
-const BASE_URL = "http://192.168.1.3:5000/api"; // Expo Go - local network
+export const BASE_URL = "http://192.168.1.3:5000/api"; // Expo Go - local network
 
 export async function apiRequest(
   endpoint: string,
