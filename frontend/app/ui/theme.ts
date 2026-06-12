@@ -1,24 +1,25 @@
 export const theme = {
   colors: {
-    bg: "#FFFFFF",
+    bg: "#F5F9FF", // soft blue-tinted background — friendlier than pure white
     surface: "#FFFFFF",
-    text: "#0B1220",
-    muted: "#5B6475",
-    subtle: "#8A93A3",
-    border: "#E6E9F0",
-    primary: "#0B2A6F", // deep navy
-    primary2: "#0A225C",
+    text: "#0F172A",
+    muted: "#526077",
+    subtle: "#8C99AD",
+    border: "#E3EAF5",
+    primary: "#2563EB", // ocean blue — friendly yet trustworthy
+    primary2: "#1D4ED8", // pressed/darker state
     accent: "#2FBF71", // soft green
     accent2: "#FF8A3D", // soft orange
+    indigo: "#6366F1", // fat macro — replaces old purple, fits blue palette
     danger: "#E5484D",
     danger2: "#C9343A",
-    tint: "rgba(11, 42, 111, 0.10)",
-    shadow: "rgba(11, 18, 32, 0.14)",
+    tint: "rgba(37, 99, 235, 0.10)",
+    shadow: "rgba(15, 23, 42, 0.14)",
   },
   radius: {
-    card: 18,
-    input: 14,
-    button: 16,
+    card: 22,
+    input: 16,
+    button: 18,
     pill: 999,
   },
   space: {
@@ -40,6 +41,17 @@ export const theme = {
 } as const;
 
 export type Theme = typeof theme;
+
+// Single source of truth for daily macro goals (grams), derived from calorie goal.
+// Split: 30% protein, 45% carbs, 25% fat. Protein/carbs = 4 kcal/g, fat = 9 kcal/g.
+// Used by Home, Progress and Meal Detail so all screens stay consistent.
+export function macroGoals(calorieGoal: number) {
+  return {
+    protein: Math.round((calorieGoal * 0.3) / 4),
+    carbs: Math.round((calorieGoal * 0.45) / 4),
+    fat: Math.round((calorieGoal * 0.25) / 9),
+  };
+}
 
 export function shadow(level: 1 | 2 | 3 = 2) {
   // Soft, premium shadow that works on iOS + Android.

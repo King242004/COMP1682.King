@@ -40,27 +40,32 @@ export function Button({
     justifyContent: "center",
     flexDirection: "row",
     gap: 10,
-    borderWidth: variant === "secondary" ? 1 : 0,
-    borderColor: variant === "secondary" ? theme.colors.border : "transparent",
     backgroundColor:
       variant === "primary"
         ? theme.colors.primary
         : variant === "danger"
-          ? theme.colors.danger
-          : "transparent",
+          ? "rgba(229,72,77,0.10)"
+          : variant === "secondary"
+            ? theme.colors.tint
+            : "transparent",
+    // Soft glow under primary button so it feels "tappable"
+    ...(variant === "primary" && {
+      shadowColor: theme.colors.primary,
+      shadowOpacity: 0.35,
+      shadowOffset: { width: 0, height: 6 },
+      shadowRadius: 12,
+      elevation: 5,
+    }),
   };
 
-  const pressed: ViewStyle =
-    variant === "primary"
-      ? { backgroundColor: theme.colors.primary2 }
-      : variant === "danger"
-        ? { backgroundColor: theme.colors.danger2 }
-        : { opacity: 0.85 };
-
   const textColor =
-    variant === "primary" || variant === "danger"
+    variant === "primary"
       ? "#FFFFFF"
-      : theme.colors.text;
+      : variant === "danger"
+        ? theme.colors.danger
+        : variant === "secondary"
+          ? theme.colors.primary
+          : theme.colors.text;
 
   return (
     <Pressable
@@ -70,8 +75,19 @@ export function Button({
       {...props}
       style={({ pressed: isPressed }) => [
         base,
-        isPressed && !disabled && pressed,
-        disabled && { opacity: 0.5 },
+        isPressed && !disabled && {
+          backgroundColor:
+            variant === "primary"
+              ? theme.colors.primary2
+              : variant === "danger"
+                ? "rgba(229,72,77,0.18)"
+                : variant === "secondary"
+                  ? "rgba(37,99,235,0.18)"
+                  : "transparent",
+          transform: [{ scale: 0.98 }],
+          opacity: variant === "ghost" ? 0.7 : 1,
+        },
+        disabled && { opacity: 0.45 },
         style,
       ]}
     >
@@ -83,4 +99,3 @@ export function Button({
     </Pressable>
   );
 }
-

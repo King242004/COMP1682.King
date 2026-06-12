@@ -9,12 +9,10 @@ import { Button } from "../ui/components/Button";
 import { Screen } from "../ui/components/Screen";
 import { Card } from "../ui/components/Card";
 
-function initials(name: string) {
-  const parts = name.split(" ").filter(Boolean);
-  const first = parts[0]?.[0] ?? "M";
-  const last = parts[parts.length - 1]?.[0] ?? "";
-  return (first + last).toUpperCase();
-}
+// Meal-type emoji shown as the row avatar — friendlier than name initials
+const MEAL_TYPE_ICON: Record<string, string> = {
+  breakfast: "☕", lunch: "🥗", dinner: "🍽️", snack: "🍎",
+};
 
 function hhmm(iso: string) {
   const d = new Date(iso);
@@ -54,20 +52,23 @@ export default function MealHistoryScreen() {
   }
 
   return (
-    <Screen padded={false} style={{ paddingTop: theme.space.lg }}>
-      <View style={{ paddingHorizontal: theme.space.lg, gap: 6, marginBottom: theme.space.lg }}>
-        <AppText variant="h1">Meal History</AppText>
-        <AppText variant="muted">Tap a meal to view details or edit.</AppText>
-      </View>
-
+    <Screen padded={false}>
       <FlatList
         data={grouped}
         keyExtractor={(g) => g.date}
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
+          paddingTop: theme.space.lg,
           paddingBottom: 120,
           gap: theme.space.lg,
         }}
+        // Title scrolls with the list — consistent with Home/Progress/Profile
+        ListHeaderComponent={
+          <View style={{ gap: 6 }}>
+            <AppText variant="h1">Meal History</AppText>
+            <AppText variant="muted">Tap a meal to view details or edit.</AppText>
+          </View>
+        }
         ListEmptyComponent={
           <Card style={{ padding: theme.space.xl }}>
             <View style={{ gap: 10 }}>
@@ -107,12 +108,11 @@ export default function MealHistoryScreen() {
                 }}>
                   <View style={{
                     width: 52, height: 52, borderRadius: 18,
-                    backgroundColor: theme.colors.tint,
-                    borderWidth: 1, borderColor: "rgba(11,42,111,0.16)",
+                    backgroundColor: "rgba(37,99,235,0.08)",
                     alignItems: "center", justifyContent: "center",
                   }}>
-                    <AppText variant="caption" style={{ color: theme.colors.primary }}>
-                      {initials(item.name)}
+                    <AppText style={{ fontSize: 24 }}>
+                      {MEAL_TYPE_ICON[item.mealType] ?? "🍴"}
                     </AppText>
                   </View>
 

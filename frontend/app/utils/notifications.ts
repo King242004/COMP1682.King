@@ -38,10 +38,12 @@ export async function scheduleDailyReminder(hour: number, minute: number) {
       title: "Log your meals",
       body: "Take 10 seconds to log what you just ate in Meal Snap.",
     },
+    // DAILY trigger repeats every day at hour:minute (new expo-notifications API
+    // requires an explicit `type` on the trigger object)
     trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
       minute,
-      repeats: true,
     },
   });
 

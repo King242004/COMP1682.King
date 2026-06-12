@@ -47,29 +47,30 @@ export default function LoginScreen() {
   return (
     <Screen keyboard style={{ justifyContent: "center" }}>
       <View style={{ gap: theme.space.xl }}>
-        <View style={{ gap: 10, alignItems: "center" }}>
+        <View style={{ gap: 12, alignItems: "center" }}>
           <View
             style={{
-              width: 62,
-              height: 62,
-              borderRadius: 18,
+              width: 88,
+              height: 88,
+              borderRadius: 30,
               backgroundColor: theme.colors.tint,
               alignItems: "center",
               justifyContent: "center",
-              borderWidth: 1,
-              borderColor: "rgba(11, 42, 111, 0.18)",
+              shadowColor: theme.colors.primary,
+              shadowOpacity: 0.18,
+              shadowOffset: { width: 0, height: 8 },
+              shadowRadius: 16,
+              elevation: 4,
             }}
           >
-            <AppText variant="h2" style={{ color: theme.colors.primary }}>
-              HS
-            </AppText>
+            <AppText style={{ fontSize: 44 }}>🥗</AppText>
           </View>
           <AppText variant="h0">HealthySnap</AppText>
           <AppText
             variant="muted"
             style={{ textAlign: "center", paddingHorizontal: theme.space.lg }}
           >
-            Log your meals in seconds. Scan or add manually to stay on track.
+            Snap a photo, we'll count the calories. Eating healthy made easy.
           </AppText>
         </View>
 

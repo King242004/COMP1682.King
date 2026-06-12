@@ -20,7 +20,8 @@ export default function RegisterScreen() {
 
   const validate = (): string | null => {
     if (name.trim().length < 2) return "Name must be at least 2 characters.";
-    if (!/^[a-zA-Z\s]+$/.test(name.trim())) return "Name must not contain numbers or special characters.";
+    // \p{L} = any Unicode letter (supports Vietnamese, Chinese, etc.)
+    if (!/^[\p{L}\s]+$/u.test(name.trim())) return "Name must not contain numbers or special characters.";
     if (!email.trim().includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Please enter a valid email address.";
     if (password.length < 6) return "Password must be at least 6 characters.";
     if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";

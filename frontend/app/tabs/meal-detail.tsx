@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 import { useMeals } from "../context/MealsContext";
-import { theme } from "../ui/theme";
+import { theme, macroGoals } from "../ui/theme";
 import { AppText } from "../ui/components/AppText";
 import { Button } from "../ui/components/Button";
 import { Card } from "../ui/components/Card";
@@ -23,7 +24,7 @@ function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
   return (
     <View style={{ alignItems: "center", justifyContent: "center", width: size, height: size }}>
       <Svg width={size} height={size} style={{ position: "absolute" }}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(11,42,111,0.08)" strokeWidth={stroke} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(37,99,235,0.08)" strokeWidth={stroke} fill="none" />
         <Circle
           cx={size / 2} cy={size / 2} r={r}
           stroke={progress >= 1 ? theme.colors.danger : theme.colors.primary}
@@ -77,9 +78,11 @@ function fullDate(iso: string) {
 export default function MealDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { meals, deleteMeal } = useMeals();
-  const meal = meals.find((m) => m.id === id);
-  const goal = 2000;
+  const { user } = useAuth();
+  const { meals, historyMeals, deleteMeal } = useMeals();
+  // Look in both lists — meal may be opened from today's view OR from history
+  const meal = meals.find((m) => m.id === id) || historyMeals.find((m) => m.id === id);
+  const goal = user?.calorieGoal ?? 2000;
 
   if (!meal) {
     return (
@@ -172,13 +175,13 @@ export default function MealDetailScreen() {
           {meal.protein || meal.carbs || meal.fat ? (
             <View style={{ gap: theme.space.md }}>
               {meal.protein ? (
-                <MacroRow label="Protein" value={meal.protein} total={150} color={theme.colors.accent2} />
+                <MacroRow label="Protein" value={meal.protein} total={macroGoals(goal).protein} color={theme.colors.accent2} />
               ) : null}
               {meal.carbs ? (
-                <MacroRow label="Carbs" value={meal.carbs} total={250} color={theme.colors.accent} />
+                <MacroRow label="Carbs" value={meal.carbs} total={macroGoals(goal).carbs} color={theme.colors.accent} />
               ) : null}
               {meal.fat ? (
-                <MacroRow label="Fat" value={meal.fat} total={65} color="#9B59B6" />
+                <MacroRow label="Fat" value={meal.fat} total={macroGoals(goal).fat} color={theme.colors.indigo} />
               ) : null}
             </View>
           ) : (

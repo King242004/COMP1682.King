@@ -35,6 +35,9 @@ type NewMeal = {
   image?: string | null;
 };
 
+// Partial type for updates — every field optional since user may only change a few
+type UpdateMeal = Partial<NewMeal>;
+
 type MealsContextType = {
   meals: Meal[];
   historyMeals: Meal[];
@@ -43,6 +46,7 @@ type MealsContextType = {
   fetchMealsByDate: (date: string) => Promise<void>;
   fetchMealHistory: () => Promise<void>;
   addMeal: (meal: NewMeal) => Promise<void>;
+  updateMeal: (id: string, updates: UpdateMeal) => Promise<void>;
   deleteMeal: (id: string) => Promise<void>;
 };
 
@@ -110,12 +114,49 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     await fetchMealsByDate(meal.date);
   };
 
+  // Map backend response (Mongo _id) to frontend shape (id) — same as fetch handlers
+  const mapMeal = (m: any): Meal => ({
+    id: m._id,
+    name: m.name,
+    calories: m.calories,
+    protein: m.protein,
+    carbs: m.carbs,
+    fat: m.fat,
+    mealType: m.mealType,
+    image: m.image,
+    note: m.note,
+    date: m.date,
+    createdAt: m.createdAt,
+  });
+
+  const updateMeal = async (id: string, updates: UpdateMeal) => {
+    if (!token) return;
+    const data = await apiRequest(`/meals/${id}`, "PUT", updates, token);
+    const updated = mapMeal(data.meal);
+    // Update in both today's list and history list (meal might exist in either)
+    setMeals((prev) => prev.map((m) => (m.id === id ? updated : m)));
+    setHistoryMeals((prev) => prev.map((m) => (m.id === id ? updated : m)));
+    // Recompute daily totals if the meal is in today's view
+    setDailyTotals((prev) => {
+      const old = meals.find((m) => m.id === id);
+      if (!old) return prev;
+      return {
+        calories: prev.calories - old.calories + updated.calories,
+        protein: prev.protein - old.protein + updated.protein,
+        carbs: prev.carbs - old.carbs + updated.carbs,
+        fat: prev.fat - old.fat + updated.fat,
+      };
+    });
+  };
+
   const deleteMeal = async (id: string) => {
     if (!token) return;
     await apiRequest(`/meals/${id}`, "DELETE", undefined, token);
+    // Remove from BOTH lists so meal-history refreshes immediately (bug B fix)
+    const deleted = meals.find((m) => m.id === id);
     setMeals((prev) => prev.filter((m) => m.id !== id));
+    setHistoryMeals((prev) => prev.filter((m) => m.id !== id));
     setDailyTotals((prev) => {
-      const deleted = meals.find((m) => m.id === id);
       if (!deleted) return prev;
       return {
         calories: prev.calories - deleted.calories,
@@ -127,7 +168,7 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <MealsContext.Provider value={{ meals, historyMeals, dailyTotals, isLoading, fetchMealsByDate, fetchMealHistory, addMeal, deleteMeal }}>
+    <MealsContext.Provider value={{ meals, historyMeals, dailyTotals, isLoading, fetchMealsByDate, fetchMealHistory, addMeal, updateMeal, deleteMeal }}>
       {children}
     </MealsContext.Provider>
   );

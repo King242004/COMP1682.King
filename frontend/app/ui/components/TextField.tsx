@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   TextInput,
   View,
@@ -36,19 +36,22 @@ export function TextField({
   style?: ViewStyle;
   inputProps?: Omit<TextInputProps, "value" | "onChangeText" | "placeholder">;
 }) {
+  const [focused, setFocused] = useState(false);
+
+  // Filled style: soft tinted background, border only lights up on focus
   const inputStyle = useMemo(
     () => ({
-      height: 52,
+      height: 54,
       borderRadius: theme.radius.input,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 1.5,
+      borderColor: focused ? theme.colors.primary : "transparent",
       paddingHorizontal: theme.space.lg,
-      backgroundColor: theme.colors.surface,
+      backgroundColor: focused ? theme.colors.surface : "rgba(37,99,235,0.06)",
       color: theme.colors.text,
       fontSize: 15,
       fontWeight: "600" as const,
     }),
-    [],
+    [focused],
   );
 
   return (
@@ -69,8 +72,9 @@ export function TextField({
         returnKeyType={returnKeyType}
         style={inputStyle}
         {...inputProps}
+        onFocus={(e) => { setFocused(true); inputProps?.onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); inputProps?.onBlur?.(e); }}
       />
     </View>
   );
 }
-
