@@ -70,6 +70,42 @@ exports.getMealHistory = async (req, res) => {
   res.json({ meals });
 };
 
+// ─── Update Meal ──────────────────────────────────────────────────────────────
+exports.updateMeal = async (req, res) => {
+  const meal = await Meal.findById(req.params.id);
+
+  if (!meal) return res.status(404).json({ message: "Meal not found." });
+
+  if (meal.user.toString() !== req.user.id)
+    return res.status(403).json({ message: "Not authorized to update this meal." });
+
+  const { name, mealType, calories, protein, carbs, fat, image, note, date } = req.body;
+
+  // Validation - only validate fields that are being updated
+  if (mealType !== undefined && !["breakfast", "lunch", "dinner", "snack"].includes(mealType))
+    return res.status(400).json({ message: "mealType must be breakfast, lunch, dinner or snack." });
+
+  if (calories !== undefined && calories < 0)
+    return res.status(400).json({ message: "Calories must be a positive number." });
+
+  if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date))
+    return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
+
+  // Apply updates - only fields explicitly provided
+  if (name !== undefined) meal.name = name.trim();
+  if (mealType !== undefined) meal.mealType = mealType;
+  if (calories !== undefined) meal.calories = calories;
+  if (protein !== undefined) meal.protein = protein || 0;
+  if (carbs !== undefined) meal.carbs = carbs || 0;
+  if (fat !== undefined) meal.fat = fat || 0;
+  if (image !== undefined) meal.image = image;
+  if (note !== undefined) meal.note = note;
+  if (date !== undefined) meal.date = date;
+
+  await meal.save();
+  res.json({ message: "Meal updated successfully.", meal });
+};
+
 // ─── Delete Meal ──────────────────────────────────────────────────────────────
 exports.deleteMeal = async (req, res) => {
   const meal = await Meal.findById(req.params.id);

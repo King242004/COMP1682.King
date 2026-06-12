@@ -74,7 +74,8 @@ exports.changeName = async (req, res) => {
   if (!name || name.trim().length < 2)
     return res.status(400).json({ message: "Name must be at least 2 characters." });
 
-  if (!/^[a-zA-Z\s]+$/.test(name.trim()))
+  // \p{L} = any Unicode letter (English + Vietnamese diacritics + other languages)
+  if (!/^[\p{L}\s]+$/u.test(name.trim()))
     return res.status(400).json({ message: "Name must contain only letters." });
 
   const user = await User.findByIdAndUpdate(

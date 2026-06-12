@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { addMeal, getMealsByDate, getMealHistory, deleteMeal } = require("../controllers/mealController");
+const { addMeal, getMealsByDate, getMealHistory, updateMeal, deleteMeal } = require("../controllers/mealController");
 const protect = require("../middleware/auth");
 
 router.use(protect);
@@ -100,6 +100,53 @@ router.get("/", getMealsByDate);
  *         description: Returns meal history
  */
 router.get("/history", getMealHistory);
+
+/**
+ * @swagger
+ * /meals/{id}:
+ *   put:
+ *     summary: Update a meal
+ *     tags: [Meals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               mealType:
+ *                 type: string
+ *                 enum: [breakfast, lunch, dinner, snack]
+ *               calories:
+ *                 type: number
+ *               protein:
+ *                 type: number
+ *               carbs:
+ *                 type: number
+ *               fat:
+ *                 type: number
+ *               date:
+ *                 type: string
+ *               note:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Meal updated successfully
+ *       403:
+ *         description: Not authorized
+ *       404:
+ *         description: Meal not found
+ */
+router.put("/:id", updateMeal);
 
 /**
  * @swagger
