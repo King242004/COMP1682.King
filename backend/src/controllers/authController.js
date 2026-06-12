@@ -8,7 +8,8 @@ const generateToken = (id) =>
 // ─── Validation helpers ───────────────────────────────────────────────────────
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isValidPassword = (pw) => pw.length >= 6 && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
-const isValidName = (name) => name.trim().length >= 2 && /^[a-zA-Z\s]+$/.test(name.trim());
+// \p{L} = any Unicode letter (supports Vietnamese diacritics, Chinese, etc.)
+const isValidName = (name) => name.trim().length >= 2 && /^[\p{L}\s]+$/u.test(name.trim());
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 exports.register = async (req, res) => {
