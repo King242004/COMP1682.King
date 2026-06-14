@@ -121,14 +121,14 @@ export default function SettingsScreen() {
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
           paddingTop: theme.space.lg,
-          paddingBottom: 120,
+          paddingBottom: 40,
           gap: theme.space.lg,
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back + title */}
+        {/* Back to Profile — explicit nav since tab siblings don't keep a back stack */}
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace("/tabs/profile")}
           style={({ pressed }) => ({
             flexDirection: "row", alignItems: "center", gap: 4,
             opacity: pressed ? 0.6 : 1, alignSelf: "flex-start",

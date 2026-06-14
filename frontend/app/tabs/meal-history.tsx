@@ -59,7 +59,7 @@ export default function MealHistoryScreen() {
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
           paddingTop: theme.space.lg,
-          paddingBottom: 120,
+          paddingBottom: 40,
           gap: theme.space.lg,
         }}
         // Title scrolls with the list — consistent with Home/Progress/Profile

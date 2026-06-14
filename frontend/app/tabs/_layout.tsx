@@ -172,6 +172,10 @@ function TabBar({ state, navigation }: any) {
   const current = state.routes[state.index]?.name;
   const [modalVisible, setModalVisible] = useState(false);
 
+  // Scan is a full-screen camera experience — hide the bottom nav so the dark
+  // overlay covers the whole screen.
+  if (current === "scan") return null;
+
   const leftTabs = [
     { name: "index", icon: "home-outline", activeIcon: "home", label: "Home" },
     { name: "progress", icon: "bar-chart-outline", activeIcon: "bar-chart", label: "Progress" },

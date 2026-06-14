@@ -111,7 +111,6 @@ export default function ProgressScreen() {
     ? Math.round(daysWithMeals.reduce((s, d) => s + d.calories, 0) / daysWithMeals.length)
     : 0;
   const daysOnTrack = summaries.filter((s) => s.onTrack).length;
-  const totalMeals = summaries.reduce((s, d) => s + d.mealCount, 0);
 
   // Best day = ngày gần goal nhất (có log bữa ăn)
   const bestDay = daysWithMeals.length > 0
@@ -148,7 +147,7 @@ export default function ProgressScreen() {
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
           paddingTop: theme.space.lg,
-          paddingBottom: 120,
+          paddingBottom: 40,
           gap: theme.space.lg,
         }}
         showsVerticalScrollIndicator={false}

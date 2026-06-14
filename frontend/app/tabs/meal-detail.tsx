@@ -116,7 +116,7 @@ export default function MealDetailScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
-          paddingBottom: 120,
+          paddingBottom: 40,
           paddingTop: theme.space.lg,
           gap: theme.space.lg,
         }}
