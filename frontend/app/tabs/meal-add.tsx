@@ -153,7 +153,7 @@ export default function AddMealScreen() {
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
           paddingTop: theme.space.lg,
-          paddingBottom: 120,
+          paddingBottom: 40,
           gap: theme.space.lg,
         }}
         keyboardShouldPersistTaps="handled"

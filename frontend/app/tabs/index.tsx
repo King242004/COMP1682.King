@@ -128,7 +128,7 @@ export default function HomeScreen() {
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
           paddingTop: theme.space.lg,
-          paddingBottom: 120,
+          paddingBottom: 40,
           gap: theme.space.lg,
         }}
         showsVerticalScrollIndicator={false}
