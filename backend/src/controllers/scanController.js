@@ -79,8 +79,13 @@ exports.scanBarcode = async (req, res) => {
     return res.status(400).json({ message: "Invalid barcode format." });
 
   try {
-    const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
-    const { data } = await axios.get(url, { timeout: 5000 });
+    // Open Food Facts REQUIRES a descriptive User-Agent or it blocks/throttles
+    // requests (default axios UA gets rate-limited). Request only the fields we use.
+    const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=product_name,product_name_en,brands,image_url,image_front_url,serving_size,serving_quantity,nutriments,status`;
+    const { data } = await axios.get(url, {
+      timeout: 10000,
+      headers: { "User-Agent": "HealthySnap/1.0 (graduation project; hoangking1124@gmail.com)" },
+    });
 
     if (data.status !== 1 || !data.product) {
       return res.status(404).json({ message: "Product not found in Open Food Facts database." });
