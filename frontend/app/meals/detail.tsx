@@ -7,6 +7,7 @@ import { AppText } from "../ui/components/AppText";
 import { Button } from "../ui/components/Button";
 import { Card } from "../ui/components/Card";
 import { Screen } from "../ui/components/Screen";
+import { ScreenHeader } from "../ui/components/ScreenHeader";
 import Svg, { Circle } from "react-native-svg";
 
 const MEAL_TYPE_ICON: Record<string, string> = {
@@ -116,13 +117,14 @@ export default function MealDetailScreen() {
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
           paddingBottom: 40,
-          paddingTop: theme.space.lg,
+          paddingTop: 60,
           gap: theme.space.lg,
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Title (native header provides the back arrow) */}
-        <View style={{ gap: 4 }}>
+        <ScreenHeader />
+        {/* Title — pulled up closer to the Back header */}
+        <View style={{ gap: 4, marginTop: -10 }}>
           <AppText variant="h1">{meal.name}</AppText>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             {meal.mealType && (

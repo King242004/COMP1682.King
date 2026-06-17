@@ -10,6 +10,7 @@ import { theme } from "../ui/theme";
 import { AppText } from "../ui/components/AppText";
 import { Card } from "../ui/components/Card";
 import { Screen } from "../ui/components/Screen";
+import { ScreenHeader } from "../ui/components/ScreenHeader";
 
 const GOAL_LABEL: Record<string, string> = {
   lose_weight: "Lose weight", gain_muscle: "Gain muscle", eat_healthy: "Eat healthy",
@@ -124,12 +125,7 @@ export default function DiscoverScreen() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={{ gap: theme.space.md, marginBottom: theme.space.sm }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Pressable onPress={() => router.back()} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <Ionicons name="chevron-back" size={26} color={theme.colors.text} />
-              </Pressable>
-              <AppText variant="h1" style={{ flex: 1 }}>Discover</AppText>
-            </View>
+            <ScreenHeader title="Discover" />
             {/* Search box */}
             <View style={{
               flexDirection: "row", alignItems: "center", gap: 8,

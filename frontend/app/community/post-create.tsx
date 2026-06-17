@@ -11,6 +11,7 @@ import { AppText } from "../ui/components/AppText";
 import { Button } from "../ui/components/Button";
 import { Card } from "../ui/components/Card";
 import { Screen } from "../ui/components/Screen";
+import { ScreenHeader } from "../ui/components/ScreenHeader";
 
 export default function PostCreateScreen() {
   const router = useRouter();
@@ -75,14 +76,7 @@ export default function PostCreateScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Pressable onPress={() => router.back()} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-            <AppText style={{ color: theme.colors.primary, fontWeight: "600" }}>Cancel</AppText>
-          </Pressable>
-          <AppText variant="h2">New post</AppText>
-          <View style={{ width: 50 }} />
-        </View>
+        <ScreenHeader title="New post" />
 
         {/* Caption */}
         <Card style={{ padding: theme.space.lg }}>

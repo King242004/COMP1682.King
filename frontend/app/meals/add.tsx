@@ -7,6 +7,7 @@ import { AppText } from "../ui/components/AppText";
 import { Button } from "../ui/components/Button";
 import { Card } from "../ui/components/Card";
 import { Screen } from "../ui/components/Screen";
+import { ScreenHeader } from "../ui/components/ScreenHeader";
 import { TextField } from "../ui/components/TextField";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -152,16 +153,16 @@ export default function AddMealScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
-          paddingTop: theme.space.lg,
+          paddingTop: 60,
           paddingBottom: 40,
           gap: theme.space.lg,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ gap: 6 }}>
-          <AppText variant="h1">{isFromScan ? "Confirm scan result" : "Add meal"}</AppText>
-          <AppText variant="muted">
+        <View>
+          <ScreenHeader title={isFromScan ? "Confirm scan" : "Add meal"} />
+          <AppText variant="muted" style={{ marginTop: -8 }}>
             {isFromScan
               ? "AI detected this meal. Review and adjust if needed."
               : "Log your nutrition for today."}

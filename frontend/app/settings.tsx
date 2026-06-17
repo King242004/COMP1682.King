@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "./context/AuthContext";
 import { scheduleDailyReminder, cancelNotification } from "./utils/notifications";
@@ -10,6 +9,7 @@ import { AppText } from "./ui/components/AppText";
 import { Button } from "./ui/components/Button";
 import { Card } from "./ui/components/Card";
 import { Screen } from "./ui/components/Screen";
+import { ScreenHeader } from "./ui/components/ScreenHeader";
 import { TextField } from "./ui/components/TextField";
 
 // Small uppercase section label above each settings card
@@ -39,7 +39,6 @@ function IconBox({ icon, bg }: { icon: string; bg?: string }) {
 }
 
 export default function SettingsScreen() {
-  const router = useRouter();
   const { user, updateProfile } = useAuth();
 
   const [reminderOn, setReminderOn] = useState(false);
@@ -126,24 +125,8 @@ export default function SettingsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back — Stack pop returns to Profile */}
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => ({
-            flexDirection: "row", alignItems: "center", gap: 4,
-            opacity: pressed ? 0.6 : 1, alignSelf: "flex-start",
-          })}
-        >
-          <Ionicons name="chevron-back" size={18} color={theme.colors.primary} />
-          <AppText style={{ fontSize: 14, color: theme.colors.primary, fontWeight: "600" }}>
-            Profile
-          </AppText>
-        </Pressable>
-
-        <View style={{ gap: 4 }}>
-          <AppText variant="h1">Settings</AppText>
-          <AppText variant="muted">Tune how HealthySnap works for you.</AppText>
-        </View>
+        <ScreenHeader title="Settings" />
+        <AppText variant="muted" style={{ marginTop: -8 }}>Tune how HealthySnap works for you.</AppText>
 
         {/* GOALS */}
         <SectionLabel>Goals</SectionLabel>

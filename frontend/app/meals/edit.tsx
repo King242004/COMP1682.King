@@ -7,6 +7,7 @@ import { AppText } from "../ui/components/AppText";
 import { Button } from "../ui/components/Button";
 import { Card } from "../ui/components/Card";
 import { Screen } from "../ui/components/Screen";
+import { ScreenHeader } from "../ui/components/ScreenHeader";
 import { TextField } from "../ui/components/TextField";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -134,33 +135,32 @@ export default function EditMealScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
-          paddingTop: theme.space.lg,
+          paddingTop: 60,
           paddingBottom: 40,
           gap: theme.space.lg,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <View style={{ gap: 2 }}>
-            <AppText variant="h1">Edit meal</AppText>
-            <AppText variant="muted">Update or delete this entry.</AppText>
-          </View>
-          <Pressable
-            onPress={handleDelete}
-            style={({ pressed }) => ({
-              paddingHorizontal: 12, paddingVertical: 7,
-              borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
-              backgroundColor: pressed ? "rgba(229,72,77,0.2)" : "rgba(229,72,77,0.1)",
-            })}
-          >
-            <Text style={{ fontSize: 13 }}>🗑️</Text>
-            <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.danger }}>
-              Delete
-            </AppText>
-          </Pressable>
-        </View>
+        {/* Header with Delete on the right */}
+        <ScreenHeader
+          title="Edit meal"
+          right={
+            <Pressable
+              onPress={handleDelete}
+              style={({ pressed }) => ({
+                paddingHorizontal: 12, paddingVertical: 7,
+                borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
+                backgroundColor: pressed ? "rgba(229,72,77,0.2)" : "rgba(229,72,77,0.1)",
+              })}
+            >
+              <Text style={{ fontSize: 13 }}>🗑️</Text>
+              <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.danger }}>
+                Delete
+              </AppText>
+            </Pressable>
+          }
+        />
 
         {/* Meal type 2x2 */}
         <View style={{ gap: 8 }}>
