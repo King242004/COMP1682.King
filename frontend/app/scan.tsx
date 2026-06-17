@@ -5,13 +5,13 @@ import { CameraView, CameraType, useCameraPermissions, scanFromURLAsync, type Ba
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
-import { BASE_URL } from "../utils/api";
-import { theme } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Button } from "../ui/components/Button";
-import { Card } from "../ui/components/Card";
-import { TextField } from "../ui/components/TextField";
+import { useAuth } from "./context/AuthContext";
+import { BASE_URL } from "./utils/api";
+import { theme } from "./ui/theme";
+import { AppText } from "./ui/components/AppText";
+import { Button } from "./ui/components/Button";
+import { Card } from "./ui/components/Card";
+import { TextField } from "./ui/components/TextField";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 type ScanMode = "photo" | "barcode";
@@ -268,12 +268,12 @@ export default function ScanScreen() {
     setCandidates(null);
     setProduct(null);
     setPreviewUri(null);
-    router.push({ pathname: "/tabs/meals/add", params: { mealType: getMealTypeByHour() } });
+    router.push({ pathname: "/meals/add", params: { mealType: getMealTypeByHour() } });
   };
 
   const handlePick = (c: Candidate) => {
     router.push({
-      pathname: "/tabs/meals/add",
+      pathname: "/meals/add",
       params: {
         prefillName: c.name,
         prefillCalories: String(c.calories),
@@ -289,7 +289,7 @@ export default function ScanScreen() {
 
   const handleAddProduct = (p: Product) => {
     router.push({
-      pathname: "/tabs/meals/add",
+      pathname: "/meals/add",
       params: {
         prefillName: p.brand ? `${p.name} (${p.brand})` : p.name,
         prefillCalories: String(p.calories),

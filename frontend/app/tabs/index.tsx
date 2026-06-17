@@ -280,7 +280,7 @@ export default function HomeScreen() {
         <View style={{ gap: 4 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             <AppText variant="h2">Diary</AppText>
-            <Pressable onPress={() => router.push("/tabs/meals/history")}>
+            <Pressable onPress={() => router.push("/meals/history")}>
               <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>View all</AppText>
             </Pressable>
           </View>
@@ -320,7 +320,7 @@ export default function HomeScreen() {
                   {isToday && (
                     <Pressable
                       onPress={() => router.push({
-                        pathname: "/tabs/meals/add",
+                        pathname: "/meals/add",
                         params: { mealType: mt.key },
                       })}
                       style={({ pressed }) => ({

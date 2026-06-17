@@ -1,13 +1,12 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useAuth } from "../../context/AuthContext";
-import { useMeals } from "../../context/MealsContext";
-import { theme, macroGoals } from "../../ui/theme";
-import { AppText } from "../../ui/components/AppText";
-import { Button } from "../../ui/components/Button";
-import { Card } from "../../ui/components/Card";
-import { Screen } from "../../ui/components/Screen";
+import { useAuth } from "../context/AuthContext";
+import { useMeals } from "../context/MealsContext";
+import { theme, macroGoals } from "../ui/theme";
+import { AppText } from "../ui/components/AppText";
+import { Button } from "../ui/components/Button";
+import { Card } from "../ui/components/Card";
+import { Screen } from "../ui/components/Screen";
 import Svg, { Circle } from "react-native-svg";
 
 const MEAL_TYPE_ICON: Record<string, string> = {
@@ -88,7 +87,7 @@ export default function MealDetailScreen() {
     return (
       <Screen style={{ justifyContent: "center", alignItems: "center" }}>
         <AppText variant="muted">Meal not found.</AppText>
-        <Button title="Go back" variant="secondary" onPress={() => router.replace("/tabs/meals/history")} />
+        <Button title="Go back" variant="secondary" onPress={() => router.replace("/meals/history")} />
       </Screen>
     );
   }
@@ -104,7 +103,7 @@ export default function MealDetailScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteMeal(meal.id);
-            router.replace("/tabs/meals/history");
+            router.replace("/meals/history");
           },
         },
       ]
@@ -122,21 +121,7 @@ export default function MealDetailScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back button */}
-        <Pressable
-          onPress={() => router.replace("/tabs/meals/history")}
-          style={({ pressed }) => ({
-            flexDirection: "row", alignItems: "center", gap: 4,
-            opacity: pressed ? 0.6 : 1, alignSelf: "flex-start",
-          })}
-        >
-          <Ionicons name="chevron-back" size={18} color={theme.colors.primary} />
-          <AppText style={{ fontSize: 14, color: theme.colors.primary, fontWeight: "600" }}>
-            Meal History
-          </AppText>
-        </Pressable>
-
-        {/* Title */}
+        {/* Title (native header provides the back arrow) */}
         <View style={{ gap: 4 }}>
           <AppText variant="h1">{meal.name}</AppText>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -194,7 +179,7 @@ export default function MealDetailScreen() {
           <Button
             title="Edit meal"
             size="lg"
-            onPress={() => router.push({ pathname: "/tabs/meals/edit", params: { id: meal.id } })}
+            onPress={() => router.push({ pathname: "/meals/edit", params: { id: meal.id } })}
           />
           <Pressable
             onPress={handleDelete}
