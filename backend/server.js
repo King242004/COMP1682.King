@@ -17,6 +17,7 @@ app.use("/api/meals", require("./src/routes/meal"));
 app.use("/api/profile", require("./src/routes/profile"));
 app.use("/api/user", require("./src/routes/user"));
 app.use("/api/scan", require("./src/routes/scan"));
+app.use("/api/community", require("./src/routes/community"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get("/", (req, res) => res.json({ message: "HealthySnap API running" }));

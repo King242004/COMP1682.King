@@ -268,12 +268,12 @@ export default function ScanScreen() {
     setCandidates(null);
     setProduct(null);
     setPreviewUri(null);
-    router.push({ pathname: "/tabs/meal-add", params: { mealType: getMealTypeByHour() } });
+    router.push({ pathname: "/tabs/meals/add", params: { mealType: getMealTypeByHour() } });
   };
 
   const handlePick = (c: Candidate) => {
     router.push({
-      pathname: "/tabs/meal-add",
+      pathname: "/tabs/meals/add",
       params: {
         prefillName: c.name,
         prefillCalories: String(c.calories),
@@ -289,7 +289,7 @@ export default function ScanScreen() {
 
   const handleAddProduct = (p: Product) => {
     router.push({
-      pathname: "/tabs/meal-add",
+      pathname: "/tabs/meals/add",
       params: {
         prefillName: p.brand ? `${p.name} (${p.brand})` : p.name,
         prefillCalories: String(p.calories),

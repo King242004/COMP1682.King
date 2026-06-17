@@ -2,12 +2,12 @@ import { useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useMeals, Meal } from "../context/MealsContext";
-import { theme } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Button } from "../ui/components/Button";
-import { Screen } from "../ui/components/Screen";
-import { Card } from "../ui/components/Card";
+import { useMeals, Meal } from "../../context/MealsContext";
+import { theme } from "../../ui/theme";
+import { AppText } from "../../ui/components/AppText";
+import { Button } from "../../ui/components/Button";
+import { Screen } from "../../ui/components/Screen";
+import { Card } from "../../ui/components/Card";
 
 // Meal-type emoji shown as the row avatar — friendlier than name initials
 const MEAL_TYPE_ICON: Record<string, string> = {
@@ -80,7 +80,7 @@ export default function MealHistoryScreen() {
                 <Button
                   title="Add meal"
                   variant="secondary"
-                  onPress={() => router.push("/tabs/meal-add")}
+                  onPress={() => router.push("/tabs/meals/add")}
                 />
               </View>
             </View>
@@ -97,7 +97,7 @@ export default function MealHistoryScreen() {
             {group.meals.map((item) => (
               <Pressable
                 key={item.id}
-                onPress={() => router.push({ pathname: "/tabs/meal-detail", params: { id: item.id } })}
+                onPress={() => router.push({ pathname: "/tabs/meals/detail", params: { id: item.id } })}
                 style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
               >
                 <Card style={{

@@ -172,16 +172,15 @@ function TabBar({ state, navigation }: any) {
   const current = state.routes[state.index]?.name;
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Scan is a full-screen camera experience — hide the bottom nav so the dark
-  // overlay covers the whole screen.
-  if (current === "scan") return null;
+  // Full-screen sub-flows hide the bottom nav (scan camera, post composer, public profile)
+  if (current === "scan" || current === "community/post-create" || current === "community/user-profile" || current === "community/discover") return null;
 
   const leftTabs = [
     { name: "index", icon: "home-outline", activeIcon: "home", label: "Home" },
-    { name: "progress", icon: "bar-chart-outline", activeIcon: "bar-chart", label: "Progress" },
+    { name: "community/index", icon: "people-outline", activeIcon: "people", label: "Community" },
   ];
   const rightTabs = [
-    { name: "meal-history", icon: "time-outline", activeIcon: "time", label: "History" },
+    { name: "progress", icon: "bar-chart-outline", activeIcon: "bar-chart", label: "Progress" },
     { name: "profile", icon: "person-outline", activeIcon: "person", label: "Profile" },
   ];
 
@@ -191,7 +190,7 @@ function TabBar({ state, navigation }: any) {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onScan={() => { setModalVisible(false); router.push("/tabs/scan"); }}
-        onAdd={() => { setModalVisible(false); router.push("/tabs/meal-add"); }}
+        onAdd={() => { setModalVisible(false); router.push("/tabs/meals/add"); }}
       />
 
       <View style={{
@@ -293,14 +292,18 @@ export default function TabLayout() {
       tabBar={(props) => <TabBar {...props} />}
     >
       <Tabs.Screen name="index" />
+      <Tabs.Screen name="community/index" />
       <Tabs.Screen name="progress" />
-      <Tabs.Screen name="meal-add" options={{ headerShown: true}} />
-      <Tabs.Screen name="meal-edit" options={{ headerShown: true }} />
+      <Tabs.Screen name="meals/add" options={{ headerShown: true }} />
+      <Tabs.Screen name="meals/edit" options={{ headerShown: true }} />
       <Tabs.Screen name="scan" options={{ headerShown: false }} />
-      <Tabs.Screen name="meal-detail" options={{ headerShown: true }} />
-      <Tabs.Screen name="meal-history" />
+      <Tabs.Screen name="meals/detail" options={{ headerShown: true }} />
+      <Tabs.Screen name="meals/history" />
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="settings" options={{ headerShown: true }} />
+      <Tabs.Screen name="community/post-create" options={{ headerShown: false }} />
+      <Tabs.Screen name="community/user-profile" options={{ headerShown: false }} />
+      <Tabs.Screen name="community/discover" options={{ headerShown: false }} />
     </Tabs>
   );
 }
