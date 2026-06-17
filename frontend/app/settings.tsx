@@ -3,14 +3,14 @@ import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
-import { scheduleDailyReminder, cancelNotification } from "../utils/notifications";
-import { theme } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Button } from "../ui/components/Button";
-import { Card } from "../ui/components/Card";
-import { Screen } from "../ui/components/Screen";
-import { TextField } from "../ui/components/TextField";
+import { useAuth } from "./context/AuthContext";
+import { scheduleDailyReminder, cancelNotification } from "./utils/notifications";
+import { theme } from "./ui/theme";
+import { AppText } from "./ui/components/AppText";
+import { Button } from "./ui/components/Button";
+import { Card } from "./ui/components/Card";
+import { Screen } from "./ui/components/Screen";
+import { TextField } from "./ui/components/TextField";
 
 // Small uppercase section label above each settings card
 function SectionLabel({ children }: { children: string }) {
@@ -120,15 +120,15 @@ export default function SettingsScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
-          paddingTop: theme.space.lg,
+          paddingTop: 60,
           paddingBottom: 40,
           gap: theme.space.lg,
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back to Profile — explicit nav since tab siblings don't keep a back stack */}
+        {/* Back — Stack pop returns to Profile */}
         <Pressable
-          onPress={() => router.replace("/tabs/profile")}
+          onPress={() => router.back()}
           style={({ pressed }) => ({
             flexDirection: "row", alignItems: "center", gap: 4,
             opacity: pressed ? 0.6 : 1, alignSelf: "flex-start",

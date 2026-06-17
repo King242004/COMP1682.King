@@ -313,7 +313,7 @@ export default function ProfileScreen() {
             <Card style={{ paddingVertical: 4, paddingHorizontal: theme.space.lg }}>
               {/* Settings entry — app preferences live in their own screen */}
               <Pressable
-                onPress={() => router.push("/tabs/settings")}
+                onPress={() => router.push("/settings")}
                 style={({ pressed }) => ({
                   flexDirection: "row", alignItems: "center", gap: 12,
                   paddingVertical: 12,

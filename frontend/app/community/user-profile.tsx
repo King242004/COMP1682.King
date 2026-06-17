@@ -2,16 +2,16 @@ import { useEffect, useState, useCallback } from "react";
 import { FlatList, Image, Pressable, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import {
   getPublicProfile, getUserPosts, followUser, unfollowUser,
   type FeedPost, type PublicProfile,
-} from "../../utils/community";
-import { theme } from "../../ui/theme";
-import { AppText } from "../../ui/components/AppText";
-import { Button } from "../../ui/components/Button";
-import { Card } from "../../ui/components/Card";
-import { Screen } from "../../ui/components/Screen";
+} from "../utils/community";
+import { theme } from "../ui/theme";
+import { AppText } from "../ui/components/AppText";
+import { Button } from "../ui/components/Button";
+import { Card } from "../ui/components/Card";
+import { Screen } from "../ui/components/Screen";
 
 function initials(name: string) {
   const p = name.split(" ").filter(Boolean);

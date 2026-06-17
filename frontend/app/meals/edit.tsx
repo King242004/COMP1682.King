@@ -1,13 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useMeals } from "../../context/MealsContext";
-import { theme } from "../../ui/theme";
-import { AppText } from "../../ui/components/AppText";
-import { Button } from "../../ui/components/Button";
-import { Card } from "../../ui/components/Card";
-import { Screen } from "../../ui/components/Screen";
-import { TextField } from "../../ui/components/TextField";
+import { useMeals } from "../context/MealsContext";
+import { theme } from "../ui/theme";
+import { AppText } from "../ui/components/AppText";
+import { Button } from "../ui/components/Button";
+import { Card } from "../ui/components/Card";
+import { Screen } from "../ui/components/Screen";
+import { TextField } from "../ui/components/TextField";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -99,7 +99,7 @@ export default function EditMealScreen() {
       fat: fat.trim() ? Number(fat) : undefined,
       mealType,
     });
-    router.replace("/tabs/meals/history");
+    router.replace("/meals/history");
   };
 
   const handleDelete = () => {
@@ -114,7 +114,7 @@ export default function EditMealScreen() {
           onPress: async () => {
             if (!id) return;
             await deleteMeal(id);
-            router.replace("/tabs/meals/history");
+            router.replace("/meals/history");
           },
         },
       ]
@@ -278,7 +278,7 @@ export default function EditMealScreen() {
         <Button title="Save changes" size="lg" disabled={!canSave} onPress={handleSave} />
 
         <Pressable
-          onPress={() => router.replace("/tabs/meals/history")}
+          onPress={() => router.replace("/meals/history")}
           style={({ pressed }) => ({
             alignItems: "center", paddingVertical: 8, opacity: pressed ? 0.6 : 1,
           })}

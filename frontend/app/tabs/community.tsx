@@ -2,12 +2,12 @@ import { useEffect, useState, useCallback } from "react";
 import { FlatList, Image, Pressable, RefreshControl, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../context/AuthContext";
-import { getFeed, getExplore, toggleLike, type FeedPost } from "../../utils/community";
-import { theme } from "../../ui/theme";
-import { AppText } from "../../ui/components/AppText";
-import { Card } from "../../ui/components/Card";
-import { Screen } from "../../ui/components/Screen";
+import { useAuth } from "../context/AuthContext";
+import { getFeed, getExplore, toggleLike, type FeedPost } from "../utils/community";
+import { theme } from "../ui/theme";
+import { AppText } from "../ui/components/AppText";
+import { Card } from "../ui/components/Card";
+import { Screen } from "../ui/components/Screen";
 
 type Tab = "feed" | "explore";
 
@@ -74,7 +74,7 @@ export default function CommunityScreen() {
     <Card style={{ padding: 0, overflow: "hidden" }}>
       {/* Author row */}
       <Pressable
-        onPress={() => router.push({ pathname: "/tabs/community/user-profile", params: { id: item.author.id } })}
+        onPress={() => router.push({ pathname: "/community/user-profile", params: { id: item.author.id } })}
         style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: theme.space.lg }}
       >
         <View style={{
@@ -157,7 +157,7 @@ export default function CommunityScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 {/* Discover: search people + follow suggestions */}
                 <Pressable
-                  onPress={() => router.push("/tabs/community/discover")}
+                  onPress={() => router.push("/community/discover")}
                   style={({ pressed }) => ({
                     width: 40, height: 40, borderRadius: 20,
                     backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.06)",
@@ -167,7 +167,7 @@ export default function CommunityScreen() {
                   <Ionicons name="search" size={19} color={theme.colors.primary} />
                 </Pressable>
                 <Pressable
-                  onPress={() => router.push("/tabs/community/post-create")}
+                  onPress={() => router.push("/community/post-create")}
                   style={({ pressed }) => ({
                     flexDirection: "row", alignItems: "center", gap: 6,
                     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 99,

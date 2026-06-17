@@ -1,13 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useMeals } from "../../context/MealsContext";
-import { theme } from "../../ui/theme";
-import { AppText } from "../../ui/components/AppText";
-import { Button } from "../../ui/components/Button";
-import { Card } from "../../ui/components/Card";
-import { Screen } from "../../ui/components/Screen";
-import { TextField } from "../../ui/components/TextField";
+import { useMeals } from "../context/MealsContext";
+import { theme } from "../ui/theme";
+import { AppText } from "../ui/components/AppText";
+import { Button } from "../ui/components/Button";
+import { Card } from "../ui/components/Card";
+import { Screen } from "../ui/components/Screen";
+import { TextField } from "../ui/components/TextField";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
