@@ -7,6 +7,7 @@ import { theme } from "../ui/theme";
 import { AppText } from "../ui/components/AppText";
 import { Button } from "../ui/components/Button";
 import { Screen } from "../ui/components/Screen";
+import { ScreenHeader } from "../ui/components/ScreenHeader";
 import { Card } from "../ui/components/Card";
 
 // Meal-type emoji shown as the row avatar — friendlier than name initials
@@ -58,15 +59,14 @@ export default function MealHistoryScreen() {
         keyExtractor={(g) => g.date}
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
-          paddingTop: theme.space.lg,
+          paddingTop: 60,
           paddingBottom: 40,
           gap: theme.space.lg,
         }}
-        // Title scrolls with the list — consistent with Home/Progress/Profile
         ListHeaderComponent={
-          <View style={{ gap: 6 }}>
-            <AppText variant="h1">Meal History</AppText>
-            <AppText variant="muted">Tap a meal to view details or edit.</AppText>
+          <View>
+            <ScreenHeader title="Meal History" />
+            <AppText variant="muted" style={{ marginTop: -8, marginBottom: 4 }}>Tap a meal to view details or edit.</AppText>
           </View>
         }
         ListEmptyComponent={

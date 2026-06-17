@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { FlatList, Image, Pressable, View } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { FlatList, Image, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -12,6 +12,7 @@ import { AppText } from "../ui/components/AppText";
 import { Button } from "../ui/components/Button";
 import { Card } from "../ui/components/Card";
 import { Screen } from "../ui/components/Screen";
+import { ScreenHeader } from "../ui/components/ScreenHeader";
 
 function initials(name: string) {
   const p = name.split(" ").filter(Boolean);
@@ -23,7 +24,6 @@ const GOAL_LABEL: Record<string, string> = {
 };
 
 export default function UserProfileScreen() {
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
 
@@ -87,11 +87,7 @@ export default function UserProfileScreen() {
         contentContainerStyle={{ paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.md }}
         ListHeaderComponent={
           <View style={{ gap: theme.space.lg, marginBottom: theme.space.sm }}>
-            {/* Back */}
-            <Pressable onPress={() => router.back()} hitSlop={10} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", opacity: pressed ? 0.6 : 1 })}>
-              <Ionicons name="chevron-back" size={18} color={theme.colors.primary} />
-              <AppText style={{ color: theme.colors.primary, fontWeight: "600" }}>Back</AppText>
-            </Pressable>
+            <ScreenHeader title="Profile" />
 
             {/* Header card */}
             <Card style={{ padding: theme.space.xl, alignItems: "center", gap: theme.space.md }}>

@@ -18,11 +18,10 @@ export default function RootLayout() {
           <Stack.Screen name="community/post-create" />
           <Stack.Screen name="community/user-profile" />
           <Stack.Screen name="community/discover" />
-          {/* Meal screens use a native header for a clean back arrow */}
-          <Stack.Screen name="meals/add" options={{ headerShown: true, headerTitle: "Add meal" }} />
-          <Stack.Screen name="meals/edit" options={{ headerShown: true, headerTitle: "Edit meal" }} />
-          <Stack.Screen name="meals/detail" options={{ headerShown: true, headerTitle: "" }} />
-          <Stack.Screen name="meals/history" options={{ headerShown: true, headerTitle: "" }} />
+          <Stack.Screen name="meals/add" />
+          <Stack.Screen name="meals/edit" />
+          <Stack.Screen name="meals/detail" />
+          <Stack.Screen name="meals/history" />
         </Stack>
       </MealsProvider>
     </AuthProvider>
