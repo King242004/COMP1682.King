@@ -19,10 +19,12 @@ export type SuggestedMeal = { name: string; calories: number; protein: number; c
 // `image` is a LOCAL uri kept only for display in the current session (not saved to history).
 // `meal` = suggested meal (shows an Add card). `loggedId` = id once the user added it (shows ✓ + Undo).
 export type ChatMessage = {
+  id?: string;            // server ChatMessage id (for log/undo of the suggested meal)
   role: "user" | "coach";
   text: string;
   image?: string;
   meal?: SuggestedMeal | null;
+  eating?: boolean;       // user is actually eating the dish → show "Add" button
   loggedId?: string | null;
 };
 
@@ -56,7 +58,7 @@ export async function chatWithCoach(
   history: ChatMessage[],
   language: Lang,
   image?: { base64: string; mimeType: string }
-): Promise<{ reply: string; meal: SuggestedMeal | null }> {
+): Promise<{ reply: string; meal: SuggestedMeal | null; eating: boolean; messageId: string | null }> {
   // Only send role+text of history (strip local image uris). Image sent as base64.
   const slimHistory = history.map((h) => ({ role: h.role, text: h.text }));
   const data = await apiRequest(
@@ -65,13 +67,32 @@ export async function chatWithCoach(
     { message, history: slimHistory, language, image: image?.base64, mimeType: image?.mimeType },
     token
   );
-  return { reply: stripMarkdown(data.reply || ""), meal: data.meal || null };
+  return { reply: stripMarkdown(data.reply || ""), meal: data.meal || null, eating: !!data.eating, messageId: data.messageId || null };
+}
+
+// Log the meal suggested in a coach message (persisted server-side). Returns the created meal id.
+export async function logMealFromMessage(token: string, messageId: string, mealType: string): Promise<string> {
+  const data = await apiRequest("/coach/log", "POST", { messageId, mealType }, token);
+  return data.logged?.id || "";
+}
+
+// Undo a meal logged from a coach message.
+export async function unlogMealFromMessage(token: string, messageId: string): Promise<void> {
+  await apiRequest("/coach/unlog", "POST", { messageId }, token);
 }
 
 export async function getChatHistory(token: string): Promise<ChatMessage[]> {
   const data = await apiRequest("/coach/history", "GET", undefined, token);
-  // Clean any markdown stored in older messages so they display naturally.
-  return (data.messages || []).map((m: ChatMessage) => ({ ...m, text: stripMarkdown(m.text) }));
+  // Clean markdown; carry id/meal/loggedId/image so action buttons persist on reload.
+  return (data.messages || []).map((m: any) => ({
+    id: m.id,
+    role: m.role,
+    text: stripMarkdown(m.text),
+    image: m.image,
+    meal: m.meal || null,
+    eating: !!m.eating,
+    loggedId: m.loggedId || null,
+  }));
 }
 
 export async function clearChatHistory(token: string): Promise<void> {

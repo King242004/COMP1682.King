@@ -13,10 +13,11 @@ import {
   clearChatHistory,
   getCachedInsight,
   cacheInsight,
+  logMealFromMessage,
+  unlogMealFromMessage,
   type CoachInsight,
   type ChatMessage,
 } from "@/utils/coach";
-import { apiRequest } from "@/utils/api";
 import { todayKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
@@ -44,11 +45,6 @@ async function compressToBase64(uri: string): Promise<{ uri: string; base64: str
   }
 }
 
-const SUGGESTED = [
-  "What should I eat for dinner?",
-  "How am I doing today?",
-  "What workout suits me?",
-];
 
 // Animated "typing" dots shown while the coach is composing a reply
 function TypingDots() {
@@ -90,17 +86,17 @@ export default function CoachTab() {
   const { token, user } = useAuth();
   const lang = resolveLanguage(user?.language);
   const suggestions = lang === "vi"
-    ? ["Tối nay nên ăn gì?", "Hôm nay tôi thế nào?", "Tôi nên tập gì hôm nay?"]
-    : SUGGESTED;
+    ? ["Tối nay nên ăn gì?", "Cách làm ức gà healthy", "Tôi nên tập gì hôm nay?"]
+    : ["What should I eat tonight?", "How to cook healthy chicken breast", "What workout suits me?"];
   const L = lang === "vi"
-    ? { add: "Thêm vào nhật ký", logged: "Đã ghi", undo: "Hoàn tác", cook: "Cách làm?", eatOut: "Ăn ngoài?" }
-    : { add: "Add to diary", logged: "Logged", undo: "Undo", cook: "How to cook?", eatOut: "Eating out?" };
-
-  // Templated questions for the cook / eat-out quick buttons on a dish card
-  const askCook = (name: string) =>
-    lang === "vi" ? `Cách làm món ${name} hợp với tình trạng của tôi?` : `How do I cook ${name} to suit my health?`;
-  const askEatOut = (name: string) =>
-    lang === "vi" ? `Ăn ${name} ngoài quán thì nên chọn sao cho hợp?` : `Eating ${name} at a restaurant — how should I order healthily?`;
+    ? {
+        add: "Thêm vào nhật ký", logged: "Đã ghi", undo: "Hoàn tác", photo: "📷 Gửi ảnh món ăn",
+        intro: "Mình là Coach 👋 Mình có thể gợi ý và chỉ cách nấu món healthy hợp tình trạng của bạn, xem ảnh món ăn, ghi nhật ký, và khuyên bài tập. Thử hỏi mình nhé:",
+      }
+    : {
+        add: "Add to diary", logged: "Logged", undo: "Undo", photo: "📷 Send a food photo",
+        intro: "I'm Coach 👋 I can suggest and teach healthy recipes for your conditions, look at food photos, log meals, and advise workouts. Try asking:",
+      };
   const headerHeight = useHeaderHeight(); // bù chiều cao AppHeader của tab cho keyboard
   const scrollRef = useRef<ScrollView>(null);
 
@@ -165,6 +161,8 @@ export default function CoachTab() {
     try {
       const hist = await getChatHistory(token);
       setMessages(hist);
+      // Jump to the latest message after history renders
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 150);
     } catch {
       // keep whatever is in state
     }
@@ -191,10 +189,13 @@ export default function CoachTab() {
     setSending(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     try {
-      const { reply, meal } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
-      setMessages((prev) => [...prev, { role: "coach", text: reply, meal }]);
-    } catch {
-      const errText = lang === "vi" ? "Xin lỗi, mình chưa trả lời được. Thử lại nhé." : "Sorry, I couldn't respond right now. Please try again.";
+      const { reply, meal, eating, messageId } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
+      setMessages((prev) => [...prev, { id: messageId ?? undefined, role: "coach", text: reply, meal, eating }]);
+    } catch (e: any) {
+      const quota = /quota/i.test(String(e?.message || ""));
+      const errText = quota
+        ? (lang === "vi" ? "Hôm nay đã hết lượt AI miễn phí, thử lại sau nhé." : "Out of free AI quota today — please try again later.")
+        : (lang === "vi" ? "Xin lỗi, mình chưa trả lời được. Thử lại nhé." : "Sorry, I couldn't respond right now. Please try again.");
       setMessages((prev) => [...prev, { role: "coach", text: errText }]);
     } finally {
       setSending(false);
@@ -209,31 +210,26 @@ export default function CoachTab() {
     );
   };
 
-  // User taps "Add" → create the meal in the diary, keep id for Undo.
+  // User taps "Add" → log the suggested meal (persisted server-side via its message id).
   const acceptLog = async (index: number) => {
-    if (!token) return;
-    const meal = messages[index]?.meal;
-    if (!meal) return;
+    const m = messages[index];
+    if (!token || !m?.id || !m.meal) return;
     try {
-      const data = await apiRequest(
-        "/meals",
-        "POST",
-        { name: meal.name, calories: meal.calories, protein: meal.protein, carbs: meal.carbs, fat: meal.fat, mealType: meal.mealType, date: todayKey() },
-        token
-      );
-      const id = data.meal?._id;
-      setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, loggedId: id } : m)));
+      const mealId = await logMealFromMessage(token, m.id, m.meal.mealType);
+      setMessages((prev) => prev.map((x, i) => (i === index ? { ...x, loggedId: mealId } : x)));
+      loadInsight(); // refresh Health Score to reflect the newly logged meal
     } catch {
       Alert.alert("Error", "Couldn't add to your diary.");
     }
   };
 
   // Undo: delete the logged meal and show the Add card again.
-  const undoLog = async (index: number, mealId: string) => {
-    if (!token) return;
+  const undoLog = async (index: number) => {
+    const m = messages[index];
+    if (!token || !m?.id) return;
     try {
-      await apiRequest(`/meals/${mealId}`, "DELETE", undefined, token);
-      setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, loggedId: null } : m)));
+      await unlogMealFromMessage(token, m.id);
+      setMessages((prev) => prev.map((x, i) => (i === index ? { ...x, loggedId: null } : x)));
     } catch {
       Alert.alert("Couldn't undo", "Please remove it from your diary instead.");
     }
@@ -376,7 +372,7 @@ export default function CoachTab() {
                     <AppText style={{ flex: 1, fontSize: 12, color: theme.colors.text }}>
                       {L.logged} {m.meal.name} ({m.meal.calories} kcal · {m.meal.mealType})
                     </AppText>
-                    <Pressable onPress={() => undoLog(i, m.loggedId!)} hitSlop={6}>
+                    <Pressable onPress={() => undoLog(i)} hitSlop={6}>
                       <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.danger }}>{L.undo}</AppText>
                     </Pressable>
                   </View>
@@ -393,67 +389,44 @@ export default function CoachTab() {
                         P {m.meal.protein} · C {m.meal.carbs} · F {m.meal.fat}
                       </AppText>
                     </View>
-                    {/* Meal type picker */}
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                      {MEAL_OPTS.map(([key, label]) => {
-                        const active = m.meal!.mealType === key;
-                        return (
-                          <Pressable
-                            key={key}
-                            onPress={() => setMealType(i, key)}
-                            style={{
-                              paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99,
-                              borderWidth: 1,
-                              borderColor: active ? theme.colors.primary : theme.colors.border,
-                              backgroundColor: active ? theme.colors.primary : theme.colors.surface,
-                            }}
-                          >
-                            <AppText style={{ fontSize: 11, fontWeight: "700", color: active ? "#fff" : theme.colors.subtle }}>
-                              {label}
-                            </AppText>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                    {/* Cooking guide quick actions */}
-                    <View style={{ flexDirection: "row", gap: 6 }}>
+                    {/* Meal type picker — only when the user is actually eating it */}
+                    {m.eating && (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                        {MEAL_OPTS.map(([key, label]) => {
+                          const active = m.meal!.mealType === key;
+                          return (
+                            <Pressable
+                              key={key}
+                              onPress={() => setMealType(i, key)}
+                              style={{
+                                paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99,
+                                borderWidth: 1,
+                                borderColor: active ? theme.colors.primary : theme.colors.border,
+                                backgroundColor: active ? theme.colors.primary : theme.colors.surface,
+                              }}
+                            >
+                              <AppText style={{ fontSize: 11, fontWeight: "700", color: active ? "#fff" : theme.colors.subtle }}>
+                                {label}
+                              </AppText>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    )}
+                    {/* Accept button — only when the user is actually eating it */}
+                    {m.eating && (
                       <Pressable
-                        onPress={() => send(askCook(m.meal!.name), L.cook)}
-                        disabled={sending}
+                        onPress={() => acceptLog(i)}
                         style={({ pressed }) => ({
-                          flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
-                          borderWidth: 1, borderColor: theme.colors.border, borderRadius: 10, paddingVertical: 8,
-                          backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
+                          flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                          backgroundColor: pressed ? theme.colors.primary2 : theme.colors.primary,
+                          borderRadius: 10, paddingVertical: 9,
                         })}
                       >
-                        <Ionicons name="restaurant-outline" size={14} color={theme.colors.primary} />
-                        <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.primary }}>{L.cook}</AppText>
+                        <Ionicons name="add-circle-outline" size={16} color="#fff" />
+                        <AppText style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>{L.add}</AppText>
                       </Pressable>
-                      <Pressable
-                        onPress={() => send(askEatOut(m.meal!.name), L.eatOut)}
-                        disabled={sending}
-                        style={({ pressed }) => ({
-                          flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
-                          borderWidth: 1, borderColor: theme.colors.border, borderRadius: 10, paddingVertical: 8,
-                          backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
-                        })}
-                      >
-                        <Ionicons name="storefront-outline" size={14} color={theme.colors.primary} />
-                        <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.primary }}>{L.eatOut}</AppText>
-                      </Pressable>
-                    </View>
-                    {/* Accept button */}
-                    <Pressable
-                      onPress={() => acceptLog(i)}
-                      style={({ pressed }) => ({
-                        flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                        backgroundColor: pressed ? theme.colors.primary2 : theme.colors.primary,
-                        borderRadius: 10, paddingVertical: 9,
-                      })}
-                    >
-                      <Ionicons name="add-circle-outline" size={16} color="#fff" />
-                      <AppText style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>{L.add}</AppText>
-                    </Pressable>
+                    )}
                   </View>
                 )
               )}
@@ -472,22 +445,36 @@ export default function CoachTab() {
             </View>
           )}
 
-          {/* Suggested questions (only before any message) */}
+          {/* Empty state: intro + example chips so users discover what Coach can do */}
           {messages.length === 0 && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-              {suggestions.map((q) => (
+            <View style={{ gap: 10, marginTop: 4 }}>
+              <AppText variant="muted" style={{ fontSize: 13 }}>{L.intro}</AppText>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {suggestions.map((q) => (
+                  <Pressable
+                    key={q}
+                    onPress={() => send(q)}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99,
+                      borderWidth: 1, borderColor: theme.colors.border,
+                      backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
+                    })}
+                  >
+                    <AppText style={{ fontSize: 12, color: theme.colors.primary }}>{q}</AppText>
+                  </Pressable>
+                ))}
+                {/* Photo capability */}
                 <Pressable
-                  key={q}
-                  onPress={() => send(q)}
+                  onPress={attachImage}
                   style={({ pressed }) => ({
                     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99,
                     borderWidth: 1, borderColor: theme.colors.border,
                     backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
                   })}
                 >
-                  <AppText style={{ fontSize: 12, color: theme.colors.primary }}>{q}</AppText>
+                  <AppText style={{ fontSize: 12, color: theme.colors.primary }}>{L.photo}</AppText>
                 </Pressable>
-              ))}
+              </View>
             </View>
           )}
         </ScrollView>

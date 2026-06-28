@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getInsight, chat, getHistory, clearHistory } = require("../controllers/coachController");
+const { getInsight, chat, getHistory, clearHistory, logFromMessage, unlogFromMessage } = require("../controllers/coachController");
 const protect = require("../middleware/auth");
 
 router.use(protect);
@@ -72,5 +72,7 @@ router.post("/chat", chat);
  */
 router.get("/history", getHistory);
 router.delete("/history", clearHistory);
+router.post("/log", logFromMessage);
+router.post("/unlog", unlogFromMessage);
 
 module.exports = router;

@@ -2,6 +2,8 @@ const { insightModels, chatModels } = require("../config/gemini");
 const { buildContext, contextToText } = require("../services/coachContext");
 const { computeHealthScore } = require("../services/healthScore");
 const ChatMessage = require("../models/ChatMessage");
+const Meal = require("../models/Meal");
+const cloudinary = require("../config/cloudinary");
 
 // Shared safety + style instruction injected into every coach prompt.
 const SAFETY = `You are "Coach", a warm, easy-going health buddy inside an app — like a supportive friend who keeps the user on track, not a textbook or a customer-service bot.
@@ -13,15 +15,28 @@ SAFETY:
 
 STYLE (very important):
 - Be SHORT by default: 2 to 3 sentences. EXCEPTION — when the user asks how to cook a dish, for a recipe, a meal plan, or a workout routine, give clear, concise NUMBERED steps.
-- For a yes/no question (e.g. "can I eat this?"), start with a clear verdict ("Yes", "Not really", "Yes, but..."), then ONE short reason.
+- For a "can I eat X?" question, give a quick verdict, then ASK ONE friendly clarifying question to advise better — e.g. which type / what's in it (especially dishes with many variants like bánh mì, cơm, salad, sandwich), whether they'll cook it or buy it, or what they'll eat it with. One natural question, not an interrogation.
+- Be interactive: prefer asking a short follow-up to gather info, instead of dumping all advice at once. Talk like a friend who wants details before giving the best tip.
 - Do NOT greet or say the user's name every message. Greet only on the very first message of a conversation. After that, just continue naturally like a friend mid-chat.
-- Warm, casual, encouraging. Vary your wording, do not repeat the same canned advice.
+- Talk like a REAL person in an ongoing chat — read the conversation history. If the user repeats a question you already answered, DO NOT answer again the same way: acknowledge it naturally ("Bạn hỏi lại nè 😄", "Như mình nói lúc nãy...") and add a NEW angle or ask a follow-up question.
+- Be conversational and practical, not a script. When it helps, ask a short follow-up question back (like a friend would) instead of dumping all advice at once.
+- When the user says they ARE eating a dish, react warmly and you may ask a quick follow-up (homemade or bought, eaten with what) to personalize the tip. Do NOT assume "dặn quán"/eating out unless they said so.
+- Warm, casual, encouraging. Vary wording AND substance — never repeat the same canned advice.
 - Prefer Vietnamese dishes when suggesting food.
 - Plain text only: no markdown, no asterisks, no bold, no headings, no tables.`;
 
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Meal type from the current hour (deterministic, overrides the model's guess).
+function mealTypeByHour(h) {
+  if (h < 11) return "breakfast";
+  if (h < 14) return "lunch";
+  if (h < 17) return "snack";
+  if (h < 21) return "dinner";
+  return "snack";
 }
 
 // Normalize requested language and build the reply-language instruction.
@@ -146,13 +161,24 @@ YOU ARE A FULL HEALTH COMPANION. You can:
 The user just said: "${userText}"
 
 Respond with ONLY valid JSON:
-{ "reply": "<your short, friendly answer in the required language>", "meal": null }
+{ "reply": "<your short, friendly answer in the required language>", "meal": null, "eating": false }
 
 - "reply": 2-3 short sentences, like a friend. Do NOT greet or use the user's name unless this is the very first message. Do NOT mention logging or diaries — the app shows an "Add" button for that.
-- "meal": whenever the user mentions, eats, or asks about a SPECIFIC dish, fill it with your best nutrition estimate so the app can offer to log it. Use null only for general talk.
+- "meal": whenever a SPECIFIC dish is discussed (asking about it, planning it, OR eating it), fill it so the app can show cooking tips + nutrition. Use null only for general talk with no dish.
   Shape: { "name": "<dish>", "calories": <kcal number>, "protein": <g>, "carbs": <g>, "fat": <g>, "mealType": "breakfast|lunch|dinner|snack" }.
-  For "name", use the dish EXACTLY as the user described it. Do NOT add a cooking method or detail they did not mention (if they said "ức gà", name it "ức gà", not "ức gà nướng").
-  Pick mealType by current hour: under 11 breakfast, 11-14 lunch, 14-17 snack, 17-21 dinner, otherwise snack.`;
+  For "name", use the dish EXACTLY as the user described it. Do NOT add a cooking method they did not mention (if they said "ức gà", name it "ức gà", not "ức gà nướng").
+- "eating": true ONLY if the user indicates they are eating or have already eaten this dish (e.g. "tôi ăn", "đang ăn", "vừa ăn", "có"). false if they are only ASKING or PLANNING.
+- CRITICAL: if eating is true, you MUST also fill "meal" with that dish (re-state it even if it was mentioned in an earlier turn). NEVER return eating=true with meal=null.
+  Pick mealType by current hour: under 11 breakfast, 11-14 lunch, 14-17 snack, 17-21 dinner, otherwise snack.
+
+EXAMPLES (match this interactive behavior, not the exact words):
+User: "Tôi ăn bánh mì được không?" => {"reply":"Được nha! Mà bánh mì gì vậy — thịt, trứng hay chay? Bạn tự làm hay mua ngoài, ăn kèm gì không? Cho mình biết để tư vấn sát hơn.","meal":{"name":"bánh mì","calories":350,"protein":12,"carbs":45,"fat":12,"mealType":"breakfast"},"eating":false}
+User: "Tôi ăn phở được không?" => {"reply":"Phở ổn đó! Bạn ăn phở bò hay gà, tự nấu hay ra quán? Mình mách cho hợp.","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
+User: "Tôi đang ăn phở" => {"reply":"Ngon miệng nha! Bạn ăn kèm rau không? Thêm rau giá với ít nước béo là cân bằng hơn đó.","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":true}
+User asks the SAME thing a 3rd time => {"reply":"Bạn hỏi lại nè 😄 Vẫn ổn như mình nói. Hay bạn đang phân vân điều gì khác về nó?","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
+User: "Hôm nay tôi thế nào?" => {"reply":"Bạn đang ổn, mới nạp ít calo thôi.","meal":null,"eating":false}
+
+Always read the history first so repeated or follow-up questions feel natural, not robotic.`;
 
     // Multimodal payload when an image is present (Gemini 2.5-flash is vision-capable)
     const payload = image
@@ -170,38 +196,103 @@ Respond with ONLY valid JSON:
     }
     const reply = (parsed.reply || "").trim();
 
-    // Suggested meal (NOT logged here — the app shows an "Add" button the user taps).
+    // Suggested meal (NOT logged here — the app shows an "Add" button when eating).
     let meal = null;
     const m = parsed.meal;
     if (m && m.name && m.calories != null) {
-      const mealType = ["breakfast", "lunch", "dinner", "snack"].includes(m.mealType) ? m.mealType : "snack";
       meal = {
         name: String(m.name).trim(),
         calories: Math.max(0, Math.round(Number(m.calories) || 0)),
         protein: Math.max(0, Math.round(Number(m.protein) || 0)),
         carbs: Math.max(0, Math.round(Number(m.carbs) || 0)),
         fat: Math.max(0, Math.round(Number(m.fat) || 0)),
-        mealType,
+        mealType: mealTypeByHour(hour), // deterministic by time; user can change with chips
       };
     }
+    const eating = !!parsed.eating && !!meal; // only show "Add" when the user is actually eating it
 
-    // Persist text only (image not stored).
-    await ChatMessage.create([
-      { user: req.user.id, role: "user", text: image ? `📷 ${userText}` : userText },
-      { user: req.user.id, role: "coach", text: reply },
+    // Upload the photo to Cloudinary so it persists in chat history. Best-effort:
+    // if it fails, we still save the text turn.
+    let imageUrl = null;
+    if (image) {
+      try {
+        const up = await cloudinary.uploader.upload(
+          `data:${mimeType || "image/jpeg"};base64,${image}`,
+          { folder: "healthysnap/coach", transformation: [{ width: 800, crop: "limit" }] }
+        );
+        imageUrl = up.secure_url;
+      } catch (e) {
+        console.error("Coach image upload failed:", e.message);
+      }
+    }
+
+    const docs = await ChatMessage.create([
+      { user: req.user.id, role: "user", text: image ? `📷 ${userText}` : userText, image: imageUrl },
+      { user: req.user.id, role: "coach", text: reply, meal: meal || null, mealEating: eating },
     ]);
 
-    res.json({ reply, meal });
+    // messageId of the coach turn lets the app log/undo the suggested meal later
+    res.json({ reply, meal, eating, image: imageUrl, messageId: docs[1]._id });
   } catch (err) {
     console.error("Coach chat error:", err.message);
-    res.status(500).json({ message: "Coach is unavailable right now. Please try again." });
+    // Distinguish "out of quota" (429) so the app can show a clearer message.
+    const quota = /429|quota|rate limit|too many requests/i.test(String(err.message || ""));
+    res.status(quota ? 429 : 500).json({ message: quota ? "QUOTA" : "Coach is unavailable right now. Please try again." });
   }
 };
 
 // ─── Chat History (GET /api/coach/history) ────────────────────────────────────
 exports.getHistory = async (req, res) => {
   const msgs = await ChatMessage.find({ user: req.user.id }).sort({ createdAt: 1 }).limit(100);
-  res.json({ messages: msgs.map((m) => ({ role: m.role, text: m.text })) });
+  res.json({
+    messages: msgs.map((m) => ({
+      id: m._id,
+      role: m.role,
+      text: m.text,
+      image: m.image || undefined,
+      meal: m.meal || null,
+      eating: m.mealEating || false,
+      loggedId: m.loggedMealId || null,
+    })),
+  });
+};
+
+// ─── Log a suggested meal from a coach message (POST /api/coach/log) ───────────
+// body: { messageId, mealType? } → creates the Meal in the diary and links it.
+exports.logFromMessage = async (req, res) => {
+  const { messageId, mealType } = req.body;
+  const msg = await ChatMessage.findOne({ _id: messageId, user: req.user.id });
+  if (!msg || !msg.meal) return res.status(404).json({ message: "No suggested meal here." });
+  if (msg.loggedMealId) return res.status(400).json({ message: "Already added." });
+
+  const m = msg.meal;
+  const type = ["breakfast", "lunch", "dinner", "snack"].includes(mealType) ? mealType : m.mealType;
+  const meal = await Meal.create({
+    user: req.user.id,
+    name: m.name,
+    mealType: type,
+    calories: m.calories,
+    protein: m.protein,
+    carbs: m.carbs,
+    fat: m.fat,
+    date: todayKey(),
+  });
+  msg.loggedMealId = meal._id;
+  await msg.save();
+  res.json({ logged: { id: meal._id, name: meal.name, mealType: meal.mealType, calories: meal.calories } });
+};
+
+// ─── Undo a logged meal (POST /api/coach/unlog) ───────────────────────────────
+exports.unlogFromMessage = async (req, res) => {
+  const { messageId } = req.body;
+  const msg = await ChatMessage.findOne({ _id: messageId, user: req.user.id });
+  if (!msg) return res.status(404).json({ message: "Message not found." });
+  if (msg.loggedMealId) {
+    await Meal.deleteOne({ _id: msg.loggedMealId, user: req.user.id });
+    msg.loggedMealId = null;
+    await msg.save();
+  }
+  res.json({ message: "Removed." });
 };
 
 // ─── Clear History (DELETE /api/coach/history) ────────────────────────────────
