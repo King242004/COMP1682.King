@@ -45,7 +45,7 @@ const visionModels = buildModels(VISION_MODELS, { temperature: 0.2, responseMime
 const insightModels = buildModels(TEXT_MODELS, { temperature: 0.3, responseMimeType: "application/json" });
 
 // Coach conversation — JSON { reply, meal } (also handles attached food photos).
-const chatModels = buildModels(TEXT_MODELS, { temperature: 0.4, responseMimeType: "application/json" });
+const chatModels = buildModels(TEXT_MODELS, { temperature: 0.75, responseMimeType: "application/json" });
 
 // Backwards-compatible single handles (first available model).
 const visionModel = visionModels[0];
