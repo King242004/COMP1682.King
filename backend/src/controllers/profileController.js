@@ -56,7 +56,7 @@ exports.getProfile = async (req, res) => {
 
 // ─── Update Profile ───────────────────────────────────────────────────────────
 exports.updateProfile = async (req, res) => {
-  const { name, gender, age, weight, height, goal, activityLevel, conditions, calorieGoal, avatar } = req.body;
+  const { name, gender, age, weight, height, goal, activityLevel, conditions, calorieGoal, avatar, language } = req.body;
 
   // Validation
   if (age && (age < 10 || age > 120))
@@ -76,6 +76,9 @@ exports.updateProfile = async (req, res) => {
 
   if (activityLevel && !["sedentary", "moderate", "active"].includes(activityLevel))
     return res.status(400).json({ message: "Invalid activity level." });
+
+  if (language && !["vi", "en"].includes(language))
+    return res.status(400).json({ message: "Language must be vi or en." });
 
   // Auto calculate TDEE as calorie goal if not manually set
   let finalCalorieGoal = calorieGoal;
@@ -101,6 +104,7 @@ exports.updateProfile = async (req, res) => {
       ...(conditions && { conditions }),
       ...(finalCalorieGoal && { calorieGoal: finalCalorieGoal }),
       ...(avatar !== undefined && { avatar }),
+      ...(language && { language }),
     },
     { new: true }
   ).select("-password");

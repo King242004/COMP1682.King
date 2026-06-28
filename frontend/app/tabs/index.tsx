@@ -1,14 +1,19 @@
 // HOME SCREEN
-import { useEffect, useState, useMemo } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { useCallback, useState, useMemo } from "react";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { useRouter } from "expo-router";
-import { useAuth } from "../context/AuthContext";
-import { useMeals } from "../context/MealsContext";
-import { theme, macroGoals } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Card } from "../ui/components/Card";
-import { Screen } from "../ui/components/Screen";
+import { useRouter, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/context/AuthContext";
+import { useMeals } from "@/context/MealsContext";
+import { getExercisesByDate, deleteExercise, type Exercise } from "@/utils/exercise";
+import { getInsight, getCachedInsight, cacheInsight, type CoachInsight } from "@/utils/coach";
+import { dateKey } from "@/utils/date";
+import { resolveLanguage } from "@/utils/language";
+import { theme, macroGoals } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
+import { Card } from "@/ui/components/Card";
+import { Screen } from "@/ui/components/Screen";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -18,10 +23,6 @@ const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
   { key: "dinner", label: "Dinner", icon: "🍽️" },
   { key: "snack", label: "Snacks", icon: "🍎" },
 ];
-
-function getDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
 
 function getLast7Days() {
   const days = [];
@@ -73,20 +74,73 @@ function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { meals, dailyTotals, historyMeals, fetchMealsByDate, fetchMealHistory } = useMeals();
 
   const today = new Date();
-  const todayKey = getDateKey(today);
+  const todayKey = dateKey(today);
   const [selectedDate, setSelectedDate] = useState(todayKey);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [totalBurned, setTotalBurned] = useState(0);
+  const [coachInsight, setCoachInsight] = useState<CoachInsight | null>(null);
 
-  useEffect(() => {
-    fetchMealsByDate(selectedDate);
-  }, [selectedDate]);
+  const loadExercises = useCallback(async () => {
+    if (!token) return;
+    try {
+      const { exercises, totalBurned } = await getExercisesByDate(token, selectedDate);
+      setExercises(exercises);
+      setTotalBurned(totalBurned);
+    } catch {
+      setExercises([]);
+      setTotalBurned(0);
+    }
+  }, [token, selectedDate]);
 
-  useEffect(() => {
-    fetchMealHistory();
-  }, []);
+  // Coach insight is for "today" only. Show cached instantly, refresh in background.
+  const lang = resolveLanguage(user?.language);
+  const loadInsight = useCallback(async () => {
+    if (!token || selectedDate !== todayKey) { setCoachInsight(null); return; }
+    const cached = await getCachedInsight(todayKey, lang);
+    if (cached) setCoachInsight(cached);
+    try {
+      const fresh = await getInsight(token, todayKey, lang);
+      setCoachInsight(fresh);
+      cacheInsight(todayKey, lang, fresh);
+    } catch {
+      if (!cached) setCoachInsight(null);
+    }
+  }, [token, selectedDate, todayKey, lang]);
+
+  // Refetch on focus (and when the selected date changes) so meals/workouts logged
+  // elsewhere — e.g. "Eat" from the Meal Plan — show up on return.
+  useFocusEffect(
+    useCallback(() => {
+      fetchMealsByDate(selectedDate);
+      fetchMealHistory();
+      loadExercises();
+      loadInsight();
+    }, [selectedDate, loadExercises, loadInsight])
+  );
+
+  const onDeleteExercise = (item: Exercise) => {
+    Alert.alert("Delete workout?", `Remove "${item.name}" from today.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          if (!token) return;
+          setExercises((prev) => prev.filter((e) => e.id !== item.id));
+          setTotalBurned((prev) => prev - item.caloriesBurned);
+          try {
+            await deleteExercise(token, item.id);
+          } catch {
+            loadExercises(); // resync on failure
+          }
+        },
+      },
+    ]);
+  };
 
   // Streak calculation
   const streak = useMemo(() => {
@@ -95,7 +149,7 @@ export default function HomeScreen() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     for (let i = 0; i < 365; i++) {
-      const key = getDateKey(d);
+      const key = dateKey(d);
       if (loggedDaysSet.has(key)) {
         count++;
         d.setDate(d.getDate() - 1);
@@ -156,7 +210,7 @@ export default function HomeScreen() {
         {/* 7-day row - clickable */}
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           {last7.map((d, i) => {
-            const key = getDateKey(d);
+            const key = dateKey(d);
             const logged = loggedDays.has(key);
             const isSelected = key === selectedDate;
             return (
@@ -276,6 +330,66 @@ export default function HomeScreen() {
           </View>
         </Card>
 
+        {/* Activity — closes the calories IN/OUT loop */}
+        <Card style={{ padding: theme.space.lg, gap: 10 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{
+                width: 36, height: 36, borderRadius: 12,
+                backgroundColor: "rgba(255,138,61,0.12)",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name="flame" size={18} color={theme.colors.accent2} />
+              </View>
+              <View>
+                <AppText variant="h2" style={{ fontSize: 15 }}>Activity</AppText>
+                <AppText variant="subtle" style={{ fontSize: 12 }}>
+                  {totalBurned > 0 ? `${totalBurned} kcal burned` : "No workout logged"}
+                </AppText>
+              </View>
+            </View>
+            {isToday && (
+              <Pressable
+                onPress={() => router.push("/exercise/log-workout" as any)}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8,
+                  backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.08)",
+                })}
+              >
+                <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.primary }}>Log</AppText>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Net calories: eaten − burned */}
+          {totalBurned > 0 && (
+            <View style={{
+              flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+              backgroundColor: "rgba(37,99,235,0.05)", borderRadius: 12, padding: theme.space.md,
+            }}>
+              <AppText variant="subtle" style={{ fontSize: 12 }}>Net calories (eaten − burned)</AppText>
+              <AppText style={{ fontSize: 15, fontWeight: "800", color: theme.colors.text }}>
+                {(eaten - totalBurned).toLocaleString()} kcal
+              </AppText>
+            </View>
+          )}
+
+          {/* Logged workouts */}
+          {exercises.map((ex) => (
+            <View key={ex.id} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <AppText variant="body2" style={{ fontWeight: "600" }}>{ex.name}</AppText>
+                <AppText variant="subtle" style={{ fontSize: 11 }}>{ex.durationMin} min · {ex.caloriesBurned} kcal</AppText>
+              </View>
+              {isToday && (
+                <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                  <Ionicons name="trash-outline" size={17} color={theme.colors.subtle} />
+                </Pressable>
+              )}
+            </View>
+          ))}
+        </Card>
+
         {/* Diary */}
         <View style={{ gap: 4 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -360,25 +474,63 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {/* Suggestion */}
-        <Card style={{
-          padding: theme.space.lg,
-          borderColor: "rgba(47,191,113,0.20)",
-          backgroundColor: "rgba(47,191,113,0.06)",
-        }}>
-          <View style={{ gap: 4 }}>
-            <AppText variant="h2" style={{ fontSize: 14 }}>What should I eat next?</AppText>
-            <AppText variant="muted" style={{ fontSize: 13 }}>
-              {meals.length === 0
-                ? "Start with a high-protein breakfast to stay full."
-                : remaining > 600
-                ? "You have room for a balanced meal — lean protein, veggies, slow carbs."
-                : remaining > 250
-                ? "Go lighter — protein and veggies, watch the carbs."
-                : "Almost at your goal. Try a light snack like yogurt or fruit."}
-            </AppText>
-          </View>
-        </Card>
+        {/* AI Coach — flagship entry */}
+        {isToday && (
+          <Pressable
+            onPress={() => router.push("/tabs/coach" as any)}
+            style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] })}
+          >
+            <Card style={{
+              padding: theme.space.lg,
+              borderColor: "rgba(37,99,235,0.20)",
+              backgroundColor: "rgba(37,99,235,0.05)",
+            }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={{
+                  width: 44, height: 44, borderRadius: 14,
+                  backgroundColor: theme.colors.primary,
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Ionicons name="sparkles" size={20} color="#fff" />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <AppText variant="h2" style={{ fontSize: 15 }}>AI Coach</AppText>
+                    {coachInsight && (
+                      <View style={{
+                        flexDirection: "row", alignItems: "center", gap: 3,
+                        backgroundColor: "rgba(37,99,235,0.10)",
+                        paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99,
+                      }}>
+                        <AppText style={{ fontSize: 11, fontWeight: "800", color: theme.colors.primary }}>
+                          {coachInsight.score}
+                        </AppText>
+                        <AppText style={{ fontSize: 10, color: theme.colors.primary }}>/100</AppText>
+                      </View>
+                    )}
+                  </View>
+                  <AppText variant="muted" style={{ fontSize: 13 }}>
+                    {coachInsight?.summary || "Get personalized analysis and ask anything about your nutrition."}
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
+              </View>
+
+              {/* Top warning, if any */}
+              {coachInsight && coachInsight.warnings.length > 0 && (
+                <View style={{
+                  flexDirection: "row", gap: 6, alignItems: "flex-start", marginTop: 10,
+                  backgroundColor: "rgba(229,72,77,0.08)", borderRadius: 10, padding: 10,
+                }}>
+                  <Ionicons name="warning-outline" size={15} color={theme.colors.danger} />
+                  <AppText style={{ fontSize: 12, color: theme.colors.danger, flex: 1 }}>
+                    {coachInsight.warnings[0]}
+                  </AppText>
+                </View>
+              )}
+            </Card>
+          </Pressable>
+        )}
       </ScrollView>
     </Screen>
   );

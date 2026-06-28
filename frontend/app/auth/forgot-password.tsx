@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { View, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { apiRequest } from "../utils/api";
-import { theme } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Button } from "../ui/components/Button";
-import { Screen } from "../ui/components/Screen";
-import { TextField } from "../ui/components/TextField";
+import { apiRequest } from "@/utils/api";
+import { theme } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
+import { Button } from "@/ui/components/Button";
+import { Screen } from "@/ui/components/Screen";
+import { TextField } from "@/ui/components/TextField";
 
 type Step = "email" | "otp" | "password";
 

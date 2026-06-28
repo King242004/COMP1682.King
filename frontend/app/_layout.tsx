@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
-import { AuthProvider } from "./context/AuthContext";
-import { MealsProvider } from "./context/MealsContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { MealsProvider } from "@/context/MealsContext";
 
 export default function RootLayout() {
   return (
@@ -14,7 +14,9 @@ export default function RootLayout() {
           <Stack.Screen name="tabs" />
           {/* Sub-flows pushed OVER the tabs — back() pops here naturally */}
           <Stack.Screen name="scan" />
-          <Stack.Screen name="settings" />
+          <Stack.Screen name="profile/edit" />
+          <Stack.Screen name="profile/settings" />
+          <Stack.Screen name="profile/progress" />
           <Stack.Screen name="community/post-create" />
           <Stack.Screen name="community/user-profile" />
           <Stack.Screen name="community/discover" />
@@ -22,6 +24,9 @@ export default function RootLayout() {
           <Stack.Screen name="meals/edit" />
           <Stack.Screen name="meals/detail" />
           <Stack.Screen name="meals/history" />
+          <Stack.Screen name="plan/weekly" />
+          <Stack.Screen name="plan/add-meal" />
+          <Stack.Screen name="exercise/log-workout" />
         </Stack>
       </MealsProvider>
     </AuthProvider>

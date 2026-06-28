@@ -10,10 +10,14 @@ const app = express();
 connectDB();
 
 app.use(cors());
-app.use(express.json());
+// Larger limit so base64 food photos sent to the AI coach chat fit (default is 100kb)
+app.use(express.json({ limit: "15mb" }));
 
 app.use("/api/auth", require("./src/routes/auth"));
 app.use("/api/meals", require("./src/routes/meal"));
+app.use("/api/plan", require("./src/routes/plan"));
+app.use("/api/exercise", require("./src/routes/exercise"));
+app.use("/api/coach", require("./src/routes/coach"));
 app.use("/api/profile", require("./src/routes/profile"));
 app.use("/api/user", require("./src/routes/user"));
 app.use("/api/scan", require("./src/routes/scan"));

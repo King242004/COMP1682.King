@@ -1,13 +1,13 @@
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useAuth } from "../context/AuthContext";
-import { useMeals } from "../context/MealsContext";
-import { theme, macroGoals } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Button } from "../ui/components/Button";
-import { Card } from "../ui/components/Card";
-import { Screen } from "../ui/components/Screen";
-import { ScreenHeader } from "../ui/components/ScreenHeader";
+import { useAuth } from "@/context/AuthContext";
+import { useMeals } from "@/context/MealsContext";
+import { theme, macroGoals } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
+import { Button } from "@/ui/components/Button";
+import { Card } from "@/ui/components/Card";
+import { Screen } from "@/ui/components/Screen";
+import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import Svg, { Circle } from "react-native-svg";
 
 const MEAL_TYPE_ICON: Record<string, string> = {
