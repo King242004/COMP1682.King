@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { FlatList, Image, Pressable, RefreshControl, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
-import { getFeed, getExplore, toggleLike, type FeedPost } from "../utils/community";
-import { theme } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Card } from "../ui/components/Card";
-import { Screen } from "../ui/components/Screen";
+import { useAuth } from "@/context/AuthContext";
+import { getFeed, getExplore, toggleLike, type FeedPost } from "@/utils/community";
+import { theme } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
+import { Card } from "@/ui/components/Card";
+import { Screen } from "@/ui/components/Screen";
 
 type Tab = "feed" | "explore";
 
@@ -30,18 +30,24 @@ export default function CommunityScreen() {
   const { token } = useAuth();
   const [tab, setTab] = useState<Tab>("feed");
   const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);   // focus/initial load → centered spinner
+  const [refreshing, setRefreshing] = useState(false); // pull-to-refresh only
 
-  const load = useCallback(async (which: Tab) => {
+  // Shared fetch. `mode` decides which spinner reflects this load:
+  // "refresh" drives RefreshControl (user gesture), otherwise the centered loader.
+  // Driving RefreshControl programmatically during a screen transition leaves its
+  // spinner stuck, so focus/initial loads must NOT touch `refreshing`.
+  const load = useCallback(async (which: Tab, mode: "load" | "refresh" = "load") => {
     if (!token) return;
-    setLoading(true);
+    const setBusy = mode === "refresh" ? setRefreshing : setLoading;
+    setBusy(true);
     try {
       const data = which === "feed" ? await getFeed(token) : await getExplore(token);
       setPosts(data);
     } catch {
       setPosts([]);
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }, [token]);
 
@@ -149,7 +155,7 @@ export default function CommunityScreen() {
         data={posts}
         keyExtractor={(p) => p.id}
         contentContainerStyle={{ paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40, gap: theme.space.lg }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={() => load(tab)} tintColor={theme.colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(tab, "refresh")} tintColor={theme.colors.primary} />}
         ListHeaderComponent={
           <View style={{ gap: theme.space.md, marginBottom: theme.space.sm }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -203,7 +209,11 @@ export default function CommunityScreen() {
           </View>
         }
         ListEmptyComponent={
-          !loading ? (
+          loading ? (
+            <View style={{ paddingVertical: theme.space.xl, alignItems: "center" }}>
+              <ActivityIndicator color={theme.colors.primary} />
+            </View>
+          ) : (
             <Card style={{ padding: theme.space.xl, alignItems: "center", gap: 10 }}>
               <AppText style={{ fontSize: 40 }}>🥗</AppText>
               <AppText variant="h2" style={{ textAlign: "center" }}>
@@ -215,7 +225,7 @@ export default function CommunityScreen() {
                   : "Be the first to share a healthy meal!"}
               </AppText>
             </Card>
-          ) : null
+          )
         }
         renderItem={renderPost}
         showsVerticalScrollIndicator={false}

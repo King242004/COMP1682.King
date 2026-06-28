@@ -2,15 +2,15 @@ import { useEffect, useState, useRef } from "react";
 import { FlatList, Image, Pressable, TextInput, View, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   searchUsers, getSuggestions, followUser, unfollowUser, type DiscoverUser,
-} from "../utils/community";
-import { theme } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Card } from "../ui/components/Card";
-import { Screen } from "../ui/components/Screen";
-import { ScreenHeader } from "../ui/components/ScreenHeader";
+} from "@/utils/community";
+import { theme } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
+import { Card } from "@/ui/components/Card";
+import { Screen } from "@/ui/components/Screen";
+import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
 const GOAL_LABEL: Record<string, string> = {
   lose_weight: "Lose weight", gain_muscle: "Gain muscle", eat_healthy: "Eat healthy",

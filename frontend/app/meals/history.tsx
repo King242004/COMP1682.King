@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useMeals, Meal } from "../context/MealsContext";
-import { theme } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Button } from "../ui/components/Button";
-import { Screen } from "../ui/components/Screen";
-import { ScreenHeader } from "../ui/components/ScreenHeader";
-import { Card } from "../ui/components/Card";
+import { useMeals, Meal } from "@/context/MealsContext";
+import { theme } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
+import { Button } from "@/ui/components/Button";
+import { Screen } from "@/ui/components/Screen";
+import { ScreenHeader } from "@/ui/components/ScreenHeader";
+import { Card } from "@/ui/components/Card";
 
 // Meal-type emoji shown as the row avatar — friendlier than name initials
 const MEAL_TYPE_ICON: Record<string, string> = {

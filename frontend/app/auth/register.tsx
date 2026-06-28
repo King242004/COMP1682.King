@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { useAuth } from "../context/AuthContext";
-import { theme } from "../ui/theme";
-import { AppText } from "../ui/components/AppText";
-import { Button } from "../ui/components/Button";
-import { Screen } from "../ui/components/Screen";
-import { TextField } from "../ui/components/TextField";
+import { useAuth } from "@/context/AuthContext";
+import { theme } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
+import { Button } from "@/ui/components/Button";
+import { Screen } from "@/ui/components/Screen";
+import { TextField } from "@/ui/components/TextField";
 
 export default function RegisterScreen() {
   const router = useRouter();

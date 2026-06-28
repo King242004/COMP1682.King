@@ -22,6 +22,8 @@ const userSchema = new mongoose.Schema(
     },
     conditions: [{ type: String }], // e.g. ["diabetes", "hypertension"]
     calorieGoal: { type: Number, default: 2000 },
+    language: { type: String, enum: ["vi", "en"] }, // AI Coach reply language (unset = follow device)
+
   },
   { timestamps: true }
 );
