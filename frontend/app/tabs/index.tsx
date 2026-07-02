@@ -1,31 +1,23 @@
 // HOME SCREEN
-import { useCallback, useState, useMemo } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { useCallback, useState, useMemo, useRef } from "react";
+import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { getExercisesByDate, deleteExercise, type Exercise } from "@/utils/exercise";
-import { getPlanMeals, type PlanMeal } from "@/utils/plan";
+import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/utils/plan";
 import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/utils/coach";
 import { dateKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme, macroGoals } from "@/ui/theme";
+import { MEAL_TYPE_META, type MealTypeKey } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 
-type MealType = "breakfast" | "lunch" | "dinner" | "snack";
-
-const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
-  { key: "breakfast", label: "Breakfast", icon: "☕" },
-  { key: "lunch", label: "Lunch", icon: "🥗" },
-  { key: "dinner", label: "Dinner", icon: "🍽️" },
-  { key: "snack", label: "Snacks", icon: "🍎" },
-];
-
-function getLast7Days() {
+function getCurrentWeekDays() {
   const days = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -112,6 +104,41 @@ export default function HomeScreen() {
     }
   }, [token, todayKey]);
 
+  // Tick a planned meal inside the Diary → logs it to the real diary (markEaten)
+  const eatingPlanRef = useRef(false); // in-flight guard against double-tap
+  const eatPlanned = async (p: PlanMeal) => {
+    if (!token || eatingPlanRef.current) return;
+    eatingPlanRef.current = true;
+    try {
+      await markPlanEaten(token, p.id);
+      await Promise.all([fetchMealsByDate(todayKey), loadPlanToday()]);
+    } catch {
+      Alert.alert("Error", "Couldn't log this meal. Please try again.");
+    } finally {
+      eatingPlanRef.current = false;
+    }
+  };
+
+  // Remove a planned meal right from the Diary (edit lives in the Plan screen)
+  const removePlanned = (p: PlanMeal) => {
+    Alert.alert("Remove from plan?", `Remove "${p.name}" from today's plan.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          if (!token) return;
+          setPlanToday((prev) => prev.filter((x) => x.id !== p.id));
+          try {
+            await deletePlanMeal(token, p.id);
+          } catch {
+            loadPlanToday(); // resync on failure
+          }
+        },
+      },
+    ]);
+  };
+
   // Coach insight is for "today" only. Show cached instantly; only hit Gemini when
   // the cache is stale (TTL) — this runs on EVERY focus, so without the TTL each
   // visit to Home would burn a free-tier AI request.
@@ -131,6 +158,20 @@ export default function HomeScreen() {
       if (!cached) setCoachInsight(null);
     }
   }, [token, selectedDate, todayKey, lang]);
+
+  // Pull-to-refresh re-runs every loader (insight still respects its TTL cache)
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchMealsByDate(selectedDate),
+      fetchMealHistory(),
+      loadExercises(),
+      loadInsight(),
+      loadPlanToday(),
+    ]);
+    setRefreshing(false);
+  }, [selectedDate, loadExercises, loadInsight, loadPlanToday]);
 
   // Refetch on focus (and when the selected date changes) so meals/workouts logged
   // elsewhere — e.g. "Eat" from the Meal Plan — show up on return.
@@ -164,12 +205,14 @@ export default function HomeScreen() {
     ]);
   };
 
-  // Streak calculation
+  // Streak calculation — today not logged yet doesn't break the streak
+  // (still counting from yesterday until the day actually ends)
   const streak = useMemo(() => {
     const loggedDaysSet = new Set(historyMeals.map((m) => m.date));
     let count = 0;
     const d = new Date();
     d.setHours(0, 0, 0, 0);
+    if (!loggedDaysSet.has(dateKey(d))) d.setDate(d.getDate() - 1);
     for (let i = 0; i < 365; i++) {
       const key = dateKey(d);
       if (loggedDaysSet.has(key)) {
@@ -190,10 +233,10 @@ export default function HomeScreen() {
   const totalFat = dailyTotals.fat;
   const totalProtein = dailyTotals.protein;
 
-  const last7 = getLast7Days();
+  const weekDays = getCurrentWeekDays();
   const loggedDays = new Set(historyMeals.map((m) => m.date));
 
-  const mealsByType = (type: MealType) =>
+  const mealsByType = (type: MealTypeKey) =>
     meals.filter((m) => m.mealType === type);
 
   const isToday = selectedDate === todayKey;
@@ -208,6 +251,9 @@ export default function HomeScreen() {
           gap: theme.space.lg,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} colors={[theme.colors.primary]} />
+        }
       >
         {/* Header */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -229,17 +275,20 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* 7-day row - clickable */}
+        {/* Current week row (Mon→Sun) - past/today clickable, future dimmed */}
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          {last7.map((d, i) => {
+          {weekDays.map((d, i) => {
             const key = dateKey(d);
             const logged = loggedDays.has(key);
             const isSelected = key === selectedDate;
+            const isFuture = key > todayKey; // YYYY-MM-DD so string compare works
             return (
               <Pressable
                 key={i}
+                disabled={isFuture}
                 onPress={() => setSelectedDate(key)}
                 style={({ pressed }) => ({
+                  opacity: isFuture ? 0.35 : 1,
                   width: 42, paddingVertical: 9,
                   borderRadius: 16,
                   alignItems: "center", gap: 5,
@@ -352,9 +401,149 @@ export default function HomeScreen() {
           </View>
         </Card>
 
-        {/* Activity — closes the calories IN/OUT loop */}
-        <Card style={{ padding: theme.space.lg, gap: 10 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        {/* Diary */}
+        <View style={{ gap: 4 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <AppText variant="h2">Diary</AppText>
+            <Pressable onPress={() => router.push("/meals/history")}>
+              <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>View all</AppText>
+            </Pressable>
+          </View>
+
+          {MEAL_TYPE_META.map((mt) => {
+            const typeMeals = mealsByType(mt.key);
+            const typeCalories = typeMeals.reduce((s, m) => s + m.calories, 0);
+            const typeCarbs = typeMeals.reduce((s, m) => s + (m.carbs ?? 0), 0);
+            const typeFat = typeMeals.reduce((s, m) => s + (m.fat ?? 0), 0);
+            const typeProtein = typeMeals.reduce((s, m) => s + (m.protein ?? 0), 0);
+            const totalMacroG = typeCarbs + typeFat + typeProtein;
+            const carbPct = totalMacroG > 0 ? Math.round((typeCarbs / totalMacroG) * 100) : 0;
+            const fatPct = totalMacroG > 0 ? Math.round((typeFat / totalMacroG) * 100) : 0;
+            const proteinPct = totalMacroG > 0 ? Math.round((typeProtein / totalMacroG) * 100) : 0;
+
+            const plannedForType = isToday
+              ? planToday.filter((p) => p.mealType === mt.key && !p.done)
+              : [];
+
+            return (
+              <Card key={mt.key} style={{ padding: theme.space.lg, gap: 10 }}>
+                {/* Header: icon + label | tổng kcal + nút thêm món bên phải */}
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <View style={{
+                      width: 36, height: 36, borderRadius: 12,
+                      backgroundColor: mt.bg,
+                      alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Ionicons name={mt.icon as any} size={18} color={mt.color} />
+                    </View>
+                    <AppText variant="h2" style={{ fontSize: 15 }}>{mt.label}</AppText>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    {typeCalories > 0 && (
+                      <AppText style={{ fontSize: 14, fontWeight: "800", color: theme.colors.text }}>
+                        {typeCalories} <AppText variant="subtle" style={{ fontSize: 11 }}>kcal</AppText>
+                      </AppText>
+                    )}
+                    {/* Quick add — jumps to Add meal with this meal type preselected */}
+                    {isToday && (
+                      <Pressable
+                        onPress={() => router.push({ pathname: "/meals/add", params: { mealType: mt.key } })}
+                        hitSlop={8}
+                        style={({ pressed }) => ({
+                          width: 26, height: 26, borderRadius: 13,
+                          alignItems: "center", justifyContent: "center",
+                          backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.10)",
+                        })}
+                      >
+                        <Ionicons name="add" size={17} color={theme.colors.primary} />
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                {/* Eaten meals — each in its own framed row, tap → detail (edit/delete there) */}
+                {typeMeals.map((m) => (
+                  <Pressable
+                    key={m.id}
+                    onPress={() => router.push({ pathname: "/meals/detail", params: { id: m.id } })}
+                    style={({ pressed }) => ({
+                      flexDirection: "row", alignItems: "center", gap: 8,
+                      borderWidth: 1, borderColor: theme.colors.border,
+                      borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+                      backgroundColor: pressed ? theme.colors.tint : "transparent",
+                    })}
+                  >
+                    <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600" }}>
+                      {m.name}
+                    </AppText>
+                    <AppText variant="subtle" style={{ fontSize: 12 }}>{m.calories} kcal</AppText>
+                    <Ionicons name="chevron-forward" size={14} color={theme.colors.subtle} />
+                  </Pressable>
+                ))}
+
+                {/* Planned (not yet eaten) — dashed frame: ✓ logs it, ✕ removes it */}
+                {plannedForType.map((p) => (
+                  <View
+                    key={p.id}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 8,
+                      borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,
+                      borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+                    }}
+                  >
+                    <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontSize: 13, color: theme.colors.muted }}>
+                      {p.name}
+                    </AppText>
+                    <AppText variant="subtle" style={{ fontSize: 11 }}>{p.calories} kcal</AppText>
+                    <Pressable
+                      onPress={() => eatPlanned(p)}
+                      hitSlop={6}
+                      style={({ pressed }) => ({
+                        flexDirection: "row", alignItems: "center", gap: 3,
+                        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+                        backgroundColor: pressed ? theme.colors.tint : "rgba(47,191,113,0.10)",
+                      })}
+                    >
+                      <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
+                      <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>Eat</AppText>
+                    </Pressable>
+                    <Pressable onPress={() => removePlanned(p)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                      <Ionicons name="close" size={16} color={theme.colors.subtle} />
+                    </Pressable>
+                  </View>
+                ))}
+
+                {/* Empty only when there is nothing at all in this slot */}
+                {typeMeals.length === 0 && plannedForType.length === 0 && (
+                  <AppText variant="subtle" style={{ fontSize: 12 }}>No meals logged</AppText>
+                )}
+
+                {/* Slim macro split bar (percent details live in the Macros card above) */}
+                {totalMacroG > 0 && (
+                  <View style={{ flexDirection: "row", height: 3, borderRadius: 99, overflow: "hidden", gap: 1 }}>
+                    {carbPct > 0 && <View style={{ flex: carbPct, backgroundColor: theme.colors.accent }} />}
+                    {fatPct > 0 && <View style={{ flex: fatPct, backgroundColor: theme.colors.indigo }} />}
+                    {proteinPct > 0 && <View style={{ flex: proteinPct, backgroundColor: theme.colors.accent2 }} />}
+                  </View>
+                )}
+              </Card>
+            );
+          })}
+        </View>
+
+        {/* Activity — section header outside (same rhythm as Diary), Log as header link */}
+        <View style={{ gap: 4 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <AppText variant="h2">Activity</AppText>
+            {isToday && (
+              <Pressable onPress={() => router.push("/exercise/log-workout" as any)}>
+                <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>Log workout</AppText>
+              </Pressable>
+            )}
+          </View>
+
+          <Card style={{ padding: theme.space.lg, gap: 10 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={{
                 width: 36, height: 36, borderRadius: 12,
@@ -363,25 +552,10 @@ export default function HomeScreen() {
               }}>
                 <Ionicons name="flame" size={18} color={theme.colors.accent2} />
               </View>
-              <View>
-                <AppText variant="h2" style={{ fontSize: 15 }}>Activity</AppText>
-                <AppText variant="subtle" style={{ fontSize: 12 }}>
-                  {totalBurned > 0 ? `${totalBurned} kcal burned` : "No workout logged"}
-                </AppText>
-              </View>
+              <AppText variant="body2" style={{ fontWeight: "700" }}>
+                {totalBurned > 0 ? `${totalBurned} kcal burned` : "No workout logged"}
+              </AppText>
             </View>
-            {isToday && (
-              <Pressable
-                onPress={() => router.push("/exercise/log-workout" as any)}
-                style={({ pressed }) => ({
-                  paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8,
-                  backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.08)",
-                })}
-              >
-                <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.primary }}>Log</AppText>
-              </Pressable>
-            )}
-          </View>
 
           {/* Net calories: eaten − burned */}
           {totalBurned > 0 && (
@@ -396,161 +570,79 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {/* Logged workouts */}
-          {exercises.map((ex) => (
-            <View key={ex.id} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <AppText variant="body2" style={{ fontWeight: "600" }}>{ex.name}</AppText>
-                <AppText variant="subtle" style={{ fontSize: 11 }}>{ex.durationMin} min · {ex.caloriesBurned} kcal</AppText>
+            {/* Logged workouts — framed rows, same language as the Diary */}
+            {exercises.map((ex) => (
+              <View key={ex.id} style={{
+                flexDirection: "row", alignItems: "center", gap: 10,
+                borderWidth: 1, borderColor: theme.colors.border,
+                borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+              }}>
+                <View style={{ flex: 1 }}>
+                  <AppText variant="body2" numberOfLines={1} style={{ fontWeight: "600", fontSize: 13 }}>{ex.name}</AppText>
+                  <AppText variant="subtle" style={{ fontSize: 11 }}>{ex.durationMin} min · {ex.caloriesBurned} kcal</AppText>
+                </View>
+                {isToday && (
+                  <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                    <Ionicons name="trash-outline" size={16} color={theme.colors.subtle} />
+                  </Pressable>
+                )}
               </View>
-              {isToday && (
-                <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-                  <Ionicons name="trash-outline" size={17} color={theme.colors.subtle} />
-                </Pressable>
-              )}
-            </View>
-          ))}
-        </Card>
+            ))}
+          </Card>
+        </View>
 
-        {/* Today's plan — surfaces the weekly plan (and its AI generation) on Home */}
+        {/* Today's plan — section header outside; card = status + workout tip, taps into the weekly plan */}
         {isToday && (() => {
           const pending = planToday.filter((p) => !p.done);
           const vi = lang === "vi";
           return (
-            <Pressable
-              onPress={() => router.push("/plan/weekly" as any)}
-              style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] })}
-            >
-              <Card style={{ padding: theme.space.lg, gap: 10 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <View style={{
-                    width: 36, height: 36, borderRadius: 12,
-                    backgroundColor: "rgba(99,102,241,0.12)",
-                    alignItems: "center", justifyContent: "center",
-                  }}>
-                    <Ionicons name="calendar" size={18} color={theme.colors.indigo} />
-                  </View>
-                  <AppText variant="h2" style={{ fontSize: 15, flex: 1 }}>
-                    {vi ? "Kế hoạch hôm nay" : "Today's plan"}
+            <View style={{ gap: 4 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <AppText variant="h2">{vi ? "Kế hoạch hôm nay" : "Today's plan"}</AppText>
+                <Pressable onPress={() => router.push("/plan/weekly" as any)}>
+                  <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>
+                    {vi ? "Xem tuần" : "View week"}
                   </AppText>
-                  <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
-                </View>
+                </Pressable>
+              </View>
 
-                {planToday.length === 0 ? (
-                  <AppText variant="muted" style={{ fontSize: 13 }}>
-                    {vi ? "Chưa có kế hoạch tuần — để AI tạo cho bạn ✨" : "No weekly plan yet — let the AI build one for you ✨"}
-                  </AppText>
-                ) : pending.length === 0 ? (
-                  <AppText variant="muted" style={{ fontSize: 13 }}>
-                    {vi ? "Đã hoàn thành kế hoạch hôm nay 🎉" : "Today's plan is all done 🎉"}
-                  </AppText>
-                ) : (
-                  pending.slice(0, 2).map((p) => (
-                    <View key={p.id} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.indigo }} />
-                      <AppText variant="body2" style={{ flex: 1 }}>{p.name}</AppText>
-                      <AppText variant="subtle" style={{ fontSize: 11 }}>{p.calories} kcal</AppText>
-                    </View>
-                  ))
-                )}
-
-                {!!planWorkout && (
-                  <View style={{
-                    flexDirection: "row", alignItems: "flex-start", gap: 8,
-                    backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 8,
-                  }}>
-                    <AppText style={{ fontSize: 13 }}>🏃</AppText>
-                    <AppText variant="subtle" style={{ flex: 1, fontSize: 12 }}>{planWorkout}</AppText>
-                  </View>
-                )}
-              </Card>
-            </Pressable>
-          );
-        })()}
-
-        {/* Diary */}
-        <View style={{ gap: 4 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <AppText variant="h2">Diary</AppText>
-            <Pressable onPress={() => router.push("/meals/history")}>
-              <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>View all</AppText>
-            </Pressable>
-          </View>
-
-          {MEAL_TYPES.map((mt) => {
-            const typeMeals = mealsByType(mt.key);
-            const typeCalories = typeMeals.reduce((s, m) => s + m.calories, 0);
-            const typeCarbs = typeMeals.reduce((s, m) => s + (m.carbs ?? 0), 0);
-            const typeFat = typeMeals.reduce((s, m) => s + (m.fat ?? 0), 0);
-            const typeProtein = typeMeals.reduce((s, m) => s + (m.protein ?? 0), 0);
-            const totalMacroG = typeCarbs + typeFat + typeProtein;
-            const carbPct = totalMacroG > 0 ? Math.round((typeCarbs / totalMacroG) * 100) : 0;
-            const fatPct = totalMacroG > 0 ? Math.round((typeFat / totalMacroG) * 100) : 0;
-            const proteinPct = totalMacroG > 0 ? Math.round((typeProtein / totalMacroG) * 100) : 0;
-
-            return (
-              <Card key={mt.key} style={{ padding: theme.space.lg, gap: 8 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    {/* Icon sits in a soft tinted square — friendlier than a bare emoji */}
+              <Pressable
+                onPress={() => router.push("/plan/weekly" as any)}
+                style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+              >
+                <Card style={{ padding: theme.space.lg, gap: 10 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <View style={{
-                      width: 42, height: 42, borderRadius: 14,
-                      backgroundColor: "rgba(37,99,235,0.08)",
+                      width: 36, height: 36, borderRadius: 12,
+                      backgroundColor: "rgba(99,102,241,0.12)",
                       alignItems: "center", justifyContent: "center",
                     }}>
-                      <AppText style={{ fontSize: 20 }}>{mt.icon}</AppText>
+                      <Ionicons name="calendar" size={18} color={theme.colors.indigo} />
                     </View>
-                    <View>
-                      <AppText variant="h2" style={{ fontSize: 15 }}>{mt.label}</AppText>
-                      {typeMeals.length > 0 && (
-                        <AppText variant="subtle" style={{ fontSize: 12 }}>
-                          {typeMeals[0].name}{typeMeals.length > 1 ? ` and ${typeMeals.length - 1} more` : ""}
-                        </AppText>
-                      )}
-                    </View>
+                    <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontWeight: "700" }}>
+                      {planToday.length === 0
+                        ? (vi ? "Chưa có kế hoạch — để AI tạo cho bạn ✨" : "No plan yet — let the AI build one ✨")
+                        : pending.length === 0
+                        ? (vi ? "Hoàn thành kế hoạch hôm nay 🎉" : "Today's plan is all done 🎉")
+                        : (vi ? `${pending.length} món đang chờ trong nhật ký` : `${pending.length} planned meals waiting in your diary`)}
+                    </AppText>
+                    <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
                   </View>
-                  {isToday && (
-                    <Pressable
-                      onPress={() => router.push({
-                        pathname: "/meals/add",
-                        params: { mealType: mt.key },
-                      })}
-                      style={({ pressed }) => ({
-                        paddingHorizontal: 14, paddingVertical: 6,
-                        borderRadius: 8,
-                        backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.08)",
-                      })}
-                    >
-                      <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.primary }}>
-                        Log
-                      </AppText>
-                    </Pressable>
-                  )}
-                </View>
 
-                {typeMeals.length > 0 ? (
-                  <View style={{ gap: 6 }}>
-                    <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
-                      <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.text }}>
-                        {typeCalories} cal
-                      </AppText>
-                      {carbPct > 0 && <AppText variant="subtle" style={{ fontSize: 11 }}>· C {carbPct}%</AppText>}
-                      {fatPct > 0 && <AppText variant="subtle" style={{ fontSize: 11 }}>· F {fatPct}%</AppText>}
-                      {proteinPct > 0 && <AppText variant="subtle" style={{ fontSize: 11 }}>· P {proteinPct}%</AppText>}
+                  {!!planWorkout && (
+                    <View style={{
+                      flexDirection: "row", alignItems: "flex-start", gap: 8,
+                      backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 8,
+                    }}>
+                      <AppText style={{ fontSize: 13 }}>🏃</AppText>
+                      <AppText variant="subtle" style={{ flex: 1, fontSize: 12 }}>{planWorkout}</AppText>
                     </View>
-                    <View style={{ flexDirection: "row", height: 3, borderRadius: 99, overflow: "hidden", gap: 1 }}>
-                      {carbPct > 0 && <View style={{ flex: carbPct, backgroundColor: theme.colors.accent }} />}
-                      {fatPct > 0 && <View style={{ flex: fatPct, backgroundColor: theme.colors.indigo }} />}
-                      {proteinPct > 0 && <View style={{ flex: proteinPct, backgroundColor: theme.colors.accent2 }} />}
-                    </View>
-                  </View>
-                ) : (
-                  <AppText variant="subtle" style={{ fontSize: 12 }}>No meals logged</AppText>
-                )}
-              </Card>
-            );
-          })}
-        </View>
+                  )}
+                </Card>
+              </Pressable>
+            </View>
+          );
+        })()}
 
         {/* AI Coach — flagship entry */}
         {isToday && (
