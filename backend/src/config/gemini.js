@@ -38,11 +38,16 @@ function buildModels(names, generationConfig) {
   );
 }
 
-// Scan (image → JSON nutrition).
-const visionModels = buildModels(VISION_MODELS, { temperature: 0.2, responseMimeType: "application/json" });
+// Gemini 2.5 models "think" before answering by default, which adds 5-15s of
+// latency. Structured JSON tasks (scan, insight, suggest, plan, grocery) don't
+// need it — disable to answer fast. Chat keeps thinking for reply quality.
+const NO_THINKING = { thinkingConfig: { thinkingBudget: 0 } };
 
-// Coach daily analysis — strict JSON.
-const insightModels = buildModels(TEXT_MODELS, { temperature: 0.3, responseMimeType: "application/json" });
+// Scan (image → JSON nutrition).
+const visionModels = buildModels(VISION_MODELS, { temperature: 0.2, responseMimeType: "application/json", ...NO_THINKING });
+
+// Coach daily analysis / suggestions / plan generation — strict JSON, speed first.
+const insightModels = buildModels(TEXT_MODELS, { temperature: 0.3, responseMimeType: "application/json", ...NO_THINKING });
 
 // Coach conversation — JSON { reply, meal } (also handles attached food photos).
 const chatModels = buildModels(TEXT_MODELS, { temperature: 0.75, responseMimeType: "application/json" });

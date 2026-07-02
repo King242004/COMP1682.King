@@ -48,8 +48,11 @@ exports.getPlanMeals = async (req, res) => {
     filter.date = { $gte: startDate, $lte: endDate };
   }
 
-  const planMeals = await PlanMeal.find(filter).sort({ date: 1, createdAt: 1 });
-  const planWorkouts = await PlanWorkout.find(filter).sort({ date: 1 });
+  // Parallel — the two collections are independent
+  const [planMeals, planWorkouts] = await Promise.all([
+    PlanMeal.find(filter).sort({ date: 1, createdAt: 1 }),
+    PlanWorkout.find(filter).sort({ date: 1 }),
+  ]);
   res.json({ planMeals, planWorkouts });
 };
 

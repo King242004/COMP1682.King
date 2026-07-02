@@ -756,6 +756,15 @@ export default function HomeScreen() {
                 <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{suggestError}</AppText>
               )}
 
+              {/* First fetch in flight → pulse placeholder rows where dishes will appear */}
+              {suggestLoading && !suggest && (
+                <View style={{ gap: 8 }}>
+                  <Skeleton height={44} radius={12} />
+                  <Skeleton height={44} radius={12} />
+                  <Skeleton height={44} radius={12} />
+                </View>
+              )}
+
               {/* Suggested dishes — "Thêm" opens Add meal with everything prefilled */}
               {suggest?.suggestions.map((s, i) => (
                 <View key={`${i}-${s.name}`} style={{

@@ -26,19 +26,17 @@ function sumMacros(meals) {
 // Returns a structured object the controller uses for both the Health Score
 // (deterministic) and the AI prompt (grounding).
 async function buildContext(userId, date) {
-  const user = await User.findById(userId).select(
-    "name gender age weight height goal activityLevel conditions calorieGoal"
-  );
+  // Independent queries — run in parallel to keep AI endpoints snappy
+  const weekStart = shiftDate(date, -6); // last 7 days (incl. `date`)
+  const [user, todayMeals, todayExercises, weekMeals] = await Promise.all([
+    User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal"),
+    Meal.find({ user: userId, date }).sort({ createdAt: 1 }),
+    Exercise.find({ user: userId, date }).sort({ createdAt: 1 }),
+    Meal.find({ user: userId, date: { $gte: weekStart, $lte: date } }),
+  ]);
 
-  const todayMeals = await Meal.find({ user: userId, date }).sort({ createdAt: 1 });
   const todayTotals = sumMacros(todayMeals);
-
-  const todayExercises = await Exercise.find({ user: userId, date }).sort({ createdAt: 1 });
   const totalBurned = todayExercises.reduce((s, e) => s + e.caloriesBurned, 0);
-
-  // Last 7 days (including `date`) for consistency + averages
-  const weekStart = shiftDate(date, -6);
-  const weekMeals = await Meal.find({ user: userId, date: { $gte: weekStart, $lte: date } });
   const loggedDays = new Set(weekMeals.map((m) => m.date));
   const weekTotals = sumMacros(weekMeals);
   const avgCalories = loggedDays.size > 0 ? Math.round(weekTotals.calories / loggedDays.size) : 0;

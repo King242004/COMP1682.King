@@ -12,6 +12,8 @@ import {
   getGroceryList,
   getCachedGrocery,
   cacheGrocery,
+  getCachedPlanWeek,
+  cachePlanWeek,
   type PlanMeal,
   type GroceryGroup,
 } from "@/utils/plan";
@@ -117,11 +119,24 @@ export default function MealPlanScreen() {
 
   const load = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
+    // Stale-while-revalidate: paint the cached week INSTANTLY (no spinner),
+    // then refresh from the network in the background.
+    const cached = await getCachedPlanWeek(weekStart);
+    if (cached) {
+      setPlan(cached.meals);
+      setWorkouts(cached.workouts);
+      // Seed the signature so a fresh-but-identical fetch doesn't nuke grocery state
+      if (!planSigRef.current) {
+        planSigRef.current = cached.meals.map((m) => m.id).sort().join(",");
+      }
+    } else {
+      setLoading(true);
+    }
     try {
       const { meals, workouts } = await getPlanMeals(token, weekStart, weekEnd);
       setPlan(meals);
       setWorkouts(workouts);
+      cachePlanWeek(weekStart, { meals, workouts });
       // Drop the grocery list ONLY when the plan actually changed — a plain focus
       // reload must not throw away a list that cost an AI request.
       const sig = meals.map((m) => m.id).sort().join(",");
@@ -131,8 +146,11 @@ export default function MealPlanScreen() {
         setGroceryChecked({});
       }
     } catch {
-      setPlan([]);
-      setWorkouts({});
+      // Offline/failed refresh: keep showing the cached week if we had one
+      if (!cached) {
+        setPlan([]);
+        setWorkouts({});
+      }
     } finally {
       setLoading(false);
     }
