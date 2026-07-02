@@ -16,18 +16,14 @@ import {
 } from "@/utils/plan";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
+import { MEAL_TYPE_META } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { dateKey } from "@/utils/date";
 
-const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
-  { key: "breakfast", label: "Breakfast", icon: "☀️" },
-  { key: "lunch", label: "Lunch", icon: "🌤️" },
-  { key: "dinner", label: "Dinner", icon: "🌙" },
-  { key: "snack", label: "Snacks", icon: "🍎" },
-];
+const MEAL_TYPES = MEAL_TYPE_META;
 
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -410,7 +406,7 @@ export default function MealPlanScreen() {
               <View key={mt.key} style={{ gap: 8 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <AppText style={{ fontSize: 16 }}>{mt.icon}</AppText>
+                    <Ionicons name={mt.icon as any} size={16} color={mt.color} />
                     <AppText variant="h2" style={{ fontSize: 15 }}>{mt.label}</AppText>
                   </View>
                   <Pressable
