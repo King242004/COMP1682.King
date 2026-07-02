@@ -13,7 +13,7 @@ export type MealTypeMeta = {
 
 export const MEAL_TYPE_META: MealTypeMeta[] = [
   { key: "breakfast", label: "Breakfast", icon: "sunny", color: "#FF8A3D", bg: "rgba(255,138,61,0.12)" },
-  { key: "lunch", label: "Lunch", icon: "partly-sunny", color: "#2563EB", bg: "rgba(37,99,235,0.10)" },
+  { key: "lunch", label: "Lunch", icon: "partly-sunny", color: "#0891B2", bg: "rgba(8,145,178,0.10)" },
   { key: "dinner", label: "Dinner", icon: "moon", color: "#6366F1", bg: "rgba(99,102,241,0.12)" },
   { key: "snack", label: "Snacks", icon: "nutrition", color: "#2FBF71", bg: "rgba(47,191,113,0.12)" },
 ];

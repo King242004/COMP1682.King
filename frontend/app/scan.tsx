@@ -475,7 +475,7 @@ export default function ScanScreen() {
               <>
                 <Card style={{ padding: theme.space.lg, gap: theme.space.md }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: theme.space.md }}>
-                    <View style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: "rgba(37,99,235,0.08)", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                    <View style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: "rgba(8,145,178,0.08)", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                       {product.image ? (
                         <Image source={{ uri: product.image }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                       ) : (

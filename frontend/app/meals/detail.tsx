@@ -24,7 +24,7 @@ function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
   return (
     <View style={{ alignItems: "center", justifyContent: "center", width: size, height: size }}>
       <Svg width={size} height={size} style={{ position: "absolute" }}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(37,99,235,0.08)" strokeWidth={stroke} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(8,145,178,0.08)" strokeWidth={stroke} fill="none" />
         <Circle
           cx={size / 2} cy={size / 2} r={r}
           stroke={progress >= 1 ? theme.colors.danger : theme.colors.primary}

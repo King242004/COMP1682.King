@@ -451,7 +451,7 @@ export default function CoachTab() {
                 ) : (
                   <View style={{
                     marginTop: 8, gap: 8,
-                    backgroundColor: "rgba(37,99,235,0.06)", borderRadius: 10, padding: 10,
+                    backgroundColor: "rgba(8,145,178,0.06)", borderRadius: 10, padding: 10,
                   }}>
                     <View>
                       <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.text }}>
@@ -581,7 +581,7 @@ export default function CoachTab() {
             disabled={sending}
             style={({ pressed }) => ({
               width: 44, height: 44, borderRadius: 22,
-              backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.06)",
+              backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.06)",
               alignItems: "center", justifyContent: "center",
             })}
           >

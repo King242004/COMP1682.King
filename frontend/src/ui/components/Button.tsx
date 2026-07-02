@@ -82,7 +82,7 @@ export function Button({
               : variant === "danger"
                 ? "rgba(229,72,77,0.18)"
                 : variant === "secondary"
-                  ? "rgba(37,99,235,0.18)"
+                  ? "rgba(8,145,178,0.18)"
                   : "transparent",
           transform: [{ scale: 0.98 }],
           opacity: variant === "ghost" ? 0.7 : 1,

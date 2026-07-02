@@ -103,7 +103,7 @@ function FABModal({ visible, onClose, onScan, onAdd }: {
             style={({ pressed }: { pressed: boolean }) => ({
               flexDirection: "row", alignItems: "center", gap: 14,
               padding: 16, borderRadius: 16,
-              backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.06)",
+              backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.06)",
             })}
           >
             <View style={{
@@ -125,7 +125,7 @@ function FABModal({ visible, onClose, onScan, onAdd }: {
             style={({ pressed }: { pressed: boolean }) => ({
               flexDirection: "row", alignItems: "center", gap: 14,
               padding: 16, borderRadius: 16,
-              backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.06)",
+              backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.06)",
             })}
           >
             <View style={{

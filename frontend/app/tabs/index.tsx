@@ -50,7 +50,7 @@ function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       <Svg width={size} height={size} style={{ position: "absolute" }}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(37,99,235,0.10)" strokeWidth={stroke} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(8,145,178,0.10)" strokeWidth={stroke} fill="none" />
         <Circle
           cx={size / 2} cy={size / 2} r={r}
           stroke={over ? theme.colors.danger : theme.colors.primary}
@@ -336,7 +336,7 @@ export default function HomeScreen() {
                   backgroundColor: isSelected
                     ? theme.colors.primary
                     : logged
-                    ? "rgba(37,99,235,0.10)"
+                    ? "rgba(8,145,178,0.10)"
                     : theme.colors.surface,
                   transform: [{ scale: pressed ? 0.94 : 1 }],
                   // Subtle lift for unselected chips so they read as tappable
@@ -494,7 +494,7 @@ export default function HomeScreen() {
                         style={({ pressed }) => ({
                           width: 26, height: 26, borderRadius: 13,
                           alignItems: "center", justifyContent: "center",
-                          backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.10)",
+                          backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.10)",
                         })}
                       >
                         <Ionicons name="add" size={17} color={theme.colors.primary} />
@@ -605,7 +605,7 @@ export default function HomeScreen() {
           {totalBurned > 0 && (
             <View style={{
               flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-              backgroundColor: "rgba(37,99,235,0.05)", borderRadius: 12, padding: theme.space.md,
+              backgroundColor: "rgba(8,145,178,0.05)", borderRadius: 12, padding: theme.space.md,
             }}>
               <AppText variant="subtle" style={{ fontSize: 12 }}>Net calories (eaten − burned)</AppText>
               <AppText style={{ fontSize: 15, fontWeight: "800", color: theme.colors.text }}>
@@ -812,8 +812,8 @@ export default function HomeScreen() {
           >
             <Card style={{
               padding: theme.space.lg,
-              borderColor: "rgba(37,99,235,0.20)",
-              backgroundColor: "rgba(37,99,235,0.05)",
+              borderColor: "rgba(8,145,178,0.20)",
+              backgroundColor: "rgba(8,145,178,0.05)",
             }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <View style={{
@@ -829,7 +829,7 @@ export default function HomeScreen() {
                     {coachInsight && (
                       <View style={{
                         flexDirection: "row", alignItems: "center", gap: 3,
-                        backgroundColor: "rgba(37,99,235,0.10)",
+                        backgroundColor: "rgba(8,145,178,0.10)",
                         paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99,
                       }}>
                         <AppText style={{ fontSize: 11, fontWeight: "800", color: theme.colors.primary }}>

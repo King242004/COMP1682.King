@@ -128,7 +128,7 @@ export default function PostCreateScreen() {
                     padding: theme.space.md, flexDirection: "row", alignItems: "center", gap: 10,
                     borderWidth: 1.5, borderColor: active ? theme.colors.primary : "transparent",
                   }}>
-                    <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(37,99,235,0.08)", alignItems: "center", justifyContent: "center" }}>
+                    <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(8,145,178,0.08)", alignItems: "center", justifyContent: "center" }}>
                       <Ionicons name={active ? "checkmark" : "restaurant-outline"} size={18} color={theme.colors.primary} />
                     </View>
                     <View style={{ flex: 1 }}>

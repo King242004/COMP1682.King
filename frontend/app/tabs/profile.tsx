@@ -41,7 +41,7 @@ function SettingRow({ icon, label, value, last }: {
     }}>
       <View style={{
         width: 34, height: 34, borderRadius: 11,
-        backgroundColor: "rgba(37,99,235,0.08)",
+        backgroundColor: "rgba(8,145,178,0.08)",
         alignItems: "center", justifyContent: "center",
       }}>
         <AppText style={{ fontSize: 15 }}>{icon}</AppText>
@@ -169,7 +169,7 @@ export default function ProfileScreen() {
               onPress={() => router.push("/profile/edit" as any)}
               style={({ pressed }) => ({
                 width: 40, height: 40, borderRadius: 14,
-                backgroundColor: pressed ? "rgba(37,99,235,0.18)" : theme.colors.tint,
+                backgroundColor: pressed ? "rgba(8,145,178,0.18)" : theme.colors.tint,
                 alignItems: "center", justifyContent: "center",
               })}
             >
@@ -233,7 +233,7 @@ export default function ProfileScreen() {
           >
             <View style={{
               width: 34, height: 34, borderRadius: 11,
-              backgroundColor: "rgba(37,99,235,0.08)",
+              backgroundColor: "rgba(8,145,178,0.08)",
               alignItems: "center", justifyContent: "center",
             }}>
               <Ionicons name="settings-outline" size={17} color={theme.colors.primary} />

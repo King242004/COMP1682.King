@@ -1,20 +1,22 @@
+// Palette from design-system/meal-snap/MASTER.md — "Calm cyan + health green"
+// (UI/UX Pro Max recommendation for health/nutrition apps).
 export const theme = {
   colors: {
-    bg: "#F5F9FF", // soft blue-tinted background — friendlier than pure white
+    bg: "#ECFEFF", // soft cyan-tinted background
     surface: "#FFFFFF",
-    text: "#0F172A",
-    muted: "#526077",
-    subtle: "#64748B", // was #8C99AD (~3:1 on white) — bumped to meet WCAG 4.5:1 for small text
-    border: "#E3EAF5",
-    primary: "#2563EB", // ocean blue — friendly yet trustworthy
-    primary2: "#1D4ED8", // pressed/darker state
-    accent: "#2FBF71", // soft green
-    accent2: "#FF8A3D", // soft orange
-    indigo: "#6366F1", // fat macro — replaces old purple, fits blue palette
+    text: "#164E63", // deep cyan-slate
+    muted: "#3F6B7D",
+    subtle: "#5C7F8F", // keeps ≥4.5:1 on white for small text
+    border: "#D7EEF4",
+    primary: "#0891B2", // calm medical cyan
+    primary2: "#0E7490", // pressed/darker state
+    accent: "#059669", // health green — CTAs & positive states
+    accent2: "#FF8A3D", // energy orange (flame/activity)
+    indigo: "#6366F1", // fat macro — cool counterpoint to the cyan palette
     danger: "#E5484D",
     danger2: "#C9343A",
-    tint: "rgba(37, 99, 235, 0.10)",
-    shadow: "rgba(15, 23, 42, 0.14)",
+    tint: "rgba(8, 145, 178, 0.10)",
+    shadow: "rgba(22, 78, 99, 0.16)",
   },
   radius: {
     card: 22,
