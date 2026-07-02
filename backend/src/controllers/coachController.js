@@ -251,7 +251,11 @@ Always read the history first so repeated or follow-up questions feel natural, n
 // One AI request per tap (the app caches per date+slot so re-taps are free).
 exports.suggestMeal = async (req, res) => {
   try {
-    const ctx = await buildContext(req.user.id, todayKey());
+    // Context + today's pending plan fetched in parallel (independent queries)
+    const [ctx, planPending] = await Promise.all([
+      buildContext(req.user.id, todayKey()),
+      PlanMeal.find({ user: req.user.id, date: todayKey(), done: false }),
+    ]);
     const hour = new Date().getHours();
     // Skip slots already eaten so we suggest for the meal the user actually faces next
     const eatenTypes = new Set(ctx.today.meals.map((m) => m.mealType));
@@ -260,7 +264,6 @@ exports.suggestMeal = async (req, res) => {
 
     // Pending planned meals today: suggestions must complement the plan, not fight it —
     // if the target slot is already planned, these become ALTERNATIVES (swap options).
-    const planPending = await PlanMeal.find({ user: req.user.id, date: todayKey(), done: false });
     const planText = planPending.length
       ? `\nTODAY'S MEAL PLAN (planned, NOT eaten yet):\n${planPending
           .map((p) => `  - [${p.mealType}] ${p.name}: ${p.calories} kcal`)

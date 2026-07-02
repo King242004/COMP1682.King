@@ -69,6 +69,30 @@ export async function getGroceryList(
   return data.groups || [];
 }
 
+// ─── Plan week cache (AsyncStorage) ───────────────────────────────────────────
+// Stale-while-revalidate: the weekly screen paints the cached week instantly and
+// refreshes from the network in the background — no more staring at a spinner.
+export type PlanWeekCache = { meals: PlanMeal[]; workouts: Record<string, string> };
+
+const planWeekKey = (weekStart: string) => `plan_week_${weekStart}`;
+
+export async function getCachedPlanWeek(weekStart: string): Promise<PlanWeekCache | null> {
+  try {
+    const raw = await AsyncStorage.getItem(planWeekKey(weekStart));
+    return raw ? (JSON.parse(raw) as PlanWeekCache) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function cachePlanWeek(weekStart: string, cache: PlanWeekCache): Promise<void> {
+  try {
+    await AsyncStorage.setItem(planWeekKey(weekStart), JSON.stringify(cache));
+  } catch {
+    // ignore cache write failures
+  }
+}
+
 // ─── Grocery cache (AsyncStorage) ─────────────────────────────────────────────
 // The list costs 1 Gemini request, so it persists per (week + language) together
 // with the user's tick state. `sig` = signature of the plan it was built from —
