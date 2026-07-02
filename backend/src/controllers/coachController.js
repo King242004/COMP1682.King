@@ -4,6 +4,7 @@ const { buildContext, contextToText } = require("../services/coachContext");
 const { computeHealthScore } = require("../services/healthScore");
 const ChatMessage = require("../models/ChatMessage");
 const Meal = require("../models/Meal");
+const PlanMeal = require("../models/PlanMeal");
 const cloudinary = require("../config/cloudinary");
 
 // Shared safety + style instruction injected into every coach prompt.
@@ -38,6 +39,16 @@ function mealTypeByHour(h) {
   if (h < 17) return "snack";
   if (h < 21) return "dinner";
   return "snack";
+}
+
+// Slot to SUGGEST for: start from the hour-based slot, then skip slots the user
+// already logged (breakfast eaten at 10am → suggest for lunch instead).
+// Mirrored in frontend utils/coach.ts nextMealSlot — keep the two in sync.
+function nextSlotToSuggest(hour, eatenTypes) {
+  const order = ["breakfast", "lunch", "snack", "dinner"];
+  let idx = order.indexOf(mealTypeByHour(hour));
+  while (idx < order.length && eatenTypes.has(order[idx])) idx++;
+  return idx < order.length ? order[idx] : "snack"; // all slots eaten → light late snack
 }
 
 // Normalize requested language and build the reply-language instruction.
@@ -231,6 +242,77 @@ Always read the history first so repeated or follow-up questions feel natural, n
     // Distinguish "out of quota" (429) so the app can show a clearer message.
     const quota = /429|quota|rate limit|too many requests/i.test(String(err.message || ""));
     res.status(quota ? 429 : 500).json({ message: quota ? "QUOTA" : "Coach is unavailable right now. Please try again." });
+  }
+};
+
+// ─── "What should I eat now?" (POST /api/coach/suggest-meal) ──────────────────
+// body: { language? } → 3 concrete dishes for the NEXT meal slot, sized to the
+// remaining calorie budget, balancing missing macros, respecting conditions.
+// One AI request per tap (the app caches per date+slot so re-taps are free).
+exports.suggestMeal = async (req, res) => {
+  try {
+    const ctx = await buildContext(req.user.id, todayKey());
+    const hour = new Date().getHours();
+    // Skip slots already eaten so we suggest for the meal the user actually faces next
+    const eatenTypes = new Set(ctx.today.meals.map((m) => m.mealType));
+    const slot = nextSlotToSuggest(hour, eatenTypes);
+    const remaining = ctx.profile.calorieGoal - ctx.today.totals.calories + ctx.today.totalBurned;
+
+    // Pending planned meals today: suggestions must complement the plan, not fight it —
+    // if the target slot is already planned, these become ALTERNATIVES (swap options).
+    const planPending = await PlanMeal.find({ user: req.user.id, date: todayKey(), done: false });
+    const planText = planPending.length
+      ? `\nTODAY'S MEAL PLAN (planned, NOT eaten yet):\n${planPending
+          .map((p) => `  - [${p.mealType}] ${p.name}: ${p.calories} kcal`)
+          .join("\n")}\n`
+      : "";
+    const plannedForSlot = planPending.find((p) => p.mealType === slot);
+    const planRule = plannedForSlot
+      ? `- The plan already has "${plannedForSlot.name}" for this ${slot}. The user wants ALTERNATIVES: suggest 3 DIFFERENT dishes with a similar or better nutrition fit. NEVER repeat the planned dish.`
+      : planPending.length
+      ? `- Do NOT suggest dishes already in today's plan above.`
+      : "";
+
+    const prompt = `${SAFETY}
+${langDirective(req.body.language)}
+
+${contextToText(ctx)}
+${planText}
+Current hour: ${hour} → the NEXT meal slot is: ${slot}.
+Remaining calorie budget today (goal - eaten + burned): ${remaining} kcal.
+
+Suggest exactly 3 SPECIFIC dishes for this next ${slot}. Prefer Vietnamese dishes. Rules:
+${planRule ? planRule + "\n" : ""}
+- Single serving each, sized to fit the remaining budget. If the budget is small (or negative), suggest light low-calorie options and say so in the reason.
+- Look at what today's meals are MISSING and balance it (e.g. little protein so far → protein-rich dishes).
+- Strictly respect the health conditions above (diabetes: low sugar/refined carbs; hypertension: low sodium).
+- The 3 dishes must be different in style (e.g. not three rice dishes).
+- "name": max 6 words, no notes or parentheses.
+- "reason": ONE short friendly sentence in the required language — why THIS dish fits right now (missing macro, remaining kcal, or their condition/goal).
+
+Return ONLY valid JSON:
+{ "suggestions": [ { "name": "<dish>", "calories": <kcal>, "protein": <g>, "carbs": <g>, "fat": <g>, "reason": "<1 sentence>" } ] }`;
+
+    const result = await generateWithFallback(insightModels, prompt);
+    const parsed = JSON.parse(result.response.text());
+    const suggestions = (Array.isArray(parsed.suggestions) ? parsed.suggestions : [])
+      .filter((s) => s && s.name && s.calories != null)
+      .slice(0, 3)
+      .map((s) => ({
+        name: String(s.name).trim(),
+        calories: Math.max(0, Math.round(Number(s.calories) || 0)),
+        protein: Math.max(0, Math.round(Number(s.protein) || 0)),
+        carbs: Math.max(0, Math.round(Number(s.carbs) || 0)),
+        fat: Math.max(0, Math.round(Number(s.fat) || 0)),
+        reason: String(s.reason || "").trim(),
+      }));
+    if (!suggestions.length) throw new Error("Empty suggestions from AI");
+
+    res.json({ mealType: slot, remaining, suggestions });
+  } catch (err) {
+    console.error("Coach suggest error:", err.message);
+    const quota = /429|quota|rate limit|too many requests/i.test(String(err.message || ""));
+    res.status(quota ? 429 : 500).json({ message: quota ? "QUOTA" : "Couldn't get suggestions right now." });
   }
 };
 
