@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals, type Meal } from "@/context/MealsContext";
-import { createPost } from "@/utils/community";
+import { createPost } from "@/features/community/api";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";

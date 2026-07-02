@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import {
   searchUsers, getSuggestions, followUser, unfollowUser, type DiscoverUser,
-} from "@/utils/community";
+} from "@/features/community/api";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";

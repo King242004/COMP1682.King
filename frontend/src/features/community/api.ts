@@ -1,4 +1,4 @@
-import { apiRequest, BASE_URL } from "./api";
+import { apiRequest, BASE_URL } from "@/utils/api";
 
 export type FeedPost = {
   id: string;
