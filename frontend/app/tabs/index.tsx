@@ -14,7 +14,7 @@ import {
 } from "@/utils/coach";
 import { dateKey, weekNumber } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
-import { theme, macroGoals } from "@/ui/theme";
+import { theme, macroGoals, shadow } from "@/ui/theme";
 import { MEAL_TYPE_META, type MealTypeKey } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -331,7 +331,7 @@ export default function HomeScreen() {
                 style={({ pressed }) => ({
                   opacity: isFuture ? 0.35 : 1,
                   width: 42, paddingVertical: 9,
-                  borderRadius: 16,
+                  borderRadius: 14,
                   alignItems: "center", gap: 5,
                   backgroundColor: isSelected
                     ? theme.colors.primary
@@ -339,12 +339,14 @@ export default function HomeScreen() {
                     ? "rgba(8,145,178,0.10)"
                     : theme.colors.surface,
                   transform: [{ scale: pressed ? 0.94 : 1 }],
-                  // Subtle lift for unselected chips so they read as tappable
-                  ...(isSelected ? {
-                    shadowColor: theme.colors.primary,
-                    shadowOpacity: 0.35, shadowOffset: { width: 0, height: 4 },
-                    shadowRadius: 8, elevation: 4,
-                  } : {}),
+                  // Soft UI: every chip floats gently; the selected one sits deeper
+                  ...(isSelected
+                    ? {
+                        shadowColor: theme.colors.primary,
+                        shadowOpacity: 0.35, shadowOffset: { width: 0, height: 4 },
+                        shadowRadius: 8, elevation: 4,
+                      }
+                    : shadow(1)),
                 })}
               >
                 <AppText style={{
@@ -371,8 +373,9 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {/* Hero calorie ring card */}
-        <Card style={{ padding: theme.space.xl }}>
+        {/* Today summary — calories + macros merged into ONE elevated soft card
+            (Soft UI Evolution: fewer, deeper blocks instead of many flat ones) */}
+        <Card style={{ padding: theme.space.xl, gap: theme.space.lg, ...shadow(2) }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View style={{ gap: 10, flex: 1 }}>
               <View style={{ gap: 2 }}>
@@ -389,12 +392,12 @@ export default function HomeScreen() {
               <View style={{
                 alignSelf: "flex-start",
                 flexDirection: "row", alignItems: "center", gap: 6,
-                backgroundColor: eaten > goal ? "rgba(229,72,77,0.10)" : "rgba(47,191,113,0.12)",
+                backgroundColor: eaten > goal ? "rgba(229,72,77,0.10)" : "rgba(5,150,105,0.12)",
                 paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
               }}>
                 <AppText style={{
                   fontSize: 13, fontWeight: "700",
-                  color: eaten > goal ? theme.colors.danger : "#1A9D58",
+                  color: eaten > goal ? theme.colors.danger : theme.colors.accent,
                 }}>
                   {eaten > goal
                     ? `${(eaten - goal).toLocaleString()} over goal`
@@ -404,22 +407,16 @@ export default function HomeScreen() {
             </View>
             <CalorieRing eaten={eaten} goal={goal} />
           </View>
-        </Card>
 
-        {/* Macros card */}
-        <Card style={{ padding: theme.space.lg }}>
+          <View style={{ height: 1, backgroundColor: theme.colors.border }} />
+
           <View style={{ flexDirection: "row", gap: 12 }}>
             {[
               { label: "Carbs", value: totalCarbs, goal: macroGoals(goal).carbs, color: theme.colors.accent },
               { label: "Fat", value: totalFat, goal: macroGoals(goal).fat, color: theme.colors.indigo },
               { label: "Protein", value: totalProtein, goal: macroGoals(goal).protein, color: theme.colors.accent2 },
-            ].map((m, i) => (
-              <View key={m.label} style={{
-                flex: 1, alignItems: "center",
-                borderLeftWidth: i > 0 ? 0.5 : 0,
-                borderLeftColor: theme.colors.border,
-                gap: 6, paddingHorizontal: 4,
-              }}>
+            ].map((m) => (
+              <View key={m.label} style={{ flex: 1, alignItems: "center", gap: 6, paddingHorizontal: 4 }}>
                 <AppText variant="subtle" style={{ fontSize: 11 }}>{m.label}</AppText>
                 <View style={{ flexDirection: "row", alignItems: "baseline", gap: 2 }}>
                   <AppText variant="h2" style={{ fontSize: 15 }}>{Math.round(m.value)}</AppText>
@@ -428,7 +425,7 @@ export default function HomeScreen() {
                 <AppText variant="subtle" style={{ fontSize: 10 }}>/ {m.goal}g</AppText>
                 <View style={{
                   height: 6, width: "80%", borderRadius: 99,
-                  backgroundColor: "rgba(0,0,0,0.06)", overflow: "hidden",
+                  backgroundColor: "rgba(22,78,99,0.08)", overflow: "hidden",
                 }}>
                   <View style={{
                     height: "100%",
@@ -510,9 +507,9 @@ export default function HomeScreen() {
                     onPress={() => router.push({ pathname: "/meals/detail", params: { id: m.id } })}
                     style={({ pressed }) => ({
                       flexDirection: "row", alignItems: "center", gap: 8,
-                      borderWidth: 1, borderColor: theme.colors.border,
-                      borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
-                      backgroundColor: pressed ? theme.colors.tint : "transparent",
+                      borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+                      // Soft inset row instead of a hard border (Soft UI Evolution)
+                      backgroundColor: pressed ? theme.colors.tint : theme.colors.bg,
                     })}
                   >
                     <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600" }}>
@@ -618,8 +615,8 @@ export default function HomeScreen() {
             {exercises.map((ex) => (
               <View key={ex.id} style={{
                 flexDirection: "row", alignItems: "center", gap: 10,
-                borderWidth: 1, borderColor: theme.colors.border,
-                borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+                borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+                backgroundColor: theme.colors.bg,
               }}>
                 <View style={{ flex: 1 }}>
                   <AppText variant="body2" numberOfLines={1} style={{ fontWeight: "600", fontSize: 13 }}>{ex.name}</AppText>
@@ -762,8 +759,8 @@ export default function HomeScreen() {
               {/* Suggested dishes — "Thêm" opens Add meal with everything prefilled */}
               {suggest?.suggestions.map((s, i) => (
                 <View key={`${i}-${s.name}`} style={{
-                  borderWidth: 1, borderColor: theme.colors.border,
-                  borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, gap: 4,
+                  borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 4,
+                  backgroundColor: theme.colors.bg,
                 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600" }}>

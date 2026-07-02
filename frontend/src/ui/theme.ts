@@ -18,10 +18,11 @@ export const theme = {
     tint: "rgba(8, 145, 178, 0.10)",
     shadow: "rgba(22, 78, 99, 0.16)",
   },
+  // Soft UI Evolution: radius 12-18, depth via layered soft shadows (see shadow())
   radius: {
-    card: 22,
-    input: 16,
-    button: 18,
+    card: 18,
+    input: 14,
+    button: 14,
     pill: 999,
   },
   space: {
