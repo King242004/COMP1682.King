@@ -1,5 +1,5 @@
 // MEAL PLAN — weekly planner
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,8 +10,9 @@ import {
   markPlanEaten,
   generateWeekPlan,
   getGroceryList,
+  getCachedGrocery,
+  cacheGrocery,
   type PlanMeal,
-  type MealType,
   type GroceryGroup,
 } from "@/utils/plan";
 import { resolveLanguage } from "@/utils/language";
@@ -22,8 +23,6 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { dateKey } from "@/utils/date";
-
-const MEAL_TYPES = MEAL_TYPE_META;
 
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -58,6 +57,8 @@ export default function MealPlanScreen() {
         close: "Đóng",
         quota: "Hôm nay hết lượt AI miễn phí, thử lại sau nhé.", genErr: "Chưa tạo được kế hoạch, thử lại nhé.",
         groceryErr: "Chưa tạo được danh sách, thử lại nhé.", error: "Lỗi",
+        pastDay: "Ngày này đã qua — chỉ xem lại thôi nhé.",
+        emptyHint: "Chưa có món nào cho ngày này — bấm nút ✨ bên dưới để AI lên thực đơn nhé.",
       }
     : {
         generate: "✨ Generate my week with AI", generating: "AI is planning your week...",
@@ -76,6 +77,8 @@ export default function MealPlanScreen() {
         close: "Close",
         quota: "Out of free AI quota today — try again later.", genErr: "Couldn't generate the plan. Please try again.",
         groceryErr: "Couldn't build the list. Please try again.", error: "Error",
+        pastDay: "This day is over — view only.",
+        emptyHint: "Nothing planned for this day — tap the ✨ button below to let the AI build a menu.",
       };
 
   const todayKey = dateKey(new Date());
@@ -89,10 +92,13 @@ export default function MealPlanScreen() {
   const [genVisible, setGenVisible] = useState(false);
   const [genScope, setGenScope] = useState<"week" | "day">("week");
   const [note, setNote] = useState("");
-  // AI grocery list
+  // AI grocery list + per-item ticks (persisted per week, see utils/plan cache)
   const [grocery, setGrocery] = useState<GroceryGroup[] | null>(null);
+  const [groceryChecked, setGroceryChecked] = useState<Record<string, boolean>>({});
   const [groceryVisible, setGroceryVisible] = useState(false);
   const [groceryLoading, setGroceryLoading] = useState(false);
+  // Signature of the loaded plan — grocery cache is only valid while this matches
+  const planSigRef = useRef("");
 
   const goal = user?.calorieGoal ?? 2000;
 
@@ -116,7 +122,14 @@ export default function MealPlanScreen() {
       const { meals, workouts } = await getPlanMeals(token, weekStart, weekEnd);
       setPlan(meals);
       setWorkouts(workouts);
-      setGrocery(null); // plan changed/reloaded → old grocery list may be stale
+      // Drop the grocery list ONLY when the plan actually changed — a plain focus
+      // reload must not throw away a list that cost an AI request.
+      const sig = meals.map((m) => m.id).sort().join(",");
+      if (sig !== planSigRef.current) {
+        planSigRef.current = sig;
+        setGrocery(null);
+        setGroceryChecked({});
+      }
     } catch {
       setPlan([]);
       setWorkouts({});
@@ -124,6 +137,14 @@ export default function MealPlanScreen() {
       setLoading(false);
     }
   }, [token, weekStart, weekEnd]);
+
+  // Switching weeks moves the selected day too — keeping the old selection would
+  // point at a date that isn't on the visible strip (nothing looks selected).
+  const changeWeek = (delta: number) => {
+    const next = weekOffset + delta;
+    setWeekOffset(next);
+    setSelectedDate(next === 0 ? todayKey : dateKey(mondayOf(new Date(), next)));
+  };
 
   // The AI never plans the past: week scope starts at max(weekStart, today).
   // (YYYY-MM-DD strings compare correctly.)
@@ -171,15 +192,25 @@ export default function MealPlanScreen() {
     }
   };
 
-  // AI grocery list for the planned meals (today → end of viewed week)
+  // AI grocery list for the planned meals (today → end of viewed week).
+  // In-memory → AsyncStorage (survives leaving the screen) → only then Gemini.
   const openGrocery = async () => {
     if (groceryLoading || !token) return;
     if (grocery) { setGroceryVisible(true); return; } // reuse until the plan changes
+    const cached = await getCachedGrocery(weekStart, lang);
+    if (cached && cached.sig === planSigRef.current) {
+      setGrocery(cached.groups);
+      setGroceryChecked(cached.checked || {});
+      setGroceryVisible(true);
+      return;
+    }
     const start = weekStart > todayKey ? weekStart : todayKey;
     setGroceryLoading(true);
     try {
       const groups = await getGroceryList(token, start, weekEnd, lang);
       setGrocery(groups);
+      setGroceryChecked({});
+      cacheGrocery(weekStart, lang, { groups, checked: {}, sig: planSigRef.current });
       setGroceryVisible(true);
     } catch (e: any) {
       const quota = /quota/i.test(String(e?.message || ""));
@@ -187,6 +218,15 @@ export default function MealPlanScreen() {
     } finally {
       setGroceryLoading(false);
     }
+  };
+
+  // Tick/untick a grocery item — persisted with the list so it survives reopening
+  const toggleGroceryItem = (key: string) => {
+    setGroceryChecked((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      cacheGrocery(weekStart, lang, { groups: grocery || [], checked: next, sig: planSigRef.current });
+      return next;
+    });
   };
 
   // Reload on focus (e.g. returning from add screen) and whenever the week changes
@@ -248,8 +288,21 @@ export default function MealPlanScreen() {
     ]);
   };
 
-  const addToDay = (mealType: MealType) =>
-    router.push({ pathname: "/plan/add-meal" as any, params: { date: selectedDate, mealType } });
+  // Tap the 💬 on a dish → jump to the Coach tab with a ready-made cooking question
+  const askCoach = (item: PlanMeal) =>
+    router.push({
+      pathname: "/tabs/coach" as any,
+      params: {
+        ask: lang === "vi"
+          ? `Hướng dẫn mình cách làm "${item.name}" tốt cho sức khoẻ nhé`
+          : `How do I cook "${item.name}" in a healthy way?`,
+        askId: String(Date.now()), // unique per tap — consumed once on the Coach tab
+      },
+    });
+
+  // Past days are read-only: adding/eating a plan for yesterday makes no sense
+  // (Eat would even log the meal into TODAY's diary). Delete stays available.
+  const isPast = selectedDate < todayKey;
 
   const selectedLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "long",
@@ -275,7 +328,7 @@ export default function MealPlanScreen() {
         {/* Week navigator */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Pressable
-            onPress={() => setWeekOffset((w) => w - 1)}
+            onPress={() => changeWeek(-1)}
             hitSlop={10}
             style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
           >
@@ -289,7 +342,7 @@ export default function MealPlanScreen() {
                 weekDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}
           </AppText>
           <Pressable
-            onPress={() => setWeekOffset((w) => w + 1)}
+            onPress={() => changeWeek(1)}
             hitSlop={10}
             style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
           >
@@ -400,7 +453,20 @@ export default function MealPlanScreen() {
             <ActivityIndicator color={theme.colors.primary} />
           </View>
         ) : (
-          MEAL_TYPES.map((mt) => {
+          <>
+          {/* Time-aware hints: empty future/today day → point at the AI button; past day → view only */}
+          {dayPlan.length === 0 && (
+            <View style={{
+              flexDirection: "row", alignItems: "flex-start", gap: 8,
+              backgroundColor: "rgba(37,99,235,0.05)", borderRadius: 12, padding: theme.space.md,
+            }}>
+              <Ionicons name={isPast ? "time-outline" : "sparkles"} size={15} color={theme.colors.primary} style={{ marginTop: 1 }} />
+              <AppText variant="subtle" style={{ flex: 1, fontSize: 12 }}>
+                {isPast ? L.pastDay : L.emptyHint}
+              </AppText>
+            </View>
+          )}
+          {MEAL_TYPE_META.map((mt) => {
             const items = dayPlan.filter((p) => p.mealType === mt.key);
             return (
               <View key={mt.key} style={{ gap: 8 }}>
@@ -409,17 +475,6 @@ export default function MealPlanScreen() {
                     <Ionicons name={mt.icon as any} size={16} color={mt.color} />
                     <AppText variant="h2" style={{ fontSize: 15 }}>{mt.label}</AppText>
                   </View>
-                  <Pressable
-                    onPress={() => addToDay(mt.key)}
-                    style={({ pressed }) => ({
-                      flexDirection: "row", alignItems: "center", gap: 4,
-                      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
-                      backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.08)",
-                    })}
-                  >
-                    <Ionicons name="add" size={15} color={theme.colors.primary} />
-                    <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.primary }}>Add</AppText>
-                  </Pressable>
                 </View>
 
                 {items.length === 0 ? (
@@ -445,7 +500,7 @@ export default function MealPlanScreen() {
                             <Ionicons name="checkmark-circle" size={20} color={theme.colors.accent} />
                             <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>Eaten</AppText>
                           </View>
-                        ) : (
+                        ) : !isPast ? (
                           <Pressable
                             onPress={() => onMarkEaten(item)}
                             hitSlop={6}
@@ -458,9 +513,14 @@ export default function MealPlanScreen() {
                             <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
                             <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>Eat</AppText>
                           </Pressable>
-                        )}
+                        ) : null}
 
-                        <Pressable onPress={() => onDelete(item)} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                        {/* Ask the Coach how to cook this dish */}
+                        <Pressable onPress={() => askCoach(item)} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                          <Ionicons name="chatbubble-ellipses-outline" size={17} color={theme.colors.primary} />
+                        </Pressable>
+
+                        <Pressable onPress={() => onDelete(item)} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
                           <Ionicons name="trash-outline" size={18} color={theme.colors.subtle} />
                         </Pressable>
                       </View>
@@ -469,7 +529,8 @@ export default function MealPlanScreen() {
                 )}
               </View>
             );
-          })
+          })}
+          </>
         )}
 
         {/* AI actions — kept at the bottom so the calendar stays front and center */}
@@ -577,12 +638,37 @@ export default function MealPlanScreen() {
               {(grocery || []).map((g) => (
                 <View key={g.name} style={{ gap: 6 }}>
                   <AppText style={{ fontSize: 13, fontWeight: "800", color: theme.colors.primary }}>{g.name}</AppText>
-                  {g.items.map((it, idx) => (
-                    <View key={idx} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.accent }} />
-                      <AppText variant="body2" style={{ flex: 1, fontSize: 13 }}>{it}</AppText>
-                    </View>
-                  ))}
+                  {g.items.map((it, idx) => {
+                    // Tick state keyed by group+item text (stable across reopenings)
+                    const key = `${g.name}|${it}`;
+                    const checked = !!groceryChecked[key];
+                    return (
+                      <Pressable
+                        key={idx}
+                        onPress={() => toggleGroceryItem(key)}
+                        style={({ pressed }) => ({
+                          flexDirection: "row", alignItems: "center", gap: 10,
+                          paddingVertical: 4, opacity: pressed ? 0.6 : 1,
+                        })}
+                      >
+                        <Ionicons
+                          name={checked ? "checkbox" : "square-outline"}
+                          size={19}
+                          color={checked ? theme.colors.accent : theme.colors.subtle}
+                        />
+                        <AppText
+                          variant="body2"
+                          style={{
+                            flex: 1, fontSize: 13,
+                            textDecorationLine: checked ? "line-through" : "none",
+                            color: checked ? theme.colors.subtle : theme.colors.text,
+                          }}
+                        >
+                          {it}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               ))}
             </ScrollView>

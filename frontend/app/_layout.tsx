@@ -25,7 +25,6 @@ export default function RootLayout() {
           <Stack.Screen name="meals/detail" />
           <Stack.Screen name="meals/history" />
           <Stack.Screen name="plan/weekly" />
-          <Stack.Screen name="plan/add-meal" />
           <Stack.Screen name="exercise/log-workout" />
         </Stack>
       </MealsProvider>
