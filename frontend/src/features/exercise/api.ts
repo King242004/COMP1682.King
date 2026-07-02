@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest } from "@/utils/api";
 
 export type Exercise = {
   id: string;

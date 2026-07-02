@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiRequest } from "./api";
-import type { Lang } from "./language";
+import { apiRequest } from "@/utils/api";
+import type { Lang } from "@/utils/language";
 
 export type CoachInsight = {
   date: string;

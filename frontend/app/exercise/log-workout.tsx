@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import { addExercise, estimateBurned, ACTIVITY_GROUPS, type Activity } from "@/utils/exercise";
+import { addExercise, estimateBurned, ACTIVITY_GROUPS, type Activity } from "@/features/exercise/api";
 import { todayKey } from "@/utils/date";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";

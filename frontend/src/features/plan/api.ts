@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiRequest } from "./api";
+import { apiRequest } from "@/utils/api";
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 

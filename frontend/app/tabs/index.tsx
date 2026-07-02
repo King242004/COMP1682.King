@@ -1,15 +1,16 @@
 // HOME SCREEN
 import { useCallback, useState, useRef } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
-import { getExercisesByDate, deleteExercise, type Exercise } from "@/utils/exercise";
-import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/utils/plan";
-import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/utils/coach";
-import { SuggestMealCard } from "@/plan/SuggestMealCard";
+import { getExercisesByDate, deleteExercise, type Exercise } from "@/features/exercise/api";
+import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/features/plan/api";
+import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/features/coach/api";
+import { SuggestMealCard } from "@/features/plan/SuggestMealCard";
+import { CalorieRing } from "@/features/home/CalorieRing";
+import { getCurrentWeekDays, dayLabelsFixed } from "@/features/home/week";
 import { dateKey, weekNumber } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme, macroGoals, shadow } from "@/ui/theme";
@@ -18,54 +19,6 @@ import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { Skeleton } from "@/ui/components/Skeleton";
-
-function getCurrentWeekDays(weekOffset = 0) {
-  const days = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  // Start from Monday of the week, shifted back `weekOffset` weeks (0 = this week)
-  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7) + weekOffset * 7);
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    days.push(d);
-  }
-  return days;
-}
-
-const dayLabelsFixed = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-// Big friendly progress ring for the hero calorie card
-function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
-  const size = 116;
-  const stroke = 11;
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const progress = goal > 0 ? Math.min(eaten / goal, 1) : 0;
-  const over = eaten > goal;
-  return (
-    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
-      <Svg width={size} height={size} style={{ position: "absolute" }}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(8,145,178,0.10)" strokeWidth={stroke} fill="none" />
-        <Circle
-          cx={size / 2} cy={size / 2} r={r}
-          stroke={over ? theme.colors.danger : theme.colors.primary}
-          strokeWidth={stroke} fill="none"
-          strokeDasharray={`${progress * circ} ${circ}`}
-          strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
-      </Svg>
-      <AppText style={{ fontSize: 22, fontWeight: "800", color: over ? theme.colors.danger : theme.colors.primary }}>
-        {Math.round(progress * 100)}%
-      </AppText>
-      <AppText variant="subtle" style={{ fontSize: 10 }}>of goal</AppText>
-    </View>
-  );
-}
 
 export default function HomeScreen() {
   const router = useRouter();

@@ -14,8 +14,8 @@ import {
   cacheSuggestions,
   nextMealSlot,
   type MealSuggestions,
-} from "@/plan/suggest";
-import type { PlanMeal } from "@/utils/plan";
+} from "@/features/plan/suggest";
+import type { PlanMeal } from "@/features/plan/api";
 import { todayKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
