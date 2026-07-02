@@ -5,18 +5,29 @@ const User = require("../models/User");
 const OTP = require("../models/OTP");
 
 // ─── Upload Avatar ────────────────────────────────────────────────────────────
+// upload_stream is callback-based (it returns a stream, NOT a promise) — wrap it
+// so errors flow through try/catch instead of relying on the callback by accident.
+function uploadAvatarToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "healthysnap/avatars", transformation: [{ width: 300, height: 300, crop: "fill" }] },
+      (err, result) => (err ? reject(err) : resolve(result.secure_url))
+    );
+    stream.end(buffer);
+  });
+}
+
 exports.uploadAvatar = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No image provided." });
 
-  const result = await cloudinary.uploader.upload_stream(
-    { folder: "healthysnap/avatars", transformation: [{ width: 300, height: 300, crop: "fill" }] },
-    async (error, result) => {
-      if (error) return res.status(500).json({ message: "Upload failed." });
-      await User.findByIdAndUpdate(req.user.id, { avatar: result.secure_url });
-      res.json({ message: "Avatar uploaded successfully.", avatar: result.secure_url });
-    }
-  );
-  result.end(req.file.buffer);
+  try {
+    const url = await uploadAvatarToCloudinary(req.file.buffer);
+    await User.findByIdAndUpdate(req.user.id, { avatar: url });
+    res.json({ message: "Avatar uploaded successfully.", avatar: url });
+  } catch (err) {
+    console.error("Avatar upload failed:", err.message);
+    res.status(500).json({ message: "Upload failed." });
+  }
 };
 
 // ─── Send OTP ─────────────────────────────────────────────────────────────────

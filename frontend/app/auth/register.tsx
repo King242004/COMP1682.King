@@ -43,7 +43,8 @@ export default function RegisterScreen() {
     setIsLoading(true);
     try {
       await register(name.trim(), email.trim(), password);
-      router.replace("/auth/login");
+      // register() already stored the token (auto-login) → go straight into the app
+      router.replace("/tabs");
     } catch (e: any) {
       setError(e.message || "Something went wrong. Please try again.");
     } finally {

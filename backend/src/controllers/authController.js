@@ -5,6 +5,25 @@ const User = require("../models/User");
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
 
+// Full safe user payload for auth responses. Login/register used to return only
+// a few fields, so the app lacked language/conditions/weight/avatar until the
+// user happened to open the Profile tab (wrong coach language, 60kg fallback...).
+const publicUser = (u) => ({
+  id: u._id,
+  name: u.name,
+  email: u.email,
+  goal: u.goal,
+  calorieGoal: u.calorieGoal,
+  gender: u.gender ?? null,
+  age: u.age ?? null,
+  weight: u.weight ?? null,
+  height: u.height ?? null,
+  activityLevel: u.activityLevel ?? null,
+  conditions: u.conditions || [],
+  language: u.language ?? null,
+  avatar: u.avatar ?? null,
+});
+
 // ─── Validation helpers ───────────────────────────────────────────────────────
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isValidPassword = (pw) => pw.length >= 6 && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
@@ -42,10 +61,7 @@ exports.register = async (req, res) => {
     weight, height, age,
   });
 
-  res.status(201).json({
-    token: generateToken(user._id),
-    user: { id: user._id, name: user.name, email: user.email, goal: user.goal, calorieGoal: user.calorieGoal },
-  });
+  res.status(201).json({ token: generateToken(user._id), user: publicUser(user) });
 };
 
 // ─── Login ────────────────────────────────────────────────────────────────────
@@ -64,10 +80,7 @@ exports.login = async (req, res) => {
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(400).json({ message: "Invalid email or password." });
 
-  res.json({
-    token: generateToken(user._id),
-    user: { id: user._id, name: user.name, email: user.email, goal: user.goal, calorieGoal: user.calorieGoal },
-  });
+  res.json({ token: generateToken(user._id), user: publicUser(user) });
 };
 
 // ─── Get current user ─────────────────────────────────────────────────────────
