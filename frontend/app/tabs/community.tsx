@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, View } f
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { getFeed, getExplore, toggleLike, type FeedPost } from "@/utils/community";
+import { getFeed, getExplore, toggleLike, type FeedPost } from "@/features/community/api";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";

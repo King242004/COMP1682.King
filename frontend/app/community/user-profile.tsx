@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   getPublicProfile, getUserPosts, followUser, unfollowUser,
   type FeedPost, type PublicProfile,
-} from "@/utils/community";
+} from "@/features/community/api";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
