@@ -164,7 +164,7 @@ export default function ProgressScreen() {
                 style={({ pressed }) => ({
                   flex: 1, alignItems: "center", paddingVertical: 8,
                   borderRadius: 10,
-                  backgroundColor: active ? theme.colors.primary : "rgba(37,99,235,0.06)",
+                  backgroundColor: active ? theme.colors.primary : "rgba(8,145,178,0.06)",
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
@@ -191,7 +191,7 @@ export default function ProgressScreen() {
                 </AppText>
                 <AppText variant="muted">/ {goal.toLocaleString()} kcal</AppText>
               </View>
-              <View style={{ height: 8, borderRadius: 99, backgroundColor: "rgba(37,99,235,0.08)", overflow: "hidden" }}>
+              <View style={{ height: 8, borderRadius: 99, backgroundColor: "rgba(8,145,178,0.08)", overflow: "hidden" }}>
                 <View style={{
                   height: "100%",
                   width: `${Math.min(todaySummary.ratio, 1) * 100}%`,
@@ -242,7 +242,7 @@ export default function ProgressScreen() {
                       ? theme.colors.accent
                       : day.isToday
                       ? theme.colors.primary
-                      : "rgba(37,99,235,0.15)";
+                      : "rgba(8,145,178,0.15)";
                     return (
                       <View key={day.key} style={{ flex: 1, alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
                         {day.calories > 0 && (
@@ -510,7 +510,7 @@ export default function ProgressScreen() {
                         ? theme.colors.danger
                         : day.calories > 0
                         ? theme.colors.primary
-                        : "rgba(37,99,235,0.08)",
+                        : "rgba(8,145,178,0.08)",
                       borderWidth: day.isToday && day.calories === 0 ? 1.5 : 0,
                       borderColor: theme.colors.primary,
                       alignItems: "center", justifyContent: "center",

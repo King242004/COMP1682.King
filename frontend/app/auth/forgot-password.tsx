@@ -104,7 +104,7 @@ export default function ForgotPasswordScreen() {
                 height: 4, flex: 1, borderRadius: 99,
                 backgroundColor: ["email", "otp", "password"].indexOf(step) >= i
                   ? theme.colors.primary
-                  : "rgba(37,99,235,0.12)",
+                  : "rgba(8,145,178,0.12)",
               }}
             />
           ))}

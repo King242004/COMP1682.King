@@ -32,7 +32,7 @@ function IconBox({ icon, bg }: { icon: string; bg?: string }) {
   return (
     <View style={{
       width: 34, height: 34, borderRadius: 11,
-      backgroundColor: bg ?? "rgba(37,99,235,0.08)",
+      backgroundColor: bg ?? "rgba(8,145,178,0.08)",
       alignItems: "center", justifyContent: "center",
     }}>
       <AppText style={{ fontSize: 15 }}>{icon}</AppText>

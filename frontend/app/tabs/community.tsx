@@ -116,10 +116,10 @@ export default function CommunityScreen() {
         <View style={{
           flexDirection: "row", alignItems: "center", gap: 10,
           margin: theme.space.lg, padding: theme.space.md,
-          borderRadius: theme.radius.card, backgroundColor: "rgba(37,99,235,0.06)",
+          borderRadius: theme.radius.card, backgroundColor: "rgba(8,145,178,0.06)",
         }}>
           <View style={{
-            width: 38, height: 38, borderRadius: 12, backgroundColor: "rgba(37,99,235,0.10)",
+            width: 38, height: 38, borderRadius: 12, backgroundColor: "rgba(8,145,178,0.10)",
             alignItems: "center", justifyContent: "center",
           }}>
             <AppText style={{ fontSize: 18 }}>🍽️</AppText>
@@ -166,7 +166,7 @@ export default function CommunityScreen() {
                   onPress={() => router.push("/community/discover")}
                   style={({ pressed }) => ({
                     width: 40, height: 40, borderRadius: 20,
-                    backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.06)",
+                    backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.06)",
                     alignItems: "center", justifyContent: "center",
                   })}
                 >
@@ -195,7 +195,7 @@ export default function CommunityScreen() {
                     onPress={() => setTab(key)}
                     style={({ pressed }) => ({
                       flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 12,
-                      backgroundColor: active ? theme.colors.primary : "rgba(37,99,235,0.06)",
+                      backgroundColor: active ? theme.colors.primary : "rgba(8,145,178,0.06)",
                       opacity: pressed ? 0.7 : 1,
                     })}
                   >

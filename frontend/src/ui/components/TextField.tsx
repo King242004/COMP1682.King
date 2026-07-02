@@ -46,7 +46,7 @@ export function TextField({
       borderWidth: 1.5,
       borderColor: focused ? theme.colors.primary : "transparent",
       paddingHorizontal: theme.space.lg,
-      backgroundColor: focused ? theme.colors.surface : "rgba(37,99,235,0.06)",
+      backgroundColor: focused ? theme.colors.surface : "rgba(8,145,178,0.06)",
       color: theme.colors.text,
       fontSize: 15,
       fontWeight: "600" as const,

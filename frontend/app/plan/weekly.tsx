@@ -366,7 +366,7 @@ export default function MealPlanScreen() {
                   backgroundColor: isSelected
                     ? theme.colors.primary
                     : hasPlan
-                    ? "rgba(37,99,235,0.10)"
+                    ? "rgba(8,145,178,0.10)"
                     : theme.colors.surface,
                   transform: [{ scale: pressed ? 0.94 : 1 }],
                 })}
@@ -416,7 +416,7 @@ export default function MealPlanScreen() {
                 style={({ pressed }) => ({
                   flexDirection: "row", alignItems: "center", gap: 5,
                   paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10,
-                  backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.08)",
+                  backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.08)",
                 })}
               >
                 {/* Fixed 14px box so the spinner doesn't grow the button */}
@@ -458,7 +458,7 @@ export default function MealPlanScreen() {
           {dayPlan.length === 0 && (
             <View style={{
               flexDirection: "row", alignItems: "flex-start", gap: 8,
-              backgroundColor: "rgba(37,99,235,0.05)", borderRadius: 12, padding: theme.space.md,
+              backgroundColor: "rgba(8,145,178,0.05)", borderRadius: 12, padding: theme.space.md,
             }}>
               <Ionicons name={isPast ? "time-outline" : "sparkles"} size={15} color={theme.colors.primary} style={{ marginTop: 1 }} />
               <AppText variant="subtle" style={{ flex: 1, fontSize: 12 }}>

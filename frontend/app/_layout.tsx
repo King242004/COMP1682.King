@@ -1,8 +1,36 @@
 import { Stack } from "expo-router";
+import {
+  useFonts,
+  Lora_400Regular,
+  Lora_500Medium,
+  Lora_600SemiBold,
+  Lora_700Bold,
+} from "@expo-google-fonts/lora";
+import {
+  Raleway_400Regular,
+  Raleway_500Medium,
+  Raleway_600SemiBold,
+  Raleway_700Bold,
+  Raleway_800ExtraBold,
+} from "@expo-google-fonts/raleway";
 import { AuthProvider } from "@/context/AuthContext";
 import { MealsProvider } from "@/context/MealsContext";
 
 export default function RootLayout() {
+  // Design-system fonts (Lora headings / Raleway body) — AppText maps weights to these files
+  const [fontsLoaded] = useFonts({
+    Lora_400Regular,
+    Lora_500Medium,
+    Lora_600SemiBold,
+    Lora_700Bold,
+    Raleway_400Regular,
+    Raleway_500Medium,
+    Raleway_600SemiBold,
+    Raleway_700Bold,
+    Raleway_800ExtraBold,
+  });
+  if (!fontsLoaded) return null; // brief blank on first launch instead of font swap flash
+
   return (
     <AuthProvider>
       <MealsProvider>

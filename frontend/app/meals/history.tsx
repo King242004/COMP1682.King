@@ -107,7 +107,7 @@ export default function MealHistoryScreen() {
                 }}>
                   <View style={{
                     width: 52, height: 52, borderRadius: 18,
-                    backgroundColor: MEAL_TYPE_BY_KEY[item.mealType]?.bg ?? "rgba(37,99,235,0.08)",
+                    backgroundColor: MEAL_TYPE_BY_KEY[item.mealType]?.bg ?? "rgba(8,145,178,0.08)",
                     alignItems: "center", justifyContent: "center",
                   }}>
                     <Ionicons

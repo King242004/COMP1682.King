@@ -129,7 +129,7 @@ export default function DiscoverScreen() {
             {/* Search box */}
             <View style={{
               flexDirection: "row", alignItems: "center", gap: 8,
-              backgroundColor: "rgba(37,99,235,0.06)", borderRadius: theme.radius.input,
+              backgroundColor: "rgba(8,145,178,0.06)", borderRadius: theme.radius.input,
               paddingHorizontal: theme.space.lg, height: 50,
             }}>
               <Ionicons name="search" size={18} color={theme.colors.subtle} />
