@@ -1,8 +1,8 @@
-// "What should I eat now?" — API + cache logic. Lives in src/plan (feature
-// module) together with SuggestMealCard; the endpoint itself is /coach/suggest-meal.
+// "What should I eat now?" — API + cache logic for the plan feature
+// (the endpoint itself is /coach/suggest-meal).
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/api";
-import { stripMarkdown } from "@/utils/coach";
+import { stripMarkdown } from "@/features/coach/api";
 import type { Lang } from "@/utils/language";
 
 export type MealSuggestion = {

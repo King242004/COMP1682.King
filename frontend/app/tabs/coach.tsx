@@ -19,7 +19,7 @@ import {
   unlogMealFromMessage,
   type CoachInsight,
   type ChatMessage,
-} from "@/utils/coach";
+} from "@/features/coach/api";
 import { todayKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";

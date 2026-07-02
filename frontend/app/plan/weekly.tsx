@@ -16,7 +16,7 @@ import {
   cachePlanWeek,
   type PlanMeal,
   type GroceryGroup,
-} from "@/utils/plan";
+} from "@/features/plan/api";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
 import { MEAL_TYPE_META } from "@/ui/mealTypes";
