@@ -29,7 +29,7 @@ async function buildContext(userId, date) {
   // Independent queries — run in parallel to keep AI endpoints snappy
   const weekStart = shiftDate(date, -6); // last 7 days (incl. `date`)
   const [user, todayMeals, todayExercises, weekMeals] = await Promise.all([
-    User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal"),
+    User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal tastePreferences"),
     Meal.find({ user: userId, date }).sort({ createdAt: 1 }),
     Exercise.find({ user: userId, date }).sort({ createdAt: 1 }),
     Meal.find({ user: userId, date: { $gte: weekStart, $lte: date } }),
@@ -52,6 +52,7 @@ async function buildContext(userId, date) {
       activityLevel: user?.activityLevel || "moderate",
       conditions: user?.conditions || [],
       calorieGoal: user?.calorieGoal || 2000,
+      tastePreferences: user?.tastePreferences || "",
     },
     today: {
       date,
@@ -94,6 +95,7 @@ function contextToText(ctx) {
 - Name: ${p.name}
 - Goal: ${p.goal}
 - Health conditions: ${conditions}
+- Taste preferences (MUST respect — allergies/dislikes): ${p.tastePreferences || "none saved"}
 - Daily calorie goal: ${p.calorieGoal} kcal
 - Weight: ${p.weight ?? "unknown"} kg, Height: ${p.height ?? "unknown"} cm, Age: ${p.age ?? "unknown"}, Gender: ${p.gender ?? "unknown"}
 

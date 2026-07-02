@@ -194,6 +194,19 @@ export default function HomeScreen() {
     }
   };
 
+  // Tap 💬 on a suggested dish → Coach tab with a ready-made cooking question
+  // (same deep-link pattern as the weekly plan's dish rows)
+  const askCoachHow = (name: string) =>
+    router.push({
+      pathname: "/tabs/coach" as any,
+      params: {
+        ask: lang === "vi"
+          ? `Hướng dẫn mình cách làm "${name}" tốt cho sức khoẻ nhé`
+          : `How do I cook "${name}" in a healthy way?`,
+        askId: String(Date.now()),
+      },
+    });
+
   // Pull-to-refresh re-runs every loader (insight still respects its TTL cache)
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -776,6 +789,10 @@ export default function HomeScreen() {
                       {s.name}
                     </AppText>
                     <AppText variant="subtle" style={{ fontSize: 12 }}>{s.calories} kcal</AppText>
+                    {/* Ask the Coach how to cook this dish */}
+                    <Pressable onPress={() => askCoachHow(s.name)} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.colors.primary} />
+                    </Pressable>
                     <Pressable
                       onPress={() => router.push({
                         pathname: "/meals/add",

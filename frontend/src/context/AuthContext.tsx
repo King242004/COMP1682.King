@@ -16,6 +16,7 @@ type User = {
   conditions?: string[];
   avatar?: string | null;
   language?: "vi" | "en" | null;
+  tastePreferences?: string;
 };
 
 type Stats = {

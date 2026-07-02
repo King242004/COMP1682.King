@@ -39,7 +39,7 @@ function mondayOf(base: Date, weekOffset: number) {
 
 export default function MealPlanScreen() {
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { token, user, updateProfile } = useAuth();
   const lang = resolveLanguage(user?.language);
   const L = lang === "vi"
     ? {
@@ -61,6 +61,7 @@ export default function MealPlanScreen() {
         groceryErr: "Chưa tạo được danh sách, thử lại nhé.", error: "Lỗi",
         pastDay: "Ngày này đã qua — chỉ xem lại thôi nhé.",
         emptyHint: "Chưa có món nào cho ngày này — bấm nút ✨ bên dưới để AI lên thực đơn nhé.",
+        rememberTaste: "Ghi nhớ khẩu vị này — gợi ý món và Coach cũng sẽ theo",
       }
     : {
         generate: "✨ Generate my week with AI", generating: "AI is planning your week...",
@@ -81,6 +82,7 @@ export default function MealPlanScreen() {
         groceryErr: "Couldn't build the list. Please try again.", error: "Error",
         pastDay: "This day is over — view only.",
         emptyHint: "Nothing planned for this day — tap the ✨ button below to let the AI build a menu.",
+        rememberTaste: "Remember these preferences — meal suggestions and Coach will follow them too",
       };
 
   const todayKey = dateKey(new Date());
@@ -90,10 +92,13 @@ export default function MealPlanScreen() {
   const [workouts, setWorkouts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  // Generate modal (week or single day) + optional taste note
+  // Generate modal (week or single day) + optional taste note.
+  // Note prefills from the profile's saved preferences; "remember" writes it back
+  // so EVERY AI feature (suggest, coach, next generations) knows the user's taste.
   const [genVisible, setGenVisible] = useState(false);
   const [genScope, setGenScope] = useState<"week" | "day">("week");
   const [note, setNote] = useState("");
+  const [rememberTaste, setRememberTaste] = useState(true);
   // AI grocery list + per-item ticks (persisted per week, see utils/plan cache)
   const [grocery, setGrocery] = useState<GroceryGroup[] | null>(null);
   const [groceryChecked, setGroceryChecked] = useState<Record<string, boolean>>({});
@@ -181,7 +186,12 @@ export default function MealPlanScreen() {
       Alert.alert(L.error, L.pastWeek);
       return;
     }
-    const show = () => { setGenScope(scope); setGenVisible(true); };
+    const show = () => {
+      setGenScope(scope);
+      // Prefill with the profile's saved taste preferences (only when empty)
+      setNote((n) => n.trim() ? n : (user?.tastePreferences || ""));
+      setGenVisible(true);
+    };
     // Regenerating over existing meals is destructive → explicit confirmation first
     const hasMeals = plan.some((p) => p.date >= range[0] && p.date <= range[1]);
     if (hasMeals) {
@@ -199,8 +209,14 @@ export default function MealPlanScreen() {
     if (!token || generating || !range) return;
     setGenVisible(false);
     setGenerating(true);
+    // Remember taste in the profile (best-effort, fire-and-forget) so the
+    // suggest button and the coach respect it too — user types it once.
+    const taste = note.trim();
+    if (rememberTaste && taste && taste !== (user?.tastePreferences || "")) {
+      updateProfile({ tastePreferences: taste }).catch(() => {});
+    }
     try {
-      await generateWeekPlan(token, range[0], range[1], lang, note.trim() || undefined);
+      await generateWeekPlan(token, range[0], range[1], lang, taste || undefined);
       await load();
     } catch (e: any) {
       const quota = /quota/i.test(String(e?.message || ""));
@@ -614,6 +630,19 @@ export default function MealPlanScreen() {
                 fontSize: 13, color: theme.colors.text, textAlignVertical: "top",
               }}
             />
+            {/* Save the note to the profile so every AI feature shares one taste memory */}
+            <Pressable
+              onPress={() => setRememberTaste((v) => !v)}
+              hitSlop={6}
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <Ionicons
+                name={rememberTaste ? "checkbox" : "square-outline"}
+                size={19}
+                color={rememberTaste ? theme.colors.accent : theme.colors.subtle}
+              />
+              <AppText variant="subtle" style={{ fontSize: 12, flex: 1 }}>{L.rememberTaste}</AppText>
+            </Pressable>
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Pressable
                 onPress={() => setGenVisible(false)}

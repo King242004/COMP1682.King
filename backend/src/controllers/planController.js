@@ -76,10 +76,16 @@ exports.generatePlan = async (req, res) => {
   if (dates.length === 0) return res.status(400).json({ message: "Invalid date range." });
 
   try {
-    const user = await User.findById(req.user.id).select("gender age weight height goal activityLevel conditions calorieGoal");
+    const user = await User.findById(req.user.id).select("gender age weight height goal activityLevel conditions calorieGoal tastePreferences");
     const conditions = user?.conditions?.length ? user.conditions.join(", ") : "none";
     const goalCal = user?.calorieGoal || 2000;
     const langName = language === "vi" ? "Vietnamese (tiếng Việt)" : "English";
+    // Saved profile preferences + this-generation note, deduped into one directive
+    const prefs = [user?.tastePreferences, note]
+      .map((s) => String(s || "").trim())
+      .filter(Boolean)
+      .join("; ")
+      .slice(0, 300);
 
     const prompt = `You are a nutrition and fitness coach creating a personalized weekly plan.
 
@@ -96,8 +102,8 @@ REQUIREMENTS:
 - Adjust every dish choice to the health conditions above.
 - Also give ONE short workout suggestion per day (max ~15 words) suited to the user's conditions and goal; a rest day is allowed.
 - Write dish names and workout text in ${langName}.${
-      note && String(note).trim()
-        ? `\n- USER FOOD PREFERENCES (MUST follow strictly — avoid disliked/allergy foods): ${String(note).trim().slice(0, 300)}`
+      prefs
+        ? `\n- USER FOOD PREFERENCES (MUST follow strictly — avoid disliked/allergy foods): ${prefs}`
         : ""
     }
 

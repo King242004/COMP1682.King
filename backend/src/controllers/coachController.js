@@ -286,6 +286,7 @@ Remaining calorie budget today (goal - eaten + burned): ${remaining} kcal.
 
 Suggest exactly 3 SPECIFIC dishes for this next ${slot}. Prefer Vietnamese dishes. Rules:
 ${planRule ? planRule + "\n" : ""}
+- STRICTLY follow the taste preferences in the profile above — NEVER suggest a food the user is allergic to or dislikes.
 - Single serving each, sized to fit the remaining budget. If the budget is small (or negative), suggest light low-calorie options and say so in the reason.
 - Look at what today's meals are MISSING and balance it (e.g. little protein so far → protein-rich dishes).
 - Strictly respect the health conditions above (diabetes: low sugar/refined carbs; hypertension: low sodium).
