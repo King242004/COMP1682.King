@@ -1,4 +1,5 @@
 const { insightModels, chatModels } = require("../config/gemini");
+const { generateWithFallback } = require("../services/aiGenerate");
 const { buildContext, contextToText } = require("../services/coachContext");
 const { computeHealthScore } = require("../services/healthScore");
 const ChatMessage = require("../models/ChatMessage");
@@ -44,21 +45,6 @@ function langDirective(raw) {
   const lang = raw === "vi" ? "vi" : "en";
   const name = lang === "vi" ? "Vietnamese (tiếng Việt)" : "English";
   return `IMPORTANT: Write your ENTIRE response in ${name}.`;
-}
-
-// Try each model in order. Each model name has its own free-tier daily quota, so
-// when one is exhausted (429 quota) or errors, we fall back to the next one.
-async function generateWithFallback(models, payload) {
-  let lastErr;
-  for (const model of models) {
-    try {
-      return await model.generateContent(payload);
-    } catch (e) {
-      lastErr = e;
-      console.warn("Coach model failed, trying next:", String(e?.message || "").slice(0, 140));
-    }
-  }
-  throw lastErr;
 }
 
 // ─── Daily Insight (GET /api/coach/insight?date=) ─────────────────────────────
@@ -194,7 +180,12 @@ Always read the history first so repeated or follow-up questions feel natural, n
     } catch {
       parsed = { reply: result.response.text().trim(), meal: null };
     }
-    const reply = (parsed.reply || "").trim();
+    // Guard: ChatMessage.text is required — an empty AI reply must not crash the save.
+    const reply =
+      (parsed.reply || "").trim() ||
+      (req.body.language === "vi"
+        ? "Mình chưa nghĩ ra câu trả lời, bạn thử hỏi lại nhé."
+        : "I couldn't come up with a reply — try asking again.");
 
     // Suggested meal (NOT logged here — the app shows an "Add" button when eating).
     let meal = null;
@@ -214,6 +205,7 @@ Always read the history first so repeated or follow-up questions feel natural, n
     // Upload the photo to Cloudinary so it persists in chat history. Best-effort:
     // if it fails, we still save the text turn.
     let imageUrl = null;
+    let imagePublicId = null;
     if (image) {
       try {
         const up = await cloudinary.uploader.upload(
@@ -221,13 +213,14 @@ Always read the history first so repeated or follow-up questions feel natural, n
           { folder: "healthysnap/coach", transformation: [{ width: 800, crop: "limit" }] }
         );
         imageUrl = up.secure_url;
+        imagePublicId = up.public_id; // kept so clearHistory can delete the file from Cloudinary
       } catch (e) {
         console.error("Coach image upload failed:", e.message);
       }
     }
 
     const docs = await ChatMessage.create([
-      { user: req.user.id, role: "user", text: image ? `📷 ${userText}` : userText, image: imageUrl },
+      { user: req.user.id, role: "user", text: image ? `📷 ${userText}` : userText, image: imageUrl, imagePublicId },
       { user: req.user.id, role: "coach", text: reply, meal: meal || null, mealEating: eating },
     ]);
 
@@ -243,7 +236,9 @@ Always read the history first so repeated or follow-up questions feel natural, n
 
 // ─── Chat History (GET /api/coach/history) ────────────────────────────────────
 exports.getHistory = async (req, res) => {
-  const msgs = await ChatMessage.find({ user: req.user.id }).sort({ createdAt: 1 }).limit(100);
+  // Take the LATEST 100 then restore chronological order — sorting ascending with
+  // limit would return the oldest 100 and hide new messages once history grows.
+  const msgs = (await ChatMessage.find({ user: req.user.id }).sort({ createdAt: -1 }).limit(100)).reverse();
   res.json({
     messages: msgs.map((m) => ({
       id: m._id,
@@ -296,7 +291,11 @@ exports.unlogFromMessage = async (req, res) => {
 };
 
 // ─── Clear History (DELETE /api/coach/history) ────────────────────────────────
+// Also deletes the user's chat photos from Cloudinary so no orphan files pile up.
 exports.clearHistory = async (req, res) => {
+  const withImages = await ChatMessage.find({ user: req.user.id, imagePublicId: { $ne: null } }).select("imagePublicId");
+  // Best-effort: a failed Cloudinary delete should not block clearing the chat
+  await Promise.allSettled(withImages.map((m) => cloudinary.uploader.destroy(m.imagePublicId)));
   await ChatMessage.deleteMany({ user: req.user.id });
   res.json({ message: "Chat history cleared." });
 };

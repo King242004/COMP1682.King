@@ -42,9 +42,41 @@ function mapPlan(p: any): PlanMeal {
   };
 }
 
-export async function getPlanMeals(token: string, startDate: string, endDate: string): Promise<PlanMeal[]> {
+export async function getPlanMeals(
+  token: string,
+  startDate: string,
+  endDate: string
+): Promise<{ meals: PlanMeal[]; workouts: Record<string, string> }> {
   const data = await apiRequest(`/plan?startDate=${startDate}&endDate=${endDate}`, "GET", undefined, token);
-  return (data.planMeals || []).map(mapPlan);
+  // Workouts come as [{date, text}] — index by date for easy per-day lookup
+  const workouts: Record<string, string> = {};
+  for (const w of data.planWorkouts || []) workouts[w.date] = w.text;
+  return { meals: (data.planMeals || []).map(mapPlan), workouts };
+}
+
+// Ask the AI to generate the range (meals + daily workout tip). REPLACES the range.
+// `note` = optional taste preferences ("không ăn hải sản, thích gà"...).
+export async function generateWeekPlan(
+  token: string,
+  startDate: string,
+  endDate: string,
+  language: string,
+  note?: string
+): Promise<void> {
+  await apiRequest("/plan/generate", "POST", { startDate, endDate, language, note }, token);
+}
+
+export type GroceryGroup = { name: string; items: string[] };
+
+// AI grocery shopping list built from the planned meals in the range.
+export async function getGroceryList(
+  token: string,
+  startDate: string,
+  endDate: string,
+  language: string
+): Promise<GroceryGroup[]> {
+  const data = await apiRequest("/plan/grocery", "POST", { startDate, endDate, language }, token);
+  return data.groups || [];
 }
 
 export async function addPlanMeal(token: string, input: NewPlanMeal): Promise<PlanMeal> {

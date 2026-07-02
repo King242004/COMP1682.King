@@ -1,20 +1,6 @@
 const axios = require("axios");
 const { visionModels } = require("../config/gemini");
-
-// Try each vision model in order; fall back to the next on quota/error so a
-// single exhausted model doesn't break scanning.
-async function generateWithFallback(models, payload) {
-  let lastErr;
-  for (const model of models) {
-    try {
-      return await model.generateContent(payload);
-    } catch (e) {
-      lastErr = e;
-      console.warn("Scan model failed, trying next:", String(e?.message || "").slice(0, 140));
-    }
-  }
-  throw lastErr;
-}
+const { generateWithFallback } = require("../services/aiGenerate");
 
 // ─── Scan Photo (AI Food Recognition)
 // Receives an uploaded image (multer memory storage), sends to Gemini Vision,

@@ -13,6 +13,7 @@ import {
   clearChatHistory,
   getCachedInsight,
   cacheInsight,
+  INSIGHT_TTL_MS,
   logMealFromMessage,
   unlogMealFromMessage,
   type CoachInsight,
@@ -92,11 +93,40 @@ export default function CoachTab() {
     ? {
         add: "Thêm vào nhật ký", logged: "Đã ghi", undo: "Hoàn tác", photo: "📷 Gửi ảnh món ăn",
         intro: "Mình là Coach 👋 Mình có thể gợi ý và chỉ cách nấu món healthy hợp tình trạng của bạn, xem ảnh món ăn, ghi nhật ký, và khuyên bài tập. Thử hỏi mình nhé:",
+        placeholder: "Hỏi Coach điều gì đó...",
+        disclaimer: "Lời khuyên từ AI, không thay thế ý kiến bác sĩ. Có vấn đề sức khỏe hãy đi khám nhé.",
+        insightFail: "Chưa tải được phân tích hôm nay.",
+        photoAttached: "Đã đính kèm ảnh. Hỏi gì về món này cũng được.",
+        photoTitle: "Thêm ảnh món ăn", photoMsg: "Hỏi Coach về một món qua ảnh.",
+        camera: "Máy ảnh", library: "Thư viện ảnh", cancel: "Huỷ",
+        permTitle: "Cần quyền truy cập", permMsg: "Cho phép truy cập để đính kèm ảnh món ăn.",
+        imgErrTitle: "Lỗi ảnh", imgErrMsg: "Không xử lý được ảnh này, thử ảnh khác nhé.",
+        clearTitle: "Xoá đoạn chat?", clearMsg: "Toàn bộ lịch sử trò chuyện với Coach sẽ bị xoá.", clear: "Xoá",
+        addErr: "Chưa thêm được vào nhật ký.", undoErrTitle: "Chưa hoàn tác được", undoErrMsg: "Bạn xoá món trong nhật ký giúp mình nhé.",
+        error: "Lỗi",
       }
     : {
         add: "Add to diary", logged: "Logged", undo: "Undo", photo: "📷 Send a food photo",
         intro: "I'm Coach 👋 I can suggest and teach healthy recipes for your conditions, look at food photos, log meals, and advise workouts. Try asking:",
+        placeholder: "Ask your coach...",
+        disclaimer: "AI guidance, not medical advice. Consult a professional for health concerns.",
+        insightFail: "Couldn't load today's analysis right now.",
+        photoAttached: "Photo attached. Ask anything about it.",
+        photoTitle: "Add a food photo", photoMsg: "Ask the coach about a meal photo.",
+        camera: "Camera", library: "Photo library", cancel: "Cancel",
+        permTitle: "Permission needed", permMsg: "Allow access to attach a food photo.",
+        imgErrTitle: "Image error", imgErrMsg: "Couldn't process that photo. Try another.",
+        clearTitle: "Clear chat?", clearMsg: "This deletes your conversation history with the coach.", clear: "Clear",
+        addErr: "Couldn't add to your diary.", undoErrTitle: "Couldn't undo", undoErrMsg: "Please remove it from your diary instead.",
+        error: "Error",
       };
+  const mealOpts: [string, string][] = lang === "vi"
+    ? [["breakfast", "Sáng"], ["lunch", "Trưa"], ["dinner", "Tối"], ["snack", "Phụ"]]
+    : MEAL_OPTS;
+
+  // Tap an insight tip/warning → ask the coach to elaborate on it in chat
+  const askAboutTip = (tip: string) =>
+    send(lang === "vi" ? `Nói rõ hơn giúp mình: "${tip}"` : `Tell me more about this: "${tip}"`);
   const headerHeight = useHeaderHeight(); // bù chiều cao AppHeader của tab cho keyboard
   const scrollRef = useRef<ScrollView>(null);
 
@@ -113,7 +143,7 @@ export default function CoachTab() {
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow access to attach a food photo.");
+      Alert.alert(L.permTitle, L.permMsg);
       return;
     }
     const result = source === "camera"
@@ -122,26 +152,27 @@ export default function CoachTab() {
     if (result.canceled || !result.assets?.[0]?.uri) return;
     const compressed = await compressToBase64(result.assets[0].uri);
     if (compressed) setPendingImage(compressed);
-    else Alert.alert("Image error", "Couldn't process that photo. Try another.");
+    else Alert.alert(L.imgErrTitle, L.imgErrMsg);
   };
 
   const attachImage = () => {
-    Alert.alert("Add a food photo", "Ask the coach about a meal photo.", [
-      { text: "Camera", onPress: () => pickImage("camera") },
-      { text: "Photo library", onPress: () => pickImage("library") },
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(L.photoTitle, L.photoMsg, [
+      { text: L.camera, onPress: () => pickImage("camera") },
+      { text: L.library, onPress: () => pickImage("library") },
+      { text: L.cancel, style: "cancel" },
     ]);
   };
 
-  const loadInsight = useCallback(async () => {
+  // Show cached insight instantly; only hit Gemini when the cache is stale (TTL)
+  // or when forced (e.g. right after logging a meal) — saves free-tier quota.
+  const loadInsight = useCallback(async (force = false) => {
     if (!token) return;
     const date = todayKey();
-    // Show cached insight instantly (if any), then refresh in the background so
-    // reopening the tab is not blocked by the AI call.
     const cached = await getCachedInsight(date, lang);
     if (cached) {
-      setInsight(cached);
+      setInsight(cached.insight);
       setLoadingInsight(false);
+      if (!force && Date.now() - cached.at < INSIGHT_TTL_MS) return; // still fresh → skip AI call
     } else {
       setLoadingInsight(true);
     }
@@ -211,15 +242,19 @@ export default function CoachTab() {
   };
 
   // User taps "Add" → log the suggested meal (persisted server-side via its message id).
+  const loggingRef = useRef(false); // in-flight guard: double-tap must not log twice
   const acceptLog = async (index: number) => {
     const m = messages[index];
-    if (!token || !m?.id || !m.meal) return;
+    if (!token || !m?.id || !m.meal || loggingRef.current) return;
+    loggingRef.current = true;
     try {
       const mealId = await logMealFromMessage(token, m.id, m.meal.mealType);
       setMessages((prev) => prev.map((x, i) => (i === index ? { ...x, loggedId: mealId } : x)));
-      loadInsight(); // refresh Health Score to reflect the newly logged meal
+      loadInsight(true); // force-refresh Health Score to reflect the newly logged meal
     } catch {
-      Alert.alert("Error", "Couldn't add to your diary.");
+      Alert.alert(L.error, L.addErr);
+    } finally {
+      loggingRef.current = false;
     }
   };
 
@@ -231,16 +266,16 @@ export default function CoachTab() {
       await unlogMealFromMessage(token, m.id);
       setMessages((prev) => prev.map((x, i) => (i === index ? { ...x, loggedId: null } : x)));
     } catch {
-      Alert.alert("Couldn't undo", "Please remove it from your diary instead.");
+      Alert.alert(L.undoErrTitle, L.undoErrMsg);
     }
   };
 
   const onClear = () => {
     if (messages.length === 0 || !token) return;
-    Alert.alert("Clear chat?", "This deletes your conversation history with the coach.", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(L.clearTitle, L.clearMsg, [
+      { text: L.cancel, style: "cancel" },
       {
-        text: "Clear",
+        text: L.clear,
         style: "destructive",
         onPress: async () => {
           setMessages([]);
@@ -284,7 +319,7 @@ export default function CoachTab() {
           }}>
             <Ionicons name="information-circle-outline" size={15} color={theme.colors.subtle} />
             <AppText variant="subtle" style={{ fontSize: 11, flex: 1 }}>
-              AI guidance, not medical advice. Consult a professional for health concerns.
+              {L.disclaimer}
             </AppText>
           </View>
 
@@ -311,27 +346,44 @@ export default function CoachTab() {
                 </View>
               </View>
 
+              {/* Warnings and tips are tappable → sends them to the chat for elaboration */}
               {insight.warnings.map((w, i) => (
-                <View key={i} style={{
-                  flexDirection: "row", gap: 8, alignItems: "flex-start",
-                  backgroundColor: "rgba(229,72,77,0.08)", borderRadius: 10, padding: 10,
-                }}>
+                <Pressable
+                  key={i}
+                  onPress={() => askAboutTip(w)}
+                  disabled={sending}
+                  style={({ pressed }) => ({
+                    flexDirection: "row", gap: 8, alignItems: "flex-start",
+                    backgroundColor: pressed ? "rgba(229,72,77,0.16)" : "rgba(229,72,77,0.08)",
+                    borderRadius: 10, padding: 10,
+                  })}
+                >
                   <Ionicons name="warning-outline" size={16} color={theme.colors.danger} />
                   <AppText style={{ fontSize: 13, color: theme.colors.danger, flex: 1 }}>{w}</AppText>
-                </View>
+                  <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.colors.danger} style={{ marginTop: 2 }} />
+                </Pressable>
               ))}
 
               {insight.tips.map((t, i) => (
-                <View key={i} style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                <Pressable
+                  key={i}
+                  onPress={() => askAboutTip(t)}
+                  disabled={sending}
+                  style={({ pressed }) => ({
+                    flexDirection: "row", gap: 8, alignItems: "flex-start",
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
                   <Ionicons name="bulb-outline" size={16} color={theme.colors.primary} style={{ marginTop: 1 }} />
                   <AppText variant="body2" style={{ flex: 1 }}>{t}</AppText>
-                </View>
+                  <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.colors.subtle} style={{ marginTop: 2 }} />
+                </Pressable>
               ))}
             </Card>
           ) : (
             <Card style={{ padding: theme.space.lg, alignItems: "center" }}>
               <AppText variant="muted" style={{ textAlign: "center" }}>
-                Couldn't load today's analysis right now.
+                {L.insightFail}
               </AppText>
             </Card>
           )}
@@ -392,7 +444,7 @@ export default function CoachTab() {
                     {/* Meal type picker — only when the user is actually eating it */}
                     {m.eating && (
                       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                        {MEAL_OPTS.map(([key, label]) => {
+                        {mealOpts.map(([key, label]) => {
                           const active = m.meal!.mealType === key;
                           return (
                             <Pressable
@@ -497,7 +549,7 @@ export default function CoachTab() {
                 <Ionicons name="close" size={13} color="#fff" />
               </Pressable>
             </View>
-            <AppText variant="subtle" style={{ fontSize: 12 }}>Photo attached. Ask anything about it.</AppText>
+            <AppText variant="subtle" style={{ fontSize: 12 }}>{L.photoAttached}</AppText>
           </View>
         )}
 
@@ -518,7 +570,7 @@ export default function CoachTab() {
           <TextInput
             value={input}
             onChangeText={setInput}
-            placeholder="Ask your coach..."
+            placeholder={L.placeholder}
             placeholderTextColor={theme.colors.subtle}
             style={{
               flex: 1, backgroundColor: theme.colors.surface,

@@ -71,6 +71,7 @@ export default function AddMealScreen() {
   const [mealType, setMealType] = useState<MealType>(defaultType ?? "breakfast");
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate meals
   const isFromScan = !!prefillName;
 
   useEffect(() => {
@@ -117,10 +118,12 @@ export default function AddMealScreen() {
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     const e = validate();
     setTouched({ mealName: true, calories: true, protein: true, carbs: true, fat: true });
     setErrors(e);
     if (Object.keys(e).length > 0) return;
+    setIsSaving(true);
     try {
       await addMeal({
         name: mealName.trim(),
@@ -134,6 +137,7 @@ export default function AddMealScreen() {
       router.back();
     } catch (err: any) {
       setErrors({ mealName: err.message || "Failed to save meal." });
+      setIsSaving(false); // only re-enable on failure — success navigates away
     }
   };
 
@@ -297,7 +301,7 @@ export default function AddMealScreen() {
           </View>
         </Card>
 
-        <Button title="Save meal" size="lg" disabled={!canSave} onPress={handleSave} />
+        <Button title={isSaving ? "Saving..." : "Save meal"} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
 
         <Pressable
           onPress={() => router.back()}

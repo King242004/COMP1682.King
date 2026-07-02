@@ -7,7 +7,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { getExercisesByDate, deleteExercise, type Exercise } from "@/utils/exercise";
-import { getInsight, getCachedInsight, cacheInsight, type CoachInsight } from "@/utils/coach";
+import { getPlanMeals, type PlanMeal } from "@/utils/plan";
+import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/utils/coach";
 import { dateKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme, macroGoals } from "@/ui/theme";
@@ -83,6 +84,8 @@ export default function HomeScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [totalBurned, setTotalBurned] = useState(0);
   const [coachInsight, setCoachInsight] = useState<CoachInsight | null>(null);
+  const [planToday, setPlanToday] = useState<PlanMeal[]>([]);
+  const [planWorkout, setPlanWorkout] = useState<string | null>(null);
 
   const loadExercises = useCallback(async () => {
     if (!token) return;
@@ -96,12 +99,30 @@ export default function HomeScreen() {
     }
   }, [token, selectedDate]);
 
-  // Coach insight is for "today" only. Show cached instantly, refresh in background.
+  // Today's plan (meals not yet eaten + AI workout tip) for the Home card
+  const loadPlanToday = useCallback(async () => {
+    if (!token) return;
+    try {
+      const { meals, workouts } = await getPlanMeals(token, todayKey, todayKey);
+      setPlanToday(meals);
+      setPlanWorkout(workouts[todayKey] || null);
+    } catch {
+      setPlanToday([]);
+      setPlanWorkout(null);
+    }
+  }, [token, todayKey]);
+
+  // Coach insight is for "today" only. Show cached instantly; only hit Gemini when
+  // the cache is stale (TTL) — this runs on EVERY focus, so without the TTL each
+  // visit to Home would burn a free-tier AI request.
   const lang = resolveLanguage(user?.language);
   const loadInsight = useCallback(async () => {
     if (!token || selectedDate !== todayKey) { setCoachInsight(null); return; }
     const cached = await getCachedInsight(todayKey, lang);
-    if (cached) setCoachInsight(cached);
+    if (cached) {
+      setCoachInsight(cached.insight);
+      if (Date.now() - cached.at < INSIGHT_TTL_MS) return; // fresh enough → no AI call
+    }
     try {
       const fresh = await getInsight(token, todayKey, lang);
       setCoachInsight(fresh);
@@ -119,7 +140,8 @@ export default function HomeScreen() {
       fetchMealHistory();
       loadExercises();
       loadInsight();
-    }, [selectedDate, loadExercises, loadInsight])
+      loadPlanToday();
+    }, [selectedDate, loadExercises, loadInsight, loadPlanToday])
   );
 
   const onDeleteExercise = (item: Exercise) => {
@@ -389,6 +411,62 @@ export default function HomeScreen() {
             </View>
           ))}
         </Card>
+
+        {/* Today's plan — surfaces the weekly plan (and its AI generation) on Home */}
+        {isToday && (() => {
+          const pending = planToday.filter((p) => !p.done);
+          const vi = lang === "vi";
+          return (
+            <Pressable
+              onPress={() => router.push("/plan/weekly" as any)}
+              style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] })}
+            >
+              <Card style={{ padding: theme.space.lg, gap: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={{
+                    width: 36, height: 36, borderRadius: 12,
+                    backgroundColor: "rgba(99,102,241,0.12)",
+                    alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Ionicons name="calendar" size={18} color={theme.colors.indigo} />
+                  </View>
+                  <AppText variant="h2" style={{ fontSize: 15, flex: 1 }}>
+                    {vi ? "Kế hoạch hôm nay" : "Today's plan"}
+                  </AppText>
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
+                </View>
+
+                {planToday.length === 0 ? (
+                  <AppText variant="muted" style={{ fontSize: 13 }}>
+                    {vi ? "Chưa có kế hoạch tuần — để AI tạo cho bạn ✨" : "No weekly plan yet — let the AI build one for you ✨"}
+                  </AppText>
+                ) : pending.length === 0 ? (
+                  <AppText variant="muted" style={{ fontSize: 13 }}>
+                    {vi ? "Đã hoàn thành kế hoạch hôm nay 🎉" : "Today's plan is all done 🎉"}
+                  </AppText>
+                ) : (
+                  pending.slice(0, 2).map((p) => (
+                    <View key={p.id} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.indigo }} />
+                      <AppText variant="body2" style={{ flex: 1 }}>{p.name}</AppText>
+                      <AppText variant="subtle" style={{ fontSize: 11 }}>{p.calories} kcal</AppText>
+                    </View>
+                  ))
+                )}
+
+                {!!planWorkout && (
+                  <View style={{
+                    flexDirection: "row", alignItems: "flex-start", gap: 8,
+                    backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 8,
+                  }}>
+                    <AppText style={{ fontSize: 13 }}>🏃</AppText>
+                    <AppText variant="subtle" style={{ flex: 1, fontSize: 12 }}>{planWorkout}</AppText>
+                  </View>
+                )}
+              </Card>
+            </Pressable>
+          );
+        })()}
 
         {/* Diary */}
         <View style={{ gap: 4 }}>

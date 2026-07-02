@@ -6,6 +6,8 @@ const {
   updatePlanMeal,
   deletePlanMeal,
   markEaten,
+  generatePlan,
+  groceryList,
 } = require("../controllers/planController");
 const protect = require("../middleware/auth");
 
@@ -118,5 +120,55 @@ router.delete("/:id", deletePlanMeal);
  *       404: { description: Not found }
  */
 router.post("/:id/eaten", markEaten);
+
+/**
+ * @swagger
+ * /plan/generate:
+ *   post:
+ *     summary: Generate a full week plan with AI (meals + daily workout tips)
+ *     tags: [Plan]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [startDate, endDate]
+ *             properties:
+ *               startDate: { type: string, example: "2026-06-22" }
+ *               endDate: { type: string, example: "2026-06-28" }
+ *               language: { type: string, enum: [vi, en] }
+ *     responses:
+ *       200: { description: Plan generated and saved }
+ *       429: { description: Out of AI quota }
+ */
+router.post("/generate", generatePlan);
+
+/**
+ * @swagger
+ * /plan/grocery:
+ *   post:
+ *     summary: Build an AI grocery shopping list from the planned meals in a range
+ *     tags: [Plan]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [startDate, endDate]
+ *             properties:
+ *               startDate: { type: string, example: "2026-06-22" }
+ *               endDate: { type: string, example: "2026-06-28" }
+ *               language: { type: string, enum: [vi, en] }
+ *     responses:
+ *       200: { description: Returns grouped grocery items }
+ *       400: { description: No planned meals in range }
+ */
+router.post("/grocery", groceryList);
 
 module.exports = router;
