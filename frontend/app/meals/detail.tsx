@@ -3,6 +3,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { theme, macroGoals } from "@/ui/theme";
+import { Ionicons } from "@expo/vector-icons";
+import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
@@ -10,9 +12,7 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import Svg, { Circle } from "react-native-svg";
 
-const MEAL_TYPE_ICON: Record<string, string> = {
-  breakfast: "☀️", lunch: "🥗", dinner: "🍽️", snack: "🍎",
-};
+// Meal-type icon/tint comes from the shared MEAL_TYPE_BY_KEY meta
 
 function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
   const size = 64;
@@ -128,7 +128,7 @@ export default function MealDetailScreen() {
           <AppText variant="h1">{meal.name}</AppText>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             {meal.mealType && (
-              <AppText style={{ fontSize: 14 }}>{MEAL_TYPE_ICON[meal.mealType]}</AppText>
+              <Ionicons name={(MEAL_TYPE_BY_KEY[meal.mealType]?.icon ?? "restaurant") as any} size={14} color={MEAL_TYPE_BY_KEY[meal.mealType]?.color ?? theme.colors.primary} />
             )}
             <AppText variant="muted" style={{ textTransform: "capitalize" }}>
               {meal.mealType ?? "Meal"}

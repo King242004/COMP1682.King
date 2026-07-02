@@ -87,6 +87,7 @@ USER PROFILE:
 
 REQUIREMENTS:
 - Plan meals for EXACTLY these dates: ${dates.join(", ")}
+- "name" must be a SHORT dish name only, at most 6 words. NO cooking notes, NO parentheses, NO instructions in the name (write "Cơm gạo lứt cá kho", NOT "Cơm gạo lứt, cá thu sốt cà chua (ít muối, không đường)"). The health adjustments are implied by your dish CHOICE, not written in the name.
 - Each day: breakfast, lunch, dinner and optionally one snack. Daily total within ±10% of ${goalCal} kcal.
 - Prefer common Vietnamese dishes that are easy to cook or buy. Vary dishes across the week — do not repeat the same dish two days in a row.
 - Adjust every dish choice to the health conditions above.

@@ -4,6 +4,7 @@ import { FlatList, Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMeals, Meal } from "@/context/MealsContext";
 import { theme } from "@/ui/theme";
+import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Screen } from "@/ui/components/Screen";
@@ -11,9 +12,7 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { Card } from "@/ui/components/Card";
 
 // Meal-type emoji shown as the row avatar — friendlier than name initials
-const MEAL_TYPE_ICON: Record<string, string> = {
-  breakfast: "☕", lunch: "🥗", dinner: "🍽️", snack: "🍎",
-};
+// Meal-type icon/tint comes from the shared MEAL_TYPE_BY_KEY meta
 
 function hhmm(iso: string) {
   const d = new Date(iso);
@@ -108,12 +107,14 @@ export default function MealHistoryScreen() {
                 }}>
                   <View style={{
                     width: 52, height: 52, borderRadius: 18,
-                    backgroundColor: "rgba(37,99,235,0.08)",
+                    backgroundColor: MEAL_TYPE_BY_KEY[item.mealType]?.bg ?? "rgba(37,99,235,0.08)",
                     alignItems: "center", justifyContent: "center",
                   }}>
-                    <AppText style={{ fontSize: 24 }}>
-                      {MEAL_TYPE_ICON[item.mealType] ?? "🍴"}
-                    </AppText>
+                    <Ionicons
+                      name={(MEAL_TYPE_BY_KEY[item.mealType]?.icon ?? "restaurant") as any}
+                      size={22}
+                      color={MEAL_TYPE_BY_KEY[item.mealType]?.color ?? theme.colors.primary}
+                    />
                   </View>
 
                   <View style={{ flex: 1, gap: 4 }}>

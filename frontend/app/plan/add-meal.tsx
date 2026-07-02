@@ -4,6 +4,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { addPlanMeal, type MealType } from "@/utils/plan";
 import { theme } from "@/ui/theme";
+import { MEAL_TYPE_META } from "@/ui/mealTypes";
+import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
@@ -11,12 +13,7 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 
-const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
-  { key: "breakfast", label: "Breakfast", icon: "☀️" },
-  { key: "lunch", label: "Lunch", icon: "🌤️" },
-  { key: "dinner", label: "Dinner", icon: "🌙" },
-  { key: "snack", label: "Snacks", icon: "🍎" },
-];
+const MEAL_TYPES = MEAL_TYPE_META;
 
 type Errors = { mealName?: string; calories?: string; protein?: string; carbs?: string; fat?: string };
 
@@ -121,7 +118,7 @@ export default function AddPlanMealScreen() {
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <Text style={{ fontSize: 18 }}>{mt.icon}</Text>
+                <Ionicons name={mt.icon as any} size={18} color={active ? mt.color : theme.colors.subtle} />
                 <Text style={{ fontSize: 10, fontWeight: "700", color: active ? theme.colors.primary : theme.colors.subtle }}>
                   {mt.label}
                 </Text>
