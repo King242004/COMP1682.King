@@ -1,6 +1,6 @@
 // MEAL PLAN — weekly planner
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -8,9 +8,13 @@ import {
   getPlanMeals,
   deletePlanMeal,
   markPlanEaten,
+  generateWeekPlan,
+  getGroceryList,
   type PlanMeal,
   type MealType,
+  type GroceryGroup,
 } from "@/utils/plan";
+import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -39,12 +43,60 @@ function mondayOf(base: Date, weekOffset: number) {
 export default function MealPlanScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
+  const lang = resolveLanguage(user?.language);
+  const L = lang === "vi"
+    ? {
+        generate: "✨ Tạo kế hoạch tuần bằng AI", generating: "AI đang lên kế hoạch...",
+        modalWeekTitle: "Tạo kế hoạch bằng AI", modalDayTitle: "Làm lại thực đơn ngày này",
+        modalWeekMsg: "AI sẽ lên thực đơn từ hôm nay tới hết tuần theo mục tiêu và tình trạng của bạn. Món đã có trong khoảng này sẽ bị thay.",
+        modalDayMsg: "AI sẽ thay toàn bộ món của ngày này bằng thực đơn mới.",
+        notePlaceholder: "Khẩu vị (không bắt buộc): vd không ăn hải sản, thích gà...",
+        start: "Tạo ngay", cancel: "Huỷ",
+        pastWeek: "Tuần này đã qua rồi, chuyển sang tuần hiện tại hoặc tuần sau nhé.",
+        redoDay: "Làm lại ngày này",
+        confirmTitle: "Bạn có chắc không?",
+        confirmWeekMsg: "Các món đang có từ hôm nay tới cuối tuần sẽ bị THAY bằng kế hoạch mới.",
+        confirmDayMsg: "Toàn bộ món của ngày này sẽ bị THAY bằng thực đơn mới.",
+        continue: "Tiếp tục",
+        grocery: "🛒 Danh sách đi chợ", groceryTitle: "Danh sách đi chợ", groceryLoading: "AI đang tổng hợp nguyên liệu...",
+        close: "Đóng",
+        quota: "Hôm nay hết lượt AI miễn phí, thử lại sau nhé.", genErr: "Chưa tạo được kế hoạch, thử lại nhé.",
+        groceryErr: "Chưa tạo được danh sách, thử lại nhé.", error: "Lỗi",
+      }
+    : {
+        generate: "✨ Generate my week with AI", generating: "AI is planning your week...",
+        modalWeekTitle: "Generate with AI", modalDayTitle: "Regenerate this day",
+        modalWeekMsg: "The AI will plan from today to the end of the week based on your goal and conditions. Existing meals in that range will be replaced.",
+        modalDayMsg: "The AI will replace all meals on this day with a new menu.",
+        notePlaceholder: "Preferences (optional): e.g. no seafood, love chicken...",
+        start: "Generate", cancel: "Cancel",
+        pastWeek: "This week is already over — switch to the current or next week.",
+        redoDay: "Regenerate this day",
+        confirmTitle: "Are you sure?",
+        confirmWeekMsg: "Meals from today to the end of the week will be REPLACED by the new plan.",
+        confirmDayMsg: "All meals on this day will be REPLACED by a new menu.",
+        continue: "Continue",
+        grocery: "🛒 Grocery list", groceryTitle: "Grocery list", groceryLoading: "AI is building your list...",
+        close: "Close",
+        quota: "Out of free AI quota today — try again later.", genErr: "Couldn't generate the plan. Please try again.",
+        groceryErr: "Couldn't build the list. Please try again.", error: "Error",
+      };
 
   const todayKey = dateKey(new Date());
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [plan, setPlan] = useState<PlanMeal[]>([]);
+  const [workouts, setWorkouts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  // Generate modal (week or single day) + optional taste note
+  const [genVisible, setGenVisible] = useState(false);
+  const [genScope, setGenScope] = useState<"week" | "day">("week");
+  const [note, setNote] = useState("");
+  // AI grocery list
+  const [grocery, setGrocery] = useState<GroceryGroup[] | null>(null);
+  const [groceryVisible, setGroceryVisible] = useState(false);
+  const [groceryLoading, setGroceryLoading] = useState(false);
 
   const goal = user?.calorieGoal ?? 2000;
 
@@ -65,14 +117,81 @@ export default function MealPlanScreen() {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await getPlanMeals(token, weekStart, weekEnd);
-      setPlan(data);
+      const { meals, workouts } = await getPlanMeals(token, weekStart, weekEnd);
+      setPlan(meals);
+      setWorkouts(workouts);
+      setGrocery(null); // plan changed/reloaded → old grocery list may be stale
     } catch {
       setPlan([]);
+      setWorkouts({});
     } finally {
       setLoading(false);
     }
   }, [token, weekStart, weekEnd]);
+
+  // The AI never plans the past: week scope starts at max(weekStart, today).
+  // (YYYY-MM-DD strings compare correctly.)
+  const genRange = (scope: "week" | "day"): [string, string] | null => {
+    if (scope === "day") {
+      return selectedDate >= todayKey ? [selectedDate, selectedDate] : null;
+    }
+    if (weekEnd < todayKey) return null; // entirely past week
+    return [weekStart > todayKey ? weekStart : todayKey, weekEnd];
+  };
+
+  const openGenerate = (scope: "week" | "day") => {
+    if (generating) return;
+    const range = genRange(scope);
+    if (!range) {
+      Alert.alert(L.error, L.pastWeek);
+      return;
+    }
+    const show = () => { setGenScope(scope); setGenVisible(true); };
+    // Regenerating over existing meals is destructive → explicit confirmation first
+    const hasMeals = plan.some((p) => p.date >= range[0] && p.date <= range[1]);
+    if (hasMeals) {
+      Alert.alert(L.confirmTitle, scope === "day" ? L.confirmDayMsg : L.confirmWeekMsg, [
+        { text: L.cancel, style: "cancel" },
+        { text: L.continue, style: "destructive", onPress: show },
+      ]);
+    } else {
+      show();
+    }
+  };
+
+  const runGenerate = async () => {
+    const range = genRange(genScope);
+    if (!token || generating || !range) return;
+    setGenVisible(false);
+    setGenerating(true);
+    try {
+      await generateWeekPlan(token, range[0], range[1], lang, note.trim() || undefined);
+      await load();
+    } catch (e: any) {
+      const quota = /quota/i.test(String(e?.message || ""));
+      Alert.alert(L.error, quota ? L.quota : L.genErr);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // AI grocery list for the planned meals (today → end of viewed week)
+  const openGrocery = async () => {
+    if (groceryLoading || !token) return;
+    if (grocery) { setGroceryVisible(true); return; } // reuse until the plan changes
+    const start = weekStart > todayKey ? weekStart : todayKey;
+    setGroceryLoading(true);
+    try {
+      const groups = await getGroceryList(token, start, weekEnd, lang);
+      setGrocery(groups);
+      setGroceryVisible(true);
+    } catch (e: any) {
+      const quota = /quota/i.test(String(e?.message || ""));
+      Alert.alert(L.error, quota ? L.quota : L.groceryErr);
+    } finally {
+      setGroceryLoading(false);
+    }
+  };
 
   // Reload on focus (e.g. returning from add screen) and whenever the week changes
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -144,16 +263,18 @@ export default function MealPlanScreen() {
 
   return (
     <Screen padded={false}>
+      {/* Fixed header — stays visible while the list scrolls */}
+      <View style={{ paddingHorizontal: theme.space.lg, paddingTop: 60 }}>
+        <ScreenHeader title="Meal Plan" />
+      </View>
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: theme.space.lg,
-          paddingTop: 60,
           paddingBottom: 40,
           gap: theme.space.lg,
         }}
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title="Meal Plan" />
 
         {/* Week navigator */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -226,7 +347,8 @@ export default function MealPlanScreen() {
 
         {/* Day total card */}
         <Card style={{ padding: theme.space.lg }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          {/* flex-start: the redo button sits level with the date line, clear of the big number */}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
             <View style={{ gap: 2 }}>
               <AppText variant="subtle" style={{ fontSize: 12 }}>{selectedLabel}</AppText>
               <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
@@ -236,12 +358,45 @@ export default function MealPlanScreen() {
                 <AppText variant="muted" style={{ fontSize: 13 }}>/ {goal.toLocaleString()} kcal planned</AppText>
               </View>
             </View>
+            {/* Regenerate just this day (today or future only) */}
+            {selectedDate >= todayKey && dayPlan.length > 0 && (
+              <Pressable
+                onPress={() => openGenerate("day")}
+                disabled={generating}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  flexDirection: "row", alignItems: "center", gap: 5,
+                  paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10,
+                  backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.08)",
+                })}
+              >
+                {/* Fixed 14px box so the spinner doesn't grow the button */}
+                <View style={{ width: 14, height: 14, alignItems: "center", justifyContent: "center" }}>
+                  {generating && genScope === "day" ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ transform: [{ scale: 0.7 }] }} />
+                  ) : (
+                    <Ionicons name="refresh" size={14} color={theme.colors.primary} />
+                  )}
+                </View>
+                <AppText style={{ fontSize: 11, fontWeight: "700", color: theme.colors.primary }}>{L.redoDay}</AppText>
+              </Pressable>
+            )}
           </View>
           <View style={{ flexDirection: "row", gap: 14, marginTop: 10 }}>
             <AppText variant="subtle" style={{ fontSize: 12 }}>P {Math.round(dayTotals.protein)}g</AppText>
             <AppText variant="subtle" style={{ fontSize: 12 }}>C {Math.round(dayTotals.carbs)}g</AppText>
             <AppText variant="subtle" style={{ fontSize: 12 }}>F {Math.round(dayTotals.fat)}g</AppText>
           </View>
+          {/* AI workout suggestion for the selected day */}
+          {!!workouts[selectedDate] && (
+            <View style={{
+              flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 10,
+              backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 10,
+            }}>
+              <AppText style={{ fontSize: 14 }}>🏃</AppText>
+              <AppText variant="body2" style={{ flex: 1, fontSize: 13 }}>{workouts[selectedDate]}</AppText>
+            </View>
+          )}
         </Card>
 
         {loading && dayPlan.length === 0 ? (
@@ -320,7 +475,124 @@ export default function MealPlanScreen() {
             );
           })
         )}
+
+        {/* AI actions — kept at the bottom so the calendar stays front and center */}
+        <View style={{ gap: 10, marginTop: 6 }}>
+          <Pressable
+            onPress={() => openGenerate("week")}
+            disabled={generating}
+            style={({ pressed }) => ({
+              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+              backgroundColor: generating ? theme.colors.border : pressed ? theme.colors.primary2 : theme.colors.primary,
+              borderRadius: 14, paddingVertical: 13,
+            })}
+          >
+            {/* Loading here only when the WEEK is being generated (day regen has its own spinner) */}
+            {generating && genScope === "week" && <ActivityIndicator color="#fff" size="small" />}
+            <AppText style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+              {generating && genScope === "week" ? L.generating : L.generate}
+            </AppText>
+          </Pressable>
+
+          {plan.length > 0 && (
+            <Pressable
+              onPress={openGrocery}
+              disabled={groceryLoading}
+              style={({ pressed }) => ({
+                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                borderWidth: 1.5, borderColor: theme.colors.primary,
+                backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
+                borderRadius: 14, paddingVertical: 11,
+              })}
+            >
+              {groceryLoading && <ActivityIndicator color={theme.colors.primary} size="small" />}
+              <AppText style={{ color: theme.colors.primary, fontWeight: "700", fontSize: 13 }}>
+                {groceryLoading ? L.groceryLoading : L.grocery}
+              </AppText>
+            </Pressable>
+          )}
+        </View>
       </ScrollView>
+
+      {/* Generate modal: scope info + optional taste note */}
+      <Modal transparent visible={genVisible} animationType="fade" onRequestClose={() => setGenVisible(false)}>
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: theme.space.lg }}
+          onPress={() => setGenVisible(false)}
+        >
+          <Pressable onPress={() => {}} style={{
+            backgroundColor: theme.colors.surface, borderRadius: 20, padding: theme.space.xl, gap: 12,
+          }}>
+            <AppText variant="h2">{genScope === "day" ? L.modalDayTitle : L.modalWeekTitle}</AppText>
+            <AppText variant="muted" style={{ fontSize: 13 }}>
+              {genScope === "day" ? L.modalDayMsg : L.modalWeekMsg}
+            </AppText>
+            <TextInput
+              value={note}
+              onChangeText={setNote}
+              placeholder={L.notePlaceholder}
+              placeholderTextColor={theme.colors.subtle}
+              multiline
+              style={{
+                borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12,
+                paddingHorizontal: 12, paddingVertical: 10, minHeight: 60,
+                fontSize: 13, color: theme.colors.text, textAlignVertical: "top",
+              }}
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={() => setGenVisible(false)}
+                style={({ pressed }) => ({
+                  flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 12,
+                  borderWidth: 1.5, borderColor: theme.colors.border,
+                  backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
+                })}
+              >
+                <AppText style={{ fontWeight: "700", color: theme.colors.subtle }}>{L.cancel}</AppText>
+              </Pressable>
+              <Pressable
+                onPress={runGenerate}
+                style={({ pressed }) => ({
+                  flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 12,
+                  backgroundColor: pressed ? theme.colors.primary2 : theme.colors.primary,
+                })}
+              >
+                <AppText style={{ fontWeight: "700", color: "#fff" }}>{L.start}</AppText>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Grocery list modal */}
+      <Modal transparent visible={groceryVisible} animationType="slide" onRequestClose={() => setGroceryVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
+          <View style={{
+            backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            padding: theme.space.xl, maxHeight: "80%", gap: 12,
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <AppText variant="h2">{L.groceryTitle}</AppText>
+              <Pressable onPress={() => setGroceryVisible(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.colors.subtle} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 20 }}>
+              {(grocery || []).map((g) => (
+                <View key={g.name} style={{ gap: 6 }}>
+                  <AppText style={{ fontSize: 13, fontWeight: "800", color: theme.colors.primary }}>{g.name}</AppText>
+                  {g.items.map((it, idx) => (
+                    <View key={idx} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.accent }} />
+                      <AppText variant="body2" style={{ flex: 1, fontSize: 13 }}>{it}</AppText>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }

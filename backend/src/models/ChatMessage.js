@@ -7,6 +7,7 @@ const chatMessageSchema = new mongoose.Schema(
     role: { type: String, enum: ["user", "coach"], required: true },
     text: { type: String, required: true },
     image: { type: String, default: null }, // Cloudinary URL for photos sent in chat
+    imagePublicId: { type: String, default: null }, // Cloudinary id so clearHistory can delete the file too
     // Suggested meal on a coach turn (so the Add card persists across reloads)
     meal: {
       type: {

@@ -50,6 +50,7 @@ export default function EditMealScreen() {
   const [mealType, setMealType] = useState<MealType>((meal?.mealType as MealType) ?? "breakfast");
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate updates
 
   useEffect(() => {
     if (meal) {
@@ -87,20 +88,27 @@ export default function EditMealScreen() {
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     const e = validate();
     setTouched({ mealName: true, calories: true, protein: true, carbs: true, fat: true });
     setErrors(e);
     if (Object.keys(e).length > 0) return;
     if (!id) return;
-    await updateMeal(id, {
-      name: mealName.trim(),
-      calories: Number(calories),
-      protein: protein.trim() ? Number(protein) : undefined,
-      carbs: carbs.trim() ? Number(carbs) : undefined,
-      fat: fat.trim() ? Number(fat) : undefined,
-      mealType,
-    });
-    router.replace("/meals/history");
+    setIsSaving(true);
+    try {
+      await updateMeal(id, {
+        name: mealName.trim(),
+        calories: Number(calories),
+        protein: protein.trim() ? Number(protein) : undefined,
+        carbs: carbs.trim() ? Number(carbs) : undefined,
+        fat: fat.trim() ? Number(fat) : undefined,
+        mealType,
+      });
+      router.replace("/meals/history");
+    } catch (err: any) {
+      setErrors({ mealName: err.message || "Failed to save changes." });
+      setIsSaving(false); // only re-enable on failure — success navigates away
+    }
   };
 
   const handleDelete = () => {
@@ -275,7 +283,7 @@ export default function EditMealScreen() {
           </View>
         </Card>
 
-        <Button title="Save changes" size="lg" disabled={!canSave} onPress={handleSave} />
+        <Button title={isSaving ? "Saving..." : "Save changes"} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
 
         <Pressable
           onPress={() => router.replace("/meals/history")}

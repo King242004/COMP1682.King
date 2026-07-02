@@ -100,14 +100,23 @@ export async function clearChatHistory(token: string): Promise<void> {
 }
 
 // ─── Insight cache (AsyncStorage) ─────────────────────────────────────────────
-// Cache today's insight so reopening the Coach tab is instant. Keyed by date +
-// language so switching language or day fetches fresh.
+// Cache today's insight so reopening the Coach tab is instant, WITH a timestamp so
+// callers can skip the Gemini refresh while the cache is still fresh (saves quota:
+// Home refetches on every focus otherwise). Keyed by date + language.
 const insightKey = (date: string, language: Lang) => `coach_insight_${date}_${language}`;
 
-export async function getCachedInsight(date: string, language: Lang): Promise<CoachInsight | null> {
+export const INSIGHT_TTL_MS = 10 * 60 * 1000; // consider the cached insight fresh for 10 minutes
+
+export type CachedInsight = { insight: CoachInsight; at: number };
+
+export async function getCachedInsight(date: string, language: Lang): Promise<CachedInsight | null> {
   try {
     const raw = await AsyncStorage.getItem(insightKey(date, language));
-    return raw ? (JSON.parse(raw) as CoachInsight) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.insight) return parsed as CachedInsight;
+    if (parsed?.score != null) return { insight: parsed as CoachInsight, at: 0 }; // legacy entry → treat as stale
+    return null;
   } catch {
     return null;
   }
@@ -115,7 +124,7 @@ export async function getCachedInsight(date: string, language: Lang): Promise<Co
 
 export async function cacheInsight(date: string, language: Lang, insight: CoachInsight): Promise<void> {
   try {
-    await AsyncStorage.setItem(insightKey(date, language), JSON.stringify(insight));
+    await AsyncStorage.setItem(insightKey(date, language), JSON.stringify({ insight, at: Date.now() }));
   } catch {
     // ignore cache write failures
   }

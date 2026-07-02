@@ -1,5 +1,9 @@
 const PlanMeal = require("../models/PlanMeal");
+const PlanWorkout = require("../models/PlanWorkout");
 const Meal = require("../models/Meal");
+const User = require("../models/User");
+const { insightModels } = require("../config/gemini");
+const { generateWithFallback } = require("../services/aiGenerate");
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
@@ -35,7 +39,7 @@ exports.addPlanMeal = async (req, res) => {
 };
 
 // ─── Get Plan Meals by date range ───────────────────────────────────────────
-// Returns flat list for the range; frontend groups by date/mealType.
+// Returns flat list for the range (+ AI workout suggestions per day).
 exports.getPlanMeals = async (req, res) => {
   const { startDate, endDate } = req.query;
 
@@ -45,7 +49,155 @@ exports.getPlanMeals = async (req, res) => {
   }
 
   const planMeals = await PlanMeal.find(filter).sort({ date: 1, createdAt: 1 });
-  res.json({ planMeals });
+  const planWorkouts = await PlanWorkout.find(filter).sort({ date: 1 });
+  res.json({ planMeals, planWorkouts });
+};
+
+// ─── Generate a week plan with AI (POST /api/plan/generate) ──────────────────
+// body: { startDate, endDate, language } — REPLACES the whole range with an
+// AI-generated Vietnamese-friendly menu + one workout suggestion per day,
+// tailored to the user's goal, calorie target and health conditions.
+exports.generatePlan = async (req, res) => {
+  const { startDate, endDate, language, note } = req.body;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(endDate || ""))
+    return res.status(400).json({ message: "startDate and endDate must be YYYY-MM-DD." });
+
+  // Explicit date list so the model can't drift outside the requested week
+  const dates = [];
+  const cur = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T00:00:00");
+  while (cur <= end && dates.length < 14) {
+    dates.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`);
+    cur.setDate(cur.getDate() + 1);
+  }
+  if (dates.length === 0) return res.status(400).json({ message: "Invalid date range." });
+
+  try {
+    const user = await User.findById(req.user.id).select("gender age weight height goal activityLevel conditions calorieGoal");
+    const conditions = user?.conditions?.length ? user.conditions.join(", ") : "none";
+    const goalCal = user?.calorieGoal || 2000;
+    const langName = language === "vi" ? "Vietnamese (tiếng Việt)" : "English";
+
+    const prompt = `You are a nutrition and fitness coach creating a personalized weekly plan.
+
+USER PROFILE:
+- Goal: ${user?.goal || "eat_healthy"} | Daily calorie target: ${goalCal} kcal
+- Health conditions: ${conditions} (diabetes: low sugar/refined carbs; hypertension: low sodium)
+- Weight: ${user?.weight ?? "unknown"} kg, Height: ${user?.height ?? "unknown"} cm, Age: ${user?.age ?? "unknown"}, Gender: ${user?.gender ?? "unknown"}, Activity: ${user?.activityLevel || "moderate"}
+
+REQUIREMENTS:
+- Plan meals for EXACTLY these dates: ${dates.join(", ")}
+- Each day: breakfast, lunch, dinner and optionally one snack. Daily total within ±10% of ${goalCal} kcal.
+- Prefer common Vietnamese dishes that are easy to cook or buy. Vary dishes across the week — do not repeat the same dish two days in a row.
+- Adjust every dish choice to the health conditions above.
+- Also give ONE short workout suggestion per day (max ~15 words) suited to the user's conditions and goal; a rest day is allowed.
+- Write dish names and workout text in ${langName}.${
+      note && String(note).trim()
+        ? `\n- USER FOOD PREFERENCES (MUST follow strictly — avoid disliked/allergy foods): ${String(note).trim().slice(0, 300)}`
+        : ""
+    }
+
+Return ONLY valid JSON:
+{"days":[{"date":"YYYY-MM-DD","workout":"...","meals":[{"name":"...","mealType":"breakfast|lunch|dinner|snack","calories":0,"protein":0,"carbs":0,"fat":0}]}]}`;
+
+    const result = await generateWithFallback(insightModels, prompt);
+    let parsed;
+    try {
+      parsed = JSON.parse(result.response.text());
+    } catch {
+      return res.status(500).json({ message: "AI returned an invalid plan. Please try again." });
+    }
+
+    // Validate + normalize every generated item before touching the DB
+    const num = (v) => Math.max(0, Math.round(Number(v) || 0));
+    const mealDocs = [];
+    const workoutDocs = [];
+    for (const day of Array.isArray(parsed.days) ? parsed.days : []) {
+      if (!dates.includes(day?.date)) continue;
+      for (const m of Array.isArray(day.meals) ? day.meals : []) {
+        if (!m?.name || m.calories == null) continue;
+        mealDocs.push({
+          user: req.user.id,
+          name: String(m.name).trim().slice(0, 100),
+          mealType: MEAL_TYPES.includes(m.mealType) ? m.mealType : "snack",
+          calories: num(m.calories),
+          protein: num(m.protein),
+          carbs: num(m.carbs),
+          fat: num(m.fat),
+          date: day.date,
+        });
+      }
+      if (day.workout && String(day.workout).trim()) {
+        workoutDocs.push({ user: req.user.id, date: day.date, text: String(day.workout).trim().slice(0, 200) });
+      }
+    }
+    if (mealDocs.length === 0)
+      return res.status(500).json({ message: "AI plan came back empty. Please try again." });
+
+    // Replace the whole week (user confirmed in the app before calling this)
+    const range = { user: req.user.id, date: { $gte: startDate, $lte: endDate } };
+    await PlanMeal.deleteMany(range);
+    await PlanWorkout.deleteMany(range);
+    await PlanMeal.insertMany(mealDocs);
+    if (workoutDocs.length) await PlanWorkout.insertMany(workoutDocs);
+
+    res.json({ message: "Plan generated.", meals: mealDocs.length, workouts: workoutDocs.length });
+  } catch (err) {
+    console.error("Plan generate error:", err.message);
+    const quota = /429|quota|rate limit|too many requests/i.test(String(err.message || ""));
+    res.status(quota ? 429 : 500).json({ message: quota ? "QUOTA" : "Failed to generate the plan. Please try again." });
+  }
+};
+
+// ─── Grocery list from the planned week (POST /api/plan/grocery) ─────────────
+// body: { startDate, endDate, language } — AI turns the planned dishes into a
+// one-person shopping list grouped by category with estimated quantities.
+exports.groceryList = async (req, res) => {
+  const { startDate, endDate, language } = req.body;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(endDate || ""))
+    return res.status(400).json({ message: "startDate and endDate must be YYYY-MM-DD." });
+
+  const meals = await PlanMeal.find({ user: req.user.id, date: { $gte: startDate, $lte: endDate } }).sort({ date: 1 });
+  if (meals.length === 0)
+    return res.status(400).json({ message: "No planned meals in this range yet." });
+
+  const langName = language === "vi" ? "Vietnamese (tiếng Việt)" : "English";
+  const dishLines = meals.map((m) => `- ${m.date} (${m.mealType}): ${m.name}`).join("\n");
+
+  const prompt = `You are helping ONE person shop for the meals they planned this week.
+
+PLANNED DISHES:
+${dishLines}
+
+Create a realistic grocery shopping list for ONE person to cook these dishes at home:
+- Combine duplicate ingredients across dishes into one line with a total estimated quantity (e.g. "500g thịt bò").
+- Group items into 3-5 sensible categories (e.g. meat/fish, vegetables & herbs, dry goods & spices, others).
+- Assume a Vietnamese market/supermarket; skip water and basic items everyone has (salt, cooking oil) unless a dish needs something special.
+- Keep it concise: quantities are rough estimates for one person.
+- Write everything in ${langName}.
+
+Return ONLY valid JSON:
+{"groups":[{"name":"<category>","items":["<quantity + ingredient>", "..."]}]}`;
+
+  try {
+    const result = await generateWithFallback(insightModels, prompt);
+    let parsed;
+    try {
+      parsed = JSON.parse(result.response.text());
+    } catch {
+      return res.status(500).json({ message: "AI returned an invalid list. Please try again." });
+    }
+    const groups = (Array.isArray(parsed.groups) ? parsed.groups : [])
+      .filter((g) => g && g.name && Array.isArray(g.items))
+      .map((g) => ({ name: String(g.name).slice(0, 60), items: g.items.map((s) => String(s).slice(0, 120)).slice(0, 30) }));
+    if (groups.length === 0)
+      return res.status(500).json({ message: "AI list came back empty. Please try again." });
+    res.json({ groups });
+  } catch (err) {
+    console.error("Grocery list error:", err.message);
+    const quota = /429|quota|rate limit|too many requests/i.test(String(err.message || ""));
+    res.status(quota ? 429 : 500).json({ message: quota ? "QUOTA" : "Failed to build the grocery list." });
+  }
 };
 
 // ─── Update Plan Meal ───────────────────────────────────────────────────────

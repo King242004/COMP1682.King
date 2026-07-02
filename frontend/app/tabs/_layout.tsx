@@ -81,26 +81,18 @@ function AppHeader() {
             <Text style={{ fontSize: 14 }}>⚡</Text>
           </View>
         )}
-        <Pressable style={({ pressed }: { pressed: boolean }) => ({
-          width: 38, height: 38, borderRadius: 12,
-          backgroundColor: "rgba(255,255,255,0.15)",
-          alignItems: "center", justifyContent: "center",
-          opacity: pressed ? 0.7 : 1,
-        })}>
-          <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
-        </Pressable>
+        {/* Bell button removed: it had no onPress (dead button). Bring it back when a
+            notifications screen exists (e.g. proactive coach nudges in the backlog). */}
       </View>
     </View>
   );
 }
 
-function FABModal({ visible, onClose, onScan, onAdd, onPlan, onWorkout }: {
+function FABModal({ visible, onClose, onScan, onAdd }: {
   visible: boolean;
   onClose: () => void;
   onScan: () => void;
   onAdd: () => void;
-  onPlan: () => void;
-  onWorkout: () => void;
 }) {
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
@@ -163,50 +155,6 @@ function FABModal({ visible, onClose, onScan, onAdd, onPlan, onWorkout }: {
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
           </Pressable>
-
-          <Pressable
-            onPress={onPlan}
-            style={({ pressed }: { pressed: boolean }) => ({
-              flexDirection: "row", alignItems: "center", gap: 14,
-              padding: 16, borderRadius: 16,
-              backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.06)",
-            })}
-          >
-            <View style={{
-              width: 44, height: 44, borderRadius: 14,
-              backgroundColor: theme.colors.indigo,
-              alignItems: "center", justifyContent: "center",
-            }}>
-              <Ionicons name="calendar" size={22} color="#fff" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: theme.colors.text }}>Plan a meal</Text>
-              <Text style={{ fontSize: 13, color: theme.colors.muted, marginTop: 2 }}>Schedule meals for the week</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
-          </Pressable>
-
-          <Pressable
-            onPress={onWorkout}
-            style={({ pressed }: { pressed: boolean }) => ({
-              flexDirection: "row", alignItems: "center", gap: 14,
-              padding: 16, borderRadius: 16,
-              backgroundColor: pressed ? theme.colors.tint : "rgba(37,99,235,0.06)",
-            })}
-          >
-            <View style={{
-              width: 44, height: 44, borderRadius: 14,
-              backgroundColor: theme.colors.accent2,
-              alignItems: "center", justifyContent: "center",
-            }}>
-              <Ionicons name="barbell" size={22} color="#fff" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: theme.colors.text }}>Log workout</Text>
-              <Text style={{ fontSize: 13, color: theme.colors.muted, marginTop: 2 }}>Track exercise and calories burned</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
-          </Pressable>
         </View>
       </Pressable>
     </Modal>
@@ -234,8 +182,6 @@ function TabBar({ state, navigation }: any) {
         onClose={() => setModalVisible(false)}
         onScan={() => { setModalVisible(false); router.push("/scan"); }}
         onAdd={() => { setModalVisible(false); router.push("/meals/add"); }}
-        onPlan={() => { setModalVisible(false); router.push("/plan/weekly" as any); }}
-        onWorkout={() => { setModalVisible(false); router.push("/exercise/log-workout" as any); }}
       />
 
       <View style={{
