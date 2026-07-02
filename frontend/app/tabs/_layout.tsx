@@ -4,6 +4,7 @@ import { Modal, Platform, Pressable, Text, View } from "react-native";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
+import { mealStreak } from "@/utils/streak";
 import { theme } from "@/ui/theme";
 
 
@@ -15,27 +16,10 @@ function greetingForHour(h: number) {
 
 function AppHeader() {
   const { user } = useAuth();
-  // Streak reads from historyMeals (all logged days), matched on meal.date with a
-  // local date key — `meals` only holds one day so it gave a wrong streak before.
+  // historyMeals = all logged days (`meals` only holds one day). Streak logic is
+  // shared in utils/streak so every screen shows the same number.
   const { historyMeals } = useMeals();
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const localKey = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-  const streak = (() => {
-    const loggedDays = new Set(historyMeals.map((m) => m.date));
-    let count = 0;
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      if (loggedDays.has(localKey(d))) count++;
-      else break;
-    }
-    return count;
-  })();
+  const streak = mealStreak(historyMeals.map((m) => m.date));
 
   return (
     <View style={{
@@ -71,14 +55,16 @@ function AppHeader() {
       </View>
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        {/* Frosted pill — same visual language as the avatar circle on this header */}
         {streak > 0 && (
           <View style={{
             flexDirection: "row", alignItems: "center", gap: 4,
-            backgroundColor: "rgba(255,138,61,0.25)",
-            paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99,
+            backgroundColor: "rgba(255,255,255,0.15)",
+            borderWidth: 1, borderColor: "rgba(255,255,255,0.25)",
+            paddingHorizontal: 11, paddingVertical: 6, borderRadius: 99,
           }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: "#FFB347" }}>{streak}</Text>
-            <Text style={{ fontSize: 14 }}>⚡</Text>
+            <Text style={{ fontSize: 14 }}>🔥</Text>
+            <Text style={{ fontSize: 13, fontWeight: "800", color: "#FFFFFF" }}>{streak}</Text>
           </View>
         )}
         {/* Bell button removed: it had no onPress (dead button). Bring it back when a
