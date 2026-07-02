@@ -153,13 +153,13 @@
 
 ## Style Guidelines
 
-**Style:** Vibrant & Block-based
+**Style:** Soft UI Evolution *(user-selected 2026-07-02 — overrides the generated "Vibrant & Block-based")*
 
-**Keywords:** Bold, energetic, playful, block layout, geometric shapes, high color contrast, duotone, modern, energetic
+**Keywords:** Evolved soft UI, better contrast, modern aesthetics, subtle depth, accessibility-focused, improved shadows, hybrid
 
-**Best For:** Startups, creative agencies, gaming, social media, youth-focused, entertainment, consumer
+**Best For:** Health/wellness, modern SaaS, professional tools
 
-**Key Effects:** Large sections (48px+ gaps), animated patterns, bold hover (color shift), scroll-snap, large type (32px+), 200-300ms
+**Key Effects:** Soft multi-layer shadows (clearer than neumorphism), border-radius 12-18px, 200-300ms animations, visible pressed states, WCAG AA+ contrast (4.5:1+)
 
 ### Page Pattern
 
