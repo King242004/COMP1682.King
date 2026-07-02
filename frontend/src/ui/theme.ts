@@ -4,7 +4,7 @@ export const theme = {
     surface: "#FFFFFF",
     text: "#0F172A",
     muted: "#526077",
-    subtle: "#8C99AD",
+    subtle: "#64748B", // was #8C99AD (~3:1 on white) — bumped to meet WCAG 4.5:1 for small text
     border: "#E3EAF5",
     primary: "#2563EB", // ocean blue — friendly yet trustworthy
     primary2: "#1D4ED8", // pressed/darker state

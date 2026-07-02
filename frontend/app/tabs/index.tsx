@@ -1,6 +1,6 @@
 // HOME SCREEN
-import { useCallback, useState, useMemo, useRef } from "react";
-import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,23 +8,27 @@ import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { getExercisesByDate, deleteExercise, type Exercise } from "@/utils/exercise";
 import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/utils/plan";
-import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/utils/coach";
-import { dateKey } from "@/utils/date";
+import {
+  getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight,
+  suggestNextMeal, getCachedSuggestions, cacheSuggestions, nextMealSlot, type MealSuggestions,
+} from "@/utils/coach";
+import { dateKey, weekNumber } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme, macroGoals } from "@/ui/theme";
 import { MEAL_TYPE_META, type MealTypeKey } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
+import { Skeleton } from "@/ui/components/Skeleton";
 
-function getCurrentWeekDays() {
+function getCurrentWeekDays(weekOffset = 0) {
   const days = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  // Start from Monday of current week
+  // Start from Monday of the week, shifted back `weekOffset` weeks (0 = this week)
   const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
   const monday = new Date(today);
-  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7)); // Go back to Monday
+  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7) + weekOffset * 7);
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
@@ -68,7 +72,7 @@ function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
 export default function HomeScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
-  const { meals, dailyTotals, historyMeals, fetchMealsByDate, fetchMealHistory } = useMeals();
+  const { meals, dailyTotals, historyMeals, isLoading, fetchMealsByDate, fetchMealHistory } = useMeals();
 
   const today = new Date();
   const todayKey = dateKey(today);
@@ -159,6 +163,37 @@ export default function HomeScreen() {
     }
   }, [token, selectedDate, todayKey, lang]);
 
+  // "Ăn gì bây giờ?" — user-initiated only (each call = 1 Gemini request), cached
+  // per (date + meal slot + lang) so re-taps within the same slot are free.
+  const [suggest, setSuggest] = useState<MealSuggestions | null>(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+
+  const loadSuggestions = async (force = false) => {
+    if (!token || suggestLoading) return;
+    setSuggestError(null);
+    // Slot = hour-based, skipping meals already logged (mirrors backend nextSlotToSuggest)
+    const slot = nextMealSlot(new Date().getHours(), new Set(meals.map((m) => m.mealType)));
+    if (!force) {
+      const cached = await getCachedSuggestions(todayKey, slot, lang);
+      if (cached) { setSuggest(cached); return; }
+    }
+    setSuggestLoading(true);
+    try {
+      const fresh = await suggestNextMeal(token, lang);
+      setSuggest(fresh);
+      cacheSuggestions(todayKey, slot, lang, fresh);
+    } catch (e: any) {
+      setSuggestError(
+        e?.message === "QUOTA"
+          ? (lang === "vi" ? "Hôm nay hết lượt AI rồi, thử lại sau nhé." : "Out of AI requests for today — try again later.")
+          : (lang === "vi" ? "Không lấy được gợi ý, thử lại nhé." : "Couldn't get suggestions. Please try again.")
+      );
+    } finally {
+      setSuggestLoading(false);
+    }
+  };
+
   // Pull-to-refresh re-runs every loader (insight still respects its TTL cache)
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -205,26 +240,6 @@ export default function HomeScreen() {
     ]);
   };
 
-  // Streak calculation — today not logged yet doesn't break the streak
-  // (still counting from yesterday until the day actually ends)
-  const streak = useMemo(() => {
-    const loggedDaysSet = new Set(historyMeals.map((m) => m.date));
-    let count = 0;
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    if (!loggedDaysSet.has(dateKey(d))) d.setDate(d.getDate() - 1);
-    for (let i = 0; i < 365; i++) {
-      const key = dateKey(d);
-      if (loggedDaysSet.has(key)) {
-        count++;
-        d.setDate(d.getDate() - 1);
-      } else {
-        break;
-      }
-    }
-    return count;
-  }, [historyMeals]);
-
   const goal = user?.calorieGoal ?? 2000;
   const eaten = dailyTotals.calories;
   const remaining = Math.max(0, goal - eaten);
@@ -233,13 +248,31 @@ export default function HomeScreen() {
   const totalFat = dailyTotals.fat;
   const totalProtein = dailyTotals.protein;
 
-  const weekDays = getCurrentWeekDays();
+  // Diary week browsing: back through the past freely, forward only up to the
+  // current week — future diary days don't exist (that's the Plan screen's job).
+  const [weekOffset, setWeekOffset] = useState(0);
+  const changeWeek = (delta: number) => {
+    const next = weekOffset + delta;
+    if (next > 0) return;
+    setWeekOffset(next);
+    setSelectedDate(next === 0 ? todayKey : dateKey(getCurrentWeekDays(next)[0]));
+  };
+
+  const weekDays = getCurrentWeekDays(weekOffset);
   const loggedDays = new Set(historyMeals.map((m) => m.date));
 
   const mealsByType = (type: MealTypeKey) =>
     meals.filter((m) => m.mealType === type);
 
   const isToday = selectedDate === todayKey;
+
+  // Suggest slot for "Ăn gì bây giờ?": hour-based, skipping meals already logged.
+  // Logging a meal moves the slot forward → cache key changes → stale picks vanish.
+  const currentSlot = nextMealSlot(new Date().getHours(), new Set(meals.map((m) => m.mealType)));
+  useEffect(() => {
+    if (!isToday) return;
+    getCachedSuggestions(todayKey, currentSlot, lang).then(setSuggest);
+  }, [isToday, currentSlot, lang, todayKey]);
 
   return (
     <Screen padded={false} style={{ paddingTop: 0 }}>
@@ -255,24 +288,32 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} colors={[theme.colors.primary]} />
         }
       >
-        {/* Header */}
+        {/* Header — title left, week navigator right ("Week N" keeps the arrows apart).
+            Forward is disabled at the current week: the diary has no future weeks. */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <AppText variant="h1">
             {isToday ? "Today" : new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
           </AppText>
-          {streak > 0 && (
-            <View style={{
-              flexDirection: "row", alignItems: "center", gap: 4,
-              backgroundColor: "rgba(255,160,0,0.12)",
-              borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-              borderWidth: 1, borderColor: "rgba(255,160,0,0.25)",
-            }}>
-              <AppText style={{ fontSize: 16 }}>🔥</AppText>
-              <AppText style={{ fontSize: 14, fontWeight: "700", color: "#E67E00" }}>
-                {streak} day{streak > 1 ? "s" : ""}
-              </AppText>
-            </View>
-          )}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Pressable
+              onPress={() => changeWeek(-1)}
+              hitSlop={10}
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+            >
+              <Ionicons name="chevron-back" size={20} color={theme.colors.subtle} />
+            </Pressable>
+            <AppText variant="body2" style={{ fontWeight: "700", color: weekOffset === 0 ? theme.colors.primary : theme.colors.text }}>
+              Week {weekNumber(weekDays[0])}
+            </AppText>
+            <Pressable
+              onPress={() => changeWeek(1)}
+              disabled={weekOffset === 0}
+              hitSlop={10}
+              style={({ pressed }) => ({ opacity: weekOffset === 0 ? 0.25 : pressed ? 0.5 : 1, padding: 4 })}
+            >
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.subtle} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Current week row (Mon→Sun) - past/today clickable, future dimmed */}
@@ -405,7 +446,7 @@ export default function HomeScreen() {
         <View style={{ gap: 4 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             <AppText variant="h2">Diary</AppText>
-            <Pressable onPress={() => router.push("/meals/history")}>
+            <Pressable onPress={() => router.push("/meals/history")} hitSlop={10}>
               <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>View all</AppText>
             </Pressable>
           </View>
@@ -514,9 +555,12 @@ export default function HomeScreen() {
                   </View>
                 ))}
 
-                {/* Empty only when there is nothing at all in this slot */}
+                {/* Empty only when there is nothing at all in this slot;
+                    while fetching, pulse a skeleton instead of flashing "No meals logged" */}
                 {typeMeals.length === 0 && plannedForType.length === 0 && (
-                  <AppText variant="subtle" style={{ fontSize: 12 }}>No meals logged</AppText>
+                  isLoading
+                    ? <Skeleton width="55%" height={14} />
+                    : <AppText variant="subtle" style={{ fontSize: 12 }}>No meals logged</AppText>
                 )}
 
                 {/* Slim macro split bar (percent details live in the Macros card above) */}
@@ -537,7 +581,7 @@ export default function HomeScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             <AppText variant="h2">Activity</AppText>
             {isToday && (
-              <Pressable onPress={() => router.push("/exercise/log-workout" as any)}>
+              <Pressable onPress={() => router.push("/exercise/log-workout" as any)} hitSlop={10}>
                 <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>Log workout</AppText>
               </Pressable>
             )}
@@ -591,15 +635,20 @@ export default function HomeScreen() {
           </Card>
         </View>
 
-        {/* Today's plan — section header outside; card = status + workout tip, taps into the weekly plan */}
+        {/* Today's plan — weekly plan status card + "Ăn gì bây giờ?" card in one section */}
         {isToday && (() => {
           const pending = planToday.filter((p) => !p.done);
           const vi = lang === "vi";
+          const slot = suggest?.mealType || currentSlot;
+          const slotVi: Record<string, string> = { breakfast: "bữa sáng", lunch: "bữa trưa", dinner: "bữa tối", snack: "bữa phụ" };
+          const slotName = vi ? (slotVi[slot] || slot) : slot;
+          // Planned-but-uneaten dish for this slot → suggestions act as swap options
+          const plannedForSlot = planToday.find((p) => p.mealType === slot && !p.done);
           return (
             <View style={{ gap: 4 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <AppText variant="h2">{vi ? "Kế hoạch hôm nay" : "Today's plan"}</AppText>
-                <Pressable onPress={() => router.push("/plan/weekly" as any)}>
+                <AppText variant="h2">{vi ? "Dành cho bạn" : "For you"}</AppText>
+                <Pressable onPress={() => router.push("/plan/weekly" as any)} hitSlop={10}>
                   <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>
                     {vi ? "Xem tuần" : "View week"}
                   </AppText>
@@ -611,7 +660,7 @@ export default function HomeScreen() {
                 style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
               >
                 <Card style={{ padding: theme.space.lg, gap: 10 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                     <View style={{
                       width: 36, height: 36, borderRadius: 12,
                       backgroundColor: "rgba(99,102,241,0.12)",
@@ -619,13 +668,19 @@ export default function HomeScreen() {
                     }}>
                       <Ionicons name="calendar" size={18} color={theme.colors.indigo} />
                     </View>
-                    <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontWeight: "700" }}>
-                      {planToday.length === 0
-                        ? (vi ? "Chưa có kế hoạch — để AI tạo cho bạn ✨" : "No plan yet — let the AI build one ✨")
-                        : pending.length === 0
-                        ? (vi ? "Hoàn thành kế hoạch hôm nay 🎉" : "Today's plan is all done 🎉")
-                        : (vi ? `${pending.length} món đang chờ trong nhật ký` : `${pending.length} planned meals waiting in your diary`)}
-                    </AppText>
+                    {/* Title + gray status line (same layout as the suggest card below) */}
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <AppText variant="h2" style={{ fontSize: 15 }}>
+                        {vi ? "Kế hoạch tuần" : "Weekly plan"}
+                      </AppText>
+                      <AppText variant="subtle" numberOfLines={1} style={{ fontSize: 12 }}>
+                        {planToday.length === 0
+                          ? (vi ? "Chưa có kế hoạch — để AI tạo cho bạn ✨" : "No plan yet — let the AI build one ✨")
+                          : pending.length === 0
+                          ? (vi ? "Hoàn thành kế hoạch hôm nay 🎉" : "Today's plan is all done 🎉")
+                          : (vi ? `${pending.length} món đang chờ trong nhật ký` : `${pending.length} planned meals waiting in your diary`)}
+                      </AppText>
+                    </View>
                     <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
                   </View>
 
@@ -640,6 +695,111 @@ export default function HomeScreen() {
                   )}
                 </Card>
               </Pressable>
+
+              {/* "Ăn gì bây giờ?" — one tap, AI picks 3 dishes for the next meal slot.
+                  When the slot already has a planned dish, picks are swap alternatives. */}
+              <Card style={{ padding: theme.space.lg, gap: 10 }}>
+              {/* Header — tap generates (cache hit = instant, no AI call) */}
+              <Pressable
+                onPress={() => loadSuggestions()}
+                disabled={suggestLoading}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, opacity: pressed ? 0.8 : 1 })}
+              >
+                <View style={{
+                  width: 36, height: 36, borderRadius: 12,
+                  backgroundColor: "rgba(47,191,113,0.12)",
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <Ionicons name="restaurant" size={17} color={theme.colors.accent} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <AppText variant="h2" style={{ fontSize: 15 }}>
+                    {vi ? "Ăn gì bây giờ?" : "What should I eat now?"}
+                  </AppText>
+                  <AppText variant="subtle" numberOfLines={2} style={{ fontSize: 12 }}>
+                    {suggest
+                      ? plannedForSlot
+                        ? (vi
+                            ? `Món thay thế cho ${plannedForSlot.name} · còn ${suggest.remaining.toLocaleString()} kcal`
+                            : `Alternatives to ${plannedForSlot.name} · ${suggest.remaining.toLocaleString()} kcal left`)
+                        : (vi
+                            ? `Gợi ý cho ${slotName} · còn ${suggest.remaining.toLocaleString()} kcal`
+                            : `For your ${slotName} · ${suggest.remaining.toLocaleString()} kcal left`)
+                      : plannedForSlot
+                      ? (vi
+                          ? `Kế hoạch ${slotName} có ${plannedForSlot.name} — muốn đổi món khác?`
+                          : `${plannedForSlot.name} is planned for ${slotName} — want something else?`)
+                      : (vi
+                          ? `AI chọn món cho ${slotName} theo calo còn lại`
+                          : `AI picks dishes for your ${slotName} from what's left`)}
+                  </AppText>
+                </View>
+                {suggestLoading ? (
+                  <ActivityIndicator size="small" color={theme.colors.accent} />
+                ) : suggest ? (
+                  /* Regenerate — bypasses the cache (costs 1 AI request) */
+                  <Pressable onPress={() => loadSuggestions(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                    <Ionicons name="refresh" size={17} color={theme.colors.subtle} />
+                  </Pressable>
+                ) : (
+                  <View style={{
+                    flexDirection: "row", alignItems: "center", gap: 4,
+                    backgroundColor: "rgba(47,191,113,0.10)",
+                    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
+                  }}>
+                    <Ionicons name="sparkles" size={13} color={theme.colors.accent} />
+                    <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>
+                      {vi ? "Gợi ý" : "Suggest"}
+                    </AppText>
+                  </View>
+                )}
+              </Pressable>
+
+              {!!suggestError && (
+                <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{suggestError}</AppText>
+              )}
+
+              {/* Suggested dishes — "Thêm" opens Add meal with everything prefilled */}
+              {suggest?.suggestions.map((s, i) => (
+                <View key={`${i}-${s.name}`} style={{
+                  borderWidth: 1, borderColor: theme.colors.border,
+                  borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, gap: 4,
+                }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600" }}>
+                      {s.name}
+                    </AppText>
+                    <AppText variant="subtle" style={{ fontSize: 12 }}>{s.calories} kcal</AppText>
+                    <Pressable
+                      onPress={() => router.push({
+                        pathname: "/meals/add",
+                        params: {
+                          mealType: suggest.mealType,
+                          prefillName: s.name,
+                          prefillCalories: String(s.calories),
+                          prefillProtein: String(s.protein),
+                          prefillCarbs: String(s.carbs),
+                          prefillFat: String(s.fat),
+                          source: "suggest",
+                        },
+                      })}
+                      hitSlop={6}
+                      style={({ pressed }) => ({
+                        flexDirection: "row", alignItems: "center", gap: 3,
+                        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+                        backgroundColor: pressed ? theme.colors.tint : "rgba(47,191,113,0.10)",
+                      })}
+                    >
+                      <Ionicons name="add" size={14} color={theme.colors.accent} />
+                      <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>
+                        {vi ? "Thêm" : "Add"}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                  {!!s.reason && <AppText variant="subtle" style={{ fontSize: 11 }}>{s.reason}</AppText>}
+                </View>
+              ))}
+              </Card>
             </View>
           );
         })()}
