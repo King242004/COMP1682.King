@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "./api";
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -13,17 +14,6 @@ export type PlanMeal = {
   note?: string;
   date: string;
   done: boolean;
-};
-
-export type NewPlanMeal = {
-  name: string;
-  mealType: MealType;
-  calories: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  note?: string;
-  date: string;
 };
 
 // Map backend (_id) → frontend (id) shape
@@ -79,9 +69,29 @@ export async function getGroceryList(
   return data.groups || [];
 }
 
-export async function addPlanMeal(token: string, input: NewPlanMeal): Promise<PlanMeal> {
-  const data = await apiRequest("/plan", "POST", input, token);
-  return mapPlan(data.planMeal);
+// ─── Grocery cache (AsyncStorage) ─────────────────────────────────────────────
+// The list costs 1 Gemini request, so it persists per (week + language) together
+// with the user's tick state. `sig` = signature of the plan it was built from —
+// when the plan changes the signature stops matching and the cache is ignored.
+export type GroceryCache = { groups: GroceryGroup[]; checked: Record<string, boolean>; sig: string };
+
+const groceryCacheKey = (weekStart: string, language: string) => `grocery_${weekStart}_${language}`;
+
+export async function getCachedGrocery(weekStart: string, language: string): Promise<GroceryCache | null> {
+  try {
+    const raw = await AsyncStorage.getItem(groceryCacheKey(weekStart, language));
+    return raw ? (JSON.parse(raw) as GroceryCache) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function cacheGrocery(weekStart: string, language: string, cache: GroceryCache): Promise<void> {
+  try {
+    await AsyncStorage.setItem(groceryCacheKey(weekStart, language), JSON.stringify(cache));
+  } catch {
+    // ignore cache write failures
+  }
 }
 
 export async function deletePlanMeal(token: string, id: string): Promise<void> {

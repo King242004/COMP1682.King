@@ -1,6 +1,7 @@
 // AI HEALTH COACH (tab) — daily insight + context-aware chat with saved history
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, Image, Pressable, ScrollView, TextInput, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -187,6 +188,9 @@ export default function CoachTab() {
     }
   }, [token, lang]);
 
+  // Deep-linked questions must wait for this — sending while history is still
+  // loading would get overwritten when setMessages(hist) replaces the state.
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const loadHistory = useCallback(async () => {
     if (!token) return;
     try {
@@ -196,6 +200,8 @@ export default function CoachTab() {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 150);
     } catch {
       // keep whatever is in state
+    } finally {
+      setHistoryLoaded(true);
     }
   }, [token]);
 
@@ -233,6 +239,20 @@ export default function CoachTab() {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     }
   };
+
+  // Deep-link question (e.g. tapping a plan dish → "how do I cook X?").
+  // `askId` makes each tap unique; the ref consumes it once so switching back to
+  // the tab later doesn't re-send the same question (tab params persist).
+  const { ask, askId } = useLocalSearchParams<{ ask?: string; askId?: string }>();
+  const consumedAskRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ask || !askId || consumedAskRef.current === askId) return;
+    // Wait for history to finish loading (else setMessages(hist) would wipe the
+    // question bubble) and for any in-flight send. Effect re-runs as these settle.
+    if (!token || sending || !historyLoaded) return;
+    consumedAskRef.current = askId;
+    send(String(ask));
+  }, [ask, askId, token, sending, historyLoaded]);
 
   // Pick meal type on the suggested-meal card (before adding) — local only.
   const setMealType = (index: number, mealType: string) => {

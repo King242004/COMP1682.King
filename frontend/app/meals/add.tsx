@@ -14,8 +14,6 @@ import { TextField } from "@/ui/components/TextField";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
-const MEAL_TYPES = MEAL_TYPE_META;
-
 const QUICK_SUGGESTIONS = [
   { name: "Oatmeal", calories: 150, protein: 5, carbs: 27, fat: 3, mealType: "breakfast" as MealType },
   { name: "Chicken Rice", calories: 450, protein: 35, carbs: 48, fat: 8, mealType: "lunch" as MealType },
@@ -51,6 +49,7 @@ export default function AddMealScreen() {
     prefillProtein,
     prefillCarbs,
     prefillFat,
+    source, // "suggest" when coming from the AI meal suggestion (vs. scan)
   } = useLocalSearchParams<{
     mealType: MealType;
     prefillName?: string;
@@ -58,6 +57,7 @@ export default function AddMealScreen() {
     prefillProtein?: string;
     prefillCarbs?: string;
     prefillFat?: string;
+    source?: string;
   }>();
 
   const [mealName, setMealName] = useState(prefillName ?? "");
@@ -69,7 +69,8 @@ export default function AddMealScreen() {
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate meals
-  const isFromScan = !!prefillName;
+  const isPrefilled = !!prefillName;
+  const isFromScan = isPrefilled && source !== "suggest";
 
   useEffect(() => {
     setMealName(prefillName ?? "");
@@ -166,12 +167,14 @@ export default function AddMealScreen() {
           <AppText variant="muted" style={{ marginTop: -8 }}>
             {isFromScan
               ? "AI detected this meal. Review and adjust if needed."
+              : isPrefilled
+              ? "AI suggested this meal. Review and adjust if needed."
               : "Log your nutrition for today."}
           </AppText>
         </View>
 
-        {/* Scan badge */}
-        {isFromScan && (
+        {/* AI badge (scan or suggestion) */}
+        {isPrefilled && (
           <View style={{
             flexDirection: "row", alignItems: "center", gap: 8,
             backgroundColor: "rgba(47,191,113,0.08)",
@@ -182,7 +185,7 @@ export default function AddMealScreen() {
             <AppText style={{ fontSize: 18 }}>🤖</AppText>
             <View style={{ flex: 1 }}>
               <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.accent }}>
-                AI detected
+                {isFromScan ? "AI detected" : "AI suggested"}
               </AppText>
               <AppText variant="subtle" style={{ fontSize: 12 }}>
                 You can edit any field before saving.
@@ -193,7 +196,7 @@ export default function AddMealScreen() {
 
         {/* Meal type selector */}
         <View style={{ flexDirection: "row", gap: 8 }}>
-          {MEAL_TYPES.map((mt) => {
+          {MEAL_TYPE_META.map((mt) => {
             const active = mealType === mt.key;
             return (
               <Pressable
@@ -311,8 +314,8 @@ export default function AddMealScreen() {
           </AppText>
         </Pressable>
 
-        {/* Quick Suggestions — chỉ hiện khi không phải từ scan */}
-        {!isFromScan && (
+        {/* Quick Suggestions — chỉ hiện khi form trống (không prefill từ scan/AI) */}
+        {!isPrefilled && (
           <View style={{ gap: theme.space.sm }}>
             <AppText variant="h2" style={{ fontSize: 15 }}>Quick Suggestions</AppText>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
