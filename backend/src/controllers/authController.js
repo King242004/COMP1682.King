@@ -22,6 +22,7 @@ const publicUser = (u) => ({
   conditions: u.conditions || [],
   language: u.language ?? null,
   avatar: u.avatar ?? null,
+  tastePreferences: u.tastePreferences || "",
 });
 
 // ─── Validation helpers ───────────────────────────────────────────────────────
