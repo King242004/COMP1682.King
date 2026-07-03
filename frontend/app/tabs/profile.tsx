@@ -214,7 +214,8 @@ export default function ProfileScreen() {
           <SettingRow icon="📏" label="Height" value={user?.height ? `${user.height} cm` : "—"} />
           <SettingRow icon="🎯" label="Goal" value={GOALS.find((g) => g.key === user?.goal)?.label ?? "—"} />
           <SettingRow icon="🏃" label="Activity" value={ACTIVITY_LEVELS.find((a) => a.key === user?.activityLevel)?.label ?? "—"} />
-          <SettingRow icon="❤️" label="Conditions" value={user?.conditions?.length ? user.conditions.join(", ") : "None"} last />
+          <SettingRow icon="❤️" label="Conditions" value={user?.conditions?.length ? user.conditions.join(", ") : "None"} />
+          <SettingRow icon="🍜" label="Taste" value={user?.tastePreferences?.trim() ? user.tastePreferences : "—"} last />
         </Card>
 
         {/* Account */}

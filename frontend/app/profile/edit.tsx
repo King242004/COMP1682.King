@@ -37,6 +37,7 @@ export default function EditProfileScreen() {
   const [goal, setGoal] = useState(user?.goal ?? "eat_healthy");
   const [activityLevel, setActivityLevel] = useState(user?.activityLevel ?? "moderate");
   const [conditions, setConditions] = useState<string[]>(user?.conditions ?? []);
+  const [taste, setTaste] = useState(user?.tastePreferences ?? "");
 
   const toggleCondition = (c: string) => {
     if (c === "none") {
@@ -86,6 +87,7 @@ export default function EditProfileScreen() {
         goal: goal || undefined,
         activityLevel: activityLevel || undefined,
         conditions,
+        tastePreferences: taste.trim(), // empty string clears saved preferences
       });
       router.back();
     } catch (e: any) {
@@ -214,6 +216,20 @@ export default function EditProfileScreen() {
                 </Pressable>
               ))}
             </View>
+          </View>
+
+          {/* Taste preferences — read by every AI feature (suggest, coach, weekly plan) */}
+          <View style={{ gap: 6 }}>
+            <TextField
+              label="Taste preferences"
+              placeholder="e.g. không ăn hải sản, thích gà, ít cay..."
+              value={taste}
+              onChangeText={setTaste}
+              textContentType="none"
+            />
+            <AppText variant="subtle" style={{ fontSize: 11 }}>
+              AI (gợi ý món, Coach, kế hoạch tuần) sẽ luôn tôn trọng khẩu vị này.
+            </AppText>
           </View>
 
           <View style={{ flexDirection: "row", gap: theme.space.md }}>
