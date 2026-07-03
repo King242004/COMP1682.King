@@ -89,7 +89,8 @@ export default function LoginScreen() {
           />
 
           <View style={styles.linkRowFirst}>
-            <Link href="/auth/register" asChild>
+            {/* replace: hopping login<->register must not stack screens */}
+            <Link replace href="/auth/register" asChild>
               <Pressable hitSlop={10}>
                 <AppText variant="body2" style={styles.linkPrimary}>
                   Don't have an account? Register

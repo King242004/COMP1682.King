@@ -20,6 +20,15 @@ export const BASE_URL = devHost
   ? `http://${devHost}:5000/api`
   : "http://192.168.1.22:5000/api";
 
+// Called when the server rejects our token (401 = expired/invalid JWT).
+// AuthContext registers a handler that force-logs-out and returns to login —
+// otherwise an expired session leaves a "zombie" app full of silent errors.
+// (Safe to hook on 401: login/register failures return 400, never 401.)
+let onUnauthorized: (() => void) | null = null;
+export function setOnUnauthorized(fn: (() => void) | null) {
+  onUnauthorized = fn;
+}
+
 export async function apiRequest(
   endpoint: string,
   method: string = "GET",
@@ -38,6 +47,9 @@ export async function apiRequest(
   });
 
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Something went wrong");
+  if (!res.ok) {
+    if (res.status === 401) onUnauthorized?.();
+    throw new Error(data.message || "Something went wrong");
+  }
   return data;
 }

@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createContext, useContext, useEffect, useState } from "react";
-import { apiRequest, BASE_URL } from "../utils/api";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { Alert } from "react-native";
+import { router } from "expo-router";
+import { apiRequest, BASE_URL, setOnUnauthorized } from "../utils/api";
 
 type User = {
   id: string;
@@ -58,6 +60,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
     loadAuth();
+  }, []);
+
+  // Session-expiry watchdog: the JWT lives 30 days — when it dies the app used
+  // to become a "zombie" (token still stored, every request silently 401s).
+  // apiRequest calls this on any 401 → force logout + back to login.
+  const tokenRef = useRef<string | null>(null);
+  tokenRef.current = token;
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      // Only react while we believed we were logged in; Home fires several
+      // parallel requests, so the ref-clear makes repeat 401s no-ops.
+      if (!tokenRef.current) return;
+      tokenRef.current = null;
+      logout();
+      Alert.alert("Session expired", "Please sign in again.");
+      router.replace("/auth/login");
+    });
+    return () => setOnUnauthorized(null);
   }, []);
 
   const login = async (email: string, password: string) => {
