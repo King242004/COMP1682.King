@@ -40,13 +40,23 @@ export default function ForgotPasswordScreen() {
   };
 
   // ─── Step 2: Verify OTP ─────────────────────────────────────────────────────
-  const handleVerifyOTP = () => {
+  // Actually asks the server (used to advance locally — any 6 digits "passed").
+  // Wrong guesses count toward the 5-attempt limit; the 5th burns the code.
+  const handleVerifyOTP = async () => {
     if (otp.trim().length !== 6) {
       setError("Please enter the 6-digit OTP.");
       return;
     }
     setError("");
-    setStep("password");
+    setIsLoading(true);
+    try {
+      await apiRequest("/user/verify-otp", "POST", { email: email.trim(), otp: otp.trim() });
+      setStep("password");
+    } catch (e: any) {
+      setError(e.message || "Invalid OTP.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ─── Step 3: Reset Password ─────────────────────────────────────────────────

@@ -60,6 +60,34 @@ exports.sendPasswordOTP = async (req, res) => {
   res.json({ message: "OTP sent to your email." });
 };
 
+// ─── Verify OTP only (step-2 pre-check, does NOT consume the code) ────────────
+// The app's "Verify OTP" button used to advance locally without asking the
+// server — a wrong code sailed through to the password step. Misses here count
+// against the same 5-attempt budget as the final reset.
+exports.verifyOTP = async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp)
+    return res.status(400).json({ message: "Email and OTP are required." });
+
+  const record = await OTP.findOne({ email: email.toLowerCase() });
+  if (!record) return res.status(400).json({ message: "Invalid OTP." });
+
+  if (record.expiresAt < new Date())
+    return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+
+  if (record.otp !== String(otp).trim()) {
+    record.attempts += 1;
+    if (record.attempts >= 5) {
+      await record.deleteOne();
+      return res.status(400).json({ message: "Too many wrong attempts. Please request a new code." });
+    }
+    await record.save();
+    return res.status(400).json({ message: "Invalid OTP." });
+  }
+
+  res.json({ message: "OTP verified." });
+};
+
 // ─── Verify OTP & Change Password ─────────────────────────────────────────────
 exports.resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
