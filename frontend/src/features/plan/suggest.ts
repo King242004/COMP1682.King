@@ -3,6 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/api";
 import { stripMarkdown } from "@/features/coach/api";
+import { mealSlotByHour } from "@/utils/mealSlot";
 import type { Lang } from "@/utils/language";
 
 export type MealSuggestion = {
@@ -19,16 +20,6 @@ export type MealSuggestions = {
   remaining: number; // kcal budget left when suggestions were generated
   suggestions: MealSuggestion[];
 };
-
-// Same hour→slot mapping as the backend; used to key the cache so suggestions
-// go stale when the meal slot changes (lunch suggestions shouldn't show at dinner).
-export function mealSlotByHour(h: number): string {
-  if (h < 11) return "breakfast";
-  if (h < 14) return "lunch";
-  if (h < 17) return "snack";
-  if (h < 21) return "dinner";
-  return "snack";
-}
 
 // Slot to suggest for: hour-based slot, skipping slots already eaten today.
 // Mirrors backend nextSlotToSuggest — keep the two in sync so the cache key

@@ -1,10 +1,10 @@
-import { View, type ViewProps, type ViewStyle } from "react-native";
+import { View, type StyleProp, type ViewProps, type ViewStyle } from "react-native";
 import { shadow, theme } from "../theme";
 
 export function Card({
   style,
   ...props
-}: ViewProps & { style?: ViewStyle }) {
+}: ViewProps & { style?: StyleProp<ViewStyle> }) {
   return (
     <View
       {...props}
