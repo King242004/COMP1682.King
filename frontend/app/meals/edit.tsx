@@ -14,8 +14,6 @@ import { TextField } from "@/ui/components/TextField";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
-const MEAL_TYPES = MEAL_TYPE_META;
-
 type Errors = {
   mealName?: string;
   calories?: string;
@@ -169,7 +167,7 @@ export default function EditMealScreen() {
 
         {/* Meal type 2x2 */}
         <View style={{ gap: 8 }}>
-          {[MEAL_TYPES.slice(0, 2), MEAL_TYPES.slice(2, 4)].map((row, ri) => (
+          {[MEAL_TYPE_META.slice(0, 2), MEAL_TYPE_META.slice(2, 4)].map((row, ri) => (
             <View key={ri} style={{ flexDirection: "row", gap: 8 }}>
               {row.map((mt) => {
                 const active = mealType === mt.key;
