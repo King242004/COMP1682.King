@@ -1,6 +1,7 @@
-// MEAL PLAN — weekly planner
+// MEAL PLAN — weekly planner. Flow/state lives here; the generate + grocery
+// modals are in src/features/plan.
 import { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +18,8 @@ import {
   type PlanMeal,
   type GroceryGroup,
 } from "@/features/plan/api";
+import { GenerateModal } from "@/features/plan/GenerateModal";
+import { GroceryModal } from "@/features/plan/GroceryModal";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
 import { MEAL_TYPE_META } from "@/ui/mealTypes";
@@ -44,45 +47,31 @@ export default function MealPlanScreen() {
   const L = lang === "vi"
     ? {
         generate: "✨ Tạo kế hoạch tuần bằng AI", generating: "AI đang lên kế hoạch...",
-        modalWeekTitle: "Tạo kế hoạch bằng AI", modalDayTitle: "Làm lại thực đơn ngày này",
-        modalWeekMsg: "AI sẽ lên thực đơn từ hôm nay tới hết tuần theo mục tiêu và tình trạng của bạn. Món đã có trong khoảng này sẽ bị thay.",
-        modalDayMsg: "AI sẽ thay toàn bộ món của ngày này bằng thực đơn mới.",
-        notePlaceholder: "Khẩu vị (không bắt buộc): vd không ăn hải sản, thích gà...",
-        start: "Tạo ngay", cancel: "Huỷ",
         pastWeek: "Tuần này đã qua rồi, chuyển sang tuần hiện tại hoặc tuần sau nhé.",
         redoDay: "Làm lại ngày này",
         confirmTitle: "Bạn có chắc không?",
         confirmWeekMsg: "Các món đang có từ hôm nay tới cuối tuần sẽ bị THAY bằng kế hoạch mới.",
         confirmDayMsg: "Toàn bộ món của ngày này sẽ bị THAY bằng thực đơn mới.",
-        continue: "Tiếp tục",
-        grocery: "🛒 Danh sách đi chợ", groceryTitle: "Danh sách đi chợ", groceryLoading: "AI đang tổng hợp nguyên liệu...",
-        close: "Đóng",
+        continue: "Tiếp tục", cancel: "Huỷ",
+        grocery: "🛒 Danh sách đi chợ", groceryLoading: "AI đang tổng hợp nguyên liệu...",
         quota: "Hôm nay hết lượt AI miễn phí, thử lại sau nhé.", genErr: "Chưa tạo được kế hoạch, thử lại nhé.",
         groceryErr: "Chưa tạo được danh sách, thử lại nhé.", error: "Lỗi",
         pastDay: "Ngày này đã qua — chỉ xem lại thôi nhé.",
         emptyHint: "Chưa có món nào cho ngày này — bấm nút ✨ bên dưới để AI lên thực đơn nhé.",
-        rememberTaste: "Ghi nhớ khẩu vị này — gợi ý món và Coach cũng sẽ theo",
       }
     : {
         generate: "✨ Generate my week with AI", generating: "AI is planning your week...",
-        modalWeekTitle: "Generate with AI", modalDayTitle: "Regenerate this day",
-        modalWeekMsg: "The AI will plan from today to the end of the week based on your goal and conditions. Existing meals in that range will be replaced.",
-        modalDayMsg: "The AI will replace all meals on this day with a new menu.",
-        notePlaceholder: "Preferences (optional): e.g. no seafood, love chicken...",
-        start: "Generate", cancel: "Cancel",
         pastWeek: "This week is already over — switch to the current or next week.",
         redoDay: "Regenerate this day",
         confirmTitle: "Are you sure?",
         confirmWeekMsg: "Meals from today to the end of the week will be REPLACED by the new plan.",
         confirmDayMsg: "All meals on this day will be REPLACED by a new menu.",
-        continue: "Continue",
-        grocery: "🛒 Grocery list", groceryTitle: "Grocery list", groceryLoading: "AI is building your list...",
-        close: "Close",
+        continue: "Continue", cancel: "Cancel",
+        grocery: "🛒 Grocery list", groceryLoading: "AI is building your list...",
         quota: "Out of free AI quota today — try again later.", genErr: "Couldn't generate the plan. Please try again.",
         groceryErr: "Couldn't build the list. Please try again.", error: "Error",
         pastDay: "This day is over — view only.",
         emptyHint: "Nothing planned for this day — tap the ✨ button below to let the AI build a menu.",
-        rememberTaste: "Remember these preferences — meal suggestions and Coach will follow them too",
       };
 
   const todayKey = dateKey(new Date());
@@ -99,7 +88,7 @@ export default function MealPlanScreen() {
   const [genScope, setGenScope] = useState<"week" | "day">("week");
   const [note, setNote] = useState("");
   const [rememberTaste, setRememberTaste] = useState(true);
-  // AI grocery list + per-item ticks (persisted per week, see utils/plan cache)
+  // AI grocery list + per-item ticks (persisted per week, see plan api cache)
   const [grocery, setGrocery] = useState<GroceryGroup[] | null>(null);
   const [groceryChecked, setGroceryChecked] = useState<Record<string, boolean>>({});
   const [groceryVisible, setGroceryVisible] = useState(false);
@@ -347,28 +336,21 @@ export default function MealPlanScreen() {
   return (
     <Screen padded={false}>
       {/* Fixed header — stays visible while the list scrolls */}
-      <View style={{ paddingHorizontal: theme.space.lg, paddingTop: 60 }}>
+      <View style={styles.headerWrap}>
         <ScreenHeader title="Meal Plan" />
       </View>
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: theme.space.lg,
-          paddingBottom: 40,
-          gap: theme.space.lg,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Week navigator */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={styles.weekNav}>
           <Pressable
             onPress={() => changeWeek(-1)}
             hitSlop={10}
-            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+            style={({ pressed }) => [styles.navBtn, pressed && styles.dim]}
           >
             <Ionicons name="chevron-back" size={22} color={theme.colors.subtle} />
           </Pressable>
-          <AppText variant="body2" style={{ fontWeight: "700" }}>
+          <AppText variant="body2" style={styles.weekLabel}>
             {weekOffset === 0
               ? "This week"
               : weekDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
@@ -378,14 +360,14 @@ export default function MealPlanScreen() {
           <Pressable
             onPress={() => changeWeek(1)}
             hitSlop={10}
-            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+            style={({ pressed }) => [styles.navBtn, pressed && styles.dim]}
           >
             <Ionicons name="chevron-forward" size={22} color={theme.colors.subtle} />
           </Pressable>
         </View>
 
         {/* 7-day strip */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <View style={styles.weekRow}>
           {weekDays.map((d, i) => {
             const key = dateKey(d);
             const isSelected = key === selectedDate;
@@ -395,50 +377,34 @@ export default function MealPlanScreen() {
               <Pressable
                 key={key}
                 onPress={() => setSelectedDate(key)}
-                style={({ pressed }) => ({
-                  width: 42, paddingVertical: 9, borderRadius: 16, alignItems: "center", gap: 5,
-                  backgroundColor: isSelected
-                    ? theme.colors.primary
-                    : hasPlan
-                    ? "rgba(8,145,178,0.10)"
-                    : theme.colors.surface,
-                  transform: [{ scale: pressed ? 0.94 : 1 }],
-                })}
+                style={({ pressed }) => [
+                  styles.dayChip,
+                  hasPlan && styles.dayChipPlanned,
+                  isSelected && styles.dayChipSelected,
+                  pressed && styles.dayChipPressed,
+                ]}
               >
-                <AppText style={{
-                  fontSize: 10, fontWeight: "700",
-                  color: isSelected ? "rgba(255,255,255,0.8)" : theme.colors.subtle,
-                }}>
+                <AppText style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
                   {dayLabels[i]}
                 </AppText>
-                <AppText style={{
-                  fontSize: 14, fontWeight: "800",
-                  color: isSelected ? "#fff" : isToday ? theme.colors.primary : theme.colors.muted,
-                }}>
+                <AppText style={[styles.dayNum, isToday && styles.dayNumToday, isSelected && styles.dayNumSelected]}>
                   {d.getDate()}
                 </AppText>
-                <View style={{
-                  width: 5, height: 5, borderRadius: 3,
-                  backgroundColor: isSelected
-                    ? "rgba(255,255,255,0.9)"
-                    : hasPlan ? theme.colors.accent : "transparent",
-                }} />
+                <View style={[styles.dayDot, hasPlan && styles.dayDotPlanned, isSelected && styles.dayDotSelected]} />
               </Pressable>
             );
           })}
         </View>
 
         {/* Day total card */}
-        <Card style={{ padding: theme.space.lg }}>
+        <Card style={styles.totalCard}>
           {/* flex-start: the redo button sits level with the date line, clear of the big number */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <View style={{ gap: 2 }}>
-              <AppText variant="subtle" style={{ fontSize: 12 }}>{selectedLabel}</AppText>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
-                <AppText variant="h0" style={{ fontSize: 28, color: theme.colors.text }}>
-                  {dayTotals.calories.toLocaleString()}
-                </AppText>
-                <AppText variant="muted" style={{ fontSize: 13 }}>/ {goal.toLocaleString()} kcal planned</AppText>
+          <View style={styles.totalHead}>
+            <View style={styles.totalBlock}>
+              <AppText variant="subtle" style={styles.smallLabel}>{selectedLabel}</AppText>
+              <View style={styles.baselineRow}>
+                <AppText variant="h0" style={styles.totalKcal}>{dayTotals.calories.toLocaleString()}</AppText>
+                <AppText variant="muted" style={styles.totalGoal}>/ {goal.toLocaleString()} kcal planned</AppText>
               </View>
             </View>
             {/* Regenerate just this day (today or future only) */}
@@ -447,55 +413,45 @@ export default function MealPlanScreen() {
                 onPress={() => openGenerate("day")}
                 disabled={generating}
                 hitSlop={8}
-                style={({ pressed }) => ({
-                  flexDirection: "row", alignItems: "center", gap: 5,
-                  paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10,
-                  backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.08)",
-                })}
+                style={({ pressed }) => [styles.redoBtn, pressed && styles.redoBtnPressed]}
               >
                 {/* Fixed 14px box so the spinner doesn't grow the button */}
-                <View style={{ width: 14, height: 14, alignItems: "center", justifyContent: "center" }}>
+                <View style={styles.redoIconBox}>
                   {generating && genScope === "day" ? (
-                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ transform: [{ scale: 0.7 }] }} />
+                    <ActivityIndicator size="small" color={theme.colors.primary} style={styles.redoSpinner} />
                   ) : (
                     <Ionicons name="refresh" size={14} color={theme.colors.primary} />
                   )}
                 </View>
-                <AppText style={{ fontSize: 11, fontWeight: "700", color: theme.colors.primary }}>{L.redoDay}</AppText>
+                <AppText style={styles.redoText}>{L.redoDay}</AppText>
               </Pressable>
             )}
           </View>
-          <View style={{ flexDirection: "row", gap: 14, marginTop: 10 }}>
-            <AppText variant="subtle" style={{ fontSize: 12 }}>P {Math.round(dayTotals.protein)}g</AppText>
-            <AppText variant="subtle" style={{ fontSize: 12 }}>C {Math.round(dayTotals.carbs)}g</AppText>
-            <AppText variant="subtle" style={{ fontSize: 12 }}>F {Math.round(dayTotals.fat)}g</AppText>
+          <View style={styles.macroStrip}>
+            <AppText variant="subtle" style={styles.smallLabel}>P {Math.round(dayTotals.protein)}g</AppText>
+            <AppText variant="subtle" style={styles.smallLabel}>C {Math.round(dayTotals.carbs)}g</AppText>
+            <AppText variant="subtle" style={styles.smallLabel}>F {Math.round(dayTotals.fat)}g</AppText>
           </View>
           {/* AI workout suggestion for the selected day */}
           {!!workouts[selectedDate] && (
-            <View style={{
-              flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 10,
-              backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 10,
-            }}>
-              <AppText style={{ fontSize: 14 }}>🏃</AppText>
-              <AppText variant="body2" style={{ flex: 1, fontSize: 13 }}>{workouts[selectedDate]}</AppText>
+            <View style={styles.workoutTip}>
+              <AppText style={styles.tipEmoji}>🏃</AppText>
+              <AppText variant="body2" style={styles.tipText}>{workouts[selectedDate]}</AppText>
             </View>
           )}
         </Card>
 
         {loading && dayPlan.length === 0 ? (
-          <View style={{ paddingVertical: theme.space.xl, alignItems: "center" }}>
+          <View style={styles.loadingWrap}>
             <ActivityIndicator color={theme.colors.primary} />
           </View>
         ) : (
           <>
           {/* Time-aware hints: empty future/today day → point at the AI button; past day → view only */}
           {dayPlan.length === 0 && (
-            <View style={{
-              flexDirection: "row", alignItems: "flex-start", gap: 8,
-              backgroundColor: "rgba(8,145,178,0.05)", borderRadius: 12, padding: theme.space.md,
-            }}>
-              <Ionicons name={isPast ? "time-outline" : "sparkles"} size={15} color={theme.colors.primary} style={{ marginTop: 1 }} />
-              <AppText variant="subtle" style={{ flex: 1, fontSize: 12 }}>
+            <View style={styles.hintBox}>
+              <Ionicons name={isPast ? "time-outline" : "sparkles"} size={15} color={theme.colors.primary} style={styles.hintIcon} />
+              <AppText variant="subtle" style={styles.hintText}>
                 {isPast ? L.pastDay : L.emptyHint}
               </AppText>
             </View>
@@ -503,58 +459,49 @@ export default function MealPlanScreen() {
           {MEAL_TYPE_META.map((mt) => {
             const items = dayPlan.filter((p) => p.mealType === mt.key);
             return (
-              <View key={mt.key} style={{ gap: 8 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Ionicons name={mt.icon as any} size={16} color={mt.color} />
-                    <AppText variant="h2" style={{ fontSize: 15 }}>{mt.label}</AppText>
-                  </View>
+              <View key={mt.key} style={styles.mealSection}>
+                <View style={styles.mealSectionHead}>
+                  <Ionicons name={mt.icon as any} size={16} color={mt.color} />
+                  <AppText variant="h2" style={styles.mealSectionTitle}>{mt.label}</AppText>
                 </View>
 
                 {items.length === 0 ? (
-                  <AppText variant="subtle" style={{ fontSize: 12, paddingLeft: 4 }}>Nothing planned</AppText>
+                  <AppText variant="subtle" style={styles.nothingText}>Nothing planned</AppText>
                 ) : (
                   items.map((item) => (
-                    <Card key={item.id} style={{ padding: theme.space.md, opacity: item.done ? 0.6 : 1 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                        <View style={{ flex: 1 }}>
-                          <AppText variant="body2" style={{
-                            fontWeight: "700",
-                            textDecorationLine: item.done ? "line-through" : "none",
-                          }}>
+                    <Card key={item.id} style={[styles.dishCard, item.done && styles.dishCardDone]}>
+                      <View style={styles.dishRow}>
+                        <View style={styles.flex1}>
+                          <AppText variant="body2" style={[styles.dishName, item.done && styles.dishNameDone]}>
                             {item.name}
                           </AppText>
-                          <AppText variant="subtle" style={{ fontSize: 11 }}>
+                          <AppText variant="subtle" style={styles.dishMacros}>
                             {item.calories} kcal · P {item.protein} · C {item.carbs} · F {item.fat}
                           </AppText>
                         </View>
 
                         {item.done ? (
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                          <View style={styles.eatenChip}>
                             <Ionicons name="checkmark-circle" size={20} color={theme.colors.accent} />
-                            <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>Eaten</AppText>
+                            <AppText style={styles.eatenText}>Eaten</AppText>
                           </View>
                         ) : !isPast ? (
                           <Pressable
                             onPress={() => onMarkEaten(item)}
                             hitSlop={6}
-                            style={({ pressed }) => ({
-                              flexDirection: "row", alignItems: "center", gap: 4,
-                              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-                              backgroundColor: pressed ? theme.colors.tint : "rgba(47,191,113,0.10)",
-                            })}
+                            style={({ pressed }) => [styles.eatBtn, pressed && styles.eatBtnPressed]}
                           >
                             <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
-                            <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>Eat</AppText>
+                            <AppText style={styles.eatenText}>Eat</AppText>
                           </Pressable>
                         ) : null}
 
                         {/* Ask the Coach how to cook this dish */}
-                        <Pressable onPress={() => askCoach(item)} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                        <Pressable onPress={() => askCoach(item)} hitSlop={10} style={({ pressed }) => pressed && styles.dim}>
                           <Ionicons name="chatbubble-ellipses-outline" size={17} color={theme.colors.primary} />
                         </Pressable>
 
-                        <Pressable onPress={() => onDelete(item)} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                        <Pressable onPress={() => onDelete(item)} hitSlop={10} style={({ pressed }) => pressed && styles.dim}>
                           <Ionicons name="trash-outline" size={18} color={theme.colors.subtle} />
                         </Pressable>
                       </View>
@@ -568,19 +515,18 @@ export default function MealPlanScreen() {
         )}
 
         {/* AI actions — kept at the bottom so the calendar stays front and center */}
-        <View style={{ gap: 10, marginTop: 6 }}>
+        <View style={styles.aiActions}>
           <Pressable
             onPress={() => openGenerate("week")}
             disabled={generating}
-            style={({ pressed }) => ({
-              flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-              backgroundColor: generating ? theme.colors.border : pressed ? theme.colors.primary2 : theme.colors.primary,
-              borderRadius: 14, paddingVertical: 13,
-            })}
+            style={({ pressed }) => [
+              styles.generateBtn,
+              generating ? styles.generateBtnDisabled : pressed && styles.generateBtnPressed,
+            ]}
           >
             {/* Loading here only when the WEEK is being generated (day regen has its own spinner) */}
             {generating && genScope === "week" && <ActivityIndicator color="#fff" size="small" />}
-            <AppText style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+            <AppText style={styles.generateText}>
               {generating && genScope === "week" ? L.generating : L.generate}
             </AppText>
           </Pressable>
@@ -589,15 +535,10 @@ export default function MealPlanScreen() {
             <Pressable
               onPress={openGrocery}
               disabled={groceryLoading}
-              style={({ pressed }) => ({
-                flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-                borderWidth: 1.5, borderColor: theme.colors.primary,
-                backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
-                borderRadius: 14, paddingVertical: 11,
-              })}
+              style={({ pressed }) => [styles.groceryBtn, pressed && styles.groceryBtnPressed]}
             >
               {groceryLoading && <ActivityIndicator color={theme.colors.primary} size="small" />}
-              <AppText style={{ color: theme.colors.primary, fontWeight: "700", fontSize: 13 }}>
+              <AppText style={styles.groceryText}>
                 {groceryLoading ? L.groceryLoading : L.grocery}
               </AppText>
             </Pressable>
@@ -605,123 +546,131 @@ export default function MealPlanScreen() {
         </View>
       </ScrollView>
 
-      {/* Generate modal: scope info + optional taste note */}
-      <Modal transparent visible={genVisible} animationType="fade" onRequestClose={() => setGenVisible(false)}>
-        <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: theme.space.lg }}
-          onPress={() => setGenVisible(false)}
-        >
-          <Pressable onPress={() => {}} style={{
-            backgroundColor: theme.colors.surface, borderRadius: 20, padding: theme.space.xl, gap: 12,
-          }}>
-            <AppText variant="h2">{genScope === "day" ? L.modalDayTitle : L.modalWeekTitle}</AppText>
-            <AppText variant="muted" style={{ fontSize: 13 }}>
-              {genScope === "day" ? L.modalDayMsg : L.modalWeekMsg}
-            </AppText>
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              placeholder={L.notePlaceholder}
-              placeholderTextColor={theme.colors.subtle}
-              multiline
-              style={{
-                borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12,
-                paddingHorizontal: 12, paddingVertical: 10, minHeight: 60,
-                fontSize: 13, color: theme.colors.text, textAlignVertical: "top",
-              }}
-            />
-            {/* Save the note to the profile so every AI feature shares one taste memory */}
-            <Pressable
-              onPress={() => setRememberTaste((v) => !v)}
-              hitSlop={6}
-              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-            >
-              <Ionicons
-                name={rememberTaste ? "checkbox" : "square-outline"}
-                size={19}
-                color={rememberTaste ? theme.colors.accent : theme.colors.subtle}
-              />
-              <AppText variant="subtle" style={{ fontSize: 12, flex: 1 }}>{L.rememberTaste}</AppText>
-            </Pressable>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable
-                onPress={() => setGenVisible(false)}
-                style={({ pressed }) => ({
-                  flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 12,
-                  borderWidth: 1.5, borderColor: theme.colors.border,
-                  backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
-                })}
-              >
-                <AppText style={{ fontWeight: "700", color: theme.colors.subtle }}>{L.cancel}</AppText>
-              </Pressable>
-              <Pressable
-                onPress={runGenerate}
-                style={({ pressed }) => ({
-                  flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 12,
-                  backgroundColor: pressed ? theme.colors.primary2 : theme.colors.primary,
-                })}
-              >
-                <AppText style={{ fontWeight: "700", color: "#fff" }}>{L.start}</AppText>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Grocery list modal */}
-      <Modal transparent visible={groceryVisible} animationType="slide" onRequestClose={() => setGroceryVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-          <View style={{
-            backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-            padding: theme.space.xl, maxHeight: "80%", gap: 12,
-          }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <AppText variant="h2">{L.groceryTitle}</AppText>
-              <Pressable onPress={() => setGroceryVisible(false)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={theme.colors.subtle} />
-              </Pressable>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 20 }}>
-              {(grocery || []).map((g) => (
-                <View key={g.name} style={{ gap: 6 }}>
-                  <AppText style={{ fontSize: 13, fontWeight: "800", color: theme.colors.primary }}>{g.name}</AppText>
-                  {g.items.map((it, idx) => {
-                    // Tick state keyed by group+item text (stable across reopenings)
-                    const key = `${g.name}|${it}`;
-                    const checked = !!groceryChecked[key];
-                    return (
-                      <Pressable
-                        key={idx}
-                        onPress={() => toggleGroceryItem(key)}
-                        style={({ pressed }) => ({
-                          flexDirection: "row", alignItems: "center", gap: 10,
-                          paddingVertical: 4, opacity: pressed ? 0.6 : 1,
-                        })}
-                      >
-                        <Ionicons
-                          name={checked ? "checkbox" : "square-outline"}
-                          size={19}
-                          color={checked ? theme.colors.accent : theme.colors.subtle}
-                        />
-                        <AppText
-                          variant="body2"
-                          style={{
-                            flex: 1, fontSize: 13,
-                            textDecorationLine: checked ? "line-through" : "none",
-                            color: checked ? theme.colors.subtle : theme.colors.text,
-                          }}
-                        >
-                          {it}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* Modals — components in src/features/plan */}
+      <GenerateModal
+        visible={genVisible}
+        scope={genScope}
+        note={note}
+        onChangeNote={setNote}
+        remember={rememberTaste}
+        onToggleRemember={() => setRememberTaste((v) => !v)}
+        onCancel={() => setGenVisible(false)}
+        onStart={runGenerate}
+        lang={lang}
+      />
+      <GroceryModal
+        visible={groceryVisible}
+        groups={grocery}
+        checked={groceryChecked}
+        onToggle={toggleGroceryItem}
+        onClose={() => setGroceryVisible(false)}
+        lang={lang}
+      />
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  flex1: { flex: 1 },
+  dim: { opacity: 0.5 },
+  smallLabel: { fontSize: 12 },
+  baselineRow: { flexDirection: "row", alignItems: "baseline", gap: 5 },
+
+  headerWrap: { paddingHorizontal: theme.space.lg, paddingTop: 60 },
+  content: {
+    paddingHorizontal: theme.space.lg,
+    paddingBottom: 40,
+    gap: theme.space.lg,
+  },
+
+  // Week navigator + day strip
+  weekNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  navBtn: { padding: 4 },
+  weekLabel: { fontWeight: "700" },
+  weekRow: { flexDirection: "row", justifyContent: "space-between" },
+  dayChip: {
+    width: 42, paddingVertical: 9, borderRadius: 16,
+    alignItems: "center", gap: 5,
+    backgroundColor: theme.colors.surface,
+  },
+  dayChipPlanned: { backgroundColor: "rgba(8,145,178,0.10)" },
+  dayChipSelected: { backgroundColor: theme.colors.primary },
+  dayChipPressed: { transform: [{ scale: 0.94 }] },
+  dayLabel: { fontSize: 10, fontWeight: "700", color: theme.colors.subtle },
+  dayLabelSelected: { color: "rgba(255,255,255,0.8)" },
+  dayNum: { fontSize: 14, fontWeight: "800", color: theme.colors.muted },
+  dayNumToday: { color: theme.colors.primary },
+  dayNumSelected: { color: "#fff" },
+  dayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "transparent" },
+  dayDotPlanned: { backgroundColor: theme.colors.accent },
+  dayDotSelected: { backgroundColor: "rgba(255,255,255,0.9)" },
+
+  // Day total card
+  totalCard: { padding: theme.space.lg },
+  totalHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  totalBlock: { gap: 2 },
+  totalKcal: { fontSize: 28, color: theme.colors.text },
+  totalGoal: { fontSize: 13 },
+  redoBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10,
+    backgroundColor: "rgba(8,145,178,0.08)",
+  },
+  redoBtnPressed: { backgroundColor: theme.colors.tint },
+  redoIconBox: { width: 14, height: 14, alignItems: "center", justifyContent: "center" },
+  redoSpinner: { transform: [{ scale: 0.7 }] },
+  redoText: { fontSize: 11, fontWeight: "700", color: theme.colors.primary },
+  macroStrip: { flexDirection: "row", gap: 14, marginTop: 10 },
+  workoutTip: {
+    flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 10,
+    backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 10,
+  },
+  tipEmoji: { fontSize: 14 },
+  tipText: { flex: 1, fontSize: 13 },
+
+  // Day content
+  loadingWrap: { paddingVertical: theme.space.xl, alignItems: "center" },
+  hintBox: {
+    flexDirection: "row", alignItems: "flex-start", gap: 8,
+    backgroundColor: "rgba(8,145,178,0.05)", borderRadius: 12, padding: theme.space.md,
+  },
+  hintIcon: { marginTop: 1 },
+  hintText: { flex: 1, fontSize: 12 },
+  mealSection: { gap: 8 },
+  mealSectionHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  mealSectionTitle: { fontSize: 15 },
+  nothingText: { fontSize: 12, paddingLeft: 4 },
+  dishCard: { padding: theme.space.md },
+  dishCardDone: { opacity: 0.6 },
+  dishRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  dishName: { fontWeight: "700" },
+  dishNameDone: { textDecorationLine: "line-through" },
+  dishMacros: { fontSize: 11 },
+  eatenChip: { flexDirection: "row", alignItems: "center", gap: 4 },
+  eatenText: { fontSize: 12, fontWeight: "700", color: theme.colors.accent },
+  eatBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: "rgba(5,150,105,0.10)",
+  },
+  eatBtnPressed: { backgroundColor: theme.colors.tint },
+
+  // AI actions
+  aiActions: { gap: 10, marginTop: 6 },
+  generateBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 14, paddingVertical: 13,
+  },
+  generateBtnPressed: { backgroundColor: theme.colors.primary2 },
+  generateBtnDisabled: { backgroundColor: theme.colors.border },
+  generateText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  groceryBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    borderWidth: 1.5, borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14, paddingVertical: 11,
+  },
+  groceryBtnPressed: { backgroundColor: theme.colors.tint },
+  groceryText: { color: theme.colors.primary, fontWeight: "700", fontSize: 13 },
+});
