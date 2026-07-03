@@ -11,7 +11,7 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many attempts — please try again later." },
 });
-const { uploadAvatar, sendPasswordOTP, resetPassword, changeName } = require("../controllers/userController");
+const { uploadAvatar, sendPasswordOTP, verifyOTP, resetPassword, changeName } = require("../controllers/userController");
 const protect = require("../middleware/auth");
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
@@ -109,6 +109,26 @@ router.post("/send-otp", otpLimiter, sendPasswordOTP);
  *       400:
  *         description: Invalid or expired OTP
  */
+/**
+ * @swagger
+ * /user/verify-otp:
+ *   post:
+ *     summary: Check an OTP before the password step (counts wrong attempts)
+ *     tags: [User]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email: { type: string }
+ *               otp: { type: string }
+ *     responses:
+ *       200: { description: OTP is valid }
+ *       400: { description: Invalid, expired or burned OTP }
+ */
+router.post("/verify-otp", otpLimiter, verifyOTP);
+
 router.post("/reset-password", otpLimiter, resetPassword);
 
 module.exports = router;
