@@ -65,7 +65,7 @@ export default function LoginScreen() {
           >
             <AppText style={{ fontSize: 44 }}>🥗</AppText>
           </View>
-          <AppText variant="h0">HealthySnap</AppText>
+          <AppText variant="h0">MealMate</AppText>
           <AppText
             variant="muted"
             style={{ textAlign: "center", paddingHorizontal: theme.space.lg }}
