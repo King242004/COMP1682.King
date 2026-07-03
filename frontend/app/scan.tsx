@@ -188,15 +188,17 @@ export default function ScanScreen() {
   };
 
   // ── Shared navigation helpers ──────────────────────────────────────────────
+  // REPLACE scan with the Add screen: after saving, back() lands on Home/diary
+  // instead of dropping the user back onto the live camera.
   const handleManual = () => {
     setCandidates(null);
     setProduct(null);
     setPreviewUri(null);
-    router.push({ pathname: "/meals/add", params: { mealType: mealSlotByHour(new Date().getHours()) } });
+    router.replace({ pathname: "/meals/add", params: { mealType: mealSlotByHour(new Date().getHours()) } });
   };
 
   const handlePick = (c: Candidate) => {
-    router.push({
+    router.replace({
       pathname: "/meals/add",
       params: {
         prefillName: c.name,
@@ -212,7 +214,7 @@ export default function ScanScreen() {
   };
 
   const handleAddProduct = (p: Product) => {
-    router.push({
+    router.replace({
       pathname: "/meals/add",
       params: {
         prefillName: p.brand ? `${p.name} (${p.brand})` : p.name,
