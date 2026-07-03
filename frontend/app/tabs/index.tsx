@@ -1,6 +1,6 @@
 // HOME SCREEN
 import { useCallback, useState, useRef } from "react";
-import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -132,12 +132,20 @@ export default function HomeScreen() {
   // elsewhere — e.g. "Eat" from the Meal Plan — show up on return.
   useFocusEffect(
     useCallback(() => {
+      // Day rollover: if the app stayed open past midnight, "today" moved on.
+      // Follow it when the user was still looking at the old today — the state
+      // change re-renders with a fresh todayKey and re-runs this effect.
+      const freshToday = dateKey(new Date());
+      if (todayKey !== freshToday && selectedDate === todayKey) {
+        setSelectedDate(freshToday);
+        return;
+      }
       fetchMealsByDate(selectedDate);
       fetchMealHistory();
       loadExercises();
       loadInsight();
       loadPlanToday();
-    }, [selectedDate, loadExercises, loadInsight, loadPlanToday])
+    }, [selectedDate, todayKey, loadExercises, loadInsight, loadPlanToday])
   );
 
   const onDeleteExercise = (item: Exercise) => {
@@ -185,16 +193,12 @@ export default function HomeScreen() {
     meals.filter((m) => m.mealType === type);
 
   const isToday = selectedDate === todayKey;
+  const vi = lang === "vi";
 
   return (
-    <Screen padded={false} style={{ paddingTop: 0 }}>
+    <Screen padded={false} style={styles.screen}>
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: theme.space.lg,
-          paddingTop: theme.space.lg,
-          paddingBottom: 40,
-          gap: theme.space.lg,
-        }}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} colors={[theme.colors.primary]} />
@@ -202,26 +206,26 @@ export default function HomeScreen() {
       >
         {/* Header — title left, week navigator right ("Week N" keeps the arrows apart).
             Forward is disabled at the current week: the diary has no future weeks. */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <View style={styles.headerRow}>
           <AppText variant="h1">
             {isToday ? "Today" : new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
           </AppText>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={styles.weekNav}>
             <Pressable
               onPress={() => changeWeek(-1)}
               hitSlop={10}
-              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+              style={({ pressed }) => [styles.navBtn, pressed && styles.pressedDim]}
             >
               <Ionicons name="chevron-back" size={20} color={theme.colors.subtle} />
             </Pressable>
-            <AppText variant="body2" style={{ fontWeight: "700", color: weekOffset === 0 ? theme.colors.primary : theme.colors.text }}>
+            <AppText variant="body2" style={[styles.weekLabel, weekOffset === 0 && styles.weekLabelCurrent]}>
               Week {weekNumber(weekDays[0])}
             </AppText>
             <Pressable
               onPress={() => changeWeek(1)}
               disabled={weekOffset === 0}
               hitSlop={10}
-              style={({ pressed }) => ({ opacity: weekOffset === 0 ? 0.25 : pressed ? 0.5 : 1, padding: 4 })}
+              style={({ pressed }) => [styles.navBtn, weekOffset === 0 ? styles.navBtnDisabled : pressed && styles.pressedDim]}
             >
               <Ionicons name="chevron-forward" size={20} color={theme.colors.subtle} />
             </Pressable>
@@ -229,7 +233,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Current week row (Mon→Sun) - past/today clickable, future dimmed */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <View style={styles.weekRow}>
           {weekDays.map((d, i) => {
             const key = dateKey(d);
             const logged = loggedDays.has(key);
@@ -240,46 +244,23 @@ export default function HomeScreen() {
                 key={i}
                 disabled={isFuture}
                 onPress={() => setSelectedDate(key)}
-                style={({ pressed }) => ({
-                  opacity: isFuture ? 0.35 : 1,
-                  width: 42, paddingVertical: 9,
-                  borderRadius: 14,
-                  alignItems: "center", gap: 5,
-                  backgroundColor: isSelected
-                    ? theme.colors.primary
-                    : logged
-                    ? "rgba(8,145,178,0.10)"
-                    : theme.colors.surface,
-                  transform: [{ scale: pressed ? 0.94 : 1 }],
+                style={({ pressed }) => [
+                  styles.dayChip,
+                  logged && styles.dayChipLogged,
                   // Soft UI: every chip floats gently; the selected one sits deeper
-                  ...(isSelected
-                    ? {
-                        shadowColor: theme.colors.primary,
-                        shadowOpacity: 0.35, shadowOffset: { width: 0, height: 4 },
-                        shadowRadius: 8, elevation: 4,
-                      }
-                    : shadow(1)),
-                })}
+                  isSelected ? styles.dayChipSelected : shadow(1),
+                  isFuture && styles.dayChipFuture,
+                  pressed && styles.dayChipPressed,
+                ]}
               >
-                <AppText style={{
-                  fontSize: 10, fontWeight: "700",
-                  color: isSelected ? "rgba(255,255,255,0.8)" : theme.colors.subtle,
-                }}>
+                <AppText style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
                   {dayLabelsFixed[i]}
                 </AppText>
-                <AppText style={{
-                  fontSize: 14, fontWeight: "800",
-                  color: isSelected ? "#fff" : logged ? theme.colors.primary : theme.colors.muted,
-                }}>
+                <AppText style={[styles.dayNum, isSelected ? styles.dayNumSelected : logged && styles.dayNumLogged]}>
                   {d.getDate()}
                 </AppText>
                 {/* Tiny dot marks logged days */}
-                <View style={{
-                  width: 5, height: 5, borderRadius: 3,
-                  backgroundColor: isSelected
-                    ? "rgba(255,255,255,0.9)"
-                    : logged ? theme.colors.accent : "transparent",
-                }} />
+                <View style={[styles.dayDot, isSelected ? styles.dayDotSelected : logged && styles.dayDotLogged]} />
               </Pressable>
             );
           })}
@@ -287,30 +268,18 @@ export default function HomeScreen() {
 
         {/* Today summary — calories + macros merged into ONE elevated soft card
             (Soft UI Evolution: fewer, deeper blocks instead of many flat ones) */}
-        <Card style={{ padding: theme.space.xl, gap: theme.space.lg, ...shadow(2) }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ gap: 10, flex: 1 }}>
-              <View style={{ gap: 2 }}>
-                <AppText variant="subtle" style={{ fontSize: 12 }}>Eaten</AppText>
-                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
-                  <AppText variant="h0" style={{ fontSize: 34, color: theme.colors.text }}>
-                    {eaten.toLocaleString()}
-                  </AppText>
-                  <AppText variant="muted" style={{ fontSize: 13 }}>
-                    / {goal.toLocaleString()} kcal
-                  </AppText>
+        <Card style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <View style={styles.eatenBlock}>
+              <View style={styles.eatenNumBlock}>
+                <AppText variant="subtle" style={styles.smallLabel}>Eaten</AppText>
+                <View style={styles.baselineRow}>
+                  <AppText variant="h0" style={styles.kcalBig}>{eaten.toLocaleString()}</AppText>
+                  <AppText variant="muted" style={styles.kcalGoal}>/ {goal.toLocaleString()} kcal</AppText>
                 </View>
               </View>
-              <View style={{
-                alignSelf: "flex-start",
-                flexDirection: "row", alignItems: "center", gap: 6,
-                backgroundColor: eaten > goal ? "rgba(229,72,77,0.10)" : "rgba(5,150,105,0.12)",
-                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
-              }}>
-                <AppText style={{
-                  fontSize: 13, fontWeight: "700",
-                  color: eaten > goal ? theme.colors.danger : theme.colors.accent,
-                }}>
+              <View style={[styles.statusChip, eaten > goal && styles.statusChipOver]}>
+                <AppText style={[styles.statusChipText, eaten > goal && styles.statusChipTextOver]}>
                   {eaten > goal
                     ? `${(eaten - goal).toLocaleString()} over goal`
                     : `${remaining.toLocaleString()} kcal left`}
@@ -320,31 +289,24 @@ export default function HomeScreen() {
             <CalorieRing eaten={eaten} goal={goal} />
           </View>
 
-          <View style={{ height: 1, backgroundColor: theme.colors.border }} />
+          <View style={styles.divider} />
 
-          <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={styles.macroRow}>
             {[
               { label: "Carbs", value: totalCarbs, goal: macroGoals(goal).carbs, color: theme.colors.accent },
               { label: "Fat", value: totalFat, goal: macroGoals(goal).fat, color: theme.colors.indigo },
               { label: "Protein", value: totalProtein, goal: macroGoals(goal).protein, color: theme.colors.accent2 },
             ].map((m) => (
-              <View key={m.label} style={{ flex: 1, alignItems: "center", gap: 6, paddingHorizontal: 4 }}>
-                <AppText variant="subtle" style={{ fontSize: 11 }}>{m.label}</AppText>
-                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 2 }}>
-                  <AppText variant="h2" style={{ fontSize: 15 }}>{Math.round(m.value)}</AppText>
-                  <AppText variant="subtle" style={{ fontSize: 10 }}>g</AppText>
+              <View key={m.label} style={styles.macroCol}>
+                <AppText variant="subtle" style={styles.macroLabel}>{m.label}</AppText>
+                <View style={styles.baselineRowTight}>
+                  <AppText variant="h2" style={styles.macroVal}>{Math.round(m.value)}</AppText>
+                  <AppText variant="subtle" style={styles.macroUnit}>g</AppText>
                 </View>
-                <AppText variant="subtle" style={{ fontSize: 10 }}>/ {m.goal}g</AppText>
-                <View style={{
-                  height: 6, width: "80%", borderRadius: 99,
-                  backgroundColor: "rgba(22,78,99,0.08)", overflow: "hidden",
-                }}>
-                  <View style={{
-                    height: "100%",
-                    width: `${Math.min(m.value / m.goal, 1) * 100}%`,
-                    borderRadius: 99,
-                    backgroundColor: m.color,
-                  }} />
+                <AppText variant="subtle" style={styles.macroUnit}>/ {m.goal}g</AppText>
+                <View style={styles.macroTrack}>
+                  {/* width known only at runtime */}
+                  <View style={[styles.macroFill, { width: `${Math.min(m.value / m.goal, 1) * 100}%`, backgroundColor: m.color }]} />
                 </View>
               </View>
             ))}
@@ -352,11 +314,11 @@ export default function HomeScreen() {
         </Card>
 
         {/* Diary */}
-        <View style={{ gap: 4 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
             <AppText variant="h2">Diary</AppText>
             <Pressable onPress={() => router.push("/meals/history")} hitSlop={10}>
-              <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>View all</AppText>
+              <AppText variant="subtle" style={styles.sectionLink}>View all</AppText>
             </Pressable>
           </View>
 
@@ -376,23 +338,19 @@ export default function HomeScreen() {
               : [];
 
             return (
-              <Card key={mt.key} style={{ padding: theme.space.lg, gap: 10 }}>
+              <Card key={mt.key} style={styles.mealCard}>
                 {/* Header: icon + label | tổng kcal + nút thêm món bên phải */}
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    <View style={{
-                      width: 36, height: 36, borderRadius: 12,
-                      backgroundColor: mt.bg,
-                      alignItems: "center", justifyContent: "center",
-                    }}>
+                <View style={styles.mealCardHeader}>
+                  <View style={styles.mealCardTitle}>
+                    <View style={[styles.iconBox, { backgroundColor: mt.bg }]}>
                       <Ionicons name={mt.icon as any} size={18} color={mt.color} />
                     </View>
-                    <AppText variant="h2" style={{ fontSize: 15 }}>{mt.label}</AppText>
+                    <AppText variant="h2" style={styles.cardTitleText}>{mt.label}</AppText>
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={styles.mealCardRight}>
                     {typeCalories > 0 && (
-                      <AppText style={{ fontSize: 14, fontWeight: "800", color: theme.colors.text }}>
-                        {typeCalories} <AppText variant="subtle" style={{ fontSize: 11 }}>kcal</AppText>
+                      <AppText style={styles.typeKcal}>
+                        {typeCalories} <AppText variant="subtle" style={styles.typeKcalUnit}>kcal</AppText>
                       </AppText>
                     )}
                     {/* Quick add — jumps to Add meal with this meal type preselected */}
@@ -400,11 +358,7 @@ export default function HomeScreen() {
                       <Pressable
                         onPress={() => router.push({ pathname: "/meals/add", params: { mealType: mt.key } })}
                         hitSlop={8}
-                        style={({ pressed }) => ({
-                          width: 26, height: 26, borderRadius: 13,
-                          alignItems: "center", justifyContent: "center",
-                          backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.10)",
-                        })}
+                        style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
                       >
                         <Ionicons name="add" size={17} color={theme.colors.primary} />
                       </Pressable>
@@ -412,53 +366,33 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Eaten meals — each in its own framed row, tap → detail (edit/delete there) */}
+                {/* Eaten meals — soft inset rows, tap → detail (edit/delete there) */}
                 {typeMeals.map((m) => (
                   <Pressable
                     key={m.id}
                     onPress={() => router.push({ pathname: "/meals/detail", params: { id: m.id } })}
-                    style={({ pressed }) => ({
-                      flexDirection: "row", alignItems: "center", gap: 8,
-                      borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-                      // Soft inset row instead of a hard border (Soft UI Evolution)
-                      backgroundColor: pressed ? theme.colors.tint : theme.colors.bg,
-                    })}
+                    style={({ pressed }) => [styles.mealRow, pressed && styles.rowPressed]}
                   >
-                    <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600" }}>
-                      {m.name}
-                    </AppText>
-                    <AppText variant="subtle" style={{ fontSize: 12 }}>{m.calories} kcal</AppText>
+                    <AppText variant="body2" numberOfLines={1} style={styles.mealName}>{m.name}</AppText>
+                    <AppText variant="subtle" style={styles.mealKcal}>{m.calories} kcal</AppText>
                     <Ionicons name="chevron-forward" size={14} color={theme.colors.subtle} />
                   </Pressable>
                 ))}
 
                 {/* Planned (not yet eaten) — dashed frame: ✓ logs it, ✕ removes it */}
                 {plannedForType.map((p) => (
-                  <View
-                    key={p.id}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 8,
-                      borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,
-                      borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
-                    }}
-                  >
-                    <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontSize: 13, color: theme.colors.muted }}>
-                      {p.name}
-                    </AppText>
-                    <AppText variant="subtle" style={{ fontSize: 11 }}>{p.calories} kcal</AppText>
+                  <View key={p.id} style={styles.plannedRow}>
+                    <AppText variant="body2" numberOfLines={1} style={styles.plannedName}>{p.name}</AppText>
+                    <AppText variant="subtle" style={styles.plannedKcal}>{p.calories} kcal</AppText>
                     <Pressable
                       onPress={() => eatPlanned(p)}
                       hitSlop={6}
-                      style={({ pressed }) => ({
-                        flexDirection: "row", alignItems: "center", gap: 3,
-                        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-                        backgroundColor: pressed ? theme.colors.tint : "rgba(47,191,113,0.10)",
-                      })}
+                      style={({ pressed }) => [styles.eatBtn, pressed && styles.rowPressed]}
                     >
                       <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
-                      <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>Eat</AppText>
+                      <AppText style={styles.eatBtnText}>Eat</AppText>
                     </Pressable>
-                    <Pressable onPress={() => removePlanned(p)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                    <Pressable onPress={() => removePlanned(p)} hitSlop={8} style={({ pressed }) => pressed && styles.pressedDim}>
                       <Ionicons name="close" size={16} color={theme.colors.subtle} />
                     </Pressable>
                   </View>
@@ -469,12 +403,12 @@ export default function HomeScreen() {
                 {typeMeals.length === 0 && plannedForType.length === 0 && (
                   isLoading
                     ? <Skeleton width="55%" height={14} />
-                    : <AppText variant="subtle" style={{ fontSize: 12 }}>No meals logged</AppText>
+                    : <AppText variant="subtle" style={styles.emptyText}>No meals logged</AppText>
                 )}
 
-                {/* Slim macro split bar (percent details live in the Macros card above) */}
+                {/* Slim macro split bar (percent details live in the summary card above) */}
                 {totalMacroG > 0 && (
-                  <View style={{ flexDirection: "row", height: 3, borderRadius: 99, overflow: "hidden", gap: 1 }}>
+                  <View style={styles.splitBar}>
                     {carbPct > 0 && <View style={{ flex: carbPct, backgroundColor: theme.colors.accent }} />}
                     {fatPct > 0 && <View style={{ flex: fatPct, backgroundColor: theme.colors.indigo }} />}
                     {proteinPct > 0 && <View style={{ flex: proteinPct, backgroundColor: theme.colors.accent2 }} />}
@@ -486,56 +420,43 @@ export default function HomeScreen() {
         </View>
 
         {/* Activity — section header outside (same rhythm as Diary), Log as header link */}
-        <View style={{ gap: 4 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
             <AppText variant="h2">Activity</AppText>
             {isToday && (
               <Pressable onPress={() => router.push("/exercise/log-workout" as any)} hitSlop={10}>
-                <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>Log workout</AppText>
+                <AppText variant="subtle" style={styles.sectionLink}>Log workout</AppText>
               </Pressable>
             )}
           </View>
 
-          <Card style={{ padding: theme.space.lg, gap: 10 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <View style={{
-                width: 36, height: 36, borderRadius: 12,
-                backgroundColor: "rgba(255,138,61,0.12)",
-                alignItems: "center", justifyContent: "center",
-              }}>
+          <Card style={styles.mealCard}>
+            <View style={styles.activityHeader}>
+              <View style={[styles.iconBox, styles.flameBox]}>
                 <Ionicons name="flame" size={18} color={theme.colors.accent2} />
               </View>
-              <AppText variant="body2" style={{ fontWeight: "700" }}>
+              <AppText variant="body2" style={styles.burnedText}>
                 {totalBurned > 0 ? `${totalBurned} kcal burned` : "No workout logged"}
               </AppText>
             </View>
 
-          {/* Net calories: eaten − burned */}
-          {totalBurned > 0 && (
-            <View style={{
-              flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-              backgroundColor: "rgba(8,145,178,0.05)", borderRadius: 12, padding: theme.space.md,
-            }}>
-              <AppText variant="subtle" style={{ fontSize: 12 }}>Net calories (eaten − burned)</AppText>
-              <AppText style={{ fontSize: 15, fontWeight: "800", color: theme.colors.text }}>
-                {(eaten - totalBurned).toLocaleString()} kcal
-              </AppText>
-            </View>
-          )}
+            {/* Net calories: eaten − burned */}
+            {totalBurned > 0 && (
+              <View style={styles.netRow}>
+                <AppText variant="subtle" style={styles.smallLabel}>Net calories (eaten − burned)</AppText>
+                <AppText style={styles.netVal}>{(eaten - totalBurned).toLocaleString()} kcal</AppText>
+              </View>
+            )}
 
-            {/* Logged workouts — framed rows, same language as the Diary */}
+            {/* Logged workouts — soft inset rows, same language as the Diary */}
             {exercises.map((ex) => (
-              <View key={ex.id} style={{
-                flexDirection: "row", alignItems: "center", gap: 10,
-                borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
-                backgroundColor: theme.colors.bg,
-              }}>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="body2" numberOfLines={1} style={{ fontWeight: "600", fontSize: 13 }}>{ex.name}</AppText>
-                  <AppText variant="subtle" style={{ fontSize: 11 }}>{ex.durationMin} min · {ex.caloriesBurned} kcal</AppText>
+              <View key={ex.id} style={styles.workoutRow}>
+                <View style={styles.flex1}>
+                  <AppText variant="body2" numberOfLines={1} style={styles.mealName}>{ex.name}</AppText>
+                  <AppText variant="subtle" style={styles.workoutMeta}>{ex.durationMin} min · {ex.caloriesBurned} kcal</AppText>
                 </View>
                 {isToday && (
-                  <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                  <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => pressed && styles.pressedDim}>
                     <Ionicons name="trash-outline" size={16} color={theme.colors.subtle} />
                   </Pressable>
                 )}
@@ -544,104 +465,80 @@ export default function HomeScreen() {
           </Card>
         </View>
 
-        {/* Today's plan — weekly plan status card + "Ăn gì bây giờ?" card in one section */}
-        {isToday && (() => {
-          const pending = planToday.filter((p) => !p.done);
-          const vi = lang === "vi";
-          return (
-            <View style={{ gap: 4 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <AppText variant="h2">{vi ? "Dành cho bạn" : "For you"}</AppText>
-                <Pressable onPress={() => router.push("/plan/weekly" as any)} hitSlop={10}>
-                  <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>
-                    {vi ? "Xem tuần" : "View week"}
-                  </AppText>
-                </Pressable>
-              </View>
+        {/* For you — weekly plan status card + "Ăn gì bây giờ?" card in one section */}
+        {isToday && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <AppText variant="h2">{vi ? "Dành cho bạn" : "For you"}</AppText>
+              <Pressable onPress={() => router.push("/plan/weekly" as any)} hitSlop={10}>
+                <AppText variant="subtle" style={styles.sectionLink}>{vi ? "Xem tuần" : "View week"}</AppText>
+              </Pressable>
+            </View>
 
-              <Pressable
-                onPress={() => router.push("/plan/weekly" as any)}
-                style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
-              >
-                <Card style={{ padding: theme.space.lg, gap: 10 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                    <View style={{
-                      width: 36, height: 36, borderRadius: 12,
-                      backgroundColor: "rgba(99,102,241,0.12)",
-                      alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Ionicons name="calendar" size={18} color={theme.colors.indigo} />
-                    </View>
-                    {/* Title + gray status line (same layout as the suggest card below) */}
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <AppText variant="h2" style={{ fontSize: 15 }}>
-                        {vi ? "Kế hoạch tuần" : "Weekly plan"}
-                      </AppText>
-                      <AppText variant="subtle" numberOfLines={1} style={{ fontSize: 12 }}>
-                        {planToday.length === 0
+            <Pressable
+              onPress={() => router.push("/plan/weekly" as any)}
+              style={({ pressed }) => pressed && styles.pressedFaint}
+            >
+              <Card style={styles.mealCard}>
+                <View style={styles.planHeader}>
+                  <View style={[styles.iconBox, styles.planIconBox]}>
+                    <Ionicons name="calendar" size={18} color={theme.colors.indigo} />
+                  </View>
+                  {/* Title + gray status line (same layout as the suggest card below) */}
+                  <View style={styles.planTitleBlock}>
+                    <AppText variant="h2" style={styles.cardTitleText}>
+                      {vi ? "Kế hoạch tuần" : "Weekly plan"}
+                    </AppText>
+                    <AppText variant="subtle" numberOfLines={1} style={styles.smallLabel}>
+                      {(() => {
+                        const pending = planToday.filter((p) => !p.done);
+                        return planToday.length === 0
                           ? (vi ? "Chưa có kế hoạch — để AI tạo cho bạn ✨" : "No plan yet — let the AI build one ✨")
                           : pending.length === 0
                           ? (vi ? "Hoàn thành kế hoạch hôm nay 🎉" : "Today's plan is all done 🎉")
-                          : (vi ? `${pending.length} món đang chờ trong nhật ký` : `${pending.length} planned meals waiting in your diary`)}
-                      </AppText>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
+                          : (vi ? `${pending.length} món đang chờ trong nhật ký` : `${pending.length} planned meals waiting in your diary`);
+                      })()}
+                    </AppText>
                   </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
+                </View>
 
-                  {!!planWorkout && (
-                    <View style={{
-                      flexDirection: "row", alignItems: "flex-start", gap: 8,
-                      backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 8,
-                    }}>
-                      <AppText style={{ fontSize: 13 }}>🏃</AppText>
-                      <AppText variant="subtle" style={{ flex: 1, fontSize: 12 }}>{planWorkout}</AppText>
-                    </View>
-                  )}
-                </Card>
-              </Pressable>
+                {!!planWorkout && (
+                  <View style={styles.workoutTip}>
+                    <AppText style={styles.tipEmoji}>🏃</AppText>
+                    <AppText variant="subtle" style={styles.tipText}>{planWorkout}</AppText>
+                  </View>
+                )}
+              </Card>
+            </Pressable>
 
-              {/* "Ăn gì bây giờ?" — extracted to src/plan/SuggestMealCard */}
-              <SuggestMealCard planToday={planToday} />
-            </View>
-          );
-        })()}
+            {/* "Ăn gì bây giờ?" — extracted to src/features/plan/SuggestMealCard */}
+            <SuggestMealCard planToday={planToday} />
+          </View>
+        )}
 
         {/* AI Coach — flagship entry */}
         {isToday && (
           <Pressable
             onPress={() => router.push("/tabs/coach" as any)}
-            style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] })}
+            style={({ pressed }) => pressed && styles.pressedScale}
           >
-            <Card style={{
-              padding: theme.space.lg,
-              borderColor: "rgba(8,145,178,0.20)",
-              backgroundColor: "rgba(8,145,178,0.05)",
-            }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{
-                  width: 44, height: 44, borderRadius: 14,
-                  backgroundColor: theme.colors.primary,
-                  alignItems: "center", justifyContent: "center",
-                }}>
+            <Card style={styles.coachCard}>
+              <View style={styles.planHeader}>
+                <View style={styles.coachIcon}>
                   <Ionicons name="sparkles" size={20} color="#fff" />
                 </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <AppText variant="h2" style={{ fontSize: 15 }}>AI Coach</AppText>
+                <View style={styles.planTitleBlock}>
+                  <View style={styles.coachTitleRow}>
+                    <AppText variant="h2" style={styles.cardTitleText}>AI Coach</AppText>
                     {coachInsight && (
-                      <View style={{
-                        flexDirection: "row", alignItems: "center", gap: 3,
-                        backgroundColor: "rgba(8,145,178,0.10)",
-                        paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99,
-                      }}>
-                        <AppText style={{ fontSize: 11, fontWeight: "800", color: theme.colors.primary }}>
-                          {coachInsight.score}
-                        </AppText>
-                        <AppText style={{ fontSize: 10, color: theme.colors.primary }}>/100</AppText>
+                      <View style={styles.scoreChip}>
+                        <AppText style={styles.scoreVal}>{coachInsight.score}</AppText>
+                        <AppText style={styles.scoreMax}>/100</AppText>
                       </View>
                     )}
                   </View>
-                  <AppText variant="muted" style={{ fontSize: 13 }}>
+                  <AppText variant="muted" style={styles.coachSummary}>
                     {coachInsight?.summary || "Get personalized analysis and ask anything about your nutrition."}
                   </AppText>
                 </View>
@@ -650,14 +547,9 @@ export default function HomeScreen() {
 
               {/* Top warning, if any */}
               {coachInsight && coachInsight.warnings.length > 0 && (
-                <View style={{
-                  flexDirection: "row", gap: 6, alignItems: "flex-start", marginTop: 10,
-                  backgroundColor: "rgba(229,72,77,0.08)", borderRadius: 10, padding: 10,
-                }}>
+                <View style={styles.warnRow}>
                   <Ionicons name="warning-outline" size={15} color={theme.colors.danger} />
-                  <AppText style={{ fontSize: 12, color: theme.colors.danger, flex: 1 }}>
-                    {coachInsight.warnings[0]}
-                  </AppText>
+                  <AppText style={styles.warnText}>{coachInsight.warnings[0]}</AppText>
                 </View>
               )}
             </Card>
@@ -667,3 +559,178 @@ export default function HomeScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { paddingTop: 0 },
+  content: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: theme.space.lg,
+    paddingBottom: 40,
+    gap: theme.space.lg,
+  },
+
+  // Shared bits
+  flex1: { flex: 1 },
+  pressedDim: { opacity: 0.5 },
+  pressedFaint: { opacity: 0.9 },
+  pressedScale: { opacity: 0.9, transform: [{ scale: 0.99 }] },
+  smallLabel: { fontSize: 12 },
+  divider: { height: 1, backgroundColor: theme.colors.border },
+  baselineRow: { flexDirection: "row", alignItems: "baseline", gap: 5 },
+  baselineRowTight: { flexDirection: "row", alignItems: "baseline", gap: 2 },
+  iconBox: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  cardTitleText: { fontSize: 15 },
+
+  // Header + week navigator
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  weekNav: { flexDirection: "row", alignItems: "center", gap: 6 },
+  navBtn: { padding: 4 },
+  navBtnDisabled: { opacity: 0.25 },
+  weekLabel: { fontWeight: "700", color: theme.colors.text },
+  weekLabelCurrent: { color: theme.colors.primary },
+
+  // Week day chips
+  weekRow: { flexDirection: "row", justifyContent: "space-between" },
+  dayChip: {
+    width: 42, paddingVertical: 9, borderRadius: 14,
+    alignItems: "center", gap: 5,
+    backgroundColor: theme.colors.surface,
+  },
+  dayChipLogged: { backgroundColor: "rgba(8,145,178,0.10)" },
+  dayChipSelected: {
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOpacity: 0.35, shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8, elevation: 4,
+  },
+  dayChipFuture: { opacity: 0.35 },
+  dayChipPressed: { transform: [{ scale: 0.94 }] },
+  dayLabel: { fontSize: 10, fontWeight: "700", color: theme.colors.subtle },
+  dayLabelSelected: { color: "rgba(255,255,255,0.8)" },
+  dayNum: { fontSize: 14, fontWeight: "800", color: theme.colors.muted },
+  dayNumLogged: { color: theme.colors.primary },
+  dayNumSelected: { color: "#fff" },
+  dayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "transparent" },
+  dayDotLogged: { backgroundColor: theme.colors.accent },
+  dayDotSelected: { backgroundColor: "rgba(255,255,255,0.9)" },
+
+  // Today summary card
+  summaryCard: { padding: theme.space.xl, gap: theme.space.lg, ...shadow(2) },
+  summaryRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  eatenBlock: { gap: 10, flex: 1 },
+  eatenNumBlock: { gap: 2 },
+  kcalBig: { fontSize: 34, color: theme.colors.text },
+  kcalGoal: { fontSize: 13 },
+  statusChip: {
+    alignSelf: "flex-start",
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(5,150,105,0.12)",
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
+  },
+  statusChipOver: { backgroundColor: "rgba(229,72,77,0.10)" },
+  statusChipText: { fontSize: 13, fontWeight: "700", color: theme.colors.accent },
+  statusChipTextOver: { color: theme.colors.danger },
+  macroRow: { flexDirection: "row", gap: 12 },
+  macroCol: { flex: 1, alignItems: "center", gap: 6, paddingHorizontal: 4 },
+  macroLabel: { fontSize: 11 },
+  macroVal: { fontSize: 15 },
+  macroUnit: { fontSize: 10 },
+  macroTrack: { height: 6, width: "80%", borderRadius: 99, backgroundColor: "rgba(22,78,99,0.08)", overflow: "hidden" },
+  macroFill: { height: "100%", borderRadius: 99 },
+
+  // Sections
+  section: { gap: 4 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  sectionLink: { fontSize: 13, color: theme.colors.primary },
+
+  // Diary meal cards
+  mealCard: { padding: theme.space.lg, gap: 10 },
+  mealCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  mealCardTitle: { flexDirection: "row", alignItems: "center", gap: 10 },
+  mealCardRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  typeKcal: { fontSize: 14, fontWeight: "800", color: theme.colors.text },
+  typeKcalUnit: { fontSize: 11 },
+  addBtn: {
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(8,145,178,0.10)",
+  },
+  addBtnPressed: { backgroundColor: theme.colors.tint },
+  mealRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+    // Soft inset row instead of a hard border (Soft UI Evolution)
+    backgroundColor: theme.colors.bg,
+  },
+  rowPressed: { backgroundColor: theme.colors.tint },
+  mealName: { flex: 1, fontSize: 13, fontWeight: "600" },
+  mealKcal: { fontSize: 12 },
+  plannedRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  plannedName: { flex: 1, fontSize: 13, color: theme.colors.muted },
+  plannedKcal: { fontSize: 11 },
+  eatBtn: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: "rgba(5,150,105,0.10)",
+  },
+  eatBtnText: { fontSize: 12, fontWeight: "700", color: theme.colors.accent },
+  emptyText: { fontSize: 12 },
+  splitBar: { flexDirection: "row", height: 3, borderRadius: 99, overflow: "hidden", gap: 1 },
+
+  // Activity
+  activityHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  flameBox: { backgroundColor: "rgba(255,138,61,0.12)" },
+  burnedText: { fontWeight: "700" },
+  netRow: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    backgroundColor: "rgba(8,145,178,0.05)", borderRadius: 12, padding: theme.space.md,
+  },
+  netVal: { fontSize: 15, fontWeight: "800", color: theme.colors.text },
+  workoutRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: theme.colors.bg,
+  },
+  workoutMeta: { fontSize: 11 },
+
+  // For you (weekly plan card)
+  planHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  planIconBox: { backgroundColor: "rgba(99,102,241,0.12)" },
+  planTitleBlock: { flex: 1, gap: 2 },
+  workoutTip: {
+    flexDirection: "row", alignItems: "flex-start", gap: 8,
+    backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 8,
+  },
+  tipEmoji: { fontSize: 13 },
+  tipText: { flex: 1, fontSize: 12 },
+
+  // AI Coach card
+  coachCard: {
+    padding: theme.space.lg,
+    borderColor: "rgba(8,145,178,0.20)",
+    backgroundColor: "rgba(8,145,178,0.05)",
+  },
+  coachIcon: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center", justifyContent: "center",
+  },
+  coachTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  scoreChip: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: "rgba(8,145,178,0.10)",
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99,
+  },
+  scoreVal: { fontSize: 11, fontWeight: "800", color: theme.colors.primary },
+  scoreMax: { fontSize: 10, color: theme.colors.primary },
+  coachSummary: { fontSize: 13 },
+  warnRow: {
+    flexDirection: "row", gap: 6, alignItems: "flex-start", marginTop: 10,
+    backgroundColor: "rgba(229,72,77,0.08)", borderRadius: 10, padding: 10,
+  },
+  warnText: { fontSize: 12, color: theme.colors.danger, flex: 1 },
+});
