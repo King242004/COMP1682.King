@@ -1,5 +1,11 @@
 const Meal = require("../models/Meal");
 
+// Local YYYY-MM-DD for "today" — string compare works for date keys
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // ─── Add Meal ─────────────────────────────────────────────────────────────────
 exports.addMeal = async (req, res) => {
   const { name, mealType, calories, protein, carbs, fat, image, note, date } = req.body;
@@ -16,6 +22,11 @@ exports.addMeal = async (req, res) => {
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
+
+  // Time rule: the diary records the past — back-logging a forgotten day is
+  // fine, a FUTURE meal is not (planning lives in /plan).
+  if (date > todayKey())
+    return res.status(400).json({ message: "Cannot log a meal for a future date." });
 
   const meal = await Meal.create({
     user: req.user.id,
@@ -90,6 +101,9 @@ exports.updateMeal = async (req, res) => {
 
   if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
+
+  if (date !== undefined && date > todayKey())
+    return res.status(400).json({ message: "Cannot move a meal to a future date." });
 
   // Apply updates - only fields explicitly provided
   if (name !== undefined) meal.name = name.trim();
