@@ -1,18 +1,16 @@
 import { useMemo, useState, useEffect } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useMeals } from "@/context/MealsContext";
 import { theme } from "@/ui/theme";
-import { MEAL_TYPE_META } from "@/ui/mealTypes";
-import { Ionicons } from "@expo/vector-icons";
+import { MealTypeSelector } from "@/features/meals/MealTypeSelector";
+import { type MealTypeKey } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
-
-type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 type Errors = {
   mealName?: string;
@@ -42,7 +40,8 @@ export default function EditMealScreen() {
   const [protein, setProtein] = useState(meal?.protein ? String(meal.protein) : "");
   const [carbs, setCarbs] = useState(meal?.carbs ? String(meal.carbs) : "");
   const [fat, setFat] = useState(meal?.fat ? String(meal.fat) : "");
-  const [mealType, setMealType] = useState<MealType>((meal?.mealType as MealType) ?? "breakfast");
+  const [note, setNote] = useState(meal?.note ?? "");
+  const [mealType, setMealType] = useState<MealTypeKey>((meal?.mealType as MealTypeKey) ?? "breakfast");
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate updates
@@ -54,7 +53,8 @@ export default function EditMealScreen() {
       setProtein(meal.protein ? String(meal.protein) : "");
       setCarbs(meal.carbs ? String(meal.carbs) : "");
       setFat(meal.fat ? String(meal.fat) : "");
-      setMealType((meal.mealType as MealType) ?? "breakfast");
+      setNote(meal.note ?? "");
+      setMealType((meal.mealType as MealTypeKey) ?? "breakfast");
     }
   }, [id]);
 
@@ -98,6 +98,7 @@ export default function EditMealScreen() {
         carbs: carbs.trim() ? Number(carbs) : undefined,
         fat: fat.trim() ? Number(fat) : undefined,
         mealType,
+        note: note.trim(), // empty string clears a previous note
       });
       // Return to wherever the user came from (detail, Home or History) —
       // replacing to History used to hijack the back stack.
@@ -140,12 +141,7 @@ export default function EditMealScreen() {
   return (
     <Screen padded={false} keyboard>
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: theme.space.lg,
-          paddingTop: 60,
-          paddingBottom: 40,
-          gap: theme.space.lg,
-        }}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -155,57 +151,21 @@ export default function EditMealScreen() {
           right={
             <Pressable
               onPress={handleDelete}
-              style={({ pressed }) => ({
-                paddingHorizontal: 12, paddingVertical: 7,
-                borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
-                backgroundColor: pressed ? "rgba(229,72,77,0.2)" : "rgba(229,72,77,0.1)",
-              })}
+              style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
             >
-              <Text style={{ fontSize: 13 }}>🗑️</Text>
-              <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.danger }}>
-                Delete
-              </AppText>
+              <Text style={styles.deleteEmoji}>🗑️</Text>
+              <AppText style={styles.deleteText}>Delete</AppText>
             </Pressable>
           }
         />
 
-        {/* Meal type 2x2 */}
-        <View style={{ gap: 8 }}>
-          {[MEAL_TYPE_META.slice(0, 2), MEAL_TYPE_META.slice(2, 4)].map((row, ri) => (
-            <View key={ri} style={{ flexDirection: "row", gap: 8 }}>
-              {row.map((mt) => {
-                const active = mealType === mt.key;
-                return (
-                  <Pressable
-                    key={mt.key}
-                    onPress={() => setMealType(mt.key)}
-                    style={({ pressed }) => ({
-                      flex: 1, flexDirection: "row",
-                      alignItems: "center", justifyContent: "center",
-                      paddingVertical: 10, paddingHorizontal: 8,
-                      borderRadius: 12, gap: 6,
-                      borderWidth: 1.5,
-                      borderColor: active ? theme.colors.primary : theme.colors.border,
-                      backgroundColor: active ? theme.colors.primary : theme.colors.surface,
-                      opacity: pressed ? 0.7 : 1,
-                    })}
-                  >
-                    <Ionicons name={mt.icon as any} size={16} color={active ? mt.color : theme.colors.subtle} />
-                    <Text style={{
-                      fontSize: 12, fontWeight: "700",
-                      color: active ? "#FFFFFF" : theme.colors.subtle,
-                    }}>{mt.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ))}
-        </View>
+        {/* Meal type — shared component (same UI as Add) */}
+        <MealTypeSelector value={mealType} onChange={setMealType} />
 
         {/* Form */}
-        <Card style={{ padding: theme.space.xl }}>
-          <View style={{ gap: theme.space.md }}>
-            <View style={{ gap: 4 }}>
+        <Card style={styles.formCard}>
+          <View style={styles.formFields}>
+            <View style={styles.fieldWrap}>
               <TextField
                 label="Meal name"
                 placeholder="e.g. Chicken burrito bowl"
@@ -215,11 +175,11 @@ export default function EditMealScreen() {
                 inputProps={{ onBlur: () => handleBlur("mealName") }}
               />
               {touched.mealName && errors.mealName && (
-                <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{errors.mealName}</AppText>
+                <AppText style={styles.error}>{errors.mealName}</AppText>
               )}
             </View>
 
-            <View style={{ gap: 4 }}>
+            <View style={styles.fieldWrap}>
               <TextField
                 label="Calories (kcal)"
                 placeholder="e.g. 650"
@@ -230,12 +190,12 @@ export default function EditMealScreen() {
                 inputProps={{ onBlur: () => handleBlur("calories") }}
               />
               {touched.calories && errors.calories && (
-                <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{errors.calories}</AppText>
+                <AppText style={styles.error}>{errors.calories}</AppText>
               )}
             </View>
 
-            <View style={{ flexDirection: "row", gap: theme.space.md }}>
-              <View style={{ flex: 1, gap: 4 }}>
+            <View style={styles.macroRow}>
+              <View style={styles.macroField}>
                 <TextField
                   label="Protein (g)"
                   placeholder="Optional"
@@ -246,10 +206,10 @@ export default function EditMealScreen() {
                   inputProps={{ onBlur: () => handleBlur("protein") }}
                 />
                 {touched.protein && errors.protein && (
-                  <AppText style={{ fontSize: 11, color: theme.colors.danger }}>{errors.protein}</AppText>
+                  <AppText style={styles.errorSmall}>{errors.protein}</AppText>
                 )}
               </View>
-              <View style={{ flex: 1, gap: 4 }}>
+              <View style={styles.macroField}>
                 <TextField
                   label="Carbs (g)"
                   placeholder="Optional"
@@ -260,12 +220,12 @@ export default function EditMealScreen() {
                   inputProps={{ onBlur: () => handleBlur("carbs") }}
                 />
                 {touched.carbs && errors.carbs && (
-                  <AppText style={{ fontSize: 11, color: theme.colors.danger }}>{errors.carbs}</AppText>
+                  <AppText style={styles.errorSmall}>{errors.carbs}</AppText>
                 )}
               </View>
             </View>
 
-            <View style={{ gap: 4 }}>
+            <View style={styles.fieldWrap}>
               <TextField
                 label="Fat (g)"
                 placeholder="Optional"
@@ -276,9 +236,17 @@ export default function EditMealScreen() {
                 inputProps={{ onBlur: () => handleBlur("fat") }}
               />
               {touched.fat && errors.fat && (
-                <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{errors.fat}</AppText>
+                <AppText style={styles.error}>{errors.fat}</AppText>
               )}
             </View>
+
+            <TextField
+              label="Note (optional)"
+              placeholder="e.g. ate out, less sugar than usual..."
+              value={note}
+              onChangeText={setNote}
+              textContentType="none"
+            />
           </View>
         </Card>
 
@@ -286,15 +254,38 @@ export default function EditMealScreen() {
 
         <Pressable
           onPress={() => router.back()}
-          style={({ pressed }) => ({
-            alignItems: "center", paddingVertical: 8, opacity: pressed ? 0.6 : 1,
-          })}
+          style={({ pressed }) => [styles.cancel, pressed && styles.dim]}
         >
-          <AppText style={{ fontSize: 15, fontWeight: "600", color: theme.colors.primary }}>
-            Cancel
-          </AppText>
+          <AppText style={styles.cancelText}>Cancel</AppText>
         </Pressable>
       </ScrollView>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  dim: { opacity: 0.6 },
+  content: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: 60,
+    paddingBottom: 40,
+    gap: theme.space.lg,
+  },
+  deleteBtn: {
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(229,72,77,0.1)",
+  },
+  deleteBtnPressed: { backgroundColor: "rgba(229,72,77,0.2)" },
+  deleteEmoji: { fontSize: 13 },
+  deleteText: { fontSize: 13, fontWeight: "700", color: theme.colors.danger },
+  formCard: { padding: theme.space.xl },
+  formFields: { gap: theme.space.md },
+  fieldWrap: { gap: 4 },
+  macroRow: { flexDirection: "row", gap: theme.space.md },
+  macroField: { flex: 1, gap: 4 },
+  error: { fontSize: 12, color: theme.colors.danger },
+  errorSmall: { fontSize: 11, color: theme.colors.danger },
+  cancel: { alignItems: "center", paddingVertical: 8 },
+  cancelText: { fontSize: 15, fontWeight: "600", color: theme.colors.primary },
+});

@@ -9,7 +9,7 @@ import { getExercisesByDate, deleteExercise, type Exercise } from "@/features/ex
 import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/features/plan/api";
 import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/features/coach/api";
 import { SuggestMealCard } from "@/features/plan/SuggestMealCard";
-import { CalorieRing } from "@/features/home/CalorieRing";
+import { ProgressRing } from "@/ui/components/ProgressRing";
 import { getCurrentWeekDays, dayLabelsFixed } from "@/features/home/week";
 import { dateKey, weekNumber } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
@@ -286,7 +286,7 @@ export default function HomeScreen() {
                 </AppText>
               </View>
             </View>
-            <CalorieRing eaten={eaten} goal={goal} />
+            <ProgressRing eaten={eaten} goal={goal} caption="of goal" />
           </View>
 
           <View style={styles.divider} />
@@ -353,16 +353,16 @@ export default function HomeScreen() {
                         {typeCalories} <AppText variant="subtle" style={styles.typeKcalUnit}>kcal</AppText>
                       </AppText>
                     )}
-                    {/* Quick add — jumps to Add meal with this meal type preselected */}
-                    {isToday && (
-                      <Pressable
-                        onPress={() => router.push({ pathname: "/meals/add", params: { mealType: mt.key } })}
-                        hitSlop={8}
-                        style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
-                      >
-                        <Ionicons name="add" size={17} color={theme.colors.primary} />
-                      </Pressable>
-                    )}
+                    {/* Quick add — preselects this meal type AND the day being viewed.
+                        Back-logging a past day is allowed (people forget); the week
+                        strip already blocks future days. */}
+                    <Pressable
+                      onPress={() => router.push({ pathname: "/meals/add", params: { mealType: mt.key, date: selectedDate } })}
+                      hitSlop={8}
+                      style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
+                    >
+                      <Ionicons name="add" size={17} color={theme.colors.primary} />
+                    </Pressable>
                   </View>
                 </View>
 

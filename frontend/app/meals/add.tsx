@@ -1,26 +1,26 @@
 import { useMemo, useState, useEffect } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useMeals } from "@/context/MealsContext";
 import { theme } from "@/ui/theme";
-import { MEAL_TYPE_META } from "@/ui/mealTypes";
-import { Ionicons } from "@expo/vector-icons";
+import { MealTypeSelector } from "@/features/meals/MealTypeSelector";
+import { type MealTypeKey } from "@/ui/mealTypes";
+import { dateKey } from "@/utils/date";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
-
-type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+import { Ionicons } from "@expo/vector-icons";
 
 const QUICK_SUGGESTIONS = [
-  { name: "Oatmeal", calories: 150, protein: 5, carbs: 27, fat: 3, mealType: "breakfast" as MealType },
-  { name: "Chicken Rice", calories: 450, protein: 35, carbs: 48, fat: 8, mealType: "lunch" as MealType },
-  { name: "Greek Salad", calories: 320, protein: 8, carbs: 18, fat: 24, mealType: "lunch" as MealType },
-  { name: "Grilled Salmon", calories: 380, protein: 42, carbs: 0, fat: 22, mealType: "dinner" as MealType },
-  { name: "Banana", calories: 89, protein: 1, carbs: 23, fat: 0, mealType: "snack" as MealType },
-  { name: "Pho Bo", calories: 420, protein: 28, carbs: 52, fat: 10, mealType: "lunch" as MealType },
+  { name: "Oatmeal", calories: 150, protein: 5, carbs: 27, fat: 3, mealType: "breakfast" as MealTypeKey },
+  { name: "Chicken Rice", calories: 450, protein: 35, carbs: 48, fat: 8, mealType: "lunch" as MealTypeKey },
+  { name: "Greek Salad", calories: 320, protein: 8, carbs: 18, fat: 24, mealType: "lunch" as MealTypeKey },
+  { name: "Grilled Salmon", calories: 380, protein: 42, carbs: 0, fat: 22, mealType: "dinner" as MealTypeKey },
+  { name: "Banana", calories: 89, protein: 1, carbs: 23, fat: 0, mealType: "snack" as MealTypeKey },
+  { name: "Pho Bo", calories: 420, protein: 28, carbs: 52, fat: 10, mealType: "lunch" as MealTypeKey },
 ];
 
 type Errors = {
@@ -44,6 +44,7 @@ export default function AddMealScreen() {
   const { addMeal } = useMeals();
   const {
     mealType: defaultType,
+    date: dateParam,
     prefillName,
     prefillCalories,
     prefillProtein,
@@ -51,7 +52,8 @@ export default function AddMealScreen() {
     prefillFat,
     source, // "suggest" when coming from the AI meal suggestion (vs. scan)
   } = useLocalSearchParams<{
-    mealType: MealType;
+    mealType: MealTypeKey;
+    date?: string;
     prefillName?: string;
     prefillCalories?: string;
     prefillProtein?: string;
@@ -60,12 +62,22 @@ export default function AddMealScreen() {
     source?: string;
   }>();
 
+  // Time rule: back-logging a PAST day is allowed (people forget to log),
+  // the future never is. Anything invalid falls back to today.
+  const todayStr = dateKey(new Date());
+  const logDate =
+    dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) && dateParam <= todayStr
+      ? dateParam
+      : todayStr;
+  const isBackdated = logDate !== todayStr;
+
   const [mealName, setMealName] = useState(prefillName ?? "");
   const [calories, setCalories] = useState(prefillCalories ?? "");
   const [protein, setProtein] = useState(prefillProtein ?? "");
   const [carbs, setCarbs] = useState(prefillCarbs ?? "");
   const [fat, setFat] = useState(prefillFat ?? "");
-  const [mealType, setMealType] = useState<MealType>(defaultType ?? "breakfast");
+  const [note, setNote] = useState("");
+  const [mealType, setMealType] = useState<MealTypeKey>(defaultType ?? "breakfast");
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate meals
@@ -78,6 +90,7 @@ export default function AddMealScreen() {
     setProtein(prefillProtein ?? "");
     setCarbs(prefillCarbs ?? "");
     setFat(prefillFat ?? "");
+    setNote("");
     setErrors({});
     setTouched({});
     setMealType(defaultType ?? "breakfast");
@@ -107,14 +120,6 @@ export default function AddMealScreen() {
     setErrors(validate());
   };
 
-  const getTodayDate = () => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
-
   const handleSave = async () => {
     if (isSaving) return;
     const e = validate();
@@ -130,7 +135,8 @@ export default function AddMealScreen() {
         carbs: carbs.trim() ? Number(carbs) : 0,
         fat: fat.trim() ? Number(fat) : 0,
         mealType,
-        date: getTodayDate(),
+        date: logDate,
+        note: note.trim() || undefined,
       });
       router.back();
     } catch (err: any) {
@@ -150,81 +156,62 @@ export default function AddMealScreen() {
     setTouched({});
   };
 
+  const backdatedLabel = new Date(logDate + "T00:00:00").toLocaleDateString(undefined, {
+    weekday: "long", month: "short", day: "numeric",
+  });
+
   return (
     <Screen padded={false} keyboard>
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: theme.space.lg,
-          paddingTop: 60,
-          paddingBottom: 40,
-          gap: theme.space.lg,
-        }}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View>
           <ScreenHeader title={isFromScan ? "Confirm scan" : "Add meal"} />
-          <AppText variant="muted" style={{ marginTop: -8 }}>
+          <AppText variant="muted" style={styles.subtitle}>
             {isFromScan
               ? "AI detected this meal. Review and adjust if needed."
               : isPrefilled
               ? "AI suggested this meal. Review and adjust if needed."
+              : isBackdated
+              ? "Logging a meal you forgot to add."
               : "Log your nutrition for today."}
           </AppText>
         </View>
 
+        {/* Back-dated banner — make it unmissable WHICH day this meal goes to */}
+        {isBackdated && (
+          <View style={styles.backdateBanner}>
+            <Ionicons name="time-outline" size={16} color={theme.colors.primary} />
+            <AppText style={styles.backdateText}>
+              Logging for <AppText style={styles.backdateDate}>{backdatedLabel}</AppText>
+            </AppText>
+          </View>
+        )}
+
         {/* AI badge (scan or suggestion) */}
         {isPrefilled && (
-          <View style={{
-            flexDirection: "row", alignItems: "center", gap: 8,
-            backgroundColor: "rgba(47,191,113,0.08)",
-            borderColor: "rgba(47,191,113,0.2)",
-            borderWidth: 1, borderRadius: 12,
-            padding: theme.space.md,
-          }}>
-            <AppText style={{ fontSize: 18 }}>🤖</AppText>
-            <View style={{ flex: 1 }}>
-              <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.accent }}>
+          <View style={styles.aiBadge}>
+            <AppText style={styles.aiBadgeEmoji}>🤖</AppText>
+            <View style={styles.flex1}>
+              <AppText style={styles.aiBadgeTitle}>
                 {isFromScan ? "AI detected" : "AI suggested"}
               </AppText>
-              <AppText variant="subtle" style={{ fontSize: 12 }}>
+              <AppText variant="subtle" style={styles.aiBadgeSub}>
                 You can edit any field before saving.
               </AppText>
             </View>
           </View>
         )}
 
-        {/* Meal type selector */}
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {MEAL_TYPE_META.map((mt) => {
-            const active = mealType === mt.key;
-            return (
-              <Pressable
-                key={mt.key}
-                onPress={() => setMealType(mt.key)}
-                style={({ pressed }) => ({
-                  flex: 1, alignItems: "center", justifyContent: "center",
-                  paddingVertical: 10, borderRadius: 12, gap: 4,
-                  borderWidth: 1.5,
-                  borderColor: active ? theme.colors.primary : theme.colors.border,
-                  backgroundColor: active ? theme.colors.tint : theme.colors.surface,
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <Ionicons name={mt.icon as any} size={18} color={active ? mt.color : theme.colors.subtle} />
-                <Text style={{
-                  fontSize: 10, fontWeight: "700",
-                  color: active ? theme.colors.primary : theme.colors.subtle,
-                }}>{mt.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {/* Meal type selector — shared component (same UI as Edit) */}
+        <MealTypeSelector value={mealType} onChange={setMealType} />
 
         {/* Form */}
-        <Card style={{ padding: theme.space.xl }}>
-          <View style={{ gap: theme.space.md }}>
-            <View style={{ gap: 4 }}>
+        <Card style={styles.formCard}>
+          <View style={styles.formFields}>
+            <View style={styles.fieldWrap}>
               <TextField
                 label="Meal name"
                 placeholder="e.g. Chicken burrito bowl"
@@ -234,11 +221,11 @@ export default function AddMealScreen() {
                 inputProps={{ onBlur: () => handleBlur("mealName") }}
               />
               {touched.mealName && errors.mealName && (
-                <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{errors.mealName}</AppText>
+                <AppText style={styles.error}>{errors.mealName}</AppText>
               )}
             </View>
 
-            <View style={{ gap: 4 }}>
+            <View style={styles.fieldWrap}>
               <TextField
                 label="Calories (kcal)"
                 placeholder="e.g. 650"
@@ -249,12 +236,12 @@ export default function AddMealScreen() {
                 inputProps={{ onBlur: () => handleBlur("calories") }}
               />
               {touched.calories && errors.calories && (
-                <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{errors.calories}</AppText>
+                <AppText style={styles.error}>{errors.calories}</AppText>
               )}
             </View>
 
-            <View style={{ flexDirection: "row", gap: theme.space.md }}>
-              <View style={{ flex: 1, gap: 4 }}>
+            <View style={styles.macroRow}>
+              <View style={styles.macroField}>
                 <TextField
                   label="Protein (g)"
                   placeholder="Optional"
@@ -265,10 +252,10 @@ export default function AddMealScreen() {
                   inputProps={{ onBlur: () => handleBlur("protein") }}
                 />
                 {touched.protein && errors.protein && (
-                  <AppText style={{ fontSize: 11, color: theme.colors.danger }}>{errors.protein}</AppText>
+                  <AppText style={styles.errorSmall}>{errors.protein}</AppText>
                 )}
               </View>
-              <View style={{ flex: 1, gap: 4 }}>
+              <View style={styles.macroField}>
                 <TextField
                   label="Carbs (g)"
                   placeholder="Optional"
@@ -279,12 +266,12 @@ export default function AddMealScreen() {
                   inputProps={{ onBlur: () => handleBlur("carbs") }}
                 />
                 {touched.carbs && errors.carbs && (
-                  <AppText style={{ fontSize: 11, color: theme.colors.danger }}>{errors.carbs}</AppText>
+                  <AppText style={styles.errorSmall}>{errors.carbs}</AppText>
                 )}
               </View>
             </View>
 
-            <View style={{ gap: 4 }}>
+            <View style={styles.fieldWrap}>
               <TextField
                 label="Fat (g)"
                 placeholder="Optional"
@@ -295,9 +282,18 @@ export default function AddMealScreen() {
                 inputProps={{ onBlur: () => handleBlur("fat") }}
               />
               {touched.fat && errors.fat && (
-                <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{errors.fat}</AppText>
+                <AppText style={styles.error}>{errors.fat}</AppText>
               )}
             </View>
+
+            {/* Meal model always had `note` — the form finally exposes it */}
+            <TextField
+              label="Note (optional)"
+              placeholder="e.g. ate out, less sugar than usual..."
+              value={note}
+              onChangeText={setNote}
+              textContentType="none"
+            />
           </View>
         </Card>
 
@@ -305,38 +301,24 @@ export default function AddMealScreen() {
 
         <Pressable
           onPress={() => router.back()}
-          style={({ pressed }) => ({
-            alignItems: "center", paddingVertical: 8, opacity: pressed ? 0.6 : 1,
-          })}
+          style={({ pressed }) => [styles.cancel, pressed && styles.dim]}
         >
-          <AppText style={{ fontSize: 15, fontWeight: "600", color: theme.colors.primary }}>
-            Cancel
-          </AppText>
+          <AppText style={styles.cancelText}>Cancel</AppText>
         </Pressable>
 
         {/* Quick Suggestions — chỉ hiện khi form trống (không prefill từ scan/AI) */}
         {!isPrefilled && (
-          <View style={{ gap: theme.space.sm }}>
-            <AppText variant="h2" style={{ fontSize: 15 }}>Quick Suggestions</AppText>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <View style={styles.suggestBlock}>
+            <AppText variant="h2" style={styles.suggestTitle}>Quick Suggestions</AppText>
+            <View style={styles.suggestWrap}>
               {QUICK_SUGGESTIONS.map((s) => (
                 <Pressable
                   key={s.name}
                   onPress={() => fillSuggestion(s)}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 12, paddingVertical: 8,
-                    borderRadius: 10,
-                    backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
-                    borderWidth: 1, borderColor: theme.colors.border,
-                    gap: 2,
-                  })}
+                  style={({ pressed }) => [styles.suggestChip, pressed && styles.suggestChipPressed]}
                 >
-                  <AppText style={{ fontSize: 13, fontWeight: "600", color: theme.colors.text }}>
-                    {s.name}
-                  </AppText>
-                  <AppText style={{ fontSize: 11, color: theme.colors.subtle }}>
-                    {s.calories} kcal
-                  </AppText>
+                  <AppText style={styles.suggestName}>{s.name}</AppText>
+                  <AppText style={styles.suggestKcal}>{s.calories} kcal</AppText>
                 </Pressable>
               ))}
             </View>
@@ -346,3 +328,56 @@ export default function AddMealScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  flex1: { flex: 1 },
+  dim: { opacity: 0.6 },
+  content: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: 60,
+    paddingBottom: 40,
+    gap: theme.space.lg,
+  },
+  subtitle: { marginTop: -8 },
+  backdateBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "rgba(8,145,178,0.08)",
+    borderColor: "rgba(8,145,178,0.2)",
+    borderWidth: 1, borderRadius: 12,
+    padding: theme.space.md,
+  },
+  backdateText: { fontSize: 13, color: theme.colors.muted, flex: 1 },
+  backdateDate: { fontSize: 13, fontWeight: "800", color: theme.colors.primary },
+  aiBadge: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    backgroundColor: "rgba(5,150,105,0.08)",
+    borderColor: "rgba(5,150,105,0.2)",
+    borderWidth: 1, borderRadius: 12,
+    padding: theme.space.md,
+  },
+  aiBadgeEmoji: { fontSize: 18 },
+  aiBadgeTitle: { fontSize: 13, fontWeight: "700", color: theme.colors.accent },
+  aiBadgeSub: { fontSize: 12 },
+  formCard: { padding: theme.space.xl },
+  formFields: { gap: theme.space.md },
+  fieldWrap: { gap: 4 },
+  macroRow: { flexDirection: "row", gap: theme.space.md },
+  macroField: { flex: 1, gap: 4 },
+  error: { fontSize: 12, color: theme.colors.danger },
+  errorSmall: { fontSize: 11, color: theme.colors.danger },
+  cancel: { alignItems: "center", paddingVertical: 8 },
+  cancelText: { fontSize: 15, fontWeight: "600", color: theme.colors.primary },
+  suggestBlock: { gap: theme.space.sm },
+  suggestTitle: { fontSize: 15 },
+  suggestWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  suggestChip: {
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1, borderColor: theme.colors.border,
+    gap: 2,
+  },
+  suggestChipPressed: { backgroundColor: theme.colors.tint },
+  suggestName: { fontSize: 13, fontWeight: "600", color: theme.colors.text },
+  suggestKcal: { fontSize: 11, color: theme.colors.subtle },
+});

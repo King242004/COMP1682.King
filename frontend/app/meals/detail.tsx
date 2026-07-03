@@ -1,62 +1,34 @@
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { theme, macroGoals } from "@/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
+import { dateKey } from "@/utils/date";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
+import { ProgressRing } from "@/ui/components/ProgressRing";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
-import Svg, { Circle } from "react-native-svg";
-
-// Meal-type icon/tint comes from the shared MEAL_TYPE_BY_KEY meta
-
-function CalorieRing({ eaten, goal }: { eaten: number; goal: number }) {
-  const size = 64;
-  const stroke = 6;
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const progress = Math.min(eaten / goal, 1);
-  const dash = progress * circ;
-  return (
-    <View style={{ alignItems: "center", justifyContent: "center", width: size, height: size }}>
-      <Svg width={size} height={size} style={{ position: "absolute" }}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(8,145,178,0.08)" strokeWidth={stroke} fill="none" />
-        <Circle
-          cx={size / 2} cy={size / 2} r={r}
-          stroke={progress >= 1 ? theme.colors.danger : theme.colors.primary}
-          strokeWidth={stroke} fill="none"
-          strokeDasharray={`${dash} ${circ}`}
-          strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
-      </Svg>
-      <AppText style={{ fontSize: 11, fontWeight: "700", color: theme.colors.primary }}>
-        {Math.round(progress * 100)}%
-      </AppText>
-    </View>
-  );
-}
 
 function MacroRow({ label, value, total, color }: {
   label: string; value: number; total: number; color: string;
 }) {
   const ratio = total > 0 ? Math.min(value / total, 1) : 0;
   return (
-    <View style={{ gap: 6 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
+    <View style={styles.macroRow}>
+      <View style={styles.macroHead}>
+        <View style={styles.macroLabelWrap}>
+          {/* dot color is per-macro, known at runtime */}
+          <View style={[styles.macroDot, { backgroundColor: color }]} />
           <AppText variant="body2">{label}</AppText>
         </View>
         <AppText variant="subtle">{Math.round(value)}g / {total}g</AppText>
       </View>
-      <View style={{ height: 6, borderRadius: 99, backgroundColor: "rgba(0,0,0,0.06)", overflow: "hidden" }}>
-        <View style={{ height: "100%", width: `${ratio * 100}%`, borderRadius: 99, backgroundColor: color }} />
+      <View style={styles.macroTrack}>
+        <View style={[styles.macroFill, { width: `${ratio * 100}%`, backgroundColor: color }]} />
       </View>
     </View>
   );
@@ -67,12 +39,6 @@ function hhmm(iso: string) {
   const h = String(d.getHours()).padStart(2, "0");
   const m = String(d.getMinutes()).padStart(2, "0");
   return `${h}:${m}`;
-}
-
-function fullDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
 }
 
 export default function MealDetailScreen() {
@@ -86,12 +52,20 @@ export default function MealDetailScreen() {
 
   if (!meal) {
     return (
-      <Screen style={{ justifyContent: "center", alignItems: "center" }}>
+      <Screen style={styles.notFound}>
         <AppText variant="muted">Meal not found.</AppText>
         <Button title="Go back" variant="secondary" onPress={() => router.replace("/meals/history")} />
       </Screen>
     );
   }
+
+  // Time rule: `meal.date` is the day the meal was EATEN (source of truth) —
+  // createdAt is just when the record was saved. They differ for back-logged
+  // meals, so the clock time only makes sense when both fall on the same day.
+  const eatenDateLabel = new Date(meal.date + "T00:00:00").toLocaleDateString(undefined, {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  const loggedSameDay = dateKey(new Date(meal.createdAt)) === meal.date;
 
   const handleDelete = () => {
     Alert.alert(
@@ -113,54 +87,50 @@ export default function MealDetailScreen() {
 
   return (
     <Screen padded={false}>
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: theme.space.lg,
-          paddingBottom: 40,
-          paddingTop: 60,
-          gap: theme.space.lg,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ScreenHeader />
         {/* Title — pulled up closer to the Back header */}
-        <View style={{ gap: 4, marginTop: -10 }}>
+        <View style={styles.titleBlock}>
           <AppText variant="h1">{meal.name}</AppText>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <View style={styles.metaRow}>
             {meal.mealType && (
-              <Ionicons name={(MEAL_TYPE_BY_KEY[meal.mealType]?.icon ?? "restaurant") as any} size={14} color={MEAL_TYPE_BY_KEY[meal.mealType]?.color ?? theme.colors.primary} />
+              <Ionicons
+                name={(MEAL_TYPE_BY_KEY[meal.mealType]?.icon ?? "restaurant") as any}
+                size={14}
+                color={MEAL_TYPE_BY_KEY[meal.mealType]?.color ?? theme.colors.primary}
+              />
             )}
-            <AppText variant="muted" style={{ textTransform: "capitalize" }}>
-              {meal.mealType ?? "Meal"}
-            </AppText>
+            <AppText variant="muted" style={styles.capitalize}>{meal.mealType ?? "Meal"}</AppText>
             <AppText variant="subtle">·</AppText>
-            <AppText variant="muted">{fullDate(meal.createdAt)}</AppText>
-            <AppText variant="subtle">·</AppText>
-            <AppText variant="muted">{hhmm(meal.createdAt)}</AppText>
+            <AppText variant="muted">{eatenDateLabel}</AppText>
+            {loggedSameDay && (
+              <>
+                <AppText variant="subtle">·</AppText>
+                <AppText variant="muted">{hhmm(meal.createdAt)}</AppText>
+              </>
+            )}
           </View>
         </View>
 
         {/* Calories card with ring */}
-        <Card style={{ padding: theme.space.xl }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <View style={{ gap: 4 }}>
-              <AppText variant="subtle" style={{ fontSize: 12 }}>Energy Total</AppText>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-                <AppText variant="h0" style={{ fontSize: 42, color: theme.colors.primary }}>
-                  {meal.calories.toLocaleString()}
-                </AppText>
-                <AppText variant="muted" style={{ fontSize: 16 }}>kcal</AppText>
+        <Card style={styles.kcalCard}>
+          <View style={styles.kcalRow}>
+            <View style={styles.kcalBlock}>
+              <AppText variant="subtle" style={styles.kcalLabel}>Energy Total</AppText>
+              <View style={styles.kcalNumRow}>
+                <AppText variant="h0" style={styles.kcalNum}>{meal.calories.toLocaleString()}</AppText>
+                <AppText variant="muted" style={styles.kcalUnit}>kcal</AppText>
               </View>
             </View>
-            <CalorieRing eaten={meal.calories} goal={goal} />
+            <ProgressRing eaten={meal.calories} goal={goal} size={64} stroke={6} />
           </View>
         </Card>
 
         {/* Macros */}
-        <Card style={{ padding: theme.space.lg, gap: theme.space.lg }}>
+        <Card style={styles.macroCard}>
           <AppText variant="h2">Macros</AppText>
           {meal.protein || meal.carbs || meal.fat ? (
-            <View style={{ gap: theme.space.md }}>
+            <View style={styles.macroList}>
               {meal.protein ? (
                 <MacroRow label="Protein" value={meal.protein} total={macroGoals(goal).protein} color={theme.colors.accent2} />
               ) : null}
@@ -176,8 +146,16 @@ export default function MealDetailScreen() {
           )}
         </Card>
 
+        {/* Note — shown only when the meal has one */}
+        {!!meal.note?.trim() && (
+          <Card style={styles.noteCard}>
+            <AppText variant="h2" style={styles.noteTitle}>Note</AppText>
+            <AppText variant="muted" style={styles.noteText}>{meal.note}</AppText>
+          </Card>
+        )}
+
         {/* Actions */}
-        <View style={{ gap: theme.space.md }}>
+        <View style={styles.actions}>
           <Button
             title="Edit meal"
             size="lg"
@@ -185,20 +163,53 @@ export default function MealDetailScreen() {
           />
           <Pressable
             onPress={handleDelete}
-            style={({ pressed }) => ({
-              height: 56,
-              borderRadius: theme.radius.button,
-              backgroundColor: pressed ? "rgba(229,72,77,0.15)" : "rgba(229,72,77,0.08)",
-              alignItems: "center",
-              justifyContent: "center",
-            })}
+            style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
           >
-            <AppText style={{ fontSize: 15, fontWeight: "800", color: theme.colors.danger }}>
-              Delete meal
-            </AppText>
+            <AppText style={styles.deleteText}>Delete meal</AppText>
           </Pressable>
         </View>
       </ScrollView>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  notFound: { justifyContent: "center", alignItems: "center" },
+  content: {
+    paddingHorizontal: theme.space.lg,
+    paddingBottom: 40,
+    paddingTop: 60,
+    gap: theme.space.lg,
+  },
+  titleBlock: { gap: 4, marginTop: -10 },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  capitalize: { textTransform: "capitalize" },
+  kcalCard: { padding: theme.space.xl },
+  kcalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  kcalBlock: { gap: 4 },
+  kcalLabel: { fontSize: 12 },
+  kcalNumRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+  kcalNum: { fontSize: 42, color: theme.colors.primary },
+  kcalUnit: { fontSize: 16 },
+  macroCard: { padding: theme.space.lg, gap: theme.space.lg },
+  macroList: { gap: theme.space.md },
+  macroRow: { gap: 6 },
+  macroHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  macroLabelWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
+  macroDot: { width: 10, height: 10, borderRadius: 5 },
+  macroTrack: { height: 6, borderRadius: 99, backgroundColor: "rgba(22,78,99,0.08)", overflow: "hidden" },
+  macroFill: { height: "100%", borderRadius: 99 },
+  noteCard: { padding: theme.space.lg, gap: 6 },
+  noteTitle: { fontSize: 15 },
+  noteText: { fontSize: 13 },
+  actions: { gap: theme.space.md },
+  deleteBtn: {
+    height: 56,
+    borderRadius: theme.radius.button,
+    backgroundColor: "rgba(229,72,77,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteBtnPressed: { backgroundColor: "rgba(229,72,77,0.15)" },
+  deleteText: { fontSize: 15, fontWeight: "800", color: theme.colors.danger },
+});
