@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Alert } from "react-native";
+import { StyleSheet, View, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { apiRequest } from "@/utils/api";
 import { theme } from "@/ui/theme";
@@ -9,6 +9,7 @@ import { Screen } from "@/ui/components/Screen";
 import { TextField } from "@/ui/components/TextField";
 
 type Step = "email" | "otp" | "password";
+const STEPS: Step[] = ["email", "otp", "password"];
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -102,30 +103,22 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <Screen keyboard style={{ justifyContent: "center" }}>
-      <View style={{ gap: theme.space.xl }}>
+    <Screen keyboard style={styles.screen}>
+      <View style={styles.wrap}>
 
         {/* Step indicator */}
-        <View style={{ flexDirection: "row", gap: 8, justifyContent: "center" }}>
-          {["email", "otp", "password"].map((s, i) => (
-            <View
-              key={s}
-              style={{
-                height: 4, flex: 1, borderRadius: 99,
-                backgroundColor: ["email", "otp", "password"].indexOf(step) >= i
-                  ? theme.colors.primary
-                  : "rgba(8,145,178,0.12)",
-              }}
-            />
+        <View style={styles.stepsRow}>
+          {STEPS.map((s, i) => (
+            <View key={s} style={[styles.stepSeg, STEPS.indexOf(step) >= i && styles.stepSegActive]} />
           ))}
         </View>
 
-        <View style={{ gap: 8 }}>
+        <View style={styles.header}>
           <AppText variant="h1">{stepTitles[step].title}</AppText>
           <AppText variant="muted">{stepTitles[step].subtitle}</AppText>
         </View>
 
-        <View style={{ gap: theme.space.md }}>
+        <View style={styles.form}>
           {/* Step 1 - Email */}
           {step === "email" && (
             <TextField
@@ -176,11 +169,7 @@ export default function ForgotPasswordScreen() {
             </>
           )}
 
-          {error ? (
-            <AppText variant="subtle" style={{ color: theme.colors.danger, textAlign: "center" }}>
-              {error}
-            </AppText>
-          ) : null}
+          {error ? <AppText variant="subtle" style={styles.error}>{error}</AppText> : null}
 
           <Button
             title={
@@ -217,3 +206,14 @@ export default function ForgotPasswordScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { justifyContent: "center" },
+  wrap: { gap: theme.space.xl },
+  stepsRow: { flexDirection: "row", gap: 8, justifyContent: "center" },
+  stepSeg: { height: 4, flex: 1, borderRadius: 99, backgroundColor: "rgba(8,145,178,0.12)" },
+  stepSegActive: { backgroundColor: theme.colors.primary },
+  header: { gap: 8 },
+  form: { gap: theme.space.md },
+  error: { color: theme.colors.danger, textAlign: "center" },
+});

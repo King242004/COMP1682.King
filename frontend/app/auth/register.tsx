@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -55,17 +55,25 @@ export default function RegisterScreen() {
     }
   };
 
+  // Live requirement checklist — rules used to surface only AFTER a failed
+  // submit, one at a time
+  const pwChecks = [
+    { ok: password.length >= 6, label: "At least 6 characters" },
+    { ok: /[A-Z]/.test(password), label: "One uppercase letter" },
+    { ok: /[0-9]/.test(password), label: "One number" },
+  ];
+
   return (
-    <Screen keyboard style={{ justifyContent: "center" }}>
-      <View style={{ gap: theme.space.xl }}>
-        <View style={{ gap: 8 }}>
+    <Screen keyboard style={styles.screen}>
+      <View style={styles.wrap}>
+        <View style={styles.header}>
           <AppText variant="h1">Create your account</AppText>
           <AppText variant="muted">
             Your AI meal companion is one step away.
           </AppText>
         </View>
 
-        <View style={{ gap: theme.space.md }}>
+        <View style={styles.form}>
           <TextField
             label="Name"
             placeholder="Your name"
@@ -97,22 +105,16 @@ export default function RegisterScreen() {
             returnKeyType="done"
           />
 
-          {/* Live requirement checklist — rules used to surface only AFTER a
-              failed submit, one at a time */}
           {password.length > 0 && (
-            <View style={{ gap: 4 }}>
-              {[
-                { ok: password.length >= 6, label: "At least 6 characters" },
-                { ok: /[A-Z]/.test(password), label: "One uppercase letter" },
-                { ok: /[0-9]/.test(password), label: "One number" },
-              ].map((c) => (
-                <View key={c.label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={styles.checks}>
+              {pwChecks.map((c) => (
+                <View key={c.label} style={styles.checkRow}>
                   <Ionicons
                     name={c.ok ? "checkmark-circle" : "ellipse-outline"}
                     size={14}
                     color={c.ok ? theme.colors.accent : theme.colors.subtle}
                   />
-                  <AppText variant="subtle" style={{ fontSize: 12, color: c.ok ? theme.colors.accent : theme.colors.subtle }}>
+                  <AppText variant="subtle" style={[styles.checkText, c.ok && styles.checkTextOk]}>
                     {c.label}
                   </AppText>
                 </View>
@@ -120,11 +122,7 @@ export default function RegisterScreen() {
             </View>
           )}
 
-          {error ? (
-            <AppText variant="subtle" style={{ color: theme.colors.danger, textAlign: "center" }}>
-              {error}
-            </AppText>
-          ) : null}
+          {error ? <AppText variant="subtle" style={styles.error}>{error}</AppText> : null}
 
           <Button
             title={isLoading ? "Creating account..." : "Create account"}
@@ -133,10 +131,10 @@ export default function RegisterScreen() {
             onPress={handleRegister}
           />
 
-          <View style={{ alignItems: "center", marginTop: 4 }}>
+          <View style={styles.linkRow}>
             <Link href="/auth/login" asChild>
               <Pressable hitSlop={10}>
-                <AppText variant="body2" style={{ color: theme.colors.primary }}>
+                <AppText variant="body2" style={styles.linkPrimary}>
                   Already have an account? Sign in
                 </AppText>
               </Pressable>
@@ -147,3 +145,17 @@ export default function RegisterScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { justifyContent: "center" },
+  wrap: { gap: theme.space.xl },
+  header: { gap: 8 },
+  form: { gap: theme.space.md },
+  checks: { gap: 4 },
+  checkRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  checkText: { fontSize: 12, color: theme.colors.subtle },
+  checkTextOk: { color: theme.colors.accent },
+  error: { color: theme.colors.danger, textAlign: "center" },
+  linkRow: { alignItems: "center", marginTop: 4 },
+  linkPrimary: { color: theme.colors.primary },
+});
