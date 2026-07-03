@@ -1,6 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const rateLimit = require("express-rate-limit");
+
+// Password-reset endpoints are unauthenticated → strict per-IP cap
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { message: "Too many attempts — please try again later." },
+});
 const { uploadAvatar, sendPasswordOTP, resetPassword, changeName } = require("../controllers/userController");
 const protect = require("../middleware/auth");
 
@@ -73,7 +83,7 @@ router.put("/name", protect, changeName);
  *       404:
  *         description: Email not found
  */
-router.post("/send-otp", sendPasswordOTP);
+router.post("/send-otp", otpLimiter, sendPasswordOTP);
 
 /**
  * @swagger
@@ -99,6 +109,6 @@ router.post("/send-otp", sendPasswordOTP);
  *       400:
  *         description: Invalid or expired OTP
  */
-router.post("/reset-password", resetPassword);
+router.post("/reset-password", otpLimiter, resetPassword);
 
 module.exports = router;
