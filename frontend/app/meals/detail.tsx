@@ -78,7 +78,9 @@ export default function MealDetailScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteMeal(meal.id);
-            router.replace("/meals/history");
+            // Return to wherever the user came from (Home or History) — both
+            // update instantly via context state / focus refetch.
+            router.back();
           },
         },
       ]
