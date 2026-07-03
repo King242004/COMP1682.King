@@ -144,7 +144,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title="Settings" />
-        <AppText variant="muted" style={{ marginTop: -8 }}>Tune how HealthySnap works for you.</AppText>
+        <AppText variant="muted" style={{ marginTop: -8 }}>Tune how MealMate works for you.</AppText>
 
         {/* GOALS */}
         <SectionLabel>Goals</SectionLabel>
@@ -284,7 +284,7 @@ export default function SettingsScreen() {
 
         {/* ABOUT */}
         <AppText variant="subtle" style={{ textAlign: "center", fontSize: 11, marginTop: 4 }}>
-          HealthySnap · v1.0.0
+          MealMate · v1.0.0
         </AppText>
       </ScrollView>
     </Screen>

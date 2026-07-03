@@ -85,7 +85,7 @@ exports.scanBarcode = async (req, res) => {
     const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=product_name,product_name_en,brands,image_url,image_front_url,serving_size,serving_quantity,nutriments,status`;
     const { data } = await axios.get(url, {
       timeout: 10000,
-      headers: { "User-Agent": "HealthySnap/1.0 (graduation project; hoangking1124@gmail.com)" },
+      headers: { "User-Agent": "MealMate/1.0 (graduation project; hoangking1124@gmail.com)" },
     });
 
     if (data.status !== 1 || !data.product) {

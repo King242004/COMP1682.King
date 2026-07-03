@@ -36,7 +36,7 @@ export async function scheduleDailyReminder(hour: number, minute: number) {
   const id = await Notifications.scheduleNotificationAsync({
     content: {
       title: "Log your meals",
-      body: "Take 10 seconds to log what you just ate in Meal Snap.",
+      body: "Take 10 seconds to log what you just ate in MealMate.",
     },
     // DAILY trigger repeats every day at hour:minute (new expo-notifications API
     // requires an explicit `type` on the trigger object)

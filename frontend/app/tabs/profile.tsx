@@ -112,7 +112,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const displayName = user?.name ?? "HealthySnap User";
+  const displayName = user?.name ?? "MealMate User";
   const badge = initials(displayName);
 
   return (
@@ -267,7 +267,7 @@ export default function ProfileScreen() {
         </Card>
 
         <AppText variant="subtle" style={{ textAlign: "center", fontSize: 11, marginTop: 4 }}>
-          HealthySnap · v1.0.0
+          MealMate · v1.0.0
         </AppText>
       </ScrollView>
     </Screen>

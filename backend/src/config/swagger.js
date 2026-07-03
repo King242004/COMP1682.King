@@ -4,9 +4,9 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "HealthySnap API",
+      title: "MealMate API",
       version: "1.0.0",
-      description: "API documentation for HealthySnap - Smart Nutrition Tracking App",
+      description: "API documentation for MealMate - AI meal companion (COMP-1682 Meal Snap project)",
     },
     servers: [{ url: "http://localhost:5000/api" }],
     components: {
