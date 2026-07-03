@@ -121,9 +121,10 @@ export default function EditMealScreen() {
           onPress: async () => {
             if (!id) return;
             await deleteMeal(id);
-            // The meal is gone, so going "back" to its detail would 404 —
-            // History is the only safe landing spot after a delete.
-            router.replace("/meals/history");
+            // One step back is the detail of the meal we just deleted → skip
+            // over it and land where the user actually came from (Home/History).
+            if (router.canDismiss()) router.dismiss(2);
+            else router.replace("/meals/history");
           },
         },
       ]
