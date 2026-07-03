@@ -99,7 +99,9 @@ export default function EditMealScreen() {
         fat: fat.trim() ? Number(fat) : undefined,
         mealType,
       });
-      router.replace("/meals/history");
+      // Return to wherever the user came from (detail, Home or History) —
+      // replacing to History used to hijack the back stack.
+      router.back();
     } catch (err: any) {
       setErrors({ mealName: err.message || "Failed to save changes." });
       setIsSaving(false); // only re-enable on failure — success navigates away
@@ -118,6 +120,8 @@ export default function EditMealScreen() {
           onPress: async () => {
             if (!id) return;
             await deleteMeal(id);
+            // The meal is gone, so going "back" to its detail would 404 —
+            // History is the only safe landing spot after a delete.
             router.replace("/meals/history");
           },
         },
@@ -281,7 +285,7 @@ export default function EditMealScreen() {
         <Button title={isSaving ? "Saving..." : "Save changes"} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
 
         <Pressable
-          onPress={() => router.replace("/meals/history")}
+          onPress={() => router.back()}
           style={({ pressed }) => ({
             alignItems: "center", paddingVertical: 8, opacity: pressed ? 0.6 : 1,
           })}
