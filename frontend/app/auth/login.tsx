@@ -70,7 +70,7 @@ export default function LoginScreen() {
             variant="muted"
             style={{ textAlign: "center", paddingHorizontal: theme.space.lg }}
           >
-            Snap a photo, we'll count the calories. Eating healthy made easy.
+            Your AI meal companion — scan your food, get advice, eat right for you.
           </AppText>
         </View>
 
@@ -97,7 +97,7 @@ export default function LoginScreen() {
           />
 
           {error ? (
-            <AppText variant="subtle" style={{ color: "red", textAlign: "center" }}>
+            <AppText variant="subtle" style={{ color: theme.colors.danger, textAlign: "center" }}>
               {error}
             </AppText>
           ) : null}
@@ -109,24 +109,26 @@ export default function LoginScreen() {
             onPress={handleLogin}
           />
 
+          {/* Link asChild passes onPress into the Pressable (the old outer
+              Pressable had no handler — dead wrapper, tiny touch target) */}
           <View style={{ alignItems: "center", marginTop: 4 }}>
-            <Pressable>
-              <Link href="/auth/register" asChild>
+            <Link href="/auth/register" asChild>
+              <Pressable hitSlop={10}>
                 <AppText variant="body2" style={{ color: theme.colors.primary }}>
                   Don't have an account? Register
                 </AppText>
-              </Link>
-            </Pressable>
+              </Pressable>
+            </Link>
           </View>
 
           <View style={{ alignItems: "center" }}>
-            <Pressable>
-              <Link href="/auth/forgot-password" asChild>
+            <Link href="/auth/forgot-password" asChild>
+              <Pressable hitSlop={10}>
                 <AppText variant="body2" style={{ color: theme.colors.subtle }}>
                   Forgot password?
                 </AppText>
-              </Link>
-            </Pressable>
+              </Pressable>
+            </Link>
           </View>
         </View>
       </View>
