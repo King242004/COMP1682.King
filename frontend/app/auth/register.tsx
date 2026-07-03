@@ -43,8 +43,10 @@ export default function RegisterScreen() {
     setIsLoading(true);
     try {
       await register(name.trim(), email.trim(), password);
-      // register() already stored the token (auto-login) → go straight into the app
-      router.replace("/tabs");
+      // register() already stored the token (auto-login). New accounts go through
+      // onboarding first (goal/body/taste) so the AI knows them from day one —
+      // it's skippable and only ever shown here, never on login.
+      router.replace("/onboarding" as any);
     } catch (e: any) {
       setError(e.message || "Something went wrong. Please try again.");
     } finally {

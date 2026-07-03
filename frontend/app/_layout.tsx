@@ -39,6 +39,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/login" />
           <Stack.Screen name="auth/register" />
           <Stack.Screen name="auth/forgot-password" />
+          <Stack.Screen name="onboarding" />
           <Stack.Screen name="tabs" />
           {/* Sub-flows pushed OVER the tabs — back() pops here naturally */}
           <Stack.Screen name="scan" />
