@@ -1,5 +1,5 @@
 // Overlay on top of the camera: top bar + mode toggle, viewfinder, bottom controls.
-import { ActivityIndicator, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -116,11 +116,22 @@ export function ScanOverlay({
             <View style={styles.permBlock}>
               <Ionicons name="camera-outline" size={56} color="rgba(255,255,255,0.5)" />
               <AppText style={styles.permTitle}>Camera not enabled</AppText>
+              {/* Accurate for hard-denied iOS: no in-app tap can re-trigger the
+                  permission prompt — Settings is the only way back */}
               <AppText style={styles.permText}>
                 {isBarcode
-                  ? "Tap below to enter the barcode number manually, or enable camera to scan."
-                  : "Tap the capture button to enable camera, or pick from your library below."}
+                  ? "Camera access is off. Enable it in Settings, or enter the barcode number manually below."
+                  : "Camera access is off. Enable it in Settings, or pick a photo from your library below."}
               </AppText>
+              {/* Hard-denied ("Don't allow") users can only fix it in Settings —
+                  the OS silently blocks any further permission prompt */}
+              <Pressable
+                onPress={() => Linking.openSettings()}
+                style={({ pressed }) => [styles.settingsBtn, pressed && styles.dim]}
+              >
+                <Ionicons name="settings-outline" size={15} color="#fff" />
+                <AppText style={styles.settingsBtnText}>Open Settings</AppText>
+              </Pressable>
             </View>
           ) : (
             // marginBottom is runtime math: sit near the top edge of the frame
@@ -212,6 +223,12 @@ const styles = StyleSheet.create({
   permBlock: { alignItems: "center", gap: 12 },
   permTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
   permText: { color: "rgba(255,255,255,0.65)", fontSize: 13, textAlign: "center" },
+  settingsBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginTop: 4, paddingHorizontal: 16, paddingVertical: 9,
+    borderRadius: 99, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.4)",
+  },
+  settingsBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
   hintPill: {
     backgroundColor: "rgba(0,0,0,0.5)",
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 99,
