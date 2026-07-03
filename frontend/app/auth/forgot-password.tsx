@@ -177,7 +177,7 @@ export default function ForgotPasswordScreen() {
           )}
 
           {error ? (
-            <AppText variant="subtle" style={{ color: "red", textAlign: "center" }}>
+            <AppText variant="subtle" style={{ color: theme.colors.danger, textAlign: "center" }}>
               {error}
             </AppText>
           ) : null}

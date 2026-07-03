@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Link, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -60,7 +61,7 @@ export default function RegisterScreen() {
         <View style={{ gap: 8 }}>
           <AppText variant="h1">Create your account</AppText>
           <AppText variant="muted">
-            Start tracking meals with a clean daily calorie view.
+            Your AI meal companion is one step away.
           </AppText>
         </View>
 
@@ -96,8 +97,31 @@ export default function RegisterScreen() {
             returnKeyType="done"
           />
 
+          {/* Live requirement checklist — rules used to surface only AFTER a
+              failed submit, one at a time */}
+          {password.length > 0 && (
+            <View style={{ gap: 4 }}>
+              {[
+                { ok: password.length >= 6, label: "At least 6 characters" },
+                { ok: /[A-Z]/.test(password), label: "One uppercase letter" },
+                { ok: /[0-9]/.test(password), label: "One number" },
+              ].map((c) => (
+                <View key={c.label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Ionicons
+                    name={c.ok ? "checkmark-circle" : "ellipse-outline"}
+                    size={14}
+                    color={c.ok ? theme.colors.accent : theme.colors.subtle}
+                  />
+                  <AppText variant="subtle" style={{ fontSize: 12, color: c.ok ? theme.colors.accent : theme.colors.subtle }}>
+                    {c.label}
+                  </AppText>
+                </View>
+              ))}
+            </View>
+          )}
+
           {error ? (
-            <AppText variant="subtle" style={{ color: "red", textAlign: "center" }}>
+            <AppText variant="subtle" style={{ color: theme.colors.danger, textAlign: "center" }}>
               {error}
             </AppText>
           ) : null}
@@ -110,13 +134,13 @@ export default function RegisterScreen() {
           />
 
           <View style={{ alignItems: "center", marginTop: 4 }}>
-            <Pressable>
-              <Link href="/auth/login" asChild>
+            <Link href="/auth/login" asChild>
+              <Pressable hitSlop={10}>
                 <AppText variant="body2" style={{ color: theme.colors.primary }}>
                   Already have an account? Sign in
                 </AppText>
-              </Link>
-            </Pressable>
+              </Pressable>
+            </Link>
           </View>
         </View>
       </View>
