@@ -39,6 +39,11 @@ exports.sendPasswordOTP = async (req, res) => {
   const user = await User.findOne({ email: email.toLowerCase() });
   if (!user) return res.status(404).json({ message: "No account found with this email." });
 
+  // Cooldown: one code per minute per email — stops OTP email spam
+  const recent = await OTP.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
+  if (recent?.createdAt && Date.now() - recent.createdAt.getTime() < 60 * 1000)
+    return res.status(429).json({ message: "Please wait a minute before requesting another code." });
+
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -65,11 +70,23 @@ exports.resetPassword = async (req, res) => {
   if (newPassword.length < 6 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword))
     return res.status(400).json({ message: "Password must be at least 6 characters, include one uppercase letter and one number." });
 
-  const record = await OTP.findOne({ email: email.toLowerCase(), otp });
+  // Look up by email only, so wrong guesses can be COUNTED against the record —
+  // matching on the OTP itself would make unlimited brute-force attempts free.
+  const record = await OTP.findOne({ email: email.toLowerCase() });
   if (!record) return res.status(400).json({ message: "Invalid OTP." });
 
   if (record.expiresAt < new Date())
     return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+
+  if (record.otp !== String(otp).trim()) {
+    record.attempts += 1;
+    if (record.attempts >= 5) {
+      await record.deleteOne(); // burned — must request a fresh code
+      return res.status(400).json({ message: "Too many wrong attempts. Please request a new code." });
+    }
+    await record.save();
+    return res.status(400).json({ message: "Invalid OTP." });
+  }
 
   const hashed = await bcrypt.hash(newPassword, 10);
   await User.findOneAndUpdate({ email: email.toLowerCase() }, { password: hashed });
