@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   chatContent: { paddingBottom: 20, gap: theme.space.md },
   msgBlock: { gap: theme.space.md },
   daySep: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 2 },
-  daySepLine: { flex: 1, height: 0.5, backgroundColor: theme.colors.border },
+  daySepLine: { flex: 1, height: 1, backgroundColor: "rgba(22,78,99,0.15)" },
   daySepText: { fontSize: 11, fontWeight: "700" },
   jumpBtn: {
     position: "absolute", right: 4, bottom: 10,

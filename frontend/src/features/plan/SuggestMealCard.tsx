@@ -3,7 +3,7 @@
 // Self-contained: owns its state/cache; Home only passes today's plan and
 // renders it on today's view.
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -87,25 +87,21 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
   const plannedForSlot = planToday.find((p) => p.mealType === slot && !p.done);
 
   return (
-    <Card style={{ padding: theme.space.lg, gap: 10 }}>
+    <Card style={styles.card}>
       {/* Header — tap generates (cache hit = instant, no AI call) */}
       <Pressable
         onPress={() => loadSuggestions()}
         disabled={loading}
-        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, opacity: pressed ? 0.8 : 1 })}
+        style={({ pressed }) => [styles.headerRow, pressed && styles.pressedFaint]}
       >
-        <View style={{
-          width: 36, height: 36, borderRadius: 12,
-          backgroundColor: "rgba(5,150,105,0.12)",
-          alignItems: "center", justifyContent: "center",
-        }}>
+        <View style={styles.iconBox}>
           <Ionicons name="restaurant" size={17} color={theme.colors.accent} />
         </View>
-        <View style={{ flex: 1, gap: 2 }}>
-          <AppText variant="h2" style={{ fontSize: 15 }}>
+        <View style={styles.headerBody}>
+          <AppText variant="h2" style={styles.title}>
             {vi ? "Ăn gì bây giờ?" : "What should I eat now?"}
           </AppText>
-          <AppText variant="subtle" numberOfLines={2} style={{ fontSize: 12 }}>
+          <AppText variant="subtle" numberOfLines={2} style={styles.subtitle}>
             {suggest
               ? plannedForSlot
                 ? (vi
@@ -127,30 +123,22 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
           <ActivityIndicator size="small" color={theme.colors.accent} />
         ) : suggest ? (
           /* Regenerate — bypasses the cache (costs 1 AI request) */
-          <Pressable onPress={() => loadSuggestions(true)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+          <Pressable onPress={() => loadSuggestions(true)} hitSlop={8} style={({ pressed }) => pressed && styles.dim}>
             <Ionicons name="refresh" size={17} color={theme.colors.subtle} />
           </Pressable>
         ) : (
-          <View style={{
-            flexDirection: "row", alignItems: "center", gap: 4,
-            backgroundColor: "rgba(5,150,105,0.10)",
-            paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
-          }}>
+          <View style={styles.suggestPill}>
             <Ionicons name="sparkles" size={13} color={theme.colors.accent} />
-            <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>
-              {vi ? "Gợi ý" : "Suggest"}
-            </AppText>
+            <AppText style={styles.suggestPillText}>{vi ? "Gợi ý" : "Suggest"}</AppText>
           </View>
         )}
       </Pressable>
 
-      {!!error && (
-        <AppText style={{ fontSize: 12, color: theme.colors.danger }}>{error}</AppText>
-      )}
+      {!!error && <AppText style={styles.error}>{error}</AppText>}
 
       {/* First fetch in flight → pulse placeholder rows where dishes will appear */}
       {loading && !suggest && (
-        <View style={{ gap: 8 }}>
+        <View style={styles.skeletons}>
           <Skeleton height={44} radius={12} />
           <Skeleton height={44} radius={12} />
           <Skeleton height={44} radius={12} />
@@ -159,16 +147,11 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
 
       {/* Suggested dishes — 💬 asks the Coach how to cook; "Thêm" prefills Add meal */}
       {suggest?.suggestions.map((s, i) => (
-        <View key={`${i}-${s.name}`} style={{
-          borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 4,
-          backgroundColor: theme.colors.bg,
-        }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <AppText variant="body2" numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600" }}>
-              {s.name}
-            </AppText>
-            <AppText variant="subtle" style={{ fontSize: 12 }}>{s.calories} kcal</AppText>
-            <Pressable onPress={() => askCoachHow(s.name)} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+        <View key={`${i}-${s.name}`} style={styles.dishRow}>
+          <View style={styles.dishHead}>
+            <AppText variant="body2" numberOfLines={1} style={styles.dishName}>{s.name}</AppText>
+            <AppText variant="subtle" style={styles.dishKcal}>{s.calories} kcal</AppText>
+            <Pressable onPress={() => askCoachHow(s.name)} hitSlop={10} style={({ pressed }) => pressed && styles.dim}>
               <Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.colors.primary} />
             </Pressable>
             <Pressable
@@ -185,21 +168,53 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
                 },
               })}
               hitSlop={6}
-              style={({ pressed }) => ({
-                flexDirection: "row", alignItems: "center", gap: 3,
-                paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-                backgroundColor: pressed ? theme.colors.tint : "rgba(5,150,105,0.10)",
-              })}
+              style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
             >
               <Ionicons name="add" size={14} color={theme.colors.accent} />
-              <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.accent }}>
-                {vi ? "Thêm" : "Add"}
-              </AppText>
+              <AppText style={styles.addText}>{vi ? "Thêm" : "Add"}</AppText>
             </Pressable>
           </View>
-          {!!s.reason && <AppText variant="subtle" style={{ fontSize: 11 }}>{s.reason}</AppText>}
+          {!!s.reason && <AppText variant="subtle" style={styles.reason}>{s.reason}</AppText>}
         </View>
       ))}
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  dim: { opacity: 0.5 },
+  pressedFaint: { opacity: 0.8 },
+  card: { padding: theme.space.lg, gap: 10 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  iconBox: {
+    width: 36, height: 36, borderRadius: 12,
+    backgroundColor: "rgba(5,150,105,0.12)",
+    alignItems: "center", justifyContent: "center",
+  },
+  headerBody: { flex: 1, gap: 2 },
+  title: { fontSize: 15 },
+  subtitle: { fontSize: 12 },
+  suggestPill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(5,150,105,0.10)",
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99,
+  },
+  suggestPillText: { fontSize: 12, fontWeight: "700", color: theme.colors.accent },
+  error: { fontSize: 12, color: theme.colors.danger },
+  skeletons: { gap: 8 },
+  dishRow: {
+    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 4,
+    backgroundColor: theme.colors.bg,
+  },
+  dishHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  dishName: { flex: 1, fontSize: 13, fontWeight: "600" },
+  dishKcal: { fontSize: 12 },
+  addBtn: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: "rgba(5,150,105,0.10)",
+  },
+  addBtnPressed: { backgroundColor: theme.colors.tint },
+  addText: { fontSize: 12, fontWeight: "700", color: theme.colors.accent },
+  reason: { fontSize: 11 },
+});
