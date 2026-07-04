@@ -5,6 +5,8 @@ const postSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     caption: { type: String, default: "", maxlength: 500 },
     image: { type: String, default: null },
+    // Cloudinary public_id so deletePost can remove the file (older posts lack it)
+    imagePublicId: { type: String, default: null },
     // Frozen snapshot of the meal at post time — so editing/deleting the original
     // meal never breaks an existing post. Null if the post isn't about a meal.
     meal: {
