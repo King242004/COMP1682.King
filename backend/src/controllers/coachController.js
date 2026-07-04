@@ -334,6 +334,7 @@ exports.getHistory = async (req, res) => {
       meal: m.meal || null,
       eating: m.mealEating || false,
       loggedId: m.loggedMealId || null,
+      createdAt: m.createdAt, // for day separators in the chat UI
     })),
   });
 };
