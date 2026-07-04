@@ -2,7 +2,7 @@
 // Every answer feeds the AI features (coach, suggestions, weekly plan) from
 // minute one. Every step can be skipped — the user lands on Home regardless.
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -144,59 +144,55 @@ export function OnboardingFlow() {
   const Chip = ({ active, label, onPress, flex }: { active: boolean; label: string; onPress: () => void; flex?: boolean }) => (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({
-        ...(flex ? { flex: 1 } : {}),
-        alignItems: "center", paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12,
-        borderWidth: 1.5,
-        borderColor: active ? theme.colors.primary : theme.colors.border,
-        backgroundColor: active ? theme.colors.tint : theme.colors.surface,
-        opacity: pressed ? 0.7 : 1,
-      })}
+      style={({ pressed }) => [
+        styles.chip,
+        flex && styles.flex1,
+        active && styles.chipActive,
+        pressed && styles.pressed,
+      ]}
     >
-      <AppText style={{ fontWeight: "700", color: active ? theme.colors.primary : theme.colors.subtle }}>{label}</AppText>
+      <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
     </Pressable>
   );
 
   return (
     <Screen padded={false} keyboard>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: theme.space.lg, paddingTop: 70, paddingBottom: 40, gap: theme.space.lg, flexGrow: 1 }}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {/* Progress segments + Skip */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ flex: 1, flexDirection: "row", gap: 6 }}>
+        <View style={styles.progressRow}>
+          <View style={styles.segments}>
             {STEPS.map((s, i) => (
-              <View key={s} style={{
-                height: 4, flex: 1, borderRadius: 99,
-                backgroundColor: stepIndex >= i ? theme.colors.primary : "rgba(8,145,178,0.12)",
-              }} />
+              <View key={s} style={[styles.segment, stepIndex >= i && styles.segmentActive]} />
             ))}
           </View>
           <Pressable onPress={goHome} hitSlop={10}>
-            <AppText variant="subtle" style={{ fontSize: 13, color: theme.colors.primary }}>{L.skip}</AppText>
+            <AppText variant="subtle" style={styles.skipText}>{L.skip}</AppText>
           </Pressable>
         </View>
 
         {/* ── Intro ── */}
         {step === "intro" && (
-          <View style={{ gap: theme.space.lg, flex: 1, justifyContent: "center" }}>
-            <View style={{ gap: 8 }}>
+          <View style={styles.introWrap}>
+            <View style={styles.headerBlock}>
               <AppText variant="h1">{L.introTitle}</AppText>
               <AppText variant="muted">{L.introSub}</AppText>
             </View>
-            <Card style={{ padding: theme.space.lg, gap: theme.space.lg }}>
+            <Card style={styles.featureCard}>
               {[
                 { icon: "scan", text: L.featScan, color: theme.colors.primary, bg: "rgba(8,145,178,0.10)" },
                 { icon: "sparkles", text: L.featCoach, color: theme.colors.accent, bg: "rgba(5,150,105,0.10)" },
                 { icon: "calendar", text: L.featPlan, color: theme.colors.indigo, bg: "rgba(99,102,241,0.10)" },
               ].map((f) => (
-                <View key={f.icon} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: f.bg, alignItems: "center", justifyContent: "center" }}>
+                <View key={f.icon} style={styles.featureRow}>
+                  {/* per-feature tint, known at runtime */}
+                  <View style={[styles.featureIcon, { backgroundColor: f.bg }]}>
                     <Ionicons name={f.icon as any} size={19} color={f.color} />
                   </View>
-                  <AppText variant="body2" style={{ flex: 1 }}>{f.text}</AppText>
+                  <AppText variant="body2" style={styles.flex1}>{f.text}</AppText>
                 </View>
               ))}
             </Card>
@@ -206,35 +202,24 @@ export function OnboardingFlow() {
 
         {/* ── Goal ── */}
         {step === "goal" && (
-          <View style={{ gap: theme.space.lg }}>
-            <View style={{ gap: 6 }}>
+          <View style={styles.stepWrap}>
+            <View style={styles.headerBlockTight}>
               <AppText variant="h1">{L.goalTitle}</AppText>
               <AppText variant="muted">{L.goalSub}</AppText>
             </View>
-            <View style={{ gap: 10 }}>
+            <View style={styles.goalList}>
               {GOALS.map((g) => {
                 const active = goal === g.key;
                 return (
                   <Pressable
                     key={g.key}
                     onPress={() => setGoal(g.key)}
-                    style={({ pressed }) => ({
-                      flexDirection: "row", alignItems: "center", gap: 14,
-                      padding: theme.space.lg, borderRadius: theme.radius.card,
-                      borderWidth: 1.5,
-                      borderColor: active ? theme.colors.primary : theme.colors.border,
-                      backgroundColor: active ? theme.colors.tint : theme.colors.surface,
-                      opacity: pressed ? 0.8 : 1,
-                    })}
+                    style={({ pressed }) => [styles.goalCard, active && styles.goalCardActive, pressed && styles.pressedFaint]}
                   >
-                    <View style={{
-                      width: 44, height: 44, borderRadius: 14,
-                      backgroundColor: active ? theme.colors.primary : "rgba(8,145,178,0.08)",
-                      alignItems: "center", justifyContent: "center",
-                    }}>
+                    <View style={[styles.goalIcon, active && styles.goalIconActive]}>
                       <Ionicons name={g.icon as any} size={20} color={active ? "#fff" : theme.colors.primary} />
                     </View>
-                    <AppText variant="h2" style={{ fontSize: 16, color: active ? theme.colors.primary : theme.colors.text }}>
+                    <AppText variant="h2" style={[styles.goalLabel, active && styles.goalLabelActive]}>
                       {g.label}
                     </AppText>
                   </Pressable>
@@ -242,37 +227,37 @@ export function OnboardingFlow() {
               })}
             </View>
             <Button title={L.next} size="lg" onPress={() => setStep("body")} />
-            <Pressable onPress={() => setStep("intro")} style={{ alignItems: "center", paddingVertical: 6 }}>
-              <AppText style={{ fontSize: 14, fontWeight: "600", color: theme.colors.subtle }}>{L.back}</AppText>
+            <Pressable onPress={() => setStep("intro")} style={styles.backBtn}>
+              <AppText style={styles.backText}>{L.back}</AppText>
             </Pressable>
           </View>
         )}
 
         {/* ── Body + live TDEE ── */}
         {step === "body" && (
-          <View style={{ gap: theme.space.lg }}>
-            <View style={{ gap: 6 }}>
+          <View style={styles.stepWrap}>
+            <View style={styles.headerBlockTight}>
               <AppText variant="h1">{L.bodyTitle}</AppText>
               <AppText variant="muted">{L.bodySub}</AppText>
             </View>
 
-            <View style={{ gap: 6 }}>
+            <View style={styles.fieldBlock}>
               <AppText variant="muted">{L.gender}</AppText>
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={styles.chipRow}>
                 <Chip flex active={gender === "male"} label={L.male} onPress={() => setGender("male")} />
                 <Chip flex active={gender === "female"} label={L.female} onPress={() => setGender("female")} />
               </View>
             </View>
 
-            <View style={{ flexDirection: "row", gap: theme.space.md }}>
-              <TextField style={{ flex: 1 }} label={L.age} placeholder="21" value={age} onChangeText={setAge} keyboardType="number-pad" />
-              <TextField style={{ flex: 1 }} label={L.weight} placeholder="65" value={weight} onChangeText={setWeight} keyboardType="number-pad" />
+            <View style={styles.fieldRow}>
+              <TextField style={styles.flex1} label={L.age} placeholder="21" value={age} onChangeText={setAge} keyboardType="number-pad" />
+              <TextField style={styles.flex1} label={L.weight} placeholder="65" value={weight} onChangeText={setWeight} keyboardType="number-pad" />
             </View>
             <TextField label={L.height} placeholder="170" value={height} onChangeText={setHeight} keyboardType="number-pad" />
 
-            <View style={{ gap: 6 }}>
+            <View style={styles.fieldBlock}>
               <AppText variant="muted">{L.activity}</AppText>
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={styles.chipRow}>
                 {ACTIVITIES.map((ac) => (
                   <Chip key={ac.key} flex active={activity === ac.key} label={ac.label} onPress={() => setActivity(ac.key)} />
                 ))}
@@ -281,52 +266,52 @@ export function OnboardingFlow() {
 
             {/* The wow moment: TDEE + goal appear the second the inputs are complete */}
             {tdee !== null && (
-              <Card style={{ padding: theme.space.lg, backgroundColor: "rgba(5,150,105,0.06)", borderColor: "rgba(5,150,105,0.2)", gap: 6 }}>
-                <AppText variant="subtle" style={{ fontSize: 12 }}>{L.tdeeLabel}</AppText>
-                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-                  <AppText variant="h0" style={{ fontSize: 32, color: theme.colors.accent }}>{tdee.toLocaleString()}</AppText>
+              <Card style={styles.tdeeCard}>
+                <AppText variant="subtle" style={styles.smallLabel}>{L.tdeeLabel}</AppText>
+                <View style={styles.tdeeRow}>
+                  <AppText variant="h0" style={styles.tdeeNum}>{tdee.toLocaleString()}</AppText>
                   <AppText variant="muted">kcal / {vi ? "ngày" : "day"}</AppText>
                 </View>
-                <AppText variant="subtle" style={{ fontSize: 12 }}>
-                  {L.tdeeGoal}: <AppText style={{ fontSize: 12, fontWeight: "800", color: theme.colors.accent }}>{goalCal?.toLocaleString()} kcal</AppText>
+                <AppText variant="subtle" style={styles.smallLabel}>
+                  {L.tdeeGoal}: <AppText style={styles.tdeeGoal}>{goalCal?.toLocaleString()} kcal</AppText>
                 </AppText>
               </Card>
             )}
 
             <Button title={L.next} size="lg" onPress={() => setStep("health")} />
-            <Pressable onPress={() => setStep("goal")} style={{ alignItems: "center", paddingVertical: 6 }}>
-              <AppText style={{ fontSize: 14, fontWeight: "600", color: theme.colors.subtle }}>{L.back}</AppText>
+            <Pressable onPress={() => setStep("goal")} style={styles.backBtn}>
+              <AppText style={styles.backText}>{L.back}</AppText>
             </Pressable>
           </View>
         )}
 
         {/* ── Health & taste ── */}
         {step === "health" && (
-          <View style={{ gap: theme.space.lg }}>
-            <View style={{ gap: 6 }}>
+          <View style={styles.stepWrap}>
+            <View style={styles.headerBlockTight}>
               <AppText variant="h1">{L.healthTitle}</AppText>
               <AppText variant="muted">{L.healthSub}</AppText>
             </View>
 
-            <View style={{ gap: 6 }}>
+            <View style={styles.fieldBlock}>
               <AppText variant="muted">{L.conditions}</AppText>
-              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              <View style={styles.chipRowWrap}>
                 {CONDITIONS.map((c) => (
                   <Chip key={c.key} active={conditions.includes(c.key)} label={c.label} onPress={() => toggleCondition(c.key)} />
                 ))}
               </View>
             </View>
 
-            <View style={{ gap: 6 }}>
+            <View style={styles.fieldBlock}>
               <TextField label={L.taste} placeholder={L.tastePh} value={taste} onChangeText={setTaste} textContentType="none" />
-              <AppText variant="subtle" style={{ fontSize: 11 }}>
+              <AppText variant="subtle" style={styles.tasteHint}>
                 {vi ? "Gợi ý món, Coach và kế hoạch tuần sẽ luôn theo khẩu vị này." : "Suggestions, Coach and weekly plans will always respect this."}
               </AppText>
             </View>
 
             <Button title={saving ? L.saving : L.finish} size="lg" disabled={saving} onPress={finish} />
-            <Pressable onPress={() => setStep("body")} style={{ alignItems: "center", paddingVertical: 6 }}>
-              <AppText style={{ fontSize: 14, fontWeight: "600", color: theme.colors.subtle }}>{L.back}</AppText>
+            <Pressable onPress={() => setStep("body")} style={styles.backBtn}>
+              <AppText style={styles.backText}>{L.back}</AppText>
             </Pressable>
           </View>
         )}
@@ -334,3 +319,76 @@ export function OnboardingFlow() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  flex1: { flex: 1 },
+  pressed: { opacity: 0.7 },
+  pressedFaint: { opacity: 0.8 },
+  smallLabel: { fontSize: 12 },
+  content: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: 70,
+    paddingBottom: 40,
+    gap: theme.space.lg,
+    flexGrow: 1,
+  },
+
+  progressRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  segments: { flex: 1, flexDirection: "row", gap: 6 },
+  segment: { height: 4, flex: 1, borderRadius: 99, backgroundColor: "rgba(8,145,178,0.12)" },
+  segmentActive: { backgroundColor: theme.colors.primary },
+  skipText: { fontSize: 13, color: theme.colors.primary },
+
+  introWrap: { gap: theme.space.lg, flex: 1, justifyContent: "center" },
+  stepWrap: { gap: theme.space.lg },
+  headerBlock: { gap: 8 },
+  headerBlockTight: { gap: 6 },
+  featureCard: { padding: theme.space.lg, gap: theme.space.lg },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  featureIcon: { width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+
+  goalList: { gap: 10 },
+  goalCard: {
+    flexDirection: "row", alignItems: "center", gap: 14,
+    padding: theme.space.lg, borderRadius: theme.radius.card,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  goalCardActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
+  goalIcon: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: "rgba(8,145,178,0.08)",
+    alignItems: "center", justifyContent: "center",
+  },
+  goalIconActive: { backgroundColor: theme.colors.primary },
+  goalLabel: { fontSize: 16, color: theme.colors.text },
+  goalLabelActive: { color: theme.colors.primary },
+
+  fieldBlock: { gap: 6 },
+  fieldRow: { flexDirection: "row", gap: theme.space.md },
+  chipRow: { flexDirection: "row", gap: 8 },
+  chipRowWrap: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  chip: {
+    alignItems: "center", paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  chipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
+  chipText: { fontWeight: "700", color: theme.colors.subtle },
+  chipTextActive: { color: theme.colors.primary },
+
+  tdeeCard: {
+    padding: theme.space.lg, gap: 6,
+    backgroundColor: "rgba(5,150,105,0.06)",
+    borderColor: "rgba(5,150,105,0.2)",
+  },
+  tdeeRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+  tdeeNum: { fontSize: 32, color: theme.colors.accent },
+  tdeeGoal: { fontSize: 12, fontWeight: "800", color: theme.colors.accent },
+
+  tasteHint: { fontSize: 11 },
+  backBtn: { alignItems: "center", paddingVertical: 6 },
+  backText: { fontSize: 14, fontWeight: "600", color: theme.colors.subtle },
+});
