@@ -1,9 +1,9 @@
-// AI HEALTH COACH (tab) — daily insight + context-aware chat with saved history
+// AI HEALTH COACH (tab) — daily insight + context-aware chat with saved history.
+// Flow/state lives here; InsightCard, ChatBubble, TypingDots are in src/features/coach.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Image, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -20,63 +20,17 @@ import {
   type CoachInsight,
   type ChatMessage,
 } from "@/features/coach/api";
+import { compressToBase64 } from "@/features/coach/image";
+import { TypingDots } from "@/features/coach/TypingDots";
+import { InsightCard } from "@/features/coach/InsightCard";
+import { ChatBubble } from "@/features/coach/ChatBubble";
 import { todayKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
-import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 
-function scoreColor(score: number) {
-  if (score >= 75) return "#1A9D58";
-  if (score >= 50) return theme.colors.accent2;
-  return theme.colors.danger;
-}
-
-// Resize + compress a food photo to base64 for the vision coach (smaller = faster).
-async function compressToBase64(uri: string): Promise<{ uri: string; base64: string } | null> {
-  try {
-    const r = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 1024 } }],
-      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-    );
-    return r.base64 ? { uri: r.uri, base64: r.base64 } : null;
-  } catch {
-    return null;
-  }
-}
-
-
-// Animated "typing" dots shown while the coach is composing a reply
-function TypingDots() {
-  const dots = useRef([new Animated.Value(0.3), new Animated.Value(0.3), new Animated.Value(0.3)]).current;
-  useEffect(() => {
-    const anims = dots.map((v, i) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(i * 160),
-          Animated.timing(v, { toValue: 1, duration: 320, useNativeDriver: true }),
-          Animated.timing(v, { toValue: 0.3, duration: 320, useNativeDriver: true }),
-        ])
-      )
-    );
-    anims.forEach((a) => a.start());
-    return () => anims.forEach((a) => a.stop());
-  }, [dots]);
-  return (
-    <View style={{ flexDirection: "row", gap: 5, paddingVertical: 2 }}>
-      {dots.map((v, i) => (
-        <Animated.View
-          key={i}
-          style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: theme.colors.subtle, opacity: v }}
-        />
-      ))}
-    </View>
-  );
-}
-
-// Meal types for the quick-edit buttons on an auto-logged chip
+// Meal types for the quick-edit buttons on a suggested-meal card
 const MEAL_OPTS: [string, string][] = [
   ["breakfast", "Breakfast"],
   ["lunch", "Lunch"],
@@ -125,9 +79,6 @@ export default function CoachTab() {
     ? [["breakfast", "Sáng"], ["lunch", "Trưa"], ["dinner", "Tối"], ["snack", "Phụ"]]
     : MEAL_OPTS;
 
-  // Tap an insight tip/warning → ask the coach to elaborate on it in chat
-  const askAboutTip = (tip: string) =>
-    send(lang === "vi" ? `Nói rõ hơn giúp mình: "${tip}"` : `Tell me more about this: "${tip}"`);
   const headerHeight = useHeaderHeight(); // bù chiều cao AppHeader của tab cho keyboard
   const scrollRef = useRef<ScrollView>(null);
 
@@ -240,6 +191,10 @@ export default function CoachTab() {
     }
   };
 
+  // Tap an insight tip/warning → ask the coach to elaborate on it in chat
+  const askAboutTip = (tip: string) =>
+    send(lang === "vi" ? `Nói rõ hơn giúp mình: "${tip}"` : `Tell me more about this: "${tip}"`);
+
   // Deep-link question (e.g. tapping a plan dish → "how do I cook X?").
   // `askId` makes each tap unique; the ref consumes it once so switching back to
   // the tab later doesn't re-send the same question (tab params persist).
@@ -311,15 +266,15 @@ export default function CoachTab() {
 
   return (
     <Screen padded={false} keyboard keyboardOffset={headerHeight}>
-      <View style={{ flex: 1, paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg }}>
+      <View style={styles.container}>
         {/* Title row */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: theme.space.md }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View style={styles.titleRow}>
+          <View style={styles.titleLeft}>
             <Ionicons name="sparkles" size={20} color={theme.colors.primary} />
             <AppText variant="h1">AI Coach</AppText>
           </View>
           {messages.length > 0 && (
-            <Pressable onPress={onClear} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+            <Pressable onPress={onClear} hitSlop={8} style={({ pressed }) => pressed && styles.dim}>
               <Ionicons name="trash-outline" size={20} color={theme.colors.subtle} />
             </Pressable>
           )}
@@ -327,224 +282,66 @@ export default function CoachTab() {
 
         <ScrollView
           ref={scrollRef}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 20, gap: theme.space.md }}
+          style={styles.flex1}
+          contentContainerStyle={styles.chatContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {/* Disclaimer */}
-          <View style={{
-            flexDirection: "row", alignItems: "center", gap: 6,
-            backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10, padding: 10,
-          }}>
+          <View style={styles.disclaimer}>
             <Ionicons name="information-circle-outline" size={15} color={theme.colors.subtle} />
-            <AppText variant="subtle" style={{ fontSize: 11, flex: 1 }}>
-              {L.disclaimer}
-            </AppText>
+            <AppText variant="subtle" style={styles.disclaimerText}>{L.disclaimer}</AppText>
           </View>
 
           {/* Daily insight */}
-          {loadingInsight ? (
-            <View style={{ paddingVertical: theme.space.xl, alignItems: "center" }}>
-              <ActivityIndicator color={theme.colors.primary} />
-            </View>
-          ) : insight ? (
-            <Card style={{ padding: theme.space.lg, gap: 12 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                <View style={{
-                  width: 64, height: 64, borderRadius: 32,
-                  borderWidth: 5, borderColor: scoreColor(insight.score),
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  <AppText style={{ fontSize: 20, fontWeight: "800", color: scoreColor(insight.score) }}>
-                    {insight.score}
-                  </AppText>
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <AppText variant="h2" style={{ fontSize: 15 }}>Health Score</AppText>
-                  <AppText variant="muted" style={{ fontSize: 13 }}>{insight.summary}</AppText>
-                </View>
-              </View>
-
-              {/* Warnings and tips are tappable → sends them to the chat for elaboration */}
-              {insight.warnings.map((w, i) => (
-                <Pressable
-                  key={i}
-                  onPress={() => askAboutTip(w)}
-                  disabled={sending}
-                  style={({ pressed }) => ({
-                    flexDirection: "row", gap: 8, alignItems: "flex-start",
-                    backgroundColor: pressed ? "rgba(229,72,77,0.16)" : "rgba(229,72,77,0.08)",
-                    borderRadius: 10, padding: 10,
-                  })}
-                >
-                  <Ionicons name="warning-outline" size={16} color={theme.colors.danger} />
-                  <AppText style={{ fontSize: 13, color: theme.colors.danger, flex: 1 }}>{w}</AppText>
-                  <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.colors.danger} style={{ marginTop: 2 }} />
-                </Pressable>
-              ))}
-
-              {insight.tips.map((t, i) => (
-                <Pressable
-                  key={i}
-                  onPress={() => askAboutTip(t)}
-                  disabled={sending}
-                  style={({ pressed }) => ({
-                    flexDirection: "row", gap: 8, alignItems: "flex-start",
-                    opacity: pressed ? 0.6 : 1,
-                  })}
-                >
-                  <Ionicons name="bulb-outline" size={16} color={theme.colors.primary} style={{ marginTop: 1 }} />
-                  <AppText variant="body2" style={{ flex: 1 }}>{t}</AppText>
-                  <Ionicons name="chatbubble-ellipses-outline" size={14} color={theme.colors.subtle} style={{ marginTop: 2 }} />
-                </Pressable>
-              ))}
-            </Card>
-          ) : (
-            <Card style={{ padding: theme.space.lg, alignItems: "center" }}>
-              <AppText variant="muted" style={{ textAlign: "center" }}>
-                {L.insightFail}
-              </AppText>
-            </Card>
-          )}
+          <InsightCard
+            insight={insight}
+            loading={loadingInsight}
+            sending={sending}
+            failText={L.insightFail}
+            onAskTip={askAboutTip}
+          />
 
           {/* Chat messages */}
           {messages.map((m, i) => (
-            <View
+            <ChatBubble
               key={i}
-              style={{
-                alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                maxWidth: "85%",
-                backgroundColor: m.role === "user" ? theme.colors.primary : theme.colors.surface,
-                borderWidth: m.role === "user" ? 0 : 1,
-                borderColor: theme.colors.border,
-                borderRadius: 16, padding: 12,
-              }}
-            >
-              {m.image && (
-                <Image
-                  source={{ uri: m.image }}
-                  style={{ width: 180, height: 180, borderRadius: 10, marginBottom: m.text ? 8 : 0 }}
-                  resizeMode="cover"
-                />
-              )}
-              {!!m.text && (
-                <AppText style={{ fontSize: 14, color: m.role === "user" ? "#fff" : theme.colors.text }}>
-                  {m.text}
-                </AppText>
-              )}
-              {/* Suggested meal: Add card → after adding becomes a Logged chip */}
-              {m.meal && (
-                m.loggedId ? (
-                  <View style={{
-                    marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6,
-                    backgroundColor: "rgba(47,191,113,0.10)", borderRadius: 10, padding: 8,
-                  }}>
-                    <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
-                    <AppText style={{ flex: 1, fontSize: 12, color: theme.colors.text }}>
-                      {L.logged} {m.meal.name} ({m.meal.calories} kcal · {m.meal.mealType})
-                    </AppText>
-                    <Pressable onPress={() => undoLog(i)} hitSlop={6}>
-                      <AppText style={{ fontSize: 12, fontWeight: "700", color: theme.colors.danger }}>{L.undo}</AppText>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <View style={{
-                    marginTop: 8, gap: 8,
-                    backgroundColor: "rgba(8,145,178,0.06)", borderRadius: 10, padding: 10,
-                  }}>
-                    <View>
-                      <AppText style={{ fontSize: 13, fontWeight: "700", color: theme.colors.text }}>
-                        {m.meal.name} · {m.meal.calories} kcal
-                      </AppText>
-                      <AppText variant="subtle" style={{ fontSize: 11 }}>
-                        P {m.meal.protein} · C {m.meal.carbs} · F {m.meal.fat}
-                      </AppText>
-                    </View>
-                    {/* Meal type picker — only when the user is actually eating it */}
-                    {m.eating && (
-                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                        {mealOpts.map(([key, label]) => {
-                          const active = m.meal!.mealType === key;
-                          return (
-                            <Pressable
-                              key={key}
-                              onPress={() => setMealType(i, key)}
-                              style={{
-                                paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99,
-                                borderWidth: 1,
-                                borderColor: active ? theme.colors.primary : theme.colors.border,
-                                backgroundColor: active ? theme.colors.primary : theme.colors.surface,
-                              }}
-                            >
-                              <AppText style={{ fontSize: 11, fontWeight: "700", color: active ? "#fff" : theme.colors.subtle }}>
-                                {label}
-                              </AppText>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    )}
-                    {/* Accept button — only when the user is actually eating it */}
-                    {m.eating && (
-                      <Pressable
-                        onPress={() => acceptLog(i)}
-                        style={({ pressed }) => ({
-                          flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                          backgroundColor: pressed ? theme.colors.primary2 : theme.colors.primary,
-                          borderRadius: 10, paddingVertical: 9,
-                        })}
-                      >
-                        <Ionicons name="add-circle-outline" size={16} color="#fff" />
-                        <AppText style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>{L.add}</AppText>
-                      </Pressable>
-                    )}
-                  </View>
-                )
-              )}
-            </View>
+              m={m}
+              labels={L}
+              mealOpts={mealOpts}
+              onSetMealType={(t) => setMealType(i, t)}
+              onAcceptLog={() => acceptLog(i)}
+              onUndoLog={() => undoLog(i)}
+            />
           ))}
 
           {/* Coach "typing" bubble while composing */}
           {sending && (
-            <View style={{
-              alignSelf: "flex-start", maxWidth: "85%",
-              backgroundColor: theme.colors.surface,
-              borderWidth: 1, borderColor: theme.colors.border,
-              borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12,
-            }}>
+            <View style={styles.typingBubble}>
               <TypingDots />
             </View>
           )}
 
           {/* Empty state: intro + example chips so users discover what Coach can do */}
           {messages.length === 0 && (
-            <View style={{ gap: 10, marginTop: 4 }}>
-              <AppText variant="muted" style={{ fontSize: 13 }}>{L.intro}</AppText>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <View style={styles.emptyBlock}>
+              <AppText variant="muted" style={styles.introText}>{L.intro}</AppText>
+              <View style={styles.chipWrap}>
                 {suggestions.map((q) => (
                   <Pressable
                     key={q}
                     onPress={() => send(q)}
-                    style={({ pressed }) => ({
-                      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99,
-                      borderWidth: 1, borderColor: theme.colors.border,
-                      backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
-                    })}
+                    style={({ pressed }) => [styles.suggestChip, pressed && styles.suggestChipPressed]}
                   >
-                    <AppText style={{ fontSize: 12, color: theme.colors.primary }}>{q}</AppText>
+                    <AppText style={styles.suggestChipText}>{q}</AppText>
                   </Pressable>
                 ))}
                 {/* Photo capability */}
                 <Pressable
                   onPress={attachImage}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99,
-                    borderWidth: 1, borderColor: theme.colors.border,
-                    backgroundColor: pressed ? theme.colors.tint : theme.colors.surface,
-                  })}
+                  style={({ pressed }) => [styles.suggestChip, pressed && styles.suggestChipPressed]}
                 >
-                  <AppText style={{ fontSize: 12, color: theme.colors.primary }}>{L.photo}</AppText>
+                  <AppText style={styles.suggestChipText}>{L.photo}</AppText>
                 </Pressable>
               </View>
             </View>
@@ -553,37 +350,24 @@ export default function CoachTab() {
 
         {/* Pending image preview */}
         {pendingImage && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 8 }}>
+          <View style={styles.pendingRow}>
             <View>
-              <Image source={{ uri: pendingImage.uri }} style={{ width: 56, height: 56, borderRadius: 10 }} />
-              <Pressable
-                onPress={() => setPendingImage(null)}
-                hitSlop={8}
-                style={{
-                  position: "absolute", top: -6, right: -6,
-                  width: 20, height: 20, borderRadius: 10,
-                  backgroundColor: theme.colors.text,
-                  alignItems: "center", justifyContent: "center",
-                }}
-              >
+              <Image source={{ uri: pendingImage.uri }} style={styles.pendingThumb} />
+              <Pressable onPress={() => setPendingImage(null)} hitSlop={8} style={styles.pendingClose}>
                 <Ionicons name="close" size={13} color="#fff" />
               </Pressable>
             </View>
-            <AppText variant="subtle" style={{ fontSize: 12 }}>{L.photoAttached}</AppText>
+            <AppText variant="subtle" style={styles.pendingText}>{L.photoAttached}</AppText>
           </View>
         )}
 
         {/* Input bar */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, paddingBottom: 14 }}>
+        <View style={styles.inputBar}>
           {/* Attach food photo */}
           <Pressable
             onPress={attachImage}
             disabled={sending}
-            style={({ pressed }) => ({
-              width: 44, height: 44, borderRadius: 22,
-              backgroundColor: pressed ? theme.colors.tint : "rgba(8,145,178,0.06)",
-              alignItems: "center", justifyContent: "center",
-            })}
+            style={({ pressed }) => [styles.cameraBtn, pressed && styles.cameraBtnPressed]}
           >
             <Ionicons name="camera-outline" size={20} color={theme.colors.primary} />
           </Pressable>
@@ -592,24 +376,18 @@ export default function CoachTab() {
             onChangeText={setInput}
             placeholder={L.placeholder}
             placeholderTextColor={theme.colors.subtle}
-            style={{
-              flex: 1, backgroundColor: theme.colors.surface,
-              borderWidth: 1, borderColor: theme.colors.border,
-              borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10,
-              fontSize: 14, color: theme.colors.text,
-            }}
+            style={styles.input}
             onSubmitEditing={() => send(input)}
             returnKeyType="send"
           />
           <Pressable
             onPress={() => send(input)}
             disabled={(!input.trim() && !pendingImage) || sending}
-            style={({ pressed }) => ({
-              width: 44, height: 44, borderRadius: 22,
-              backgroundColor: (!input.trim() && !pendingImage) || sending ? theme.colors.border : theme.colors.primary,
-              alignItems: "center", justifyContent: "center",
-              opacity: pressed ? 0.8 : 1,
-            })}
+            style={({ pressed }) => [
+              styles.sendBtn,
+              ((!input.trim() && !pendingImage) || sending) && styles.sendBtnDisabled,
+              pressed && styles.pressedFaint,
+            ]}
           >
             <Ionicons name="send" size={18} color="#fff" />
           </Pressable>
@@ -618,3 +396,71 @@ export default function CoachTab() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  flex1: { flex: 1 },
+  dim: { opacity: 0.5 },
+  pressedFaint: { opacity: 0.8 },
+  container: { flex: 1, paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg },
+
+  titleRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    marginBottom: theme.space.md,
+  },
+  titleLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+
+  chatContent: { paddingBottom: 20, gap: theme.space.md },
+  disclaimer: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10, padding: 10,
+  },
+  disclaimerText: { fontSize: 11, flex: 1 },
+
+  typingBubble: {
+    alignSelf: "flex-start", maxWidth: "85%",
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1, borderColor: theme.colors.border,
+    borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12,
+  },
+
+  emptyBlock: { gap: 10, marginTop: 4 },
+  introText: { fontSize: 13 },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  suggestChip: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99,
+    borderWidth: 1, borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  suggestChipPressed: { backgroundColor: theme.colors.tint },
+  suggestChipText: { fontSize: 12, color: theme.colors.primary },
+
+  pendingRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 8 },
+  pendingThumb: { width: 56, height: 56, borderRadius: 10 },
+  pendingClose: {
+    position: "absolute", top: -6, right: -6,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: theme.colors.text,
+    alignItems: "center", justifyContent: "center",
+  },
+  pendingText: { fontSize: 12 },
+
+  inputBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, paddingBottom: 14 },
+  cameraBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: "rgba(8,145,178,0.06)",
+    alignItems: "center", justifyContent: "center",
+  },
+  cameraBtnPressed: { backgroundColor: theme.colors.tint },
+  input: {
+    flex: 1, backgroundColor: theme.colors.surface,
+    borderWidth: 1, borderColor: theme.colors.border,
+    borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10,
+    fontSize: 14, color: theme.colors.text,
+  },
+  sendBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center", justifyContent: "center",
+  },
+  sendBtnDisabled: { backgroundColor: theme.colors.border },
+});
