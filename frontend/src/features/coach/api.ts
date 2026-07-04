@@ -26,6 +26,7 @@ export type ChatMessage = {
   meal?: SuggestedMeal | null;
   eating?: boolean;       // user is actually eating the dish → show "Add" button
   loggedId?: string | null;
+  createdAt?: string;     // ISO timestamp — drives the day separators in chat
 };
 
 // Strip leftover markdown so chat/insight read as natural text (no **, *, #, `).
@@ -92,6 +93,7 @@ export async function getChatHistory(token: string): Promise<ChatMessage[]> {
     meal: m.meal || null,
     eating: !!m.eating,
     loggedId: m.loggedId || null,
+    createdAt: m.createdAt,
   }));
 }
 

@@ -24,7 +24,7 @@ import { compressToBase64 } from "@/features/coach/image";
 import { TypingDots } from "@/features/coach/TypingDots";
 import { InsightCard } from "@/features/coach/InsightCard";
 import { ChatBubble } from "@/features/coach/ChatBubble";
-import { todayKey } from "@/utils/date";
+import { todayKey, dateKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -170,7 +170,7 @@ export default function CoachTab() {
     if ((!msg && !img) || sending || !token) return;
     const prior = messages; // history to send (before adding this turn — avoids duplication)
     // Quick-action buttons show a short label in the bubble but send the full question to the AI.
-    const userMsg: ChatMessage = { role: "user", text: (displayText ?? msg).trim(), image: img?.uri };
+    const userMsg: ChatMessage = { role: "user", text: (displayText ?? msg).trim(), image: img?.uri, createdAt: new Date().toISOString() };
     setMessages([...prior, userMsg]);
     setInput("");
     setPendingImage(null);
@@ -178,13 +178,13 @@ export default function CoachTab() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     try {
       const { reply, meal, eating, messageId } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
-      setMessages((prev) => [...prev, { id: messageId ?? undefined, role: "coach", text: reply, meal, eating }]);
+      setMessages((prev) => [...prev, { id: messageId ?? undefined, role: "coach", text: reply, meal, eating, createdAt: new Date().toISOString() }]);
     } catch (e: any) {
       const quota = /quota/i.test(String(e?.message || ""));
       const errText = quota
         ? (lang === "vi" ? "Hôm nay đã hết lượt AI miễn phí, thử lại sau nhé." : "Out of free AI quota today — please try again later.")
         : (lang === "vi" ? "Xin lỗi, mình chưa trả lời được. Thử lại nhé." : "Sorry, I couldn't respond right now. Please try again.");
-      setMessages((prev) => [...prev, { role: "coach", text: errText }]);
+      setMessages((prev) => [...prev, { role: "coach", text: errText, createdAt: new Date().toISOString() }]);
     } finally {
       setSending(false);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
@@ -245,6 +245,26 @@ export default function CoachTab() {
     }
   };
 
+  // Day separator label for the chat stream ("Today" / "Yesterday" / short date)
+  const dayLabelFor = (iso?: string) => {
+    const d = iso ? dateKey(new Date(iso)) : todayKey();
+    const now = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+    if (d === dateKey(now)) return lang === "vi" ? "Hôm nay" : "Today";
+    if (d === dateKey(yesterday)) return lang === "vi" ? "Hôm qua" : "Yesterday";
+    return new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
+  const msgDay = (m: ChatMessage) => (m.createdAt ? dateKey(new Date(m.createdAt)) : todayKey());
+
+  // "Jump to latest" appears once the user scrolls up away from the newest message
+  const [showJump, setShowJump] = useState(false);
+  const onChatScroll = (e: any) => {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    const nearBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 150;
+    setShowJump(!nearBottom && messages.length > 0);
+  };
+
   const onClear = () => {
     if (messages.length === 0 || !token) return;
     Alert.alert(L.clearTitle, L.clearMsg, [
@@ -280,12 +300,15 @@ export default function CoachTab() {
           )}
         </View>
 
+        <View style={styles.chatArea}>
         <ScrollView
           ref={scrollRef}
           style={styles.flex1}
           contentContainerStyle={styles.chatContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          onScroll={onChatScroll}
+          scrollEventThrottle={100}
         >
           {/* Disclaimer */}
           <View style={styles.disclaimer}>
@@ -302,18 +325,29 @@ export default function CoachTab() {
             onAskTip={askAboutTip}
           />
 
-          {/* Chat messages */}
-          {messages.map((m, i) => (
-            <ChatBubble
-              key={i}
-              m={m}
-              labels={L}
-              mealOpts={mealOpts}
-              onSetMealType={(t) => setMealType(i, t)}
-              onAcceptLog={() => acceptLog(i)}
-              onUndoLog={() => undoLog(i)}
-            />
-          ))}
+          {/* Chat messages — with a day separator whenever the calendar day changes */}
+          {messages.map((m, i) => {
+            const showSeparator = i === 0 || msgDay(m) !== msgDay(messages[i - 1]);
+            return (
+              <View key={i} style={styles.msgBlock}>
+                {showSeparator && (
+                  <View style={styles.daySep}>
+                    <View style={styles.daySepLine} />
+                    <AppText variant="subtle" style={styles.daySepText}>{dayLabelFor(m.createdAt)}</AppText>
+                    <View style={styles.daySepLine} />
+                  </View>
+                )}
+                <ChatBubble
+                  m={m}
+                  labels={L}
+                  mealOpts={mealOpts}
+                  onSetMealType={(t) => setMealType(i, t)}
+                  onAcceptLog={() => acceptLog(i)}
+                  onUndoLog={() => undoLog(i)}
+                />
+              </View>
+            );
+          })}
 
           {/* Coach "typing" bubble while composing */}
           {sending && (
@@ -347,6 +381,17 @@ export default function CoachTab() {
             </View>
           )}
         </ScrollView>
+
+        {/* Jump to latest — shown when the user scrolled up into older messages */}
+        {showJump && (
+          <Pressable
+            onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
+            style={({ pressed }) => [styles.jumpBtn, pressed && styles.pressedFaint]}
+          >
+            <Ionicons name="chevron-down" size={20} color="#fff" />
+          </Pressable>
+        )}
+        </View>
 
         {/* Pending image preview */}
         {pendingImage && (
@@ -409,7 +454,20 @@ const styles = StyleSheet.create({
   },
   titleLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
 
+  chatArea: { flex: 1 },
   chatContent: { paddingBottom: 20, gap: theme.space.md },
+  msgBlock: { gap: theme.space.md },
+  daySep: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 2 },
+  daySepLine: { flex: 1, height: 0.5, backgroundColor: theme.colors.border },
+  daySepText: { fontSize: 11, fontWeight: "700" },
+  jumpBtn: {
+    position: "absolute", right: 4, bottom: 10,
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center", justifyContent: "center",
+    shadowColor: theme.colors.shadow, shadowOpacity: 0.5,
+    shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 5,
+  },
   disclaimer: {
     flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10, padding: 10,
