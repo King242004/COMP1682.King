@@ -3,12 +3,12 @@ const Post = require("../models/Post");
 const Follow = require("../models/Follow");
 const User = require("../models/User");
 
-// Upload a buffer to Cloudinary, resolve with the secure URL
+// Upload a buffer to Cloudinary, resolve with URL + public_id (kept for deletion)
 function uploadToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder: "healthysnap/posts", transformation: [{ width: 1080, crop: "limit" }] },
-      (err, result) => (err ? reject(err) : resolve(result.secure_url))
+      (err, result) => (err ? reject(err) : resolve({ url: result.secure_url, publicId: result.public_id }))
     );
     stream.end(buffer);
   });
@@ -44,9 +44,12 @@ exports.createPost = async (req, res) => {
     return res.status(400).json({ message: "Caption must be 500 characters or fewer." });
 
   let imageUrl = null;
+  let imagePublicId = null;
   if (req.file) {
     try {
-      imageUrl = await uploadToCloudinary(req.file.buffer);
+      const up = await uploadToCloudinary(req.file.buffer);
+      imageUrl = up.url;
+      imagePublicId = up.publicId;
     } catch {
       return res.status(500).json({ message: "Image upload failed. Please try again." });
     }
@@ -67,6 +70,7 @@ exports.createPost = async (req, res) => {
     user: req.user.id,
     caption: caption ? caption.trim() : "",
     image: imageUrl,
+    imagePublicId,
     meal,
     likes: [],
   });
@@ -120,6 +124,10 @@ exports.deletePost = async (req, res) => {
   if (!post) return res.status(404).json({ message: "Post not found." });
   if (post.user.toString() !== req.user.id)
     return res.status(403).json({ message: "Not authorized to delete this post." });
+  // Best-effort Cloudinary cleanup — posts created before imagePublicId existed keep their file
+  if (post.imagePublicId) {
+    try { await cloudinary.uploader.destroy(post.imagePublicId); } catch {}
+  }
   await post.deleteOne();
   res.json({ message: "Post deleted." });
 };

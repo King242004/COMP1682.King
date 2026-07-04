@@ -16,6 +16,7 @@ export const theme = {
     danger: "#E5484D",
     danger2: "#C9343A",
     tint: "rgba(8, 145, 178, 0.10)",
+    tintSoft: "rgba(8, 145, 178, 0.06)", // lighter tint for large surfaces (search box, chips)
     shadow: "rgba(22, 78, 99, 0.16)",
   },
   // Soft UI Evolution: radius 12-18, depth via layered soft shadows (see shadow())
