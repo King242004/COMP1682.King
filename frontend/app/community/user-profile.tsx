@@ -154,6 +154,7 @@ export default function UserProfileScreen() {
         renderItem={({ item }) => (
           <PostTile
             post={item}
+            showAuthor={false}
             onPress={() => router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } })}
           />
         )}
