@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from 
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import {
-  getPublicProfile, getUserPosts, followUser, unfollowUser,
+  getPublicProfile, getUserPosts, getSavedPosts, followUser, unfollowUser,
   type FeedPost, type PublicProfile,
 } from "@/features/community/api";
 import { PostTile } from "@/features/community/PostTile";
@@ -15,29 +15,43 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
+type ProfileTab = "posts" | "saved";
+
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { token, user } = useAuth();
 
+  // Whether this is my own community profile — decided locally so the Saved tab
+  // and its fetch don't wait on the server profile to load.
+  const viewingSelf = !!user && id === user.id;
+
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [saved, setSaved] = useState<FeedPost[]>([]);
+  const [tab, setTab] = useState<ProfileTab>("posts");
   const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !id) return;
     try {
-      const [p, ps] = await Promise.all([getPublicProfile(token, id), getUserPosts(token, id)]);
+      // Saved is private → only fetched (and shown) on my own profile
+      const [p, ps, sv] = await Promise.all([
+        getPublicProfile(token, id),
+        getUserPosts(token, id),
+        viewingSelf ? getSavedPosts(token) : Promise.resolve([] as FeedPost[]),
+      ]);
       setProfile(p);
       setPosts(ps);
+      setSaved(sv);
       setLoadError(false);
     } catch {
       setLoadError(true);
     }
-  }, [token, id]);
+  }, [token, id, viewingSelf]);
 
-  // Refetch on focus so counts/follow state stay fresh after actions elsewhere
+  // Refetch on focus so counts, follow state and the saved list stay fresh
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onToggleFollow = async () => {
@@ -88,7 +102,9 @@ export default function UserProfileScreen() {
     );
   }
 
-  const isMe = profile.isMe || profile.user.id === user?.id;
+  const isMe = viewingSelf || profile.isMe;
+  const showSaved = isMe && tab === "saved";
+  const data = showSaved ? saved : posts;
 
   const Stat = ({ label, value }: { label: string; value: number }) => (
     <View style={styles.stat}>
@@ -100,7 +116,7 @@ export default function UserProfileScreen() {
   return (
     <Screen padded={false}>
       <FlatList
-        data={posts}
+        data={data}
         keyExtractor={(p) => p.id}
         numColumns={2}
         columnWrapperStyle={styles.gridColumn}
@@ -143,18 +159,45 @@ export default function UserProfileScreen() {
               )}
             </Card>
 
-            <AppText variant="subtle" style={styles.sectionLabel}>Posts</AppText>
+            {/* My posts / Saved tabs (own profile only, WEAR-style) */}
+            {isMe ? (
+              <View style={styles.tabRow}>
+                {([["posts", "My posts"], ["saved", "Saved"]] as const).map(
+                  ([key, label]) => {
+                    const active = tab === key;
+                    return (
+                      <Pressable
+                        key={key}
+                        onPress={() => setTab(key)}
+                        style={({ pressed }) => [styles.tabBtn, active && styles.tabBtnActive, pressed && styles.pressed]}
+                      >
+                        <AppText style={[styles.tabText, active && styles.tabTextActive]}>{label}</AppText>
+                      </Pressable>
+                    );
+                  }
+                )}
+              </View>
+            ) : (
+              <AppText variant="subtle" style={styles.sectionLabel}>Posts</AppText>
+            )}
           </View>
         }
         ListEmptyComponent={
           <Card style={styles.emptyCard}>
-            <AppText variant="muted">No posts yet.</AppText>
+            <AppText style={styles.emptyEmoji}>{showSaved ? "🔖" : "📷"}</AppText>
+            <AppText variant="muted" style={styles.centerText}>
+              {showSaved
+                ? "Nothing saved yet. Tap the bookmark on any post to keep it here."
+                : isMe
+                ? "You haven't posted yet. Share your first healthy meal!"
+                : "No posts yet."}
+            </AppText>
           </Card>
         }
         renderItem={({ item }) => (
           <PostTile
             post={item}
-            showAuthor={false}
+            showAuthor={showSaved} // saved posts come from various people; my own grid doesn't need my name
             onPress={() => router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } })}
           />
         )}
@@ -194,6 +237,14 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11 },
   followBox: { alignSelf: "stretch" },
   sectionLabel: { fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginLeft: 4 },
-  emptyCard: { padding: theme.space.xl, alignItems: "center" },
+  tabRow: { flexDirection: "row", gap: 6 },
+  tabBtn: {
+    flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 12,
+    backgroundColor: theme.colors.tintSoft,
+  },
+  tabBtnActive: { backgroundColor: theme.colors.primary },
+  tabText: { fontSize: 13, fontWeight: "700", color: theme.colors.subtle },
+  tabTextActive: { color: "#fff" },
+  emptyCard: { padding: theme.space.xl, alignItems: "center", gap: 10 },
   pressed: { opacity: 0.7 },
 });

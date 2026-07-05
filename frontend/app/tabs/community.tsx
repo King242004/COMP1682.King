@@ -122,13 +122,6 @@ export default function CommunityScreen() {
             <View style={styles.titleRow}>
               <AppText variant="h1">Community</AppText>
               <View style={styles.titleActions}>
-                {/* Saved: my private bookmark list */}
-                <Pressable
-                  onPress={() => router.push("/community/saved" as any)}
-                  style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
-                >
-                  <Ionicons name="bookmark-outline" size={18} color={theme.colors.primary} />
-                </Pressable>
                 {/* Discover: search people + follow suggestions */}
                 <Pressable
                   onPress={() => router.push("/community/discover")}
