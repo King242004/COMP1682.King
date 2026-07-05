@@ -17,6 +17,8 @@ const postSchema = new mongoose.Schema(
       fat: { type: Number },
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    // WEAR-style bookmark: users who saved this post to their private list
+    saves: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );

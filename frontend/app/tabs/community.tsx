@@ -3,8 +3,9 @@ import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleShe
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { getFeed, getExplore, toggleLike, deletePost, type FeedPost } from "@/features/community/api";
+import { getFeed, getExplore, toggleLike, toggleSave, deletePost, type FeedPost } from "@/features/community/api";
 import { PostCard } from "@/features/community/PostCard";
+import { PostTile } from "@/features/community/PostTile";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -65,6 +66,18 @@ export default function CommunityScreen() {
     }
   };
 
+  // Optimistic bookmark toggle (WEAR-style save)
+  const onSave = async (post: FeedPost) => {
+    if (!token) return;
+    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, isSaved: !p.isSaved } : p)));
+    try {
+      const res = await toggleSave(token, post.id);
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, isSaved: res.saved } : p)));
+    } catch {
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, isSaved: post.isSaved } : p)));
+    }
+  };
+
   const onDelete = (post: FeedPost) => {
     Alert.alert("Delete post?", "This can't be undone.", [
       { text: "Cancel", style: "cancel" },
@@ -84,14 +97,23 @@ export default function CommunityScreen() {
     ]);
   };
 
-  const renderPost = ({ item }: { item: FeedPost }) => (
-    <PostCard
-      post={item}
-      onPressAuthor={() => router.push({ pathname: "/community/user-profile", params: { id: item.author.id } })}
-      onLike={() => onLike(item)}
-      onDelete={item.author.id === user?.id ? () => onDelete(item) : undefined}
-    />
-  );
+  const openDetail = (item: FeedPost) =>
+    router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } });
+
+  // Following = reading list (full cards) · Explore = WEAR-style lookbook grid
+  const renderPost = ({ item }: { item: FeedPost }) =>
+    tab === "explore" ? (
+      <PostTile post={item} onPress={() => openDetail(item)} />
+    ) : (
+      <PostCard
+        post={item}
+        onPressAuthor={() => router.push({ pathname: "/community/user-profile", params: { id: item.author.id } })}
+        onOpen={() => openDetail(item)}
+        onLike={() => onLike(item)}
+        onSave={() => onSave(item)}
+        onDelete={item.author.id === user?.id ? () => onDelete(item) : undefined}
+      />
+    );
 
   const emptyState = loading ? (
     <View style={styles.loadingBox}>
@@ -123,15 +145,25 @@ export default function CommunityScreen() {
   return (
     <Screen padded={false}>
       <FlatList
+        key={tab} // numColumns can't change on a live list — remount when switching tabs
         data={posts}
         keyExtractor={(p) => p.id}
-        contentContainerStyle={styles.listContent}
+        numColumns={tab === "explore" ? 2 : 1}
+        columnWrapperStyle={tab === "explore" ? styles.gridColumn : undefined}
+        contentContainerStyle={[styles.listContent, tab === "explore" && styles.listContentGrid]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(tab, "refresh")} tintColor={theme.colors.primary} />}
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.titleRow}>
               <AppText variant="h1">Community</AppText>
               <View style={styles.titleActions}>
+                {/* Saved: my private bookmark list */}
+                <Pressable
+                  onPress={() => router.push("/community/saved" as any)}
+                  style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
+                >
+                  <Ionicons name="bookmark-outline" size={18} color={theme.colors.primary} />
+                </Pressable>
                 {/* Discover: search people + follow suggestions */}
                 <Pressable
                   onPress={() => router.push("/community/discover")}
@@ -175,6 +207,8 @@ export default function CommunityScreen() {
 
 const styles = StyleSheet.create({
   listContent: { paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40, gap: theme.space.lg },
+  listContentGrid: { gap: theme.space.sm },
+  gridColumn: { gap: theme.space.sm },
   header: { gap: theme.space.md, marginBottom: theme.space.sm },
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   titleActions: { flexDirection: "row", alignItems: "center", gap: 8 },

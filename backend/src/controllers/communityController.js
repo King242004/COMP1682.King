@@ -24,6 +24,8 @@ function shapePost(post, currentUserId) {
     meal: post.meal && post.meal.name ? post.meal : null,
     likeCount: post.likes.length,
     isLiked: post.likes.some((id) => id.toString() === currentUserId),
+    // older docs predate the saves field
+    isSaved: (post.saves || []).some((id) => id.toString() === currentUserId),
     createdAt: post.createdAt,
     author: {
       id: author._id,
@@ -130,6 +132,35 @@ exports.deletePost = async (req, res) => {
   }
   await post.deleteOne();
   res.json({ message: "Post deleted." });
+};
+
+// ─── Single post (detail screen) ─────────────────────────────────────────────
+exports.getPost = async (req, res) => {
+  const post = await Post.findById(req.params.id).populate("user", "name avatar");
+  if (!post) return res.status(404).json({ message: "Post not found." });
+  res.json({ post: shapePost(post, req.user.id) });
+};
+
+// ─── Toggle save (private bookmark, WEAR-style) ──────────────────────────────
+exports.toggleSave = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found." });
+
+  if (!post.saves) post.saves = [];
+  const idx = post.saves.findIndex((id) => id.toString() === req.user.id);
+  if (idx >= 0) post.saves.splice(idx, 1);
+  else post.saves.push(req.user.id);
+  await post.save();
+
+  res.json({ saved: idx < 0 });
+};
+
+// ─── My saved posts ──────────────────────────────────────────────────────────
+exports.getSavedPosts = async (req, res) => {
+  const posts = await Post.find({ saves: req.user.id })
+    .sort({ createdAt: -1 })
+    .populate("user", "name avatar");
+  res.json({ posts: posts.map((p) => shapePost(p, req.user.id)) });
 };
 
 // ─── Toggle like ─────────────────────────────────────────────────────────────

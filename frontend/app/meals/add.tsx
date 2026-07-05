@@ -82,7 +82,8 @@ export default function AddMealScreen() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate meals
   const isPrefilled = !!prefillName;
-  const isFromScan = isPrefilled && source !== "suggest";
+  const isFromCommunity = source === "community"; // "Try this meal" from a community post
+  const isFromScan = isPrefilled && source !== "suggest" && !isFromCommunity;
 
   useEffect(() => {
     setMealName(prefillName ?? "");
@@ -172,6 +173,8 @@ export default function AddMealScreen() {
           <AppText variant="muted" style={styles.subtitle}>
             {isFromScan
               ? "AI detected this meal. Review and adjust if needed."
+              : isFromCommunity
+              ? "From a community post. Review and adjust if needed."
               : isPrefilled
               ? "AI suggested this meal. Review and adjust if needed."
               : isBackdated
@@ -190,13 +193,13 @@ export default function AddMealScreen() {
           </View>
         )}
 
-        {/* AI badge (scan or suggestion) */}
+        {/* Prefill badge (scan, AI suggestion, or community post) */}
         {isPrefilled && (
           <View style={styles.aiBadge}>
-            <AppText style={styles.aiBadgeEmoji}>🤖</AppText>
+            <AppText style={styles.aiBadgeEmoji}>{isFromCommunity ? "🔖" : "🤖"}</AppText>
             <View style={styles.flex1}>
               <AppText style={styles.aiBadgeTitle}>
-                {isFromScan ? "AI detected" : "AI suggested"}
+                {isFromScan ? "AI detected" : isFromCommunity ? "From community" : "AI suggested"}
               </AppText>
               <AppText variant="subtle" style={styles.aiBadgeSub}>
                 You can edit any field before saving.

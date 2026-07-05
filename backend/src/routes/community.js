@@ -4,7 +4,8 @@ const multer = require("multer");
 const protect = require("../middleware/auth");
 const {
   createPost, getFeed, getExplore, getUserPosts, deletePost,
-  toggleLike, followUser, unfollowUser, getPublicProfile,
+  getPost, toggleLike, toggleSave, getSavedPosts,
+  followUser, unfollowUser, getPublicProfile,
   searchUsers, getSuggestions,
 } = require("../controllers/communityController");
 
@@ -66,6 +67,17 @@ router.get("/posts/explore", getExplore);
 
 /**
  * @swagger
+ * /community/posts/saved:
+ *   get:
+ *     summary: Posts I saved (private bookmark list)
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     responses: { 200: { description: List of saved posts } }
+ */
+router.get("/posts/saved", getSavedPosts);
+
+/**
+ * @swagger
  * /community/posts/user/{id}:
  *   get:
  *     summary: Posts by a specific user
@@ -99,6 +111,31 @@ router.delete("/posts/:id", deletePost);
  *     responses: { 200: { description: Like toggled } }
  */
 router.post("/posts/:id/like", toggleLike);
+
+/**
+ * @swagger
+ * /community/posts/{id}/save:
+ *   post:
+ *     summary: Toggle save (bookmark) on a post
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+ *     responses: { 200: { description: Save toggled } }
+ */
+router.post("/posts/:id/save", toggleSave);
+
+/**
+ * @swagger
+ * /community/posts/{id}:
+ *   get:
+ *     summary: A single post (detail view)
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+ *     responses: { 200: { description: The post } }
+ */
+// Registered AFTER /posts/feed|explore|saved|user/:id so those literals win the match
+router.get("/posts/:id", getPost);
 
 /**
  * @swagger

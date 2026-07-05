@@ -1,12 +1,12 @@
 import { useState, useCallback } from "react";
-import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, View } from "react-native";
-import { useLocalSearchParams, useFocusEffect } from "expo-router";
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from "react-native";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import {
-  getPublicProfile, getUserPosts, followUser, unfollowUser, toggleLike, deletePost,
+  getPublicProfile, getUserPosts, followUser, unfollowUser,
   type FeedPost, type PublicProfile,
 } from "@/features/community/api";
-import { PostCard } from "@/features/community/PostCard";
+import { PostTile } from "@/features/community/PostTile";
 import { GOAL_LABEL, initials } from "@/features/community/helpers";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -17,6 +17,7 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { token, user } = useAuth();
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -59,47 +60,8 @@ export default function UserProfileScreen() {
     }
   };
 
-  // Optimistic like toggle, then sync count/state from the server response
-  const onLike = async (post: FeedPost) => {
-    if (!token) return;
-    setPosts((prev) => prev.map((p) =>
-      p.id === post.id
-        ? { ...p, isLiked: !p.isLiked, likeCount: p.likeCount + (p.isLiked ? -1 : 1) }
-        : p
-    ));
-    try {
-      const res = await toggleLike(token, post.id);
-      setPosts((prev) => prev.map((p) =>
-        p.id === post.id ? { ...p, isLiked: res.liked, likeCount: res.likeCount } : p
-      ));
-    } catch {
-      setPosts((prev) => prev.map((p) =>
-        p.id === post.id ? { ...p, isLiked: post.isLiked, likeCount: post.likeCount } : p
-      ));
-    }
-  };
-
-  const onDelete = (post: FeedPost) => {
-    Alert.alert("Delete post?", "This can't be undone.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deletePost(token, post.id);
-            setPosts((prev) => prev.filter((p) => p.id !== post.id));
-            setProfile((prev) => prev
-              ? { ...prev, stats: { ...prev.stats, postCount: Math.max(0, prev.stats.postCount - 1) } }
-              : prev);
-          } catch {
-            Alert.alert("Couldn't delete", "Please try again.");
-          }
-        },
-      },
-    ]);
-  };
+  // Like/save/delete all live on the post-detail screen; this screen refetches
+  // on focus, so counts and the grid stay in sync when the user comes back.
 
   // Loading / error states keep the header so the user can always go back
   if (!profile) {
@@ -140,6 +102,8 @@ export default function UserProfileScreen() {
       <FlatList
         data={posts}
         keyExtractor={(p) => p.id}
+        numColumns={2}
+        columnWrapperStyle={styles.gridColumn}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -188,11 +152,9 @@ export default function UserProfileScreen() {
           </Card>
         }
         renderItem={({ item }) => (
-          <PostCard
+          <PostTile
             post={item}
-            showAuthor={false}
-            onLike={() => onLike(item)}
-            onDelete={isMe ? () => onDelete(item) : undefined}
+            onPress={() => router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } })}
           />
         )}
         showsVerticalScrollIndicator={false}
@@ -202,7 +164,8 @@ export default function UserProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.md },
+  listContent: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.sm },
+  gridColumn: { gap: theme.space.sm },
   header: { gap: theme.space.lg, marginBottom: theme.space.sm },
   stateBox: { paddingHorizontal: theme.space.lg, paddingTop: 60, gap: theme.space.lg },
   loadingBox: { paddingVertical: theme.space.xl, alignItems: "center" },
