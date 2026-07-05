@@ -19,6 +19,7 @@ type User = {
   avatar?: string | null;
   language?: "vi" | "en" | null;
   tastePreferences?: string;
+  isPrivate?: boolean;
 };
 
 type Stats = {

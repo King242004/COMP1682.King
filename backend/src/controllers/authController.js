@@ -23,6 +23,7 @@ const publicUser = (u) => ({
   language: u.language ?? null,
   avatar: u.avatar ?? null,
   tastePreferences: u.tastePreferences || "",
+  isPrivate: !!u.isPrivate,
 });
 
 // ─── Validation helpers ───────────────────────────────────────────────────────

@@ -49,6 +49,18 @@ export default function SettingsScreen() {
   const [goalInput, setGoalInput] = useState("");
   const [isSavingGoal, setIsSavingGoal] = useState(false);
 
+  // Private profile: mirrors user.isPrivate, toggled optimistically
+  const [isPrivate, setIsPrivate] = useState(!!user?.isPrivate);
+  const togglePrivate = async (value: boolean) => {
+    setIsPrivate(value);
+    try {
+      await updateProfile({ isPrivate: value });
+    } catch (e: any) {
+      setIsPrivate(!value); // revert
+      Alert.alert("Error", e.message || "Failed to update privacy.");
+    }
+  };
+
   // Language: effective = saved choice or device default. Tapping persists the choice.
   const currentLang = resolveLanguage(user?.language);
   const [savingLang, setSavingLang] = useState(false);
@@ -279,6 +291,26 @@ export default function SettingsScreen() {
                 </Pressable>
               );
             })}
+          </View>
+        </Card>
+
+        {/* PRIVACY */}
+        <SectionLabel>Privacy</SectionLabel>
+        <Card style={{ paddingVertical: 4, paddingHorizontal: theme.space.lg }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 }}>
+            <IconBox icon="🔒" bg="rgba(8,145,178,0.08)" />
+            <View style={{ flex: 1, gap: 2 }}>
+              <AppText variant="body2" style={{ fontWeight: "600" }}>Private profile</AppText>
+              <AppText variant="subtle" style={{ fontSize: 11 }}>
+                Hide your posts from Explore and other people. Only you can see them.
+              </AppText>
+            </View>
+            <Switch
+              value={isPrivate}
+              onValueChange={togglePrivate}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              thumbColor="#FFFFFF"
+            />
           </View>
         </Card>
 

@@ -81,6 +81,12 @@ exports.createPost = async (req, res) => {
   res.status(201).json({ message: "Posted.", post: shapePost(post, req.user.id) });
 };
 
+// IDs of users with a private profile — their posts are hidden from everyone
+// but themselves. Returned as a list to plug into a `$nin` filter.
+async function privateUserIds() {
+  return User.find({ isPrivate: true }).distinct("_id");
+}
+
 // ─── Feed (strictly people I follow), paginated ──────────────────────────────
 // Own posts are NOT included — an account following nobody sees an empty feed
 // (own posts live in Explore and on the user's own profile).
@@ -88,9 +94,14 @@ exports.getFeed = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);
 
-  const following = await Follow.find({ follower: req.user.id }).distinct("following");
+  const [following, hidden] = await Promise.all([
+    Follow.find({ follower: req.user.id }).distinct("following"),
+    privateUserIds(),
+  ]);
+  // A followed user who went private stops appearing in the feed
+  const authorIds = following.filter((id) => !hidden.some((h) => h.equals(id)));
 
-  const posts = await Post.find({ user: { $in: following } })
+  const posts = await Post.find({ user: { $in: authorIds } })
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
@@ -104,7 +115,10 @@ exports.getExplore = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);
 
-  const posts = await Post.find()
+  // Hide private users' posts, but always keep my own visible to me
+  const hidden = (await privateUserIds()).filter((id) => id.toString() !== req.user.id);
+
+  const posts = await Post.find({ user: { $nin: hidden } })
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
@@ -115,6 +129,12 @@ exports.getExplore = async (req, res) => {
 
 // ─── A user's posts ──────────────────────────────────────────────────────────
 exports.getUserPosts = async (req, res) => {
+  // A private user's posts are only visible to themselves
+  if (req.params.id !== req.user.id) {
+    const owner = await User.findById(req.params.id).select("isPrivate");
+    if (owner?.isPrivate) return res.json({ posts: [], private: true });
+  }
+
   const posts = await Post.find({ user: req.params.id })
     .sort({ createdAt: -1 })
     .populate("user", "name avatar");
@@ -137,8 +157,11 @@ exports.deletePost = async (req, res) => {
 
 // ─── Single post (detail screen) ─────────────────────────────────────────────
 exports.getPost = async (req, res) => {
-  const post = await Post.findById(req.params.id).populate("user", "name avatar");
+  const post = await Post.findById(req.params.id).populate("user", "name avatar isPrivate");
   if (!post) return res.status(404).json({ message: "Post not found." });
+  // Hide a private user's post from everyone but the owner
+  if (post.user?.isPrivate && post.user._id.toString() !== req.user.id)
+    return res.status(403).json({ message: "This post is private." });
   res.json({ post: shapePost(post, req.user.id) });
 };
 
@@ -354,7 +377,7 @@ exports.getFollowing = async (req, res) => {
 
 // ─── Public profile (counts + isFollowing) ───────────────────────────────────
 exports.getPublicProfile = async (req, res) => {
-  const user = await User.findById(req.params.id).select("name avatar goal createdAt");
+  const user = await User.findById(req.params.id).select("name avatar goal createdAt isPrivate");
   if (!user) return res.status(404).json({ message: "User not found." });
 
   const [postCount, followers, followingCount, isFollowing] = await Promise.all([
@@ -363,6 +386,8 @@ exports.getPublicProfile = async (req, res) => {
     Follow.countDocuments({ follower: user._id }),
     Follow.exists({ follower: req.user.id, following: user._id }),
   ]);
+
+  const isMe = user._id.toString() === req.user.id;
 
   res.json({
     user: {
@@ -374,6 +399,9 @@ exports.getPublicProfile = async (req, res) => {
     },
     stats: { postCount, followers, following: followingCount },
     isFollowing: !!isFollowing,
-    isMe: user._id.toString() === req.user.id,
+    isMe,
+    isPrivate: !!user.isPrivate,
+    // The grid is hidden when someone else views a private profile
+    postsHidden: !!user.isPrivate && !isMe,
   });
 };

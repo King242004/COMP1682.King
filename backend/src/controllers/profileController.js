@@ -56,7 +56,7 @@ exports.getProfile = async (req, res) => {
 
 // ─── Update Profile ───────────────────────────────────────────────────────────
 exports.updateProfile = async (req, res) => {
-  const { name, gender, age, weight, height, goal, activityLevel, conditions, calorieGoal, avatar, language, tastePreferences } = req.body;
+  const { name, gender, age, weight, height, goal, activityLevel, conditions, calorieGoal, avatar, language, tastePreferences, isPrivate } = req.body;
 
   // Validation
   if (age && (age < 10 || age > 120))
@@ -107,6 +107,7 @@ exports.updateProfile = async (req, res) => {
       ...(language && { language }),
       // !== undefined so an empty string can CLEAR saved preferences
       ...(tastePreferences !== undefined && { tastePreferences: String(tastePreferences).trim().slice(0, 300) }),
+      ...(isPrivate !== undefined && { isPrivate: !!isPrivate }),
     },
     { new: true }
   ).select("-password");

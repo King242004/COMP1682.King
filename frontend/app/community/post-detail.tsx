@@ -8,6 +8,7 @@ import { initials, timeAgo } from "@/features/community/helpers";
 import { resolveLanguage } from "@/utils/language";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
+import { ActionSheet } from "@/ui/components/ActionSheet";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
@@ -20,6 +21,7 @@ export default function PostDetailScreen() {
 
   const [post, setPost] = useState<FeedPost | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !id) return;
@@ -136,7 +138,16 @@ export default function PostDetailScreen() {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Post" />
+        <ScreenHeader
+          title="Post"
+          right={
+            isMine ? (
+              <Pressable onPress={() => setMenuOpen(true)} hitSlop={10} style={({ pressed }) => [pressed && styles.pressed]}>
+                <Ionicons name="ellipsis-horizontal" size={22} color={theme.colors.text} />
+              </Pressable>
+            ) : undefined
+          }
+        />
 
         <Card style={styles.card}>
           {/* Author row */}
@@ -180,7 +191,7 @@ export default function PostDetailScreen() {
             </View>
           )}
 
-          {/* Like + save + delete */}
+          {/* Like + save (edit/delete moved to the ⋯ menu in the header) */}
           <View style={styles.footerRow}>
             <Pressable onPress={onLike} hitSlop={8} style={({ pressed }) => [styles.likeBtn, pressed && styles.pressed]}>
               <Ionicons
@@ -200,20 +211,6 @@ export default function PostDetailScreen() {
                   color={post.isSaved ? theme.colors.primary : theme.colors.subtle}
                 />
               </Pressable>
-              {isMine && (
-                <Pressable
-                  onPress={() => router.push({ pathname: "/community/post-edit" as any, params: { id: post.id } })}
-                  hitSlop={8}
-                  style={({ pressed }) => [pressed && styles.pressed]}
-                >
-                  <Ionicons name="create-outline" size={21} color={theme.colors.subtle} />
-                </Pressable>
-              )}
-              {isMine && (
-                <Pressable onPress={onDelete} hitSlop={8} style={({ pressed }) => [pressed && styles.pressed]}>
-                  <Ionicons name="trash-outline" size={20} color={theme.colors.subtle} />
-                </Pressable>
-              )}
             </View>
           </View>
         </Card>
@@ -235,6 +232,19 @@ export default function PostDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      <ActionSheet
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        items={[
+          {
+            label: "Edit post",
+            icon: "create-outline",
+            onPress: () => router.push({ pathname: "/community/post-edit" as any, params: { id: post.id } }),
+          },
+          { label: "Delete post", icon: "trash-outline", destructive: true, onPress: onDelete },
+        ]}
+      />
     </Screen>
   );
 }
