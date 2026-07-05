@@ -15,7 +15,8 @@ type Tab = "feed" | "explore";
 export default function CommunityScreen() {
   const router = useRouter();
   const { token } = useAuth();
-  const [tab, setTab] = useState<Tab>("feed");
+  // Explore first (WEAR-style): new users land on content, not an empty feed
+  const [tab, setTab] = useState<Tab>("explore");
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(false);   // focus/initial load → centered spinner
   const [refreshing, setRefreshing] = useState(false); // pull-to-refresh only
@@ -68,14 +69,14 @@ export default function CommunityScreen() {
   const openDetail = (item: FeedPost) =>
     router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } });
 
-  // WEAR-style lookbook: both tabs are 2-column grids; save/delete live in post-detail.
-  // Following shows "x ago" under each tile like WEAR's フォロー中 feed.
+  // WEAR-style lookbook: both tabs are 2-column grids with time-ago under tiles;
+  // save/delete live in post-detail.
   const renderPost = ({ item }: { item: FeedPost }) => (
     <PostTile
       post={item}
       onPress={() => openDetail(item)}
       onLike={() => onLike(item)}
-      showTime={tab === "feed"}
+      showTime
     />
   );
 
@@ -100,7 +101,7 @@ export default function CommunityScreen() {
       </AppText>
       <AppText variant="muted" style={styles.centerText}>
         {tab === "feed"
-          ? "Follow people in Explore, or share your first healthy meal."
+          ? "Follow people in Explore to see their meals here."
           : "Be the first to share a healthy meal!"}
       </AppText>
     </Card>
@@ -145,7 +146,7 @@ export default function CommunityScreen() {
             </View>
             {/* Feed / Explore toggle */}
             <View style={styles.tabRow}>
-              {([["feed", "Following"], ["explore", "Explore"]] as [Tab, string][]).map(([key, label]) => {
+              {([["explore", "Explore"], ["feed", "Following"]] as [Tab, string][]).map(([key, label]) => {
                 const active = tab === key;
                 return (
                   <Pressable

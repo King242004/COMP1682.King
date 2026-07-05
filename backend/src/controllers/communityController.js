@@ -81,15 +81,16 @@ exports.createPost = async (req, res) => {
   res.status(201).json({ message: "Posted.", post: shapePost(post, req.user.id) });
 };
 
-// ─── Feed (people I follow + my own), paginated ──────────────────────────────
+// ─── Feed (strictly people I follow), paginated ──────────────────────────────
+// Own posts are NOT included — an account following nobody sees an empty feed
+// (own posts live in Explore and on the user's own profile).
 exports.getFeed = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);
 
   const following = await Follow.find({ follower: req.user.id }).distinct("following");
-  const authorIds = [...following, req.user.id];
 
-  const posts = await Post.find({ user: { $in: authorIds } })
+  const posts = await Post.find({ user: { $in: following } })
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
