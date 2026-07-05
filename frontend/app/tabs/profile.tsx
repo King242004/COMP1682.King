@@ -1,67 +1,29 @@
 import { useCallback, useState } from "react";
-import { Alert, ScrollView, View, Pressable, Image } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { initials } from "@/utils/name";
+import { goalLabel, activityLabel } from "@/utils/profileOptions";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
-
-function initials(name: string) {
-  const parts = name.split(" ").filter(Boolean);
-  const first = parts[0]?.[0] ?? "H";
-  const last = parts[parts.length - 1]?.[0] ?? "";
-  return (first + last).toUpperCase();
-}
-
-const GOALS = [
-  { key: "lose_weight", label: "Lose Weight" },
-  { key: "gain_muscle", label: "Gain Muscle" },
-  { key: "eat_healthy", label: "Eat Healthy" },
-];
-
-const ACTIVITY_LEVELS = [
-  { key: "sedentary", label: "Sedentary" },
-  { key: "moderate", label: "Moderate" },
-  { key: "active", label: "Active" },
-];
+import { SectionLabel } from "@/ui/components/SectionLabel";
 
 // Settings-style row: tinted icon square + label + value on the right
 function SettingRow({ icon, label, value, last }: {
   icon: string; label: string; value: string; last?: boolean;
 }) {
   return (
-    <View style={{
-      flexDirection: "row", alignItems: "center", gap: 12,
-      paddingVertical: 12,
-      borderBottomWidth: last ? 0 : 0.5,
-      borderBottomColor: theme.colors.border,
-    }}>
-      <View style={{
-        width: 34, height: 34, borderRadius: 11,
-        backgroundColor: "rgba(8,145,178,0.08)",
-        alignItems: "center", justifyContent: "center",
-      }}>
-        <AppText style={{ fontSize: 15 }}>{icon}</AppText>
+    <View style={[styles.row, last && styles.rowLast]}>
+      <View style={styles.rowIcon}>
+        <AppText style={styles.rowIconText}>{icon}</AppText>
       </View>
-      <AppText variant="body2" style={{ flex: 1, color: theme.colors.muted }}>{label}</AppText>
-      <AppText variant="body2" style={{ fontWeight: "700", textTransform: "capitalize" }}>{value}</AppText>
+      <AppText variant="body2" style={styles.rowLabel}>{label}</AppText>
+      <AppText variant="body2" style={styles.rowValue}>{value}</AppText>
     </View>
-  );
-}
-
-// Small uppercase section label above each settings card
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <AppText variant="subtle" style={{
-      fontSize: 12, fontWeight: "700",
-      textTransform: "uppercase", letterSpacing: 0.6,
-      marginBottom: -6, marginLeft: 4,
-    }}>
-      {children}
-    </AppText>
   );
 }
 
@@ -117,61 +79,35 @@ export default function ProfileScreen() {
 
   return (
     <Screen padded={false}>
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: theme.space.lg,
-          paddingTop: theme.space.lg,
-          paddingBottom: 40,
-          gap: theme.space.lg,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ gap: 4 }}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.titleBlock}>
           <AppText variant="h1">Profile</AppText>
           <AppText variant="muted">Your account and app settings.</AppText>
         </View>
 
         {/* User card — avatar (tap to change) + name + edit button */}
-        <Card style={{ padding: theme.space.xl }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: theme.space.md }}>
+        <Card style={styles.userCard}>
+          <View style={styles.userRow}>
             <Pressable onPress={handlePickAvatar} disabled={isUploadingAvatar}>
-              <View style={{
-                width: 68, height: 68, borderRadius: 24,
-                backgroundColor: theme.colors.tint,
-                alignItems: "center", justifyContent: "center",
-                overflow: "hidden",
-                opacity: isUploadingAvatar ? 0.5 : 1,
-              }}>
+              <View style={[styles.avatar, isUploadingAvatar && styles.avatarUploading]}>
                 {user?.avatar ? (
-                  <Image source={{ uri: user.avatar }} style={{ width: "100%", height: "100%" }} />
+                  <Image source={{ uri: user.avatar }} style={styles.avatarImg} />
                 ) : (
-                  <AppText variant="h2" style={{ color: theme.colors.primary }}>{badge}</AppText>
+                  <AppText variant="h2" style={styles.avatarBadge}>{badge}</AppText>
                 )}
               </View>
-              <View style={{
-                position: "absolute", bottom: -2, right: -2,
-                backgroundColor: theme.colors.primary,
-                width: 22, height: 22, borderRadius: 11,
-                alignItems: "center", justifyContent: "center",
-                borderWidth: 2, borderColor: theme.colors.surface,
-              }}>
-                <AppText style={{ fontSize: 11, color: "#fff" }}>📷</AppText>
+              <View style={styles.avatarCam}>
+                <AppText style={styles.avatarCamText}>📷</AppText>
               </View>
             </Pressable>
-            <View style={{ flex: 1, gap: 4 }}>
+            <View style={styles.userInfo}>
               <AppText variant="h2">{displayName}</AppText>
-              <AppText variant="muted" style={{ fontSize: 13 }}>{user?.email}</AppText>
-              {isUploadingAvatar && (
-                <AppText variant="muted" style={{ fontSize: 11 }}>Uploading...</AppText>
-              )}
+              <AppText variant="muted" style={styles.userEmail}>{user?.email}</AppText>
+              {isUploadingAvatar && <AppText variant="muted" style={styles.uploadingText}>Uploading...</AppText>}
             </View>
             <Pressable
               onPress={() => router.push("/profile/edit" as any)}
-              style={({ pressed }) => ({
-                width: 40, height: 40, borderRadius: 14,
-                backgroundColor: pressed ? "rgba(8,145,178,0.18)" : theme.colors.tint,
-                alignItems: "center", justifyContent: "center",
-              })}
+              style={({ pressed }) => [styles.editBtn, pressed && styles.editBtnPressed]}
             >
               <Ionicons name="pencil" size={18} color={theme.colors.primary} />
             </Pressable>
@@ -180,96 +116,113 @@ export default function ProfileScreen() {
 
         {/* Health stats strip */}
         {stats && (
-          <View style={{ flexDirection: "row", gap: theme.space.md }}>
-            <Card style={{ flex: 1, padding: theme.space.lg, alignItems: "center", gap: 4 }}>
-              <AppText variant="h0" style={{ fontSize: 24, color: theme.colors.primary }}>
-                {stats.bmi ?? "—"}
-              </AppText>
-              <AppText variant="subtle" style={{ fontSize: 12 }}>BMI</AppText>
-              {stats.bmiCategory && (
-                <AppText variant="subtle" style={{ fontSize: 11 }}>{stats.bmiCategory}</AppText>
-              )}
+          <View style={styles.statsStrip}>
+            <Card style={styles.statCard}>
+              <AppText variant="h0" style={styles.statValue}>{stats.bmi ?? "—"}</AppText>
+              <AppText variant="subtle" style={styles.statLabel}>BMI</AppText>
+              {stats.bmiCategory && <AppText variant="subtle" style={styles.statSub}>{stats.bmiCategory}</AppText>}
             </Card>
-            <Card style={{ flex: 1, padding: theme.space.lg, alignItems: "center", gap: 4 }}>
-              <AppText variant="h0" style={{ fontSize: 24, color: theme.colors.primary }}>
-                {stats.tdee ?? "—"}
-              </AppText>
-              <AppText variant="subtle" style={{ fontSize: 12 }}>TDEE (kcal)</AppText>
+            <Card style={styles.statCard}>
+              <AppText variant="h0" style={styles.statValue}>{stats.tdee ?? "—"}</AppText>
+              <AppText variant="subtle" style={styles.statLabel}>TDEE (kcal)</AppText>
             </Card>
-            <Card style={{ flex: 1, padding: theme.space.lg, alignItems: "center", gap: 4 }}>
-              <AppText variant="h0" style={{ fontSize: 24, color: theme.colors.primary }}>
-                {user?.calorieGoal ?? 2000}
-              </AppText>
-              <AppText variant="subtle" style={{ fontSize: 12 }}>Goal (kcal)</AppText>
+            <Card style={styles.statCard}>
+              <AppText variant="h0" style={styles.statValue}>{user?.calorieGoal ?? 2000}</AppText>
+              <AppText variant="subtle" style={styles.statLabel}>Goal (kcal)</AppText>
             </Card>
           </View>
         )}
 
-        {/* Health details — settings-row style */}
+        {/* Health details */}
         <SectionLabel>Health details</SectionLabel>
-        <Card style={{ paddingVertical: 4, paddingHorizontal: theme.space.lg }}>
+        <Card style={styles.detailCard}>
           <SettingRow icon="👤" label="Gender" value={user?.gender ?? "—"} />
           <SettingRow icon="🎂" label="Age" value={user?.age ? `${user.age} years` : "—"} />
           <SettingRow icon="⚖️" label="Weight" value={user?.weight ? `${user.weight} kg` : "—"} />
           <SettingRow icon="📏" label="Height" value={user?.height ? `${user.height} cm` : "—"} />
-          <SettingRow icon="🎯" label="Goal" value={GOALS.find((g) => g.key === user?.goal)?.label ?? "—"} />
-          <SettingRow icon="🏃" label="Activity" value={ACTIVITY_LEVELS.find((a) => a.key === user?.activityLevel)?.label ?? "—"} />
+          <SettingRow icon="🎯" label="Goal" value={goalLabel(user?.goal) ?? "—"} />
+          <SettingRow icon="🏃" label="Activity" value={activityLabel(user?.activityLevel) ?? "—"} />
           <SettingRow icon="❤️" label="Conditions" value={user?.conditions?.length ? user.conditions.join(", ") : "None"} />
           <SettingRow icon="🍜" label="Taste" value={user?.tastePreferences?.trim() ? user.tastePreferences : "—"} last />
         </Card>
 
         {/* Account */}
         <SectionLabel>Account</SectionLabel>
-        <Card style={{ paddingVertical: 4, paddingHorizontal: theme.space.lg }}>
+        <Card style={styles.detailCard}>
           {/* Settings entry — app preferences live in their own screen */}
           <Pressable
             onPress={() => router.push("/profile/settings" as any)}
-            style={({ pressed }) => ({
-              flexDirection: "row", alignItems: "center", gap: 12,
-              paddingVertical: 12,
-              borderBottomWidth: 0.5,
-              borderBottomColor: theme.colors.border,
-              opacity: pressed ? 0.6 : 1,
-            })}
+            style={({ pressed }) => [styles.accountRow, styles.accountRowDivider, pressed && styles.dim]}
           >
-            <View style={{
-              width: 34, height: 34, borderRadius: 11,
-              backgroundColor: "rgba(8,145,178,0.08)",
-              alignItems: "center", justifyContent: "center",
-            }}>
+            <View style={styles.accountIcon}>
               <Ionicons name="settings-outline" size={17} color={theme.colors.primary} />
             </View>
-            <AppText variant="body2" style={{ flex: 1, fontWeight: "600" }}>
-              Settings
-            </AppText>
+            <AppText variant="body2" style={styles.accountLabel}>Settings</AppText>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
-          <Pressable
-            onPress={handleLogout}
-            style={({ pressed }) => ({
-              flexDirection: "row", alignItems: "center", gap: 12,
-              paddingVertical: 12,
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <View style={{
-              width: 34, height: 34, borderRadius: 11,
-              backgroundColor: "rgba(229,72,77,0.10)",
-              alignItems: "center", justifyContent: "center",
-            }}>
+          <Pressable onPress={handleLogout} style={({ pressed }) => [styles.accountRow, pressed && styles.dim]}>
+            <View style={styles.accountIconDanger}>
               <Ionicons name="log-out-outline" size={17} color={theme.colors.danger} />
             </View>
-            <AppText variant="body2" style={{ flex: 1, fontWeight: "700", color: theme.colors.danger }}>
-              Log out
-            </AppText>
+            <AppText variant="body2" style={styles.accountLabelDanger}>Log out</AppText>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
         </Card>
 
-        <AppText variant="subtle" style={{ textAlign: "center", fontSize: 11, marginTop: 4 }}>
-          MealMate · v1.0.0
-        </AppText>
+        <AppText variant="subtle" style={styles.version}>MealMate · v1.0.0</AppText>
       </ScrollView>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40, gap: theme.space.lg },
+  titleBlock: { gap: 4 },
+
+  // Setting/detail row
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: theme.colors.border },
+  rowLast: { borderBottomWidth: 0 },
+  rowIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: theme.colors.tintSoft, alignItems: "center", justifyContent: "center" },
+  rowIconText: { fontSize: 15 },
+  rowLabel: { flex: 1, color: theme.colors.muted },
+  rowValue: { fontWeight: "700", textTransform: "capitalize" },
+
+  // User card
+  userCard: { padding: theme.space.xl },
+  userRow: { flexDirection: "row", alignItems: "center", gap: theme.space.md },
+  avatar: { width: 68, height: 68, borderRadius: 24, backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  avatarUploading: { opacity: 0.5 },
+  avatarImg: { width: "100%", height: "100%" },
+  avatarBadge: { color: theme.colors.primary },
+  avatarCam: {
+    position: "absolute", bottom: -2, right: -2, backgroundColor: theme.colors.primary,
+    width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: theme.colors.surface,
+  },
+  avatarCamText: { fontSize: 11, color: "#fff" },
+  userInfo: { flex: 1, gap: 4 },
+  userEmail: { fontSize: 13 },
+  uploadingText: { fontSize: 11 },
+  editBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center" },
+  editBtnPressed: { backgroundColor: "rgba(8,145,178,0.18)" },
+
+  // Stats strip
+  statsStrip: { flexDirection: "row", gap: theme.space.md },
+  statCard: { flex: 1, padding: theme.space.lg, alignItems: "center", gap: 4 },
+  statValue: { fontSize: 24, color: theme.colors.primary },
+  statLabel: { fontSize: 12 },
+  statSub: { fontSize: 11 },
+
+  detailCard: { paddingVertical: 4, paddingHorizontal: theme.space.lg },
+
+  // Account rows
+  accountRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  accountRowDivider: { borderBottomWidth: 0.5, borderBottomColor: theme.colors.border },
+  accountIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: theme.colors.tintSoft, alignItems: "center", justifyContent: "center" },
+  accountIconDanger: { width: 34, height: 34, borderRadius: 11, backgroundColor: "rgba(229,72,77,0.10)", alignItems: "center", justifyContent: "center" },
+  accountLabel: { flex: 1, fontWeight: "600" },
+  accountLabelDanger: { flex: 1, fontWeight: "700", color: theme.colors.danger },
+  dim: { opacity: 0.6 },
+
+  version: { textAlign: "center", fontSize: 11, marginTop: 4 },
+});

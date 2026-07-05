@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, Switch, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,31 +11,15 @@ import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
+import { SectionLabel } from "@/ui/components/SectionLabel";
 import { TextField } from "@/ui/components/TextField";
 import { resolveLanguage, type Lang } from "@/utils/language";
-
-// Small uppercase section label above each settings card
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <AppText variant="subtle" style={{
-      fontSize: 12, fontWeight: "700",
-      textTransform: "uppercase", letterSpacing: 0.6,
-      marginBottom: -6, marginLeft: 4,
-    }}>
-      {children}
-    </AppText>
-  );
-}
 
 // Reusable icon square for settings rows
 function IconBox({ icon, bg }: { icon: string; bg?: string }) {
   return (
-    <View style={{
-      width: 34, height: 34, borderRadius: 11,
-      backgroundColor: bg ?? "rgba(8,145,178,0.08)",
-      alignItems: "center", justifyContent: "center",
-    }}>
-      <AppText style={{ fontSize: 15 }}>{icon}</AppText>
+    <View style={[styles.iconBox, bg ? { backgroundColor: bg } : null]}>
+      <AppText style={styles.iconBoxText}>{icon}</AppText>
     </View>
   );
 }
@@ -146,73 +130,38 @@ export default function SettingsScreen() {
 
   return (
     <Screen padded={false}>
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: theme.space.lg,
-          paddingTop: 60,
-          paddingBottom: 40,
-          gap: theme.space.lg,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ScreenHeader title="Settings" />
-        <AppText variant="muted" style={{ marginTop: -8 }}>Tune how MealMate works for you.</AppText>
+        <AppText variant="muted" style={styles.subtitle}>Tune how MealMate works for you.</AppText>
 
         {/* GOALS */}
         <SectionLabel>Goals</SectionLabel>
-        <Card style={{ paddingVertical: 4, paddingHorizontal: theme.space.lg }}>
+        <Card style={styles.card}>
           <Pressable
             onPress={() => {
               setGoalInput(String(user?.calorieGoal ?? 2000));
               setEditingGoal((v) => !v);
             }}
-            style={({ pressed }) => ({
-              flexDirection: "row", alignItems: "center", gap: 12,
-              paddingVertical: 12,
-              opacity: pressed ? 0.6 : 1,
-            })}
+            style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}
           >
             <IconBox icon="🎯" />
-            <View style={{ flex: 1, gap: 2 }}>
-              <AppText variant="body2" style={{ fontWeight: "600" }}>Daily calorie goal</AppText>
-              <AppText variant="subtle" style={{ fontSize: 11 }}>
-                Tap to set manually or switch back to auto
-              </AppText>
+            <View style={styles.rowText}>
+              <AppText variant="body2" style={styles.rowTitle}>Daily calorie goal</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>Tap to set manually or switch back to auto</AppText>
             </View>
-            <AppText variant="body2" style={{ fontWeight: "700", color: theme.colors.primary }}>
-              {(user?.calorieGoal ?? 2000).toLocaleString()} kcal
-            </AppText>
-            <Ionicons
-              name={editingGoal ? "chevron-up" : "chevron-forward"}
-              size={16}
-              color={theme.colors.subtle}
-            />
+            <AppText variant="body2" style={styles.rowValue}>{(user?.calorieGoal ?? 2000).toLocaleString()} kcal</AppText>
+            <Ionicons name={editingGoal ? "chevron-up" : "chevron-forward"} size={16} color={theme.colors.subtle} />
           </Pressable>
 
           {editingGoal && (
-            <View style={{ gap: theme.space.md, paddingBottom: theme.space.md }}>
-              <TextField
-                label="Custom goal (kcal)"
-                placeholder="e.g. 1800"
-                value={goalInput}
-                onChangeText={setGoalInput}
-                keyboardType="number-pad"
-              />
-              <View style={{ flexDirection: "row", gap: theme.space.md }}>
-                <View style={{ flex: 1 }}>
-                  <Button
-                    title="Use auto (TDEE)"
-                    variant="secondary"
-                    onPress={handleAutoGoal}
-                    disabled={isSavingGoal}
-                  />
+            <View style={styles.goalEditor}>
+              <TextField label="Custom goal (kcal)" placeholder="e.g. 1800" value={goalInput} onChangeText={setGoalInput} keyboardType="number-pad" />
+              <View style={styles.goalBtns}>
+                <View style={styles.flex1}>
+                  <Button title="Use auto (TDEE)" variant="secondary" onPress={handleAutoGoal} disabled={isSavingGoal} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Button
-                    title={isSavingGoal ? "Saving..." : "Save"}
-                    onPress={handleSaveGoal}
-                    disabled={isSavingGoal}
-                  />
+                <View style={styles.flex1}>
+                  <Button title={isSavingGoal ? "Saving..." : "Save"} onPress={handleSaveGoal} disabled={isSavingGoal} />
                 </View>
               </View>
             </View>
@@ -221,19 +170,12 @@ export default function SettingsScreen() {
 
         {/* INSIGHTS */}
         <SectionLabel>Insights</SectionLabel>
-        <Card style={{ paddingVertical: 4, paddingHorizontal: theme.space.lg }}>
-          <Pressable
-            onPress={() => router.push("/profile/progress" as any)}
-            style={({ pressed }) => ({
-              flexDirection: "row", alignItems: "center", gap: 12,
-              paddingVertical: 12,
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <IconBox icon="📊" bg="rgba(47,191,113,0.12)" />
-            <View style={{ flex: 1, gap: 2 }}>
-              <AppText variant="body2" style={{ fontWeight: "600" }}>Progress & statistics</AppText>
-              <AppText variant="subtle" style={{ fontSize: 11 }}>Calories, nutrition and weekly trends</AppText>
+        <Card style={styles.card}>
+          <Pressable onPress={() => router.push("/profile/progress" as any)} style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}>
+            <IconBox icon="📊" bg="rgba(5,150,105,0.12)" />
+            <View style={styles.rowText}>
+              <AppText variant="body2" style={styles.rowTitle}>Progress & statistics</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>Calories, nutrition and weekly trends</AppText>
             </View>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
@@ -241,12 +183,12 @@ export default function SettingsScreen() {
 
         {/* REMINDERS */}
         <SectionLabel>Reminders</SectionLabel>
-        <Card style={{ paddingVertical: 4, paddingHorizontal: theme.space.lg }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 }}>
+        <Card style={styles.card}>
+          <View style={styles.rowStatic}>
             <IconBox icon="⏰" bg="rgba(255,138,61,0.12)" />
-            <View style={{ flex: 1, gap: 2 }}>
-              <AppText variant="body2" style={{ fontWeight: "600" }}>Meal reminder</AppText>
-              <AppText variant="subtle" style={{ fontSize: 11 }}>Daily at 7:00 PM</AppText>
+            <View style={styles.rowText}>
+              <AppText variant="body2" style={styles.rowTitle}>Meal reminder</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>Daily at 7:00 PM</AppText>
             </View>
             <Switch
               value={reminderOn}
@@ -259,17 +201,15 @@ export default function SettingsScreen() {
 
         {/* LANGUAGE */}
         <SectionLabel>Language</SectionLabel>
-        <Card style={{ padding: theme.space.lg, gap: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Card style={styles.langCard}>
+          <View style={styles.langHead}>
             <IconBox icon="🌐" />
-            <View style={{ flex: 1, gap: 2 }}>
-              <AppText variant="body2" style={{ fontWeight: "600" }}>AI Coach language</AppText>
-              <AppText variant="subtle" style={{ fontSize: 11 }}>
-                Coach trả lời theo ngôn ngữ này. Mặc định theo điện thoại.
-              </AppText>
+            <View style={styles.rowText}>
+              <AppText variant="body2" style={styles.rowTitle}>AI Coach language</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>Coach trả lời theo ngôn ngữ này. Mặc định theo điện thoại.</AppText>
             </View>
           </View>
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={styles.langBtns}>
             {([["en", "English"], ["vi", "Tiếng Việt"]] as ["en" | "vi", string][]).map(([key, label]) => {
               const active = currentLang === key;
               return (
@@ -277,17 +217,9 @@ export default function SettingsScreen() {
                   key={key}
                   onPress={() => handleSetLanguage(key)}
                   disabled={savingLang}
-                  style={({ pressed }) => ({
-                    flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: active ? theme.colors.primary : theme.colors.border,
-                    backgroundColor: active ? theme.colors.tint : theme.colors.surface,
-                    opacity: pressed ? 0.7 : 1,
-                  })}
+                  style={({ pressed }) => [styles.langBtn, active ? styles.langBtnActive : styles.langBtnIdle, pressed && styles.dim]}
                 >
-                  <AppText style={{ fontWeight: "700", color: active ? theme.colors.primary : theme.colors.subtle }}>
-                    {label}
-                  </AppText>
+                  <AppText style={[styles.langBtnText, active && styles.langBtnTextActive]}>{label}</AppText>
                 </Pressable>
               );
             })}
@@ -296,14 +228,12 @@ export default function SettingsScreen() {
 
         {/* PRIVACY */}
         <SectionLabel>Privacy</SectionLabel>
-        <Card style={{ paddingVertical: 4, paddingHorizontal: theme.space.lg }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 }}>
-            <IconBox icon="🔒" bg="rgba(8,145,178,0.08)" />
-            <View style={{ flex: 1, gap: 2 }}>
-              <AppText variant="body2" style={{ fontWeight: "600" }}>Private profile</AppText>
-              <AppText variant="subtle" style={{ fontSize: 11 }}>
-                Hide your posts from Explore and other people. Only you can see them.
-              </AppText>
+        <Card style={styles.card}>
+          <View style={styles.rowStatic}>
+            <IconBox icon="🔒" />
+            <View style={styles.rowText}>
+              <AppText variant="body2" style={styles.rowTitle}>Private profile</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>Hide your posts from Explore and other people. Only you can see them.</AppText>
             </View>
             <Switch
               value={isPrivate}
@@ -315,10 +245,40 @@ export default function SettingsScreen() {
         </Card>
 
         {/* ABOUT */}
-        <AppText variant="subtle" style={{ textAlign: "center", fontSize: 11, marginTop: 4 }}>
-          MealMate · v1.0.0
-        </AppText>
+        <AppText variant="subtle" style={styles.version}>MealMate · v1.0.0</AppText>
       </ScrollView>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
+  subtitle: { marginTop: -8 },
+  card: { paddingVertical: 4, paddingHorizontal: theme.space.lg },
+
+  iconBox: { width: 34, height: 34, borderRadius: 11, backgroundColor: theme.colors.tintSoft, alignItems: "center", justifyContent: "center" },
+  iconBoxText: { fontSize: 15 },
+
+  rowTappable: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  rowStatic: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  rowText: { flex: 1, gap: 2 },
+  rowTitle: { fontWeight: "600" },
+  rowSub: { fontSize: 11 },
+  rowValue: { fontWeight: "700", color: theme.colors.primary },
+  dim: { opacity: 0.6 },
+
+  goalEditor: { gap: theme.space.md, paddingBottom: theme.space.md },
+  goalBtns: { flexDirection: "row", gap: theme.space.md },
+  flex1: { flex: 1 },
+
+  langCard: { padding: theme.space.lg, gap: 12 },
+  langHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  langBtns: { flexDirection: "row", gap: 8 },
+  langBtn: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 12, borderWidth: 1.5 },
+  langBtnActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
+  langBtnIdle: { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+  langBtnText: { fontWeight: "700", color: theme.colors.subtle },
+  langBtnTextActive: { color: theme.colors.primary },
+
+  version: { textAlign: "center", fontSize: 11, marginTop: 4 },
+});
