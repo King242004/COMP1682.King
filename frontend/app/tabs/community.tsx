@@ -1,10 +1,9 @@
 import { useState, useCallback } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { getFeed, getExplore, toggleLike, toggleSave, deletePost, type FeedPost } from "@/features/community/api";
-import { PostCard } from "@/features/community/PostCard";
+import { getFeed, getExplore, toggleLike, type FeedPost } from "@/features/community/api";
 import { PostTile } from "@/features/community/PostTile";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -15,7 +14,7 @@ type Tab = "feed" | "explore";
 
 export default function CommunityScreen() {
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [tab, setTab] = useState<Tab>("feed");
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(false);   // focus/initial load → centered spinner
@@ -66,54 +65,19 @@ export default function CommunityScreen() {
     }
   };
 
-  // Optimistic bookmark toggle (WEAR-style save)
-  const onSave = async (post: FeedPost) => {
-    if (!token) return;
-    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, isSaved: !p.isSaved } : p)));
-    try {
-      const res = await toggleSave(token, post.id);
-      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, isSaved: res.saved } : p)));
-    } catch {
-      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, isSaved: post.isSaved } : p)));
-    }
-  };
-
-  const onDelete = (post: FeedPost) => {
-    Alert.alert("Delete post?", "This can't be undone.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await deletePost(token, post.id);
-            setPosts((prev) => prev.filter((p) => p.id !== post.id));
-          } catch {
-            Alert.alert("Couldn't delete", "Please try again.");
-          }
-        },
-      },
-    ]);
-  };
-
   const openDetail = (item: FeedPost) =>
     router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } });
 
-  // Following = reading list (full cards) · Explore = WEAR-style lookbook grid
-  const renderPost = ({ item }: { item: FeedPost }) =>
-    tab === "explore" ? (
-      <PostTile post={item} onPress={() => openDetail(item)} />
-    ) : (
-      <PostCard
-        post={item}
-        onPressAuthor={() => router.push({ pathname: "/community/user-profile", params: { id: item.author.id } })}
-        onOpen={() => openDetail(item)}
-        onLike={() => onLike(item)}
-        onSave={() => onSave(item)}
-        onDelete={item.author.id === user?.id ? () => onDelete(item) : undefined}
-      />
-    );
+  // WEAR-style lookbook: both tabs are 2-column grids; save/delete live in post-detail.
+  // Following shows "x ago" under each tile like WEAR's フォロー中 feed.
+  const renderPost = ({ item }: { item: FeedPost }) => (
+    <PostTile
+      post={item}
+      onPress={() => openDetail(item)}
+      onLike={() => onLike(item)}
+      showTime={tab === "feed"}
+    />
+  );
 
   const emptyState = loading ? (
     <View style={styles.loadingBox}>
@@ -145,12 +109,11 @@ export default function CommunityScreen() {
   return (
     <Screen padded={false}>
       <FlatList
-        key={tab} // numColumns can't change on a live list — remount when switching tabs
         data={posts}
         keyExtractor={(p) => p.id}
-        numColumns={tab === "explore" ? 2 : 1}
-        columnWrapperStyle={tab === "explore" ? styles.gridColumn : undefined}
-        contentContainerStyle={[styles.listContent, tab === "explore" && styles.listContentGrid]}
+        numColumns={2}
+        columnWrapperStyle={styles.gridColumn}
+        contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(tab, "refresh")} tintColor={theme.colors.primary} />}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -206,8 +169,7 @@ export default function CommunityScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40, gap: theme.space.lg },
-  listContentGrid: { gap: theme.space.sm },
+  listContent: { paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40, gap: theme.space.sm },
   gridColumn: { gap: theme.space.sm },
   header: { gap: theme.space.md, marginBottom: theme.space.sm },
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
