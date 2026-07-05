@@ -106,12 +106,19 @@ export default function UserProfileScreen() {
   const showSaved = isMe && tab === "saved";
   const data = showSaved ? saved : posts;
 
-  const Stat = ({ label, value }: { label: string; value: number }) => (
-    <View style={styles.stat}>
+  const Stat = ({ label, value, onPress }: { label: string; value: number; onPress?: () => void }) => (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [styles.stat, pressed && onPress && styles.pressed]}
+    >
       <AppText variant="h2" style={styles.statValue}>{value}</AppText>
       <AppText variant="subtle" style={styles.statLabel}>{label}</AppText>
-    </View>
+    </Pressable>
   );
+
+  const openList = (listType: "followers" | "following") =>
+    router.push({ pathname: "/community/user-list" as any, params: { id: profile.user.id, type: listType } });
 
   return (
     <Screen padded={false}>
@@ -143,8 +150,8 @@ export default function UserProfileScreen() {
 
               <View style={styles.statsRow}>
                 <Stat label="Posts" value={profile.stats.postCount} />
-                <Stat label="Followers" value={profile.stats.followers} />
-                <Stat label="Following" value={profile.stats.following} />
+                <Stat label="Followers" value={profile.stats.followers} onPress={() => openList("followers")} />
+                <Stat label="Following" value={profile.stats.following} onPress={() => openList("following")} />
               </View>
 
               {!isMe && (

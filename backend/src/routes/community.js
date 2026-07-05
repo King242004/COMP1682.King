@@ -3,9 +3,9 @@ const router = express.Router();
 const multer = require("multer");
 const protect = require("../middleware/auth");
 const {
-  createPost, getFeed, getExplore, getUserPosts, deletePost,
+  createPost, getFeed, getExplore, getUserPosts, deletePost, updatePost,
   getPost, toggleLike, toggleSave, getSavedPosts,
-  followUser, unfollowUser, getPublicProfile,
+  followUser, unfollowUser, getPublicProfile, getFollowers, getFollowing,
   searchUsers, getSuggestions,
 } = require("../controllers/communityController");
 
@@ -102,6 +102,28 @@ router.delete("/posts/:id", deletePost);
 
 /**
  * @swagger
+ * /community/posts/{id}:
+ *   patch:
+ *     summary: Edit your own post (caption, image, or meal)
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image: { type: string, format: binary }
+ *               caption: { type: string }
+ *               removeImage: { type: boolean }
+ *               removeMeal: { type: boolean }
+ *     responses: { 200: { description: Post updated } }
+ */
+router.patch("/posts/:id", upload.single("image"), updatePost);
+
+/**
+ * @swagger
  * /community/posts/{id}/like:
  *   post:
  *     summary: Toggle like on a post
@@ -178,6 +200,30 @@ router.get("/users/search", searchUsers);
  *     responses: { 200: { description: Suggested users } }
  */
 router.get("/suggestions", getSuggestions);
+
+/**
+ * @swagger
+ * /community/users/{id}/followers:
+ *   get:
+ *     summary: Users who follow this user
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+ *     responses: { 200: { description: Follower list } }
+ */
+router.get("/users/:id/followers", getFollowers);
+
+/**
+ * @swagger
+ * /community/users/{id}/following:
+ *   get:
+ *     summary: Users this user follows
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+ *     responses: { 200: { description: Following list } }
+ */
+router.get("/users/:id/following", getFollowing);
 
 /**
  * @swagger

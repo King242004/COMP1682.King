@@ -201,6 +201,15 @@ export default function PostDetailScreen() {
                 />
               </Pressable>
               {isMine && (
+                <Pressable
+                  onPress={() => router.push({ pathname: "/community/post-edit" as any, params: { id: post.id } })}
+                  hitSlop={8}
+                  style={({ pressed }) => [pressed && styles.pressed]}
+                >
+                  <Ionicons name="create-outline" size={21} color={theme.colors.subtle} />
+                </Pressable>
+              )}
+              {isMine && (
                 <Pressable onPress={onDelete} hitSlop={8} style={({ pressed }) => [pressed && styles.pressed]}>
                   <Ionicons name="trash-outline" size={20} color={theme.colors.subtle} />
                 </Pressable>
