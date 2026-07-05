@@ -152,8 +152,9 @@ export default function UserProfileScreen() {
 
               <View style={styles.statsRow}>
                 <Stat label="Posts" value={profile.stats.postCount} />
-                <Stat label="Followers" value={profile.stats.followers} onPress={() => openList("followers")} />
-                <Stat label="Following" value={profile.stats.following} onPress={() => openList("following")} />
+                {/* A private profile's follow lists are locked to non-owners */}
+                <Stat label="Followers" value={profile.stats.followers} onPress={postsHidden ? undefined : () => openList("followers")} />
+                <Stat label="Following" value={profile.stats.following} onPress={postsHidden ? undefined : () => openList("following")} />
               </View>
 
               {!isMe && (
