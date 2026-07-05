@@ -149,7 +149,7 @@ export default function HomeScreen() {
   );
 
   const onDeleteExercise = (item: Exercise) => {
-    Alert.alert("Delete workout?", `Remove "${item.name}" from today.`, [
+    Alert.alert("Delete workout?", `Remove "${item.name}" from your log.`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -423,8 +423,12 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <AppText variant="h2">Activity</AppText>
-            {isToday && (
-              <Pressable onPress={() => router.push("/exercise/log-workout" as any)} hitSlop={10}>
+            {/* Allow logging for today AND past days (back-dating), never the future */}
+            {selectedDate <= todayKey && (
+              <Pressable
+                onPress={() => router.push({ pathname: "/exercise/log-workout" as any, params: { date: selectedDate } })}
+                hitSlop={10}
+              >
                 <AppText variant="subtle" style={styles.sectionLink}>Log workout</AppText>
               </Pressable>
             )}
@@ -455,11 +459,10 @@ export default function HomeScreen() {
                   <AppText variant="body2" numberOfLines={1} style={styles.mealName}>{ex.name}</AppText>
                   <AppText variant="subtle" style={styles.workoutMeta}>{ex.durationMin} min · {ex.caloriesBurned} kcal</AppText>
                 </View>
-                {isToday && (
-                  <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => pressed && styles.pressedDim}>
-                    <Ionicons name="trash-outline" size={16} color={theme.colors.subtle} />
-                  </Pressable>
-                )}
+                {/* Delete works on any viewed day, not just today */}
+                <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => pressed && styles.pressedDim}>
+                  <Ionicons name="trash-outline" size={16} color={theme.colors.subtle} />
+                </Pressable>
               </View>
             ))}
           </Card>

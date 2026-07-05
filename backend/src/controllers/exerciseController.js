@@ -3,6 +3,12 @@ const User = require("../models/User");
 
 const DEFAULT_WEIGHT = 60; // fallback (kg) when the user hasn't set weight yet
 
+// Local YYYY-MM-DD for "today" — string compare works for date keys
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // MET formula: kcal = MET × weight(kg) × hours
 function computeBurned(met, durationMin, weight) {
   const w = weight && weight > 0 ? weight : DEFAULT_WEIGHT;
@@ -24,6 +30,10 @@ exports.addExercise = async (req, res) => {
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
+
+  // Time rule: log today or back-fill a past day; a FUTURE workout is not allowed
+  if (date > todayKey())
+    return res.status(400).json({ message: "Cannot log a workout for a future date." });
 
   // Pull current weight to compute the burn
   const user = await User.findById(req.user.id).select("weight");
