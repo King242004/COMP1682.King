@@ -7,6 +7,7 @@ export type FeedPost = {
   meal: { name: string; calories: number; protein: number; carbs: number; fat: number } | null;
   likeCount: number;
   isLiked: boolean;
+  isSaved: boolean;
   createdAt: string;
   author: { id: string; name: string; avatar: string | null };
 };
@@ -55,6 +56,20 @@ export async function getUserPosts(token: string, userId: string): Promise<FeedP
 
 export async function toggleLike(token: string, postId: string): Promise<{ liked: boolean; likeCount: number }> {
   return apiRequest(`/community/posts/${postId}/like`, "POST", undefined, token);
+}
+
+export async function toggleSave(token: string, postId: string): Promise<{ saved: boolean }> {
+  return apiRequest(`/community/posts/${postId}/save`, "POST", undefined, token);
+}
+
+export async function getSavedPosts(token: string): Promise<FeedPost[]> {
+  const data = await apiRequest(`/community/posts/saved`, "GET", undefined, token);
+  return data.posts || [];
+}
+
+export async function getPost(token: string, postId: string): Promise<FeedPost> {
+  const data = await apiRequest(`/community/posts/${postId}`, "GET", undefined, token);
+  return data.post;
 }
 
 export async function deletePost(token: string, postId: string): Promise<void> {

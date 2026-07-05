@@ -47,8 +47,10 @@ export default function RootLayout() {
           <Stack.Screen name="profile/settings" />
           <Stack.Screen name="profile/progress" />
           <Stack.Screen name="community/post-create" />
+          <Stack.Screen name="community/post-detail" />
           <Stack.Screen name="community/user-profile" />
           <Stack.Screen name="community/discover" />
+          <Stack.Screen name="community/saved" />
           <Stack.Screen name="meals/add" />
           <Stack.Screen name="meals/edit" />
           <Stack.Screen name="meals/detail" />
