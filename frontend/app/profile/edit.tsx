@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { GOALS, ACTIVITY_LEVELS } from "@/utils/profileOptions";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -9,18 +10,6 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
-
-const GOALS = [
-  { key: "lose_weight", label: "Lose Weight" },
-  { key: "gain_muscle", label: "Gain Muscle" },
-  { key: "eat_healthy", label: "Eat Healthy" },
-];
-
-const ACTIVITY_LEVELS = [
-  { key: "sedentary", label: "Sedentary" },
-  { key: "moderate", label: "Moderate" },
-  { key: "active", label: "Active" },
-];
 
 const CONDITIONS = ["diabetes", "hypertension", "none"];
 
@@ -40,14 +29,13 @@ export default function EditProfileScreen() {
   const [taste, setTaste] = useState(user?.tastePreferences ?? "");
 
   const toggleCondition = (c: string) => {
-    if (c === "none") {
-      setConditions([]);
-      return;
-    }
+    if (c === "none") { setConditions([]); return; }
     setConditions((prev) =>
       prev.includes(c) ? prev.filter((x) => x !== c) : [...prev.filter((x) => x !== "none"), c]
     );
   };
+
+  const isConditionActive = (c: string) => (c === "none" ? conditions.length === 0 : conditions.includes(c));
 
   const handleSave = async () => {
     // Validate name first (backend rule: 2+ chars, letters only)
@@ -76,9 +64,7 @@ export default function EditProfileScreen() {
     setIsSaving(true);
     try {
       // Only call changeName if it actually changed (saves a request)
-      if (trimmedName !== user?.name) {
-        await changeName(trimmedName);
-      }
+      if (trimmedName !== user?.name) await changeName(trimmedName);
       await updateProfile({
         gender: gender || undefined,
         age: age ? Number(age) : undefined,
@@ -100,42 +86,32 @@ export default function EditProfileScreen() {
   return (
     <Screen padded={false} keyboard>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg }}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title="Edit profile" />
 
-        <Card style={{ padding: theme.space.lg, gap: theme.space.md }}>
+        <Card style={styles.card}>
           {/* Name */}
-          <TextField
-            label="Name"
-            placeholder="e.g. John Doe"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
+          <TextField label="Name" placeholder="e.g. John Doe" value={name} onChangeText={setName} autoCapitalize="words" />
 
           {/* Gender */}
-          <View style={{ gap: 6 }}>
+          <View style={styles.field}>
             <AppText variant="muted">Gender</AppText>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {["male", "female"].map((g) => (
-                <Pressable
-                  key={g}
-                  onPress={() => setGender(g as "male" | "female")}
-                  style={{
-                    flex: 1, padding: 10, borderRadius: 12, alignItems: "center",
-                    borderWidth: 1.5,
-                    borderColor: gender === g ? theme.colors.primary : theme.colors.border,
-                    backgroundColor: gender === g ? theme.colors.tint : theme.colors.surface,
-                  }}
-                >
-                  <AppText style={{ color: gender === g ? theme.colors.primary : theme.colors.subtle, textTransform: "capitalize" }}>
-                    {g}
-                  </AppText>
-                </Pressable>
-              ))}
+            <View style={styles.genderRow}>
+              {["male", "female"].map((g) => {
+                const active = gender === g;
+                return (
+                  <Pressable
+                    key={g}
+                    onPress={() => setGender(g as "male" | "female")}
+                    style={[styles.genderBtn, active ? styles.optActive : styles.optIdle]}
+                  >
+                    <AppText style={[styles.optText, active && styles.optTextActive]}>{g}</AppText>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
@@ -144,82 +120,52 @@ export default function EditProfileScreen() {
           <TextField label="Height (cm)" placeholder="e.g. 170" value={height} onChangeText={setHeight} keyboardType="number-pad" />
 
           {/* Goal */}
-          <View style={{ gap: 6 }}>
+          <View style={styles.field}>
             <AppText variant="muted">Goal</AppText>
-            <View style={{ gap: 6 }}>
-              {GOALS.map((g) => (
-                <Pressable
-                  key={g.key}
-                  onPress={() => setGoal(g.key)}
-                  style={{
-                    padding: 12, borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: goal === g.key ? theme.colors.primary : theme.colors.border,
-                    backgroundColor: goal === g.key ? theme.colors.tint : theme.colors.surface,
-                  }}
-                >
-                  <AppText style={{ color: goal === g.key ? theme.colors.primary : theme.colors.subtle }}>
-                    {g.label}
-                  </AppText>
-                </Pressable>
-              ))}
+            <View style={styles.stackList}>
+              {GOALS.map((g) => {
+                const active = goal === g.key;
+                return (
+                  <Pressable key={g.key} onPress={() => setGoal(g.key)} style={[styles.stackBtn, active ? styles.optActive : styles.optIdle]}>
+                    <AppText style={[styles.optTextLeft, active && styles.optTextActive]}>{g.label}</AppText>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
           {/* Activity Level */}
-          <View style={{ gap: 6 }}>
+          <View style={styles.field}>
             <AppText variant="muted">Activity Level</AppText>
-            <View style={{ gap: 6 }}>
-              {ACTIVITY_LEVELS.map((a) => (
-                <Pressable
-                  key={a.key}
-                  onPress={() => setActivityLevel(a.key)}
-                  style={{
-                    padding: 12, borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: activityLevel === a.key ? theme.colors.primary : theme.colors.border,
-                    backgroundColor: activityLevel === a.key ? theme.colors.tint : theme.colors.surface,
-                  }}
-                >
-                  <AppText style={{ color: activityLevel === a.key ? theme.colors.primary : theme.colors.subtle }}>
-                    {a.label}
-                  </AppText>
-                </Pressable>
-              ))}
+            <View style={styles.stackList}>
+              {ACTIVITY_LEVELS.map((a) => {
+                const active = activityLevel === a.key;
+                return (
+                  <Pressable key={a.key} onPress={() => setActivityLevel(a.key)} style={[styles.stackBtn, active ? styles.optActive : styles.optIdle]}>
+                    <AppText style={[styles.optTextLeft, active && styles.optTextActive]}>{a.label}</AppText>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
           {/* Conditions */}
-          <View style={{ gap: 6 }}>
+          <View style={styles.field}>
             <AppText variant="muted">Health Conditions</AppText>
-            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-              {CONDITIONS.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => toggleCondition(c)}
-                  style={{
-                    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderColor: (c === "none" ? conditions.length === 0 : conditions.includes(c))
-                      ? theme.colors.primary : theme.colors.border,
-                    backgroundColor: (c === "none" ? conditions.length === 0 : conditions.includes(c))
-                      ? theme.colors.tint : theme.colors.surface,
-                  }}
-                >
-                  <AppText style={{
-                    color: (c === "none" ? conditions.length === 0 : conditions.includes(c))
-                      ? theme.colors.primary : theme.colors.subtle,
-                    textTransform: "capitalize",
-                  }}>
-                    {c}
-                  </AppText>
-                </Pressable>
-              ))}
+            <View style={styles.chipWrap}>
+              {CONDITIONS.map((c) => {
+                const active = isConditionActive(c);
+                return (
+                  <Pressable key={c} onPress={() => toggleCondition(c)} style={[styles.chip, active ? styles.optActive : styles.optIdle]}>
+                    <AppText style={[styles.optText, active && styles.optTextActive]}>{c}</AppText>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
           {/* Taste preferences — read by every AI feature (suggest, coach, weekly plan) */}
-          <View style={{ gap: 6 }}>
+          <View style={styles.field}>
             <TextField
               label="Taste preferences"
               placeholder="e.g. không ăn hải sản, thích gà, ít cay..."
@@ -227,16 +173,16 @@ export default function EditProfileScreen() {
               onChangeText={setTaste}
               textContentType="none"
             />
-            <AppText variant="subtle" style={{ fontSize: 11 }}>
+            <AppText variant="subtle" style={styles.hint}>
               AI (gợi ý món, Coach, kế hoạch tuần) sẽ luôn tôn trọng khẩu vị này.
             </AppText>
           </View>
 
-          <View style={{ flexDirection: "row", gap: theme.space.md }}>
-            <View style={{ flex: 1 }}>
+          <View style={styles.actions}>
+            <View style={styles.actionBtn}>
               <Button title="Cancel" variant="secondary" onPress={() => router.back()} />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.actionBtn}>
               <Button title={isSaving ? "Saving..." : "Save"} onPress={handleSave} disabled={isSaving} />
             </View>
           </View>
@@ -245,3 +191,24 @@ export default function EditProfileScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
+  card: { padding: theme.space.lg, gap: theme.space.md },
+  field: { gap: 6 },
+  // Shared option-button visual states
+  optActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
+  optIdle: { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+  optText: { color: theme.colors.subtle, textTransform: "capitalize" },
+  optTextLeft: { color: theme.colors.subtle },
+  optTextActive: { color: theme.colors.primary },
+  genderRow: { flexDirection: "row", gap: 8 },
+  genderBtn: { flex: 1, padding: 10, borderRadius: 12, alignItems: "center", borderWidth: 1.5 },
+  stackList: { gap: 6 },
+  stackBtn: { padding: 12, borderRadius: 12, borderWidth: 1.5 },
+  chipWrap: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1.5 },
+  hint: { fontSize: 11 },
+  actions: { flexDirection: "row", gap: theme.space.md },
+  actionBtn: { flex: 1 },
+});
