@@ -164,6 +164,51 @@ exports.getSavedPosts = async (req, res) => {
   res.json({ posts: posts.map((p) => shapePost(p, req.user.id)) });
 };
 
+// ─── Edit own post (caption + optional image / meal changes) ─────────────────
+exports.updatePost = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found." });
+  if (post.user.toString() !== req.user.id)
+    return res.status(403).json({ message: "Not authorized to edit this post." });
+
+  if (typeof req.body.caption === "string") {
+    if (req.body.caption.length > 500)
+      return res.status(400).json({ message: "Caption must be 500 characters or fewer." });
+    post.caption = req.body.caption.trim();
+  }
+
+  // Image: a new upload replaces the old one; removeImage clears it. Either way,
+  // the previous Cloudinary file is destroyed best-effort (older posts lack an id).
+  if (req.file) {
+    if (post.imagePublicId) {
+      try { await cloudinary.uploader.destroy(post.imagePublicId); } catch {}
+    }
+    try {
+      const up = await uploadToCloudinary(req.file.buffer);
+      post.image = up.url;
+      post.imagePublicId = up.publicId;
+    } catch {
+      return res.status(500).json({ message: "Image upload failed. Please try again." });
+    }
+  } else if (req.body.removeImage === "true") {
+    if (post.imagePublicId) {
+      try { await cloudinary.uploader.destroy(post.imagePublicId); } catch {}
+    }
+    post.image = null;
+    post.imagePublicId = null;
+  }
+
+  if (req.body.removeMeal === "true") post.meal = undefined;
+
+  // A post must still carry something after the edit
+  if (!post.caption && !post.image && !(post.meal && post.meal.name))
+    return res.status(400).json({ message: "A post needs a caption, photo, or meal." });
+
+  await post.save();
+  await post.populate("user", "name avatar");
+  res.json({ message: "Post updated.", post: shapePost(post, req.user.id) });
+};
+
 // ─── Toggle like ─────────────────────────────────────────────────────────────
 exports.toggleLike = async (req, res) => {
   const post = await Post.findById(req.params.id);
@@ -270,6 +315,41 @@ exports.getSuggestions = async (req, res) => {
       sameGoal: !!sameGoal,
     })),
   });
+};
+
+// Shape a list of user docs with isFollowing from the current viewer's angle
+async function withFollowState(users, viewerId) {
+  const ids = users.map((u) => u._id);
+  const followingIds = await Follow.find({
+    follower: viewerId,
+    following: { $in: ids },
+  }).distinct("following");
+  const set = new Set(followingIds.map((id) => id.toString()));
+  return users.map((u) => ({
+    id: u._id,
+    name: u.name,
+    avatar: u.avatar || null,
+    goal: u.goal,
+    isFollowing: set.has(u._id.toString()),
+  }));
+}
+
+// ─── Followers of a user ──────────────────────────────────────────────────────
+exports.getFollowers = async (req, res) => {
+  const rels = await Follow.find({ following: req.params.id })
+    .sort({ createdAt: -1 })
+    .populate("follower", "name avatar goal");
+  const users = rels.map((r) => r.follower).filter(Boolean);
+  res.json({ users: await withFollowState(users, req.user.id) });
+};
+
+// ─── Who a user follows ───────────────────────────────────────────────────────
+exports.getFollowing = async (req, res) => {
+  const rels = await Follow.find({ follower: req.params.id })
+    .sort({ createdAt: -1 })
+    .populate("following", "name avatar goal");
+  const users = rels.map((r) => r.following).filter(Boolean);
+  res.json({ users: await withFollowState(users, req.user.id) });
 };
 
 // ─── Public profile (counts + isFollowing) ───────────────────────────────────

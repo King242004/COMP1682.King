@@ -80,6 +80,16 @@ export async function getPublicProfile(token: string, userId: string): Promise<P
   return apiRequest(`/community/users/${userId}`, "GET", undefined, token);
 }
 
+export async function getFollowers(token: string, userId: string): Promise<DiscoverUser[]> {
+  const data = await apiRequest(`/community/users/${userId}/followers`, "GET", undefined, token);
+  return data.users || [];
+}
+
+export async function getFollowing(token: string, userId: string): Promise<DiscoverUser[]> {
+  const data = await apiRequest(`/community/users/${userId}/following`, "GET", undefined, token);
+  return data.users || [];
+}
+
 export async function followUser(token: string, userId: string): Promise<void> {
   await apiRequest(`/community/follow/${userId}`, "POST", undefined, token);
 }
@@ -119,5 +129,37 @@ export async function createPost(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || "Failed to post");
+  return data.post;
+}
+
+// Edit an existing post — multipart because it may include a replacement image
+export async function updatePost(
+  token: string,
+  postId: string,
+  input: {
+    caption: string;
+    newImageUri?: string | null; // a freshly picked local image to upload
+    removeImage?: boolean;       // clear the current image (no replacement)
+    removeMeal?: boolean;        // drop the attached meal snapshot
+  }
+): Promise<FeedPost> {
+  const form = new FormData();
+  form.append("caption", input.caption);
+  if (input.removeMeal) form.append("removeMeal", "true");
+  if (input.newImageUri) {
+    const filename = input.newImageUri.split("/").pop() || "post.jpg";
+    const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
+    form.append("image", { uri: input.newImageUri, name: filename, type: ext === "png" ? "image/png" : "image/jpeg" } as any);
+  } else if (input.removeImage) {
+    form.append("removeImage", "true");
+  }
+
+  const res = await fetch(`${BASE_URL}/community/posts/${postId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to update post");
   return data.post;
 }
