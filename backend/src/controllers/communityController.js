@@ -357,8 +357,17 @@ async function withFollowState(users, viewerId) {
   }));
 }
 
+// A private user's social graph (followers/following) is only visible to them
+async function graphHiddenFrom(targetId, viewerId) {
+  if (targetId === viewerId) return false;
+  const owner = await User.findById(targetId).select("isPrivate");
+  return !!owner?.isPrivate;
+}
+
 // ─── Followers of a user ──────────────────────────────────────────────────────
 exports.getFollowers = async (req, res) => {
+  if (await graphHiddenFrom(req.params.id, req.user.id))
+    return res.json({ users: [], private: true });
   const rels = await Follow.find({ following: req.params.id })
     .sort({ createdAt: -1 })
     .populate("follower", "name avatar goal");
@@ -368,6 +377,8 @@ exports.getFollowers = async (req, res) => {
 
 // ─── Who a user follows ───────────────────────────────────────────────────────
 exports.getFollowing = async (req, res) => {
+  if (await graphHiddenFrom(req.params.id, req.user.id))
+    return res.json({ users: [], private: true });
   const rels = await Follow.find({ follower: req.params.id })
     .sort({ createdAt: -1 })
     .populate("following", "name avatar goal");
