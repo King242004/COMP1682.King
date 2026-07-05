@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { getFeed, getExplore, toggleLike, type FeedPost } from "@/features/community/api";
 import { PostTile } from "@/features/community/PostTile";
+import { initials } from "@/features/community/helpers";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -14,7 +15,7 @@ type Tab = "feed" | "explore";
 
 export default function CommunityScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   // Explore first (WEAR-style): new users land on content, not an empty feed
   const [tab, setTab] = useState<Tab>("explore");
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -139,9 +140,21 @@ export default function CommunityScreen() {
                   onPress={() => router.push("/community/post-create")}
                   style={({ pressed }) => [styles.postBtn, pressed && styles.postBtnPressed]}
                 >
-                  <Ionicons name="add" size={18} color="#fff" />
-                  <AppText style={styles.postBtnText}>Post</AppText>
+                  <Ionicons name="add" size={22} color="#fff" />
                 </Pressable>
+                {/* My community profile (own lookbook) — avatar on the right, WEAR-style */}
+                {user && (
+                  <Pressable
+                    onPress={() => router.push({ pathname: "/community/user-profile", params: { id: user.id } })}
+                    style={({ pressed }) => [styles.myAvatar, pressed && styles.pressed]}
+                  >
+                    {user.avatar ? (
+                      <Image source={{ uri: user.avatar }} style={styles.myAvatarImg} />
+                    ) : (
+                      <AppText style={styles.myAvatarInitials}>{initials(user.name)}</AppText>
+                    )}
+                  </Pressable>
+                )}
               </View>
             </View>
             {/* Feed / Explore toggle */}
@@ -181,12 +194,18 @@ const styles = StyleSheet.create({
   },
   searchBtnPressed: { backgroundColor: theme.colors.tint },
   postBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: theme.radius.pill,
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: "center", justifyContent: "center",
     backgroundColor: theme.colors.primary,
   },
   postBtnPressed: { backgroundColor: theme.colors.primary2 },
-  postBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  myAvatar: {
+    width: 40, height: 40, borderRadius: 20, overflow: "hidden",
+    backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5, borderColor: theme.colors.primary,
+  },
+  myAvatarImg: { width: "100%", height: "100%" },
+  myAvatarInitials: { color: theme.colors.primary, fontSize: 13, fontWeight: "700" },
   tabRow: { flexDirection: "row", gap: 6 },
   tabBtn: {
     flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 12,
