@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import {
   getPublicProfile, getUserPosts, getSavedPosts, followUser, unfollowUser,
@@ -104,7 +105,8 @@ export default function UserProfileScreen() {
 
   const isMe = viewingSelf || profile.isMe;
   const showSaved = isMe && tab === "saved";
-  const data = showSaved ? saved : posts;
+  const postsHidden = profile.postsHidden; // private profile viewed by someone else
+  const data = postsHidden ? [] : showSaved ? saved : posts;
 
   const Stat = ({ label, value, onPress }: { label: string; value: number; onPress?: () => void }) => (
     <Pressable
@@ -184,22 +186,35 @@ export default function UserProfileScreen() {
                   }
                 )}
               </View>
-            ) : (
+            ) : !postsHidden ? (
               <AppText variant="subtle" style={styles.sectionLabel}>Posts</AppText>
+            ) : null}
+
+            {/* Private profile viewed by someone else — grid replaced with a lock */}
+            {postsHidden && (
+              <Card style={styles.lockCard}>
+                <Ionicons name="lock-closed" size={30} color={theme.colors.subtle} />
+                <AppText variant="h2" style={styles.centerText}>This profile is private</AppText>
+                <AppText variant="muted" style={styles.centerText}>
+                  {profile.user.name} keeps their posts private.
+                </AppText>
+              </Card>
             )}
           </View>
         }
         ListEmptyComponent={
-          <Card style={styles.emptyCard}>
-            <AppText style={styles.emptyEmoji}>{showSaved ? "🔖" : "📷"}</AppText>
-            <AppText variant="muted" style={styles.centerText}>
-              {showSaved
-                ? "Nothing saved yet. Tap the bookmark on any post to keep it here."
-                : isMe
-                ? "You haven't posted yet. Share your first healthy meal!"
-                : "No posts yet."}
-            </AppText>
-          </Card>
+          postsHidden ? null : ( // lock card already shown in the header
+            <Card style={styles.emptyCard}>
+              <AppText style={styles.emptyEmoji}>{showSaved ? "🔖" : "📷"}</AppText>
+              <AppText variant="muted" style={styles.centerText}>
+                {showSaved
+                  ? "Nothing saved yet. Tap the bookmark on any post to keep it here."
+                  : isMe
+                  ? "You haven't posted yet. Share your first healthy meal!"
+                  : "No posts yet."}
+              </AppText>
+            </Card>
+          )
         }
         renderItem={({ item }) => (
           <PostTile
@@ -253,5 +268,6 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: "700", color: theme.colors.subtle },
   tabTextActive: { color: "#fff" },
   emptyCard: { padding: theme.space.xl, alignItems: "center", gap: 10 },
+  lockCard: { padding: theme.space.xl, alignItems: "center", gap: 10 },
   pressed: { opacity: 0.7 },
 });

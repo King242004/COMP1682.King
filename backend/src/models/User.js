@@ -26,6 +26,9 @@ const userSchema = new mongoose.Schema(
     // Saved taste preferences ("không ăn hải sản, thích gà") — read by ALL AI
     // features (meal suggestions, weekly plan, coach) so the user types it once.
     tastePreferences: { type: String, default: "" },
+    // Private profile: when true, this user's posts are hidden from Explore,
+    // other people's feeds, and their public profile (only the owner sees them).
+    isPrivate: { type: Boolean, default: false },
 
   },
   { timestamps: true }

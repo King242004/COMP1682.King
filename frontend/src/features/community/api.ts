@@ -17,6 +17,8 @@ export type PublicProfile = {
   stats: { postCount: number; followers: number; following: number };
   isFollowing: boolean;
   isMe: boolean;
+  isPrivate: boolean;
+  postsHidden: boolean; // true when someone else views a private profile → hide the grid
 };
 
 export async function getFeed(token: string, page = 1): Promise<FeedPost[]> {
