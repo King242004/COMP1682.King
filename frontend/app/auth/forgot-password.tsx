@@ -2,6 +2,7 @@ import { useState } from "react";
 import { StyleSheet, View, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { apiRequest } from "@/utils/api";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -13,6 +14,7 @@ const STEPS: Step[] = ["email", "otp", "password"];
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const t = useT();
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -25,7 +27,7 @@ export default function ForgotPasswordScreen() {
   // ─── Step 1: Send OTP ───────────────────────────────────────────────────────
   const handleSendOTP = async () => {
     if (!email.trim() || !email.includes("@")) {
-      setError("Please enter a valid email address.");
+      setError(t.auth.invalidEmail);
       return;
     }
     setError("");
@@ -34,7 +36,7 @@ export default function ForgotPasswordScreen() {
       await apiRequest("/user/send-otp", "POST", { email: email.trim() });
       setStep("otp");
     } catch (e: any) {
-      setError(e.message || "Failed to send OTP.");
+      setError(e.message || t.auth.failedSendOtp);
     } finally {
       setIsLoading(false);
     }
@@ -45,7 +47,7 @@ export default function ForgotPasswordScreen() {
   // Wrong guesses count toward the 5-attempt limit; the 5th burns the code.
   const handleVerifyOTP = async () => {
     if (otp.trim().length !== 6) {
-      setError("Please enter the 6-digit OTP.");
+      setError(t.auth.otpMustBe6);
       return;
     }
     setError("");
@@ -54,7 +56,7 @@ export default function ForgotPasswordScreen() {
       await apiRequest("/user/verify-otp", "POST", { email: email.trim(), otp: otp.trim() });
       setStep("password");
     } catch (e: any) {
-      setError(e.message || "Invalid OTP.");
+      setError(e.message || t.auth.invalidOtp);
     } finally {
       setIsLoading(false);
     }
@@ -63,19 +65,19 @@ export default function ForgotPasswordScreen() {
   // ─── Step 3: Reset Password ─────────────────────────────────────────────────
   const handleResetPassword = async () => {
     if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(t.auth.passwordTooShort);
       return;
     }
     if (!/[A-Z]/.test(newPassword)) {
-      setError("Password must contain at least one uppercase letter.");
+      setError(t.auth.passwordNeedUpper);
       return;
     }
     if (!/[0-9]/.test(newPassword)) {
-      setError("Password must contain at least one number.");
+      setError(t.auth.passwordNeedNumber);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t.auth.passwordsNoMatch);
       return;
     }
     setError("");
@@ -86,20 +88,20 @@ export default function ForgotPasswordScreen() {
         otp: otp.trim(),
         newPassword,
       });
-      Alert.alert("Success", "Password changed successfully!", [
-        { text: "Sign In", onPress: () => router.replace("/auth/login") },
+      Alert.alert(t.auth.resetSuccessTitle, t.auth.resetSuccessMsg, [
+        { text: t.auth.signIn, onPress: () => router.replace("/auth/login") },
       ]);
     } catch (e: any) {
-      setError(e.message || "Failed to reset password.");
+      setError(e.message || t.auth.failedReset);
     } finally {
       setIsLoading(false);
     }
   };
 
   const stepTitles = {
-    email: { title: "Forgot Password", subtitle: "Enter your email to receive an OTP." },
-    otp: { title: "Enter OTP", subtitle: `We sent a 6-digit code to ${email}` },
-    password: { title: "New Password", subtitle: "Create a new password for your account." },
+    email: { title: t.auth.forgotTitle, subtitle: t.auth.forgotSubtitle },
+    otp: { title: t.auth.otpTitle, subtitle: t.auth.otpSubtitle(email) },
+    password: { title: t.auth.newPasswordTitle, subtitle: t.auth.newPasswordSubtitle },
   };
 
   return (
@@ -122,10 +124,10 @@ export default function ForgotPasswordScreen() {
           {/* Step 1 - Email */}
           {step === "email" && (
             <TextField
-              label="Email"
-              placeholder="you@example.com"
+              label={t.auth.email}
+              placeholder={t.auth.emailPlaceholder}
               value={email}
-              onChangeText={(t) => { setEmail(t); setError(""); }}
+              onChangeText={(v) => { setEmail(v); setError(""); }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -137,10 +139,10 @@ export default function ForgotPasswordScreen() {
           {/* Step 2 - OTP */}
           {step === "otp" && (
             <TextField
-              label="OTP Code"
-              placeholder="Enter 6-digit code"
+              label={t.auth.otpLabel}
+              placeholder={t.auth.otpPlaceholder}
               value={otp}
-              onChangeText={(t) => { setOtp(t); setError(""); }}
+              onChangeText={(v) => { setOtp(v); setError(""); }}
               keyboardType="number-pad"
               inputProps={{ autoFocus: true, maxLength: 6 }}
             />
@@ -150,19 +152,19 @@ export default function ForgotPasswordScreen() {
           {step === "password" && (
             <>
               <TextField
-                label="New Password"
+                label={t.auth.newPassword}
                 placeholder="••••••••"
                 value={newPassword}
-                onChangeText={(t) => { setNewPassword(t); setError(""); }}
+                onChangeText={(v) => { setNewPassword(v); setError(""); }}
                 secureTextEntry
                 textContentType="newPassword"
                 inputProps={{ autoFocus: true }}
               />
               <TextField
-                label="Confirm Password"
+                label={t.auth.confirmPassword}
                 placeholder="••••••••"
                 value={confirmPassword}
-                onChangeText={(t) => { setConfirmPassword(t); setError(""); }}
+                onChangeText={(v) => { setConfirmPassword(v); setError(""); }}
                 secureTextEntry
                 textContentType="newPassword"
               />
@@ -173,10 +175,10 @@ export default function ForgotPasswordScreen() {
 
           <Button
             title={
-              isLoading ? "Loading..." :
-              step === "email" ? "Send OTP" :
-              step === "otp" ? "Verify OTP" :
-              "Change Password"
+              isLoading ? t.common.loading :
+              step === "email" ? t.auth.sendOtp :
+              step === "otp" ? t.auth.verifyOtp :
+              t.auth.changePassword
             }
             size="lg"
             disabled={isLoading}
@@ -190,14 +192,14 @@ export default function ForgotPasswordScreen() {
           {/* Resend OTP */}
           {step === "otp" && (
             <Button
-              title="Resend OTP"
+              title={t.auth.resendOtp}
               variant="ghost"
               onPress={() => { setStep("email"); setOtp(""); setError(""); }}
             />
           )}
 
           <Button
-            title="Back to Sign In"
+            title={t.auth.backToSignIn}
             variant="ghost"
             onPress={() => router.replace("/auth/login")}
           />
