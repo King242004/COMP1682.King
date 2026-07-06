@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -11,6 +12,7 @@ import { TextField } from "@/ui/components/TextField";
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  const t = useT();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,8 +20,8 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
 
   const validate = (): string | null => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Please enter a valid email address.";
-    if (password.length < 6) return "Password must be at least 6 characters.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return t.auth.invalidEmail;
+    if (password.length < 6) return t.auth.passwordTooShort;
     return null;
   };
 
@@ -38,7 +40,7 @@ export default function LoginScreen() {
       await login(email.trim(), password);
       router.replace("/tabs");
     } catch (e: any) {
-      setError(e.message || "Invalid email or password.");
+      setError(e.message || t.auth.invalidCredentials);
     } finally {
       setIsLoading(false);
     }
@@ -52,17 +54,15 @@ export default function LoginScreen() {
             <AppText style={styles.logoEmoji}>🥗</AppText>
           </View>
           <AppText variant="h0">MealMate</AppText>
-          <AppText variant="muted" style={styles.tagline}>
-            Your AI meal companion — scan your food, get advice, eat right for you.
-          </AppText>
+          <AppText variant="muted" style={styles.tagline}>{t.auth.tagline}</AppText>
         </View>
 
         <View style={styles.form}>
           <TextField
-            label="Email"
-            placeholder="you@example.com"
+            label={t.auth.email}
+            placeholder={t.auth.emailPlaceholder}
             value={email}
-            onChangeText={(t) => { setEmail(t); setError(""); }}
+            onChangeText={(v) => { setEmail(v); setError(""); }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -70,10 +70,10 @@ export default function LoginScreen() {
             inputProps={{ autoFocus: true }}
           />
           <TextField
-            label="Password"
+            label={t.auth.password}
             placeholder="••••••••"
             value={password}
-            onChangeText={(t) => { setPassword(t); setError(""); }}
+            onChangeText={(v) => { setPassword(v); setError(""); }}
             secureTextEntry
             textContentType="password"
             returnKeyType="done"
@@ -82,7 +82,7 @@ export default function LoginScreen() {
           {error ? <AppText variant="subtle" style={styles.error}>{error}</AppText> : null}
 
           <Button
-            title={isLoading ? "Signing in..." : "Sign in"}
+            title={isLoading ? t.auth.signingIn : t.auth.signIn}
             disabled={!canSubmit}
             size="lg"
             onPress={handleLogin}
@@ -92,9 +92,7 @@ export default function LoginScreen() {
             {/* replace: hopping login<->register must not stack screens */}
             <Link replace href="/auth/register" asChild>
               <Pressable hitSlop={10}>
-                <AppText variant="body2" style={styles.linkPrimary}>
-                  Don't have an account? Register
-                </AppText>
+                <AppText variant="body2" style={styles.linkPrimary}>{t.auth.noAccount}</AppText>
               </Pressable>
             </Link>
           </View>
@@ -102,9 +100,7 @@ export default function LoginScreen() {
           <View style={styles.linkRow}>
             <Link href="/auth/forgot-password" asChild>
               <Pressable hitSlop={10}>
-                <AppText variant="body2" style={styles.linkSubtle}>
-                  Forgot password?
-                </AppText>
+                <AppText variant="body2" style={styles.linkSubtle}>{t.auth.forgotPassword}</AppText>
               </Pressable>
             </Link>
           </View>

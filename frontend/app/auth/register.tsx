@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -12,6 +13,7 @@ import { TextField } from "@/ui/components/TextField";
 export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
+  const t = useT();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,13 +22,13 @@ export default function RegisterScreen() {
   const [error, setError] = useState("");
 
   const validate = (): string | null => {
-    if (name.trim().length < 2) return "Name must be at least 2 characters.";
+    if (name.trim().length < 2) return t.auth.nameTooShort;
     // \p{L} = any Unicode letter (supports Vietnamese, Chinese, etc.)
-    if (!/^[\p{L}\s]+$/u.test(name.trim())) return "Name must not contain numbers or special characters.";
-    if (!email.trim().includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Please enter a valid email address.";
-    if (password.length < 6) return "Password must be at least 6 characters.";
-    if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
-    if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+    if (!/^[\p{L}\s]+$/u.test(name.trim())) return t.auth.nameNoSpecial;
+    if (!email.trim().includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return t.auth.invalidEmail;
+    if (password.length < 6) return t.auth.passwordTooShort;
+    if (!/[A-Z]/.test(password)) return t.auth.passwordNeedUpper;
+    if (!/[0-9]/.test(password)) return t.auth.passwordNeedNumber;
     return null;
   };
 
@@ -49,7 +51,7 @@ export default function RegisterScreen() {
       // it's skippable and only ever shown here, never on login.
       router.replace("/onboarding" as any);
     } catch (e: any) {
-      setError(e.message || "Something went wrong. Please try again.");
+      setError(e.message || `${t.common.error} ${t.common.tryAgain}`);
     } finally {
       setIsLoading(false);
     }
@@ -58,37 +60,35 @@ export default function RegisterScreen() {
   // Live requirement checklist — rules used to surface only AFTER a failed
   // submit, one at a time
   const pwChecks = [
-    { ok: password.length >= 6, label: "At least 6 characters" },
-    { ok: /[A-Z]/.test(password), label: "One uppercase letter" },
-    { ok: /[0-9]/.test(password), label: "One number" },
+    { ok: password.length >= 6, label: t.auth.passwordChecklistLength },
+    { ok: /[A-Z]/.test(password), label: t.auth.passwordChecklistUpper },
+    { ok: /[0-9]/.test(password), label: t.auth.passwordChecklistNumber },
   ];
 
   return (
     <Screen keyboard style={styles.screen}>
       <View style={styles.wrap}>
         <View style={styles.header}>
-          <AppText variant="h1">Create your account</AppText>
-          <AppText variant="muted">
-            Your AI meal companion is one step away.
-          </AppText>
+          <AppText variant="h1">{t.auth.registerTitle}</AppText>
+          <AppText variant="muted">{t.auth.registerSubtitle}</AppText>
         </View>
 
         <View style={styles.form}>
           <TextField
-            label="Name"
-            placeholder="Your name"
+            label={t.auth.name}
+            placeholder={t.auth.namePlaceholder}
             value={name}
-            onChangeText={(t) => { setName(t); setError(""); }}
+            onChangeText={(v) => { setName(v); setError(""); }}
             textContentType="name"
             autoCapitalize="words"
             inputProps={{ autoFocus: true }}
             returnKeyType="next"
           />
           <TextField
-            label="Email"
-            placeholder="you@example.com"
+            label={t.auth.email}
+            placeholder={t.auth.emailPlaceholder}
             value={email}
-            onChangeText={(t) => { setEmail(t); setError(""); }}
+            onChangeText={(v) => { setEmail(v); setError(""); }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -96,10 +96,10 @@ export default function RegisterScreen() {
             returnKeyType="next"
           />
           <TextField
-            label="Password"
+            label={t.auth.password}
             placeholder="••••••••"
             value={password}
-            onChangeText={(t) => { setPassword(t); setError(""); }}
+            onChangeText={(v) => { setPassword(v); setError(""); }}
             secureTextEntry
             textContentType="newPassword"
             returnKeyType="done"
@@ -125,7 +125,7 @@ export default function RegisterScreen() {
           {error ? <AppText variant="subtle" style={styles.error}>{error}</AppText> : null}
 
           <Button
-            title={isLoading ? "Creating account..." : "Create account"}
+            title={isLoading ? t.auth.creatingAccount : t.auth.createAccount}
             disabled={!canSubmit}
             size="lg"
             onPress={handleRegister}
@@ -135,9 +135,7 @@ export default function RegisterScreen() {
             {/* replace: hopping login<->register must not stack screens */}
             <Link replace href="/auth/login" asChild>
               <Pressable hitSlop={10}>
-                <AppText variant="body2" style={styles.linkPrimary}>
-                  Already have an account? Sign in
-                </AppText>
+                <AppText variant="body2" style={styles.linkPrimary}>{t.auth.haveAccount}</AppText>
               </Pressable>
             </Link>
           </View>
