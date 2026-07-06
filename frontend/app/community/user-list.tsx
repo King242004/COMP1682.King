@@ -6,6 +6,7 @@ import {
   getFollowers, getFollowing, followUser, unfollowUser, type DiscoverUser,
 } from "@/features/community/api";
 import { UserRow } from "@/features/community/UserRow";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -17,6 +18,7 @@ export default function UserListScreen() {
   const { id, type } = useLocalSearchParams<{ id: string; type: "followers" | "following" }>();
   const router = useRouter();
   const { token } = useAuth();
+  const t = useT();
 
   const [users, setUsers] = useState<DiscoverUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export default function UserListScreen() {
   const [followed, setFollowed] = useState<Record<string, boolean>>({});
 
   const isFollowers = type === "followers";
-  const title = isFollowers ? "Followers" : "Following";
+  const title = isFollowers ? t.community.followers : t.community.following;
 
   useFocusEffect(useCallback(() => {
     if (!token || !id) return;
@@ -70,10 +72,10 @@ export default function UserListScreen() {
             <Card style={styles.emptyCard}>
               <AppText variant="muted" style={styles.centerText}>
                 {loadError
-                  ? "Couldn't load the list. Check your connection."
+                  ? t.community.loadListError
                   : isFollowers
-                  ? "No followers yet."
-                  : "Not following anyone yet."}
+                  ? t.community.noFollowers
+                  : t.community.noFollowing}
               </AppText>
             </Card>
           )

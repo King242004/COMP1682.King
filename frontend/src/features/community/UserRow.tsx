@@ -1,8 +1,9 @@
 import { Image, Pressable, StyleSheet, View } from "react-native";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
-import { GOAL_LABEL, initials } from "./helpers";
+import { initials } from "./helpers";
 import type { DiscoverUser } from "./api";
 
 // One user row in Discover: avatar + name/goal + Follow toggle button.
@@ -17,6 +18,7 @@ export function UserRow({
   onPress: () => void;
   onToggleFollow: () => void;
 }) {
+  const t = useT();
   return (
     <Card style={styles.card}>
       <Pressable onPress={onPress} style={styles.userArea}>
@@ -30,9 +32,9 @@ export function UserRow({
         <View style={styles.info}>
           <AppText variant="body2" style={styles.name}>{user.name}</AppText>
           <AppText variant="subtle" style={styles.meta}>
-            {user.sameGoal ? "🎯 Same goal · " : ""}
-            {GOAL_LABEL[user.goal] ?? user.goal}
-            {typeof user.followers === "number" && user.followers > 0 ? ` · ${user.followers} followers` : ""}
+            {user.sameGoal ? t.community.sameGoal : ""}
+            {t.labels.goal[user.goal] ?? user.goal}
+            {typeof user.followers === "number" && user.followers > 0 ? ` · ${t.community.followersCount(user.followers)}` : ""}
           </AppText>
         </View>
       </Pressable>
@@ -45,7 +47,7 @@ export function UserRow({
         ]}
       >
         <AppText style={[styles.followText, following && styles.followTextActive]}>
-          {following ? "Following" : "Follow"}
+          {following ? t.community.following : t.community.follow}
         </AppText>
       </Pressable>
     </Card>

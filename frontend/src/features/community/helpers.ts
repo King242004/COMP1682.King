@@ -11,9 +11,3 @@ export function timeAgo(iso: string) {
   if (s < 86400) return `${Math.floor(s / 3600)}h`;
   return `${Math.floor(s / 86400)}d`;
 }
-
-export const GOAL_LABEL: Record<string, string> = {
-  lose_weight: "Lose weight",
-  gain_muscle: "Gain muscle",
-  eat_healthy: "Eat healthy",
-};

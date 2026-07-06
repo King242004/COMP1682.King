@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getFeed, getExplore, toggleLike, type FeedPost } from "@/features/community/api";
 import { PostTile } from "@/features/community/PostTile";
 import { initials } from "@/features/community/helpers";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -16,6 +17,7 @@ type Tab = "feed" | "explore";
 export default function CommunityScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
+  const t = useT();
   // Explore first (WEAR-style): new users land on content, not an empty feed
   const [tab, setTab] = useState<Tab>("explore");
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -88,22 +90,20 @@ export default function CommunityScreen() {
   ) : loadError ? (
     <Card style={styles.emptyCard}>
       <AppText style={styles.emptyEmoji}>📡</AppText>
-      <AppText variant="h2" style={styles.centerText}>Couldn't load posts</AppText>
-      <AppText variant="muted" style={styles.centerText}>Check your connection and try again.</AppText>
+      <AppText variant="h2" style={styles.centerText}>{t.community.loadPostsError}</AppText>
+      <AppText variant="muted" style={styles.centerText}>{t.common.checkConnection}</AppText>
       <Pressable onPress={() => load(tab)} style={({ pressed }) => [styles.retryBtn, pressed && styles.pressed]}>
-        <AppText style={styles.retryText}>Retry</AppText>
+        <AppText style={styles.retryText}>{t.common.retry}</AppText>
       </Pressable>
     </Card>
   ) : (
     <Card style={styles.emptyCard}>
       <AppText style={styles.emptyEmoji}>🥗</AppText>
       <AppText variant="h2" style={styles.centerText}>
-        {tab === "feed" ? "Your feed is empty" : "No posts yet"}
+        {tab === "feed" ? t.community.feedEmptyTitle : t.community.exploreEmptyTitle}
       </AppText>
       <AppText variant="muted" style={styles.centerText}>
-        {tab === "feed"
-          ? "Follow people in Explore to see their meals here."
-          : "Be the first to share a healthy meal!"}
+        {tab === "feed" ? t.community.feedEmptySub : t.community.exploreEmptySub}
       </AppText>
     </Card>
   );
@@ -120,7 +120,7 @@ export default function CommunityScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <AppText variant="h1">Community</AppText>
+              <AppText variant="h1">{t.community.title}</AppText>
               <View style={styles.titleActions}>
                 {/* Discover: search people + follow suggestions */}
                 <Pressable
@@ -152,7 +152,7 @@ export default function CommunityScreen() {
             </View>
             {/* Feed / Explore toggle */}
             <View style={styles.tabRow}>
-              {([["explore", "Explore"], ["feed", "Following"]] as [Tab, string][]).map(([key, label]) => {
+              {([["explore", t.community.explore], ["feed", t.community.following]] as [Tab, string][]).map(([key, label]) => {
                 const active = tab === key;
                 return (
                   <Pressable

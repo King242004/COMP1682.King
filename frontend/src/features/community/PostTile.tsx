@@ -1,5 +1,6 @@
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { initials, timeAgo } from "./helpers";
@@ -22,6 +23,7 @@ export function PostTile({
   showAuthor?: boolean;
   showTime?: boolean;
 }) {
+  const t = useT();
   return (
     <View style={styles.wrap}>
       <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
@@ -38,7 +40,7 @@ export function PostTile({
 
         {post.meal && (
           <View style={styles.kcalChip}>
-            <AppText style={styles.kcalText}>{post.meal.calories} kcal</AppText>
+            <AppText style={styles.kcalText}>{post.meal.calories} {t.common.kcal}</AppText>
           </View>
         )}
 
@@ -69,7 +71,7 @@ export function PostTile({
       {showTime && (
         <View style={styles.timeRow}>
           <Ionicons name="time-outline" size={11} color={theme.colors.subtle} />
-          <AppText variant="subtle" style={styles.timeText}>{timeAgo(post.createdAt)} ago</AppText>
+          <AppText variant="subtle" style={styles.timeText}>{timeAgo(post.createdAt)} {t.community.ago}</AppText>
         </View>
       )}
     </View>
