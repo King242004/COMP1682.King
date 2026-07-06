@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
+import { useT } from "@/i18n";
 import { theme, macroGoals } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -15,17 +16,18 @@ import { ConsistencyRow } from "@/features/progress/ConsistencyRow";
 
 type Tab = "calories" | "macros" | "trends";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "calories", label: "Calories" },
-  { key: "macros", label: "Nutrition" },
-  { key: "trends", label: "Weekly" },
-];
-
 export default function ProgressScreen() {
   const { user } = useAuth();
   // Use historyMeals (all logged days) — `meals` only holds the selected date.
   const { historyMeals, fetchMealHistory } = useMeals();
+  const t = useT();
   const [activeTab, setActiveTab] = useState<Tab>("calories");
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "calories", label: t.progress.tabCalories },
+    { key: "macros", label: t.progress.tabNutrition },
+    { key: "trends", label: t.progress.tabWeekly },
+  ];
 
   useEffect(() => { fetchMealHistory(); }, []);
 
@@ -74,13 +76,13 @@ export default function ProgressScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View>
-          <ScreenHeader title="Progress" />
-          <AppText variant="muted" style={styles.subtitle}>Your nutrition for the last 7 days.</AppText>
+          <ScreenHeader title={t.progress.title} />
+          <AppText variant="muted" style={styles.subtitle}>{t.progress.subtitle}</AppText>
         </View>
 
         {/* Tabs */}
         <View style={styles.tabRow}>
-          {TABS.map((tab) => {
+          {tabs.map((tab) => {
             const active = activeTab === tab.key;
             return (
               <Pressable
@@ -99,10 +101,10 @@ export default function ProgressScreen() {
           <>
             {/* Today card */}
             <Card style={styles.todayCard}>
-              <AppText variant="subtle" style={styles.todayLabel}>Today</AppText>
+              <AppText variant="subtle" style={styles.todayLabel}>{t.progress.today}</AppText>
               <View style={styles.todayValueRow}>
                 <AppText variant="h0" style={styles.todayValue}>{todaySummary.calories.toLocaleString()}</AppText>
-                <AppText variant="muted">/ {goal.toLocaleString()} kcal</AppText>
+                <AppText variant="muted">/ {goal.toLocaleString()} {t.common.kcal}</AppText>
               </View>
               <View style={styles.todayTrack}>
                 <View style={[styles.todayFill, { width: `${Math.min(todaySummary.ratio, 1) * 100}%`, backgroundColor: todayBarColor }]} />
@@ -110,11 +112,11 @@ export default function ProgressScreen() {
               <View style={styles.todayFooter}>
                 <AppText variant="subtle" style={styles.todayFootText}>
                   {todaySummary.calories > goal
-                    ? `${(todaySummary.calories - goal).toLocaleString()} kcal over goal`
-                    : `${Math.max(0, goal - todaySummary.calories).toLocaleString()} kcal remaining`}
+                    ? t.progress.overGoal((todaySummary.calories - goal).toLocaleString())
+                    : t.progress.remaining(Math.max(0, goal - todaySummary.calories).toLocaleString())}
                 </AppText>
                 <AppText style={[styles.todayStatus, { color: todaySummary.onTrack ? theme.colors.accent : theme.colors.subtle }]}>
-                  {todaySummary.onTrack ? "✓ On track" : `${Math.round(todaySummary.ratio * 100)}%`}
+                  {todaySummary.onTrack ? t.progress.onTrack : `${Math.round(todaySummary.ratio * 100)}%`}
                 </AppText>
               </View>
             </Card>
@@ -125,15 +127,15 @@ export default function ProgressScreen() {
             <View style={styles.statsRow}>
               <Card style={styles.statCard}>
                 <AppText variant="h2" style={styles.statPrimary}>{avgCalories > 0 ? avgCalories.toLocaleString() : "—"}</AppText>
-                <AppText variant="subtle" style={styles.statLabel}>avg kcal/day</AppText>
+                <AppText variant="subtle" style={styles.statLabel}>{t.progress.avgKcalDay}</AppText>
               </Card>
               <Card style={styles.statCard}>
                 <AppText variant="h2" style={styles.statAccent}>{daysOnTrack}/7</AppText>
-                <AppText variant="subtle" style={styles.statLabel}>days on track</AppText>
+                <AppText variant="subtle" style={styles.statLabel}>{t.progress.daysOnTrack}</AppText>
               </Card>
               <Card style={styles.statCard}>
                 <AppText variant="h2" style={styles.statOrange}>{streak}🔥</AppText>
-                <AppText variant="subtle" style={styles.statLabel}>day streak</AppText>
+                <AppText variant="subtle" style={styles.statLabel}>{t.progress.dayStreak}</AppText>
               </Card>
             </View>
           </>
@@ -145,31 +147,29 @@ export default function ProgressScreen() {
             {/* Today's macros */}
             <Card style={styles.sectionCard}>
               <View style={styles.sectionHead}>
-                <AppText variant="h2">Today's nutrition</AppText>
-                <AppText variant="subtle" style={styles.sectionMeta}>Based on {goal.toLocaleString()} kcal</AppText>
+                <AppText variant="h2">{t.progress.todaysNutrition}</AppText>
+                <AppText variant="subtle" style={styles.sectionMeta}>{t.progress.basedOn(goal.toLocaleString())}</AppText>
               </View>
               {todaySummary.protein > 0 || todaySummary.carbs > 0 || todaySummary.fat > 0 ? (
                 <View style={styles.macroList}>
-                  <MacroBar label="Protein" value={todaySummary.protein} total={proteinGoal} color={theme.colors.accent2} />
-                  <MacroBar label="Carbs" value={todaySummary.carbs} total={carbsGoal} color={theme.colors.accent} />
-                  <MacroBar label="Fat" value={todaySummary.fat} total={fatGoal} color={theme.colors.indigo} />
+                  <MacroBar label={t.labels.protein} value={todaySummary.protein} total={proteinGoal} color={theme.colors.accent2} />
+                  <MacroBar label={t.labels.carbs} value={todaySummary.carbs} total={carbsGoal} color={theme.colors.accent} />
+                  <MacroBar label={t.labels.fat} value={todaySummary.fat} total={fatGoal} color={theme.colors.indigo} />
                 </View>
               ) : (
-                <AppText variant="subtle">No macro data logged today.</AppText>
+                <AppText variant="subtle">{t.progress.noMacroToday}</AppText>
               )}
             </Card>
 
             {/* Daily targets */}
             <Card style={styles.targetCard}>
-              <AppText variant="h2">Daily targets</AppText>
-              <AppText variant="subtle" style={styles.targetSub}>
-                30% protein · 45% carbs · 25% fat from {goal.toLocaleString()} kcal goal
-              </AppText>
+              <AppText variant="h2">{t.progress.dailyTargets}</AppText>
+              <AppText variant="subtle" style={styles.targetSub}>{t.progress.targetsSub(goal.toLocaleString())}</AppText>
               <View style={styles.targetRow}>
                 {[
-                  { label: "Protein", value: proteinGoal, color: theme.colors.accent2 },
-                  { label: "Carbs", value: carbsGoal, color: theme.colors.accent },
-                  { label: "Fat", value: fatGoal, color: theme.colors.indigo },
+                  { label: t.labels.protein, value: proteinGoal, color: theme.colors.accent2 },
+                  { label: t.labels.carbs, value: carbsGoal, color: theme.colors.accent },
+                  { label: t.labels.fat, value: fatGoal, color: theme.colors.indigo },
                 ].map((m, i) => (
                   <View key={m.label} style={[styles.targetCol, i > 0 && styles.targetColDivider]}>
                     <View style={[styles.targetDot, { backgroundColor: m.color }]} />
@@ -183,17 +183,17 @@ export default function ProgressScreen() {
             {/* Weekly averages */}
             <Card style={styles.sectionCard}>
               <View style={styles.sectionHead}>
-                <AppText variant="h2">Weekly average</AppText>
-                <AppText variant="subtle" style={styles.sectionMeta}>{daysWithMeals.length} days logged</AppText>
+                <AppText variant="h2">{t.progress.weeklyAverage}</AppText>
+                <AppText variant="subtle" style={styles.sectionMeta}>{t.progress.daysLogged(daysWithMeals.length)}</AppText>
               </View>
               {daysWithMeals.length > 0 ? (
                 <View style={styles.macroList}>
-                  <MacroBar label="Protein" value={avgProtein} total={proteinGoal} color={theme.colors.accent2} />
-                  <MacroBar label="Carbs" value={avgCarbs} total={carbsGoal} color={theme.colors.accent} />
-                  <MacroBar label="Fat" value={avgFat} total={fatGoal} color={theme.colors.indigo} />
+                  <MacroBar label={t.labels.protein} value={avgProtein} total={proteinGoal} color={theme.colors.accent2} />
+                  <MacroBar label={t.labels.carbs} value={avgCarbs} total={carbsGoal} color={theme.colors.accent} />
+                  <MacroBar label={t.labels.fat} value={avgFat} total={fatGoal} color={theme.colors.indigo} />
                 </View>
               ) : (
-                <AppText variant="subtle">No macro data this week.</AppText>
+                <AppText variant="subtle">{t.progress.noMacroWeek}</AppText>
               )}
             </Card>
 
@@ -210,10 +210,8 @@ export default function ProgressScreen() {
                 <View style={styles.streakRow}>
                   <AppText style={styles.streakEmoji}>🔥</AppText>
                   <View>
-                    <AppText variant="h2" style={styles.streakTitle}>{streak} day streak!</AppText>
-                    <AppText variant="subtle" style={styles.streakSub}>
-                      Keep it up — log meals every day to maintain your streak.
-                    </AppText>
+                    <AppText variant="h2" style={styles.streakTitle}>{t.progress.streakBang(streak)}</AppText>
+                    <AppText variant="subtle" style={styles.streakSub}>{t.progress.streakSub}</AppText>
                   </View>
                 </View>
               </Card>
@@ -221,16 +219,16 @@ export default function ProgressScreen() {
 
             {/* Weekly summary table */}
             <Card style={styles.sectionCard}>
-              <AppText variant="h2">Weekly summary</AppText>
+              <AppText variant="h2">{t.progress.weeklySummary}</AppText>
               <View style={styles.summaryList}>
                 {summaries.map((day) => (
                   <View key={day.key} style={styles.summaryRow}>
                     <View style={styles.summaryLeft}>
                       <AppText variant="body2" style={day.isToday ? styles.bold : undefined}>
-                        {day.fullLabel}{day.isToday ? " (Today)" : ""}
+                        {day.fullLabel}{day.isToday ? t.progress.todaySuffix : ""}
                       </AppText>
                       <AppText variant="subtle" style={styles.summaryMeta}>
-                        {day.mealCount > 0 ? `${day.mealCount} meal${day.mealCount !== 1 ? "s" : ""} logged` : "No meals logged"}
+                        {day.mealCount > 0 ? t.progress.mealsLogged(day.mealCount) : t.progress.noMealsLogged}
                       </AppText>
                     </View>
                     <View style={styles.summaryRight}>
@@ -240,14 +238,14 @@ export default function ProgressScreen() {
                           : day.onTrack ? theme.colors.accent
                           : theme.colors.primary,
                       }]}>
-                        {day.calories > 0 ? `${day.calories.toLocaleString()} kcal` : "—"}
+                        {day.calories > 0 ? `${day.calories.toLocaleString()} ${t.common.kcal}` : "—"}
                       </AppText>
                       {day.calories > 0 && (
                         <AppText variant="subtle" style={styles.summaryDelta}>
                           {day.calories > goal
-                            ? `+${(day.calories - goal).toLocaleString()} over`
-                            : day.onTrack ? "✓ On track"
-                            : `${(goal - day.calories).toLocaleString()} under`}
+                            ? t.progress.over((day.calories - goal).toLocaleString())
+                            : day.onTrack ? t.progress.onTrack
+                            : t.progress.under((goal - day.calories).toLocaleString())}
                         </AppText>
                       )}
                     </View>
@@ -259,10 +257,11 @@ export default function ProgressScreen() {
             {/* Best day = closest to goal */}
             {bestDay && (
               <Card style={styles.bestCard}>
-                <AppText variant="h2" style={styles.bestTitle}>🏆 Closest to goal this week</AppText>
+                <AppText variant="h2" style={styles.bestTitle}>{t.progress.closestToGoal}</AppText>
                 <AppText variant="muted">
-                  {bestDay.fullLabel} — {bestDay.calories.toLocaleString()} kcal
-                  {bestDay.onTrack ? " ✓ On track!" : ` (${Math.abs(bestDay.calories - goal).toLocaleString()} kcal from goal)`}
+                  {bestDay.onTrack
+                    ? t.progress.closestOnTrack(bestDay.fullLabel, bestDay.calories.toLocaleString())
+                    : t.progress.closestOff(bestDay.fullLabel, bestDay.calories.toLocaleString(), Math.abs(bestDay.calories - goal).toLocaleString())}
                 </AppText>
               </Card>
             )}

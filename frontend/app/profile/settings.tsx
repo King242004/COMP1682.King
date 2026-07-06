@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useT } from "@/i18n";
 import { scheduleDailyReminder, cancelNotification } from "@/utils/notifications";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -27,6 +28,7 @@ function IconBox({ icon, bg }: { icon: string; bg?: string }) {
 export default function SettingsScreen() {
   const { user, updateProfile } = useAuth();
   const router = useRouter();
+  const t = useT();
 
   const [reminderOn, setReminderOn] = useState(false);
   const [editingGoal, setEditingGoal] = useState(false);
@@ -41,7 +43,7 @@ export default function SettingsScreen() {
       await updateProfile({ isPrivate: value });
     } catch (e: any) {
       setIsPrivate(!value); // revert
-      Alert.alert("Error", e.message || "Failed to update privacy.");
+      Alert.alert(t.common.errorTitle, e.message || t.settings.failedPrivacy);
     }
   };
 
@@ -54,7 +56,7 @@ export default function SettingsScreen() {
     try {
       await updateProfile({ language: l });
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Failed to change language.");
+      Alert.alert(t.common.errorTitle, e.message || t.settings.failedLanguage);
     } finally {
       setSavingLang(false);
     }
@@ -68,7 +70,7 @@ export default function SettingsScreen() {
   const handleSaveGoal = async () => {
     const n = Number(goalInput);
     if (!goalInput.trim() || isNaN(n) || n < 800 || n > 10000) {
-      Alert.alert("Invalid goal", "Calorie goal must be between 800 and 10,000 kcal.");
+      Alert.alert(t.settings.invalidGoal, t.settings.goalRange);
       return;
     }
     setIsSavingGoal(true);
@@ -76,7 +78,7 @@ export default function SettingsScreen() {
       await updateProfile({ calorieGoal: n });
       setEditingGoal(false);
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Failed to update goal.");
+      Alert.alert(t.common.errorTitle, e.message || t.settings.failedGoal);
     } finally {
       setIsSavingGoal(false);
     }
@@ -86,10 +88,7 @@ export default function SettingsScreen() {
     // Backend recomputes calorieGoal from TDEE when calorieGoal is absent —
     // resend current body metrics so it has the inputs to calculate
     if (!user?.weight || !user?.height || !user?.age || !user?.gender) {
-      Alert.alert(
-        "Missing info",
-        "Add your weight, height, age and gender in Profile first, so we can calculate your goal automatically."
-      );
+      Alert.alert(t.settings.missingInfo, t.settings.missingInfoMsg);
       return;
     }
     setIsSavingGoal(true);
@@ -104,7 +103,7 @@ export default function SettingsScreen() {
       });
       setEditingGoal(false);
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Failed to update goal.");
+      Alert.alert(t.common.errorTitle, e.message || t.settings.failedGoal);
     } finally {
       setIsSavingGoal(false);
     }
@@ -115,7 +114,7 @@ export default function SettingsScreen() {
     if (value) {
       const id = await scheduleDailyReminder(19, 0);
       if (!id) {
-        Alert.alert("Permission needed", "Allow notifications to get daily meal reminders.");
+        Alert.alert(t.profile.permissionNeeded, t.settings.reminderPermMsg);
         return;
       }
       await AsyncStorage.setItem("mealReminderId", id);
@@ -131,11 +130,11 @@ export default function SettingsScreen() {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Settings" />
-        <AppText variant="muted" style={styles.subtitle}>Tune how MealMate works for you.</AppText>
+        <ScreenHeader title={t.settings.title} />
+        <AppText variant="muted" style={styles.subtitle}>{t.settings.subtitle}</AppText>
 
         {/* GOALS */}
-        <SectionLabel>Goals</SectionLabel>
+        <SectionLabel>{t.settings.goals}</SectionLabel>
         <Card style={styles.card}>
           <Pressable
             onPress={() => {
@@ -146,22 +145,22 @@ export default function SettingsScreen() {
           >
             <IconBox icon="🎯" />
             <View style={styles.rowText}>
-              <AppText variant="body2" style={styles.rowTitle}>Daily calorie goal</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>Tap to set manually or switch back to auto</AppText>
+              <AppText variant="body2" style={styles.rowTitle}>{t.settings.dailyCalorieGoal}</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>{t.settings.goalRowSub}</AppText>
             </View>
-            <AppText variant="body2" style={styles.rowValue}>{(user?.calorieGoal ?? 2000).toLocaleString()} kcal</AppText>
+            <AppText variant="body2" style={styles.rowValue}>{(user?.calorieGoal ?? 2000).toLocaleString()} {t.common.kcal}</AppText>
             <Ionicons name={editingGoal ? "chevron-up" : "chevron-forward"} size={16} color={theme.colors.subtle} />
           </Pressable>
 
           {editingGoal && (
             <View style={styles.goalEditor}>
-              <TextField label="Custom goal (kcal)" placeholder="e.g. 1800" value={goalInput} onChangeText={setGoalInput} keyboardType="number-pad" />
+              <TextField label={t.settings.customGoal} placeholder={t.settings.customGoalPlaceholder} value={goalInput} onChangeText={setGoalInput} keyboardType="number-pad" />
               <View style={styles.goalBtns}>
                 <View style={styles.flex1}>
-                  <Button title="Use auto (TDEE)" variant="secondary" onPress={handleAutoGoal} disabled={isSavingGoal} />
+                  <Button title={t.settings.useAuto} variant="secondary" onPress={handleAutoGoal} disabled={isSavingGoal} />
                 </View>
                 <View style={styles.flex1}>
-                  <Button title={isSavingGoal ? "Saving..." : "Save"} onPress={handleSaveGoal} disabled={isSavingGoal} />
+                  <Button title={isSavingGoal ? t.common.saving : t.common.save} onPress={handleSaveGoal} disabled={isSavingGoal} />
                 </View>
               </View>
             </View>
@@ -169,26 +168,26 @@ export default function SettingsScreen() {
         </Card>
 
         {/* INSIGHTS */}
-        <SectionLabel>Insights</SectionLabel>
+        <SectionLabel>{t.settings.insights}</SectionLabel>
         <Card style={styles.card}>
           <Pressable onPress={() => router.push("/profile/progress" as any)} style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}>
             <IconBox icon="📊" bg="rgba(5,150,105,0.12)" />
             <View style={styles.rowText}>
-              <AppText variant="body2" style={styles.rowTitle}>Progress & statistics</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>Calories, nutrition and weekly trends</AppText>
+              <AppText variant="body2" style={styles.rowTitle}>{t.settings.progressStats}</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>{t.settings.progressSub}</AppText>
             </View>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
         </Card>
 
         {/* REMINDERS */}
-        <SectionLabel>Reminders</SectionLabel>
+        <SectionLabel>{t.settings.reminders}</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.rowStatic}>
             <IconBox icon="⏰" bg="rgba(255,138,61,0.12)" />
             <View style={styles.rowText}>
-              <AppText variant="body2" style={styles.rowTitle}>Meal reminder</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>Daily at 7:00 PM</AppText>
+              <AppText variant="body2" style={styles.rowTitle}>{t.settings.mealReminder}</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>{t.settings.mealReminderSub}</AppText>
             </View>
             <Switch
               value={reminderOn}
@@ -200,13 +199,13 @@ export default function SettingsScreen() {
         </Card>
 
         {/* LANGUAGE */}
-        <SectionLabel>Language</SectionLabel>
+        <SectionLabel>{t.settings.language}</SectionLabel>
         <Card style={styles.langCard}>
           <View style={styles.langHead}>
             <IconBox icon="🌐" />
             <View style={styles.rowText}>
-              <AppText variant="body2" style={styles.rowTitle}>AI Coach language</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>Coach trả lời theo ngôn ngữ này. Mặc định theo điện thoại.</AppText>
+              <AppText variant="body2" style={styles.rowTitle}>{t.settings.coachLanguage}</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>{t.settings.coachLanguageSub}</AppText>
             </View>
           </View>
           <View style={styles.langBtns}>
@@ -227,13 +226,13 @@ export default function SettingsScreen() {
         </Card>
 
         {/* PRIVACY */}
-        <SectionLabel>Privacy</SectionLabel>
+        <SectionLabel>{t.settings.privacy}</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.rowStatic}>
             <IconBox icon="🔒" />
             <View style={styles.rowText}>
-              <AppText variant="body2" style={styles.rowTitle}>Private profile</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>Hide your posts from Explore and other people. Only you can see them.</AppText>
+              <AppText variant="body2" style={styles.rowTitle}>{t.settings.privateProfile}</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>{t.settings.privateProfileSub}</AppText>
             </View>
             <Switch
               value={isPrivate}
