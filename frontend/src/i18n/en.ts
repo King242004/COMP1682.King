@@ -14,6 +14,23 @@ export const en = {
     error: "Something went wrong.",
     tryAgain: "Please try again.",
     checkConnection: "Check your connection and try again.",
+    kcal: "kcal",
+  },
+
+  exercise: {
+    title: "Log workout",
+    subtitle: "Calories burned are estimated from the MET formula.",
+    loggingFor: "Logging for",
+    weightWarn: "Set your weight in Profile for an accurate estimate. Using 60 kg for now.",
+    activityName: "Activity name",
+    activityNamePlaceholder: "e.g. Rock climbing",
+    metValue: "MET value",
+    metPlaceholder: "e.g. 8",
+    metHint: "MET = how many times harder than resting. Walking ≈ 3.5, running ≈ 8, intense ≈ 10+.",
+    duration: "Duration (minutes)",
+    durationPlaceholder: "e.g. 30",
+    estimatedBurned: "Estimated calories burned",
+    failed: "Failed to log workout.",
   },
 
   auth: {

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useT } from "@/i18n";
 import { addExercise, estimateBurned, ACTIVITY_GROUPS, type Activity } from "@/features/exercise/api";
 import { todayKey } from "@/utils/date";
 import { theme } from "@/ui/theme";
@@ -16,6 +17,7 @@ import { TextField } from "@/ui/components/TextField";
 export default function AddExerciseScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
+  const t = useT();
   const { date } = useLocalSearchParams<{ date?: string }>();
 
   // Log today or a past day; never the future (guard the param, fall back to today)
@@ -57,7 +59,7 @@ export default function AddExerciseScreen() {
       await addExercise(token, { name, met, durationMin: durationNum, date: logDate });
       router.back();
     } catch (err: any) {
-      setError(err.message || "Failed to log workout.");
+      setError(err.message || t.exercise.failed);
       setSaving(false);
     }
   };
@@ -74,10 +76,8 @@ export default function AddExerciseScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <ScreenHeader title="Log workout" />
-          <AppText variant="muted" style={styles.subtitle}>
-            Calories burned are estimated from the MET formula.
-          </AppText>
+          <ScreenHeader title={t.exercise.title} />
+          <AppText variant="muted" style={styles.subtitle}>{t.exercise.subtitle}</AppText>
         </View>
 
         {/* Back-dated banner — make it clear WHICH day this workout goes to */}
@@ -85,7 +85,7 @@ export default function AddExerciseScreen() {
           <View style={styles.backdateBanner}>
             <Ionicons name="time-outline" size={16} color={theme.colors.primary} />
             <AppText style={styles.backdateText}>
-              Logging for <AppText style={styles.backdateDate}>{backdatedLabel}</AppText>
+              {t.exercise.loggingFor} <AppText style={styles.backdateDate}>{backdatedLabel}</AppText>
             </AppText>
           </View>
         )}
@@ -94,9 +94,7 @@ export default function AddExerciseScreen() {
         {!user?.weight && (
           <View style={styles.warnBanner}>
             <AppText style={styles.warnEmoji}>⚠️</AppText>
-            <AppText variant="subtle" style={styles.warnText}>
-              Set your weight in Profile for an accurate estimate. Using 60 kg for now.
-            </AppText>
+            <AppText variant="subtle" style={styles.warnText}>{t.exercise.weightWarn}</AppText>
           </View>
         )}
 
@@ -128,33 +126,31 @@ export default function AddExerciseScreen() {
         {isCustom && (
           <Card style={styles.card}>
             <TextField
-              label="Activity name"
-              placeholder="e.g. Rock climbing"
+              label={t.exercise.activityName}
+              placeholder={t.exercise.activityNamePlaceholder}
               value={customName}
               onChangeText={setCustomName}
               textContentType="none"
             />
             <TextField
-              label="MET value"
-              placeholder="e.g. 8"
+              label={t.exercise.metValue}
+              placeholder={t.exercise.metPlaceholder}
               value={customMet}
               onChangeText={setCustomMet}
               keyboardType="decimal-pad"
               textContentType="none"
             />
-            <AppText variant="subtle" style={styles.metHint}>
-              MET = how many times harder than resting. Walking ≈ 3.5, running ≈ 8, intense ≈ 10+.
-            </AppText>
+            <AppText variant="subtle" style={styles.metHint}>{t.exercise.metHint}</AppText>
           </Card>
         )}
 
         {/* Duration */}
         <Card style={styles.durationCard}>
           <TextField
-            label="Duration (minutes)"
-            placeholder="e.g. 30"
+            label={t.exercise.duration}
+            placeholder={t.exercise.durationPlaceholder}
             value={duration}
-            onChangeText={(t) => { setDuration(t); setError(null); }}
+            onChangeText={(v) => { setDuration(v); setError(null); }}
             keyboardType="number-pad"
             textContentType="none"
           />
@@ -162,19 +158,19 @@ export default function AddExerciseScreen() {
 
         {/* Live estimate */}
         <Card style={styles.estimateCard}>
-          <AppText variant="subtle" style={styles.estimateLabel}>Estimated calories burned</AppText>
+          <AppText variant="subtle" style={styles.estimateLabel}>{t.exercise.estimatedBurned}</AppText>
           <View style={styles.estimateValueRow}>
             <AppText variant="h0" style={styles.estimateValue}>{estimate}</AppText>
-            <AppText variant="muted" style={styles.estimateUnit}>kcal</AppText>
+            <AppText variant="muted" style={styles.estimateUnit}>{t.common.kcal}</AppText>
           </View>
         </Card>
 
         {error && <AppText style={styles.error}>{error}</AppText>}
 
-        <Button title={saving ? "Saving..." : "Log workout"} size="lg" disabled={!canSave || saving} onPress={handleSave} />
+        <Button title={saving ? t.common.saving : t.exercise.title} size="lg" disabled={!canSave || saving} onPress={handleSave} />
 
         <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}>
-          <AppText style={styles.cancelText}>Cancel</AppText>
+          <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
         </Pressable>
       </ScrollView>
     </Screen>
