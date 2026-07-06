@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { getPost, updatePost, type FeedPost } from "@/features/community/api";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -16,6 +17,7 @@ export default function PostEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { token } = useAuth();
+  const t = useT();
 
   const [post, setPost] = useState<FeedPost | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -43,7 +45,7 @@ export default function PostEditScreen() {
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow photo library access to change the photo.");
+      Alert.alert(t.profile.permissionNeeded, t.community.photoPermChange);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -76,7 +78,7 @@ export default function PostEditScreen() {
       });
       router.back(); // detail refetches on focus → shows the update
     } catch (e: any) {
-      Alert.alert("Couldn't save", e.message || "Please try again.");
+      Alert.alert(t.community.couldntSave, e.message || t.common.tryAgain);
     } finally {
       setSaving(false);
     }
@@ -86,10 +88,10 @@ export default function PostEditScreen() {
     return (
       <Screen padded={false}>
         <View style={styles.stateBox}>
-          <ScreenHeader title="Edit post" />
+          <ScreenHeader title={t.community.editPost} />
           {loadError ? (
             <Card style={styles.errorCard}>
-              <AppText variant="muted" style={styles.centerText}>Couldn't load the post.</AppText>
+              <AppText variant="muted" style={styles.centerText}>{t.community.loadPostError}</AppText>
             </Card>
           ) : (
             <View style={styles.loadingBox}>
@@ -115,7 +117,7 @@ export default function PostEditScreen() {
           <TextInput
             value={caption}
             onChangeText={setCaption}
-            placeholder="Share something healthy..."
+            placeholder={t.community.shareSomething}
             placeholderTextColor={theme.colors.subtle}
             multiline
             maxLength={500}
@@ -141,7 +143,7 @@ export default function PostEditScreen() {
           <Pressable onPress={pickImage}>
             <Card style={styles.addPhotoCard}>
               <Ionicons name="image-outline" size={32} color={theme.colors.subtle} />
-              <AppText variant="muted">Add a photo</AppText>
+              <AppText variant="muted">{t.community.addPhoto}</AppText>
             </Card>
           </Pressable>
         )}
@@ -149,7 +151,7 @@ export default function PostEditScreen() {
         {/* Attached meal — can be kept or removed (not re-picked here) */}
         {post.meal && (
           <View style={styles.mealSection}>
-            <AppText variant="subtle" style={styles.sectionLabel}>Attached meal</AppText>
+            <AppText variant="subtle" style={styles.sectionLabel}>{t.community.attachedMeal}</AppText>
             <Card style={[styles.mealCard, !keepMeal && styles.mealCardOff]}>
               <View style={styles.mealIcon}>
                 <AppText style={styles.mealEmoji}>🍽️</AppText>
@@ -169,7 +171,7 @@ export default function PostEditScreen() {
           </View>
         )}
 
-        <Button title={saving ? "Saving..." : "Save changes"} size="lg" disabled={!canSave} onPress={handleSave} />
+        <Button title={saving ? t.common.saving : t.community.saveChanges} size="lg" disabled={!canSave} onPress={handleSave} />
       </ScrollView>
     </Screen>
   );

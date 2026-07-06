@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { getPost, toggleLike, toggleSave, deletePost, type FeedPost } from "@/features/community/api";
 import { initials, timeAgo } from "@/features/community/helpers";
-import { resolveLanguage } from "@/utils/language";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { ActionSheet } from "@/ui/components/ActionSheet";
@@ -17,7 +17,7 @@ export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { token, user } = useAuth();
-  const lang = resolveLanguage(user?.language);
+  const t = useT();
 
   const [post, setPost] = useState<FeedPost | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -62,10 +62,10 @@ export default function PostDetailScreen() {
   };
 
   const onDelete = () => {
-    Alert.alert("Delete post?", "This can't be undone.", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.community.deletePostTitle, t.community.deletePostMsg, [
+      { text: t.common.cancel, style: "cancel" },
       {
-        text: "Delete",
+        text: t.common.delete,
         style: "destructive",
         onPress: async () => {
           if (!token || !post) return;
@@ -73,7 +73,7 @@ export default function PostDetailScreen() {
             await deletePost(token, post.id);
             router.back();
           } catch {
-            Alert.alert("Couldn't delete", "Please try again.");
+            Alert.alert(t.community.couldntDelete, t.common.tryAgain);
           }
         },
       },
@@ -86,9 +86,7 @@ export default function PostDetailScreen() {
     router.push({
       pathname: "/tabs/coach" as any,
       params: {
-        ask: lang === "vi"
-          ? `Hướng dẫn mình cách làm "${post.meal.name}" tốt cho sức khoẻ nhé`
-          : `How do I cook "${post.meal.name}" in a healthy way?`,
+        ask: t.community.cookQuestion(post.meal.name),
         askId: String(Date.now()), // unique per tap — consumed once on the Coach tab
       },
     });
@@ -113,14 +111,14 @@ export default function PostDetailScreen() {
     return (
       <Screen padded={false}>
         <View style={styles.stateBox}>
-          <ScreenHeader title="Post" />
+          <ScreenHeader title={t.community.postDetailTitle} />
           {loadError ? (
             <Card style={styles.errorCard}>
               <AppText style={styles.emptyEmoji}>📡</AppText>
-              <AppText variant="h2" style={styles.centerText}>Couldn't load post</AppText>
-              <AppText variant="muted" style={styles.centerText}>It may have been deleted, or check your connection.</AppText>
+              <AppText variant="h2" style={styles.centerText}>{t.community.loadPostError}</AppText>
+              <AppText variant="muted" style={styles.centerText}>{t.community.loadPostErrorSub}</AppText>
               <Pressable onPress={load} style={({ pressed }) => [styles.retryBtn, pressed && styles.pressed]}>
-                <AppText style={styles.retryText}>Retry</AppText>
+                <AppText style={styles.retryText}>{t.common.retry}</AppText>
               </Pressable>
             </Card>
           ) : (
@@ -139,7 +137,7 @@ export default function PostDetailScreen() {
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         <ScreenHeader
-          title="Post"
+          title={t.community.postDetailTitle}
           right={
             isMine ? (
               <Pressable onPress={() => setMenuOpen(true)} hitSlop={10} style={({ pressed }) => [pressed && styles.pressed]}>
@@ -164,7 +162,7 @@ export default function PostDetailScreen() {
             </View>
             <View style={styles.flex1}>
               <AppText variant="body2" style={styles.bold}>{post.author.name}</AppText>
-              <AppText variant="subtle" style={styles.timeText}>{timeAgo(post.createdAt)} ago</AppText>
+              <AppText variant="subtle" style={styles.timeText}>{timeAgo(post.createdAt)} {t.community.ago}</AppText>
             </View>
           </Pressable>
 
@@ -185,7 +183,7 @@ export default function PostDetailScreen() {
               <View style={styles.flex1}>
                 <AppText variant="body2" style={styles.bold}>{post.meal.name}</AppText>
                 <AppText variant="subtle" style={styles.timeText}>
-                  {post.meal.calories} kcal · P {post.meal.protein} · C {post.meal.carbs} · F {post.meal.fat}
+                  {post.meal.calories} {t.common.kcal} · P {post.meal.protein} · C {post.meal.carbs} · F {post.meal.fat}
                 </AppText>
               </View>
             </View>
@@ -218,15 +216,15 @@ export default function PostDetailScreen() {
         {/* Try this meal — save-and-act loop unique to MealMate */}
         {post.meal && (
           <View style={styles.trySection}>
-            <AppText variant="subtle" style={styles.sectionLabel}>Try this meal</AppText>
+            <AppText variant="subtle" style={styles.sectionLabel}>{t.community.tryThisMeal}</AppText>
             <View style={styles.tryRow}>
               <Pressable onPress={askCoachHow} style={({ pressed }) => [styles.tryBtn, pressed && styles.pressed]}>
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.colors.primary} />
-                <AppText style={styles.tryBtnText}>How to cook?</AppText>
+                <AppText style={styles.tryBtnText}>{t.community.howToCook}</AppText>
               </Pressable>
               <Pressable onPress={addToDiary} style={({ pressed }) => [styles.tryBtn, styles.tryBtnAccent, pressed && styles.pressed]}>
                 <Ionicons name="add-circle-outline" size={18} color={theme.colors.accent} />
-                <AppText style={[styles.tryBtnText, styles.tryBtnTextAccent]}>Add to diary</AppText>
+                <AppText style={[styles.tryBtnText, styles.tryBtnTextAccent]}>{t.community.addToDiary}</AppText>
               </Pressable>
             </View>
           </View>
@@ -238,11 +236,11 @@ export default function PostDetailScreen() {
         onClose={() => setMenuOpen(false)}
         items={[
           {
-            label: "Edit post",
+            label: t.community.editPost,
             icon: "create-outline",
             onPress: () => router.push({ pathname: "/community/post-edit" as any, params: { id: post.id } }),
           },
-          { label: "Delete post", icon: "trash-outline", destructive: true, onPress: onDelete },
+          { label: t.community.deletePost, icon: "trash-outline", destructive: true, onPress: onDelete },
         ]}
       />
     </Screen>

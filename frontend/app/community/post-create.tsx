@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals, type Meal } from "@/context/MealsContext";
 import { createPost } from "@/features/community/api";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -17,6 +18,7 @@ export default function PostCreateScreen() {
   const router = useRouter();
   const { token } = useAuth();
   const { historyMeals, fetchMealHistory } = useMeals();
+  const t = useT();
 
   const [caption, setCaption] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export default function PostCreateScreen() {
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow photo library access to add a photo.");
+      Alert.alert(t.profile.permissionNeeded, t.community.photoPermPost);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -61,7 +63,7 @@ export default function PostCreateScreen() {
       // Community tab refetches on focus, so simply going back shows the new post
       router.back();
     } catch (e: any) {
-      Alert.alert("Couldn't post", e.message || "Please try again.");
+      Alert.alert(t.community.couldntPost, e.message || t.common.tryAgain);
     } finally {
       setPosting(false);
     }
@@ -77,14 +79,14 @@ export default function PostCreateScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title="New post" />
+        <ScreenHeader title={t.community.newPost} />
 
         {/* Caption */}
         <Card style={styles.captionCard}>
           <TextInput
             value={caption}
             onChangeText={setCaption}
-            placeholder="Share something healthy..."
+            placeholder={t.community.shareSomething}
             placeholderTextColor={theme.colors.subtle}
             multiline
             maxLength={500}
@@ -105,16 +107,16 @@ export default function PostCreateScreen() {
           <Pressable onPress={pickImage}>
             <Card style={styles.addPhotoCard}>
               <Ionicons name="image-outline" size={32} color={theme.colors.subtle} />
-              <AppText variant="muted">Add a photo</AppText>
+              <AppText variant="muted">{t.community.addPhoto}</AppText>
             </Card>
           </Pressable>
         )}
 
         {/* Attach a meal */}
         <View style={styles.mealSection}>
-          <AppText variant="subtle" style={styles.sectionLabel}>Attach a meal (optional)</AppText>
+          <AppText variant="subtle" style={styles.sectionLabel}>{t.community.attachMeal}</AppText>
           {recentMeals.length === 0 ? (
-            <AppText variant="subtle" style={styles.noMeals}>No logged meals yet.</AppText>
+            <AppText variant="subtle" style={styles.noMeals}>{t.community.noLoggedMeals}</AppText>
           ) : (
             recentMeals.map((m) => {
               const active = selectedMeal?.id === m.id;
@@ -126,7 +128,7 @@ export default function PostCreateScreen() {
                     </View>
                     <View style={styles.mealInfo}>
                       <AppText variant="body2" style={styles.mealName}>{m.name}</AppText>
-                      <AppText variant="subtle" style={styles.mealMeta}>{m.calories} kcal · {m.date}</AppText>
+                      <AppText variant="subtle" style={styles.mealMeta}>{t.community.mealMeta(m.calories, m.date)}</AppText>
                     </View>
                   </Card>
                 </Pressable>
@@ -135,7 +137,7 @@ export default function PostCreateScreen() {
           )}
         </View>
 
-        <Button title={posting ? "Posting..." : "Post"} size="lg" disabled={!canPost} onPress={handlePost} />
+        <Button title={posting ? t.community.posting : t.community.post} size="lg" disabled={!canPost} onPress={handlePost} />
       </ScrollView>
     </Screen>
   );

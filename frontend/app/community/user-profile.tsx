@@ -8,7 +8,8 @@ import {
   type FeedPost, type PublicProfile,
 } from "@/features/community/api";
 import { PostTile } from "@/features/community/PostTile";
-import { GOAL_LABEL, initials } from "@/features/community/helpers";
+import { initials } from "@/features/community/helpers";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -22,6 +23,7 @@ export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { token, user } = useAuth();
+  const t = useT();
 
   // Whether this is my own community profile — decided locally so the Saved tab
   // and its fetch don't wait on the server profile to load.
@@ -87,10 +89,10 @@ export default function UserProfileScreen() {
           {loadError ? (
             <Card style={styles.errorCard}>
               <AppText style={styles.emptyEmoji}>📡</AppText>
-              <AppText variant="h2" style={styles.centerText}>Couldn't load profile</AppText>
-              <AppText variant="muted" style={styles.centerText}>Check your connection and try again.</AppText>
+              <AppText variant="h2" style={styles.centerText}>{t.community.loadProfileError}</AppText>
+              <AppText variant="muted" style={styles.centerText}>{t.common.checkConnection}</AppText>
               <Pressable onPress={load} style={({ pressed }) => [styles.retryBtn, pressed && styles.pressed]}>
-                <AppText style={styles.retryText}>Retry</AppText>
+                <AppText style={styles.retryText}>{t.common.retry}</AppText>
               </Pressable>
             </Card>
           ) : (
@@ -132,7 +134,7 @@ export default function UserProfileScreen() {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View style={styles.header}>
-            <ScreenHeader title="Profile" />
+            <ScreenHeader title={t.community.profile} />
 
             {/* Header card */}
             <Card style={styles.profileCard}>
@@ -146,21 +148,21 @@ export default function UserProfileScreen() {
               <View style={styles.nameBox}>
                 <AppText variant="h1" style={styles.name}>{profile.user.name}</AppText>
                 {profile.user.goal ? (
-                  <AppText variant="muted" style={styles.goal}>🎯 {GOAL_LABEL[profile.user.goal] ?? profile.user.goal}</AppText>
+                  <AppText variant="muted" style={styles.goal}>🎯 {t.labels.goal[profile.user.goal] ?? profile.user.goal}</AppText>
                 ) : null}
               </View>
 
               <View style={styles.statsRow}>
-                <Stat label="Posts" value={profile.stats.postCount} />
+                <Stat label={t.community.posts} value={profile.stats.postCount} />
                 {/* A private profile's follow lists are locked to non-owners */}
-                <Stat label="Followers" value={profile.stats.followers} onPress={postsHidden ? undefined : () => openList("followers")} />
-                <Stat label="Following" value={profile.stats.following} onPress={postsHidden ? undefined : () => openList("following")} />
+                <Stat label={t.community.followers} value={profile.stats.followers} onPress={postsHidden ? undefined : () => openList("followers")} />
+                <Stat label={t.community.following} value={profile.stats.following} onPress={postsHidden ? undefined : () => openList("following")} />
               </View>
 
               {!isMe && (
                 <View style={styles.followBox}>
                   <Button
-                    title={profile.isFollowing ? "Following" : "Follow"}
+                    title={profile.isFollowing ? t.community.following : t.community.follow}
                     variant={profile.isFollowing ? "secondary" : "primary"}
                     disabled={busy}
                     onPress={onToggleFollow}
@@ -172,7 +174,7 @@ export default function UserProfileScreen() {
             {/* My posts / Saved tabs (own profile only, WEAR-style) */}
             {isMe ? (
               <View style={styles.tabRow}>
-                {([["posts", "My posts"], ["saved", "Saved"]] as const).map(
+                {([["posts", t.community.myPosts], ["saved", t.community.saved]] as const).map(
                   ([key, label]) => {
                     const active = tab === key;
                     return (
@@ -188,17 +190,15 @@ export default function UserProfileScreen() {
                 )}
               </View>
             ) : !postsHidden ? (
-              <AppText variant="subtle" style={styles.sectionLabel}>Posts</AppText>
+              <AppText variant="subtle" style={styles.sectionLabel}>{t.community.posts}</AppText>
             ) : null}
 
             {/* Private profile viewed by someone else — grid replaced with a lock */}
             {postsHidden && (
               <Card style={styles.lockCard}>
                 <Ionicons name="lock-closed" size={30} color={theme.colors.subtle} />
-                <AppText variant="h2" style={styles.centerText}>This profile is private</AppText>
-                <AppText variant="muted" style={styles.centerText}>
-                  {profile.user.name} keeps their posts private.
-                </AppText>
+                <AppText variant="h2" style={styles.centerText}>{t.community.privateTitle}</AppText>
+                <AppText variant="muted" style={styles.centerText}>{t.community.privateSub(profile.user.name)}</AppText>
               </Card>
             )}
           </View>
@@ -209,10 +209,10 @@ export default function UserProfileScreen() {
               <AppText style={styles.emptyEmoji}>{showSaved ? "🔖" : "📷"}</AppText>
               <AppText variant="muted" style={styles.centerText}>
                 {showSaved
-                  ? "Nothing saved yet. Tap the bookmark on any post to keep it here."
+                  ? t.community.savedEmpty
                   : isMe
-                  ? "You haven't posted yet. Share your first healthy meal!"
-                  : "No posts yet."}
+                  ? t.community.noPostsSelfEmpty
+                  : t.community.noPostsEmpty}
               </AppText>
             </Card>
           )

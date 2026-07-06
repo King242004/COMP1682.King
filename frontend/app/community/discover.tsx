@@ -7,6 +7,7 @@ import {
   searchUsers, getSuggestions, followUser, unfollowUser, type DiscoverUser,
 } from "@/features/community/api";
 import { UserRow } from "@/features/community/UserRow";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -16,6 +17,7 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 export default function DiscoverScreen() {
   const router = useRouter();
   const { token } = useAuth();
+  const t = useT();
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DiscoverUser[]>([]);
@@ -102,14 +104,14 @@ export default function DiscoverScreen() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={styles.header}>
-            <ScreenHeader title="Discover" />
+            <ScreenHeader title={t.community.discover} />
             {/* Search box */}
             <View style={styles.searchBox}>
               <Ionicons name="search" size={18} color={theme.colors.subtle} />
               <TextInput
                 value={query}
                 onChangeText={onChangeQuery}
-                placeholder="Search people by name"
+                placeholder={t.community.searchPlaceholder}
                 placeholderTextColor={theme.colors.subtle}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -122,7 +124,7 @@ export default function DiscoverScreen() {
               )}
             </View>
             <AppText variant="subtle" style={styles.sectionLabel}>
-              {showingSearch ? "Results" : "Suggested for you"}
+              {showingSearch ? t.community.results : t.community.suggested}
             </AppText>
           </View>
         }
@@ -132,7 +134,7 @@ export default function DiscoverScreen() {
           ) : (
             <Card style={styles.emptyCard}>
               <AppText variant="muted" style={styles.centerText}>
-                {showingSearch ? "No users found." : "No suggestions right now."}
+                {showingSearch ? t.community.noUsersFound : t.community.noSuggestions}
               </AppText>
             </Card>
           )
