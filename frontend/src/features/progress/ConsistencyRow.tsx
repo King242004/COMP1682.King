@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -8,11 +9,12 @@ import type { DaySummary } from "./summary";
 export function ConsistencyRow({ summaries, goal, daysLogged }: {
   summaries: DaySummary[]; goal: number; daysLogged: number;
 }) {
+  const t = useT();
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <AppText variant="h2">Consistency</AppText>
-        <AppText variant="subtle" style={styles.headerMeta}>{daysLogged}/7 days logged</AppText>
+        <AppText variant="h2">{t.progress.consistency}</AppText>
+        <AppText variant="subtle" style={styles.headerMeta}>{t.progress.daysLoggedOf7(daysLogged)}</AppText>
       </View>
       <View style={styles.row}>
         {summaries.map((day) => {
@@ -44,15 +46,15 @@ export function ConsistencyRow({ summaries, goal, daysLogged }: {
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.accent }]} />
-          <AppText variant="subtle" style={styles.legendText}>On track</AppText>
+          <AppText variant="subtle" style={styles.legendText}>{t.progress.onTrackShort}</AppText>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.primary }]} />
-          <AppText variant="subtle" style={styles.legendText}>Logged</AppText>
+          <AppText variant="subtle" style={styles.legendText}>{t.progress.logged}</AppText>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.danger }]} />
-          <AppText variant="subtle" style={styles.legendText}>Over goal</AppText>
+          <AppText variant="subtle" style={styles.legendText}>{t.progress.overGoalShort}</AppText>
         </View>
       </View>
     </Card>

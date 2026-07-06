@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -6,9 +7,10 @@ import type { DaySummary } from "./summary";
 
 // Per-day protein/carb/fat ratio as a stacked mini-bar (7 days).
 export function MacroRatioList({ summaries }: { summaries: DaySummary[] }) {
+  const t = useT();
   return (
     <Card style={styles.card}>
-      <AppText variant="h2">Daily macro ratio</AppText>
+      <AppText variant="h2">{t.progress.dailyMacroRatio}</AppText>
       <View style={styles.list}>
         {summaries.map((day) => {
           const totalMacroG = day.protein + day.carbs + day.fat;
@@ -19,12 +21,12 @@ export function MacroRatioList({ summaries }: { summaries: DaySummary[] }) {
             <View key={day.key} style={styles.row}>
               <View style={styles.head}>
                 <AppText variant="body2" style={day.isToday ? styles.bold : undefined}>
-                  {day.label}{day.isToday ? " (Today)" : ""}
+                  {day.label}{day.isToday ? t.progress.todaySuffix : ""}
                 </AppText>
                 {totalMacroG > 0 ? (
                   <AppText variant="subtle" style={styles.meta}>P {pPct}% · C {cPct}% · F {fPct}%</AppText>
                 ) : (
-                  <AppText variant="subtle" style={styles.meta}>No data</AppText>
+                  <AppText variant="subtle" style={styles.meta}>{t.progress.noData}</AppText>
                 )}
               </View>
               {totalMacroG > 0 ? (

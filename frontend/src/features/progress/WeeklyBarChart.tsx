@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -8,9 +9,10 @@ import type { DaySummary } from "./summary";
 export function WeeklyBarChart({ summaries, goal, maxCalories }: {
   summaries: DaySummary[]; goal: number; maxCalories: number;
 }) {
+  const t = useT();
   return (
     <Card style={styles.card}>
-      <AppText variant="h2">This week</AppText>
+      <AppText variant="h2">{t.progress.thisWeek}</AppText>
       <View style={styles.chartWrap}>
         {/* Goal line (runtime top → inline) */}
         <View style={[styles.goalLine, { top: (1 - goal / maxCalories) * 80, opacity: goal <= maxCalories ? 1 : 0 }]} />
@@ -44,15 +46,15 @@ export function WeeklyBarChart({ summaries, goal, maxCalories }: {
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={styles.legendLine} />
-          <AppText variant="subtle" style={styles.legendText}>Goal ({goal.toLocaleString()} kcal)</AppText>
+          <AppText variant="subtle" style={styles.legendText}>{t.progress.goalLine(goal.toLocaleString())}</AppText>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.accent }]} />
-          <AppText variant="subtle" style={styles.legendText}>On track (80–100%)</AppText>
+          <AppText variant="subtle" style={styles.legendText}>{t.progress.onTrackRange}</AppText>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.danger }]} />
-          <AppText variant="subtle" style={styles.legendText}>Over goal</AppText>
+          <AppText variant="subtle" style={styles.legendText}>{t.progress.overGoalShort}</AppText>
         </View>
       </View>
     </Card>

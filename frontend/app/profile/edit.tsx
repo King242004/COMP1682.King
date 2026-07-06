@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import { GOALS, ACTIVITY_LEVELS } from "@/utils/profileOptions";
+import { useT } from "@/i18n";
+import { GOAL_KEYS, ACTIVITY_KEYS, CONDITION_KEYS } from "@/utils/profileOptions";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -11,11 +12,10 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 
-const CONDITIONS = ["diabetes", "hypertension", "none"];
-
 export default function EditProfileScreen() {
   const router = useRouter();
   const { user, updateProfile, changeName } = useAuth();
+  const t = useT();
 
   const [isSaving, setIsSaving] = useState(false);
   const [name, setName] = useState(user?.name ?? "");
@@ -41,24 +41,24 @@ export default function EditProfileScreen() {
     // Validate name first (backend rule: 2+ chars, letters only)
     const trimmedName = name.trim();
     if (!trimmedName || trimmedName.length < 2) {
-      Alert.alert("Invalid name", "Name must be at least 2 characters.");
+      Alert.alert(t.editProfile.invalidName, t.editProfile.nameMin);
       return;
     }
     // \p{L} = any Unicode letter (supports Vietnamese, Chinese, etc.)
     if (!/^[\p{L}\s]+$/u.test(trimmedName)) {
-      Alert.alert("Invalid name", "Name must contain only letters and spaces.");
+      Alert.alert(t.editProfile.invalidName, t.editProfile.nameLettersOnly);
       return;
     }
     if (age && (Number(age) < 10 || Number(age) > 120)) {
-      Alert.alert("Invalid age", "Age must be between 10 and 120.");
+      Alert.alert(t.editProfile.invalidAge, t.editProfile.ageRange);
       return;
     }
     if (weight && (Number(weight) < 20 || Number(weight) > 300)) {
-      Alert.alert("Invalid weight", "Weight must be between 20 and 300 kg.");
+      Alert.alert(t.editProfile.invalidWeight, t.editProfile.weightRange);
       return;
     }
     if (height && (Number(height) < 50 || Number(height) > 250)) {
-      Alert.alert("Invalid height", "Height must be between 50 and 250 cm.");
+      Alert.alert(t.editProfile.invalidHeight, t.editProfile.heightRange);
       return;
     }
     setIsSaving(true);
@@ -77,7 +77,7 @@ export default function EditProfileScreen() {
       });
       router.back();
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Failed to update profile.");
+      Alert.alert(t.common.errorTitle, e.message || t.editProfile.updateFailed);
     } finally {
       setIsSaving(false);
     }
@@ -90,15 +90,15 @@ export default function EditProfileScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title="Edit profile" />
+        <ScreenHeader title={t.editProfile.title} />
 
         <Card style={styles.card}>
           {/* Name */}
-          <TextField label="Name" placeholder="e.g. John Doe" value={name} onChangeText={setName} autoCapitalize="words" />
+          <TextField label={t.editProfile.nameLabel} placeholder={t.editProfile.namePlaceholder} value={name} onChangeText={setName} autoCapitalize="words" />
 
           {/* Gender */}
           <View style={styles.field}>
-            <AppText variant="muted">Gender</AppText>
+            <AppText variant="muted">{t.profile.gender}</AppText>
             <View style={styles.genderRow}>
               {["male", "female"].map((g) => {
                 const active = gender === g;
@@ -108,26 +108,26 @@ export default function EditProfileScreen() {
                     onPress={() => setGender(g as "male" | "female")}
                     style={[styles.genderBtn, active ? styles.optActive : styles.optIdle]}
                   >
-                    <AppText style={[styles.optText, active && styles.optTextActive]}>{g}</AppText>
+                    <AppText style={[styles.optText, active && styles.optTextActive]}>{t.labels.gender[g]}</AppText>
                   </Pressable>
                 );
               })}
             </View>
           </View>
 
-          <TextField label="Age" placeholder="e.g. 21" value={age} onChangeText={setAge} keyboardType="number-pad" />
-          <TextField label="Weight (kg)" placeholder="e.g. 65" value={weight} onChangeText={setWeight} keyboardType="number-pad" />
-          <TextField label="Height (cm)" placeholder="e.g. 170" value={height} onChangeText={setHeight} keyboardType="number-pad" />
+          <TextField label={t.profile.age} placeholder={t.editProfile.agePlaceholder} value={age} onChangeText={setAge} keyboardType="number-pad" />
+          <TextField label={t.editProfile.weightLabel} placeholder={t.editProfile.weightPlaceholder} value={weight} onChangeText={setWeight} keyboardType="number-pad" />
+          <TextField label={t.editProfile.heightLabel} placeholder={t.editProfile.heightPlaceholder} value={height} onChangeText={setHeight} keyboardType="number-pad" />
 
           {/* Goal */}
           <View style={styles.field}>
-            <AppText variant="muted">Goal</AppText>
+            <AppText variant="muted">{t.profile.goal}</AppText>
             <View style={styles.stackList}>
-              {GOALS.map((g) => {
-                const active = goal === g.key;
+              {GOAL_KEYS.map((key) => {
+                const active = goal === key;
                 return (
-                  <Pressable key={g.key} onPress={() => setGoal(g.key)} style={[styles.stackBtn, active ? styles.optActive : styles.optIdle]}>
-                    <AppText style={[styles.optTextLeft, active && styles.optTextActive]}>{g.label}</AppText>
+                  <Pressable key={key} onPress={() => setGoal(key)} style={[styles.stackBtn, active ? styles.optActive : styles.optIdle]}>
+                    <AppText style={[styles.optTextLeft, active && styles.optTextActive]}>{t.labels.goal[key]}</AppText>
                   </Pressable>
                 );
               })}
@@ -136,13 +136,13 @@ export default function EditProfileScreen() {
 
           {/* Activity Level */}
           <View style={styles.field}>
-            <AppText variant="muted">Activity Level</AppText>
+            <AppText variant="muted">{t.editProfile.activityLabel}</AppText>
             <View style={styles.stackList}>
-              {ACTIVITY_LEVELS.map((a) => {
-                const active = activityLevel === a.key;
+              {ACTIVITY_KEYS.map((key) => {
+                const active = activityLevel === key;
                 return (
-                  <Pressable key={a.key} onPress={() => setActivityLevel(a.key)} style={[styles.stackBtn, active ? styles.optActive : styles.optIdle]}>
-                    <AppText style={[styles.optTextLeft, active && styles.optTextActive]}>{a.label}</AppText>
+                  <Pressable key={key} onPress={() => setActivityLevel(key)} style={[styles.stackBtn, active ? styles.optActive : styles.optIdle]}>
+                    <AppText style={[styles.optTextLeft, active && styles.optTextActive]}>{t.labels.activity[key]}</AppText>
                   </Pressable>
                 );
               })}
@@ -151,13 +151,13 @@ export default function EditProfileScreen() {
 
           {/* Conditions */}
           <View style={styles.field}>
-            <AppText variant="muted">Health Conditions</AppText>
+            <AppText variant="muted">{t.editProfile.healthConditions}</AppText>
             <View style={styles.chipWrap}>
-              {CONDITIONS.map((c) => {
+              {CONDITION_KEYS.map((c) => {
                 const active = isConditionActive(c);
                 return (
                   <Pressable key={c} onPress={() => toggleCondition(c)} style={[styles.chip, active ? styles.optActive : styles.optIdle]}>
-                    <AppText style={[styles.optText, active && styles.optTextActive]}>{c}</AppText>
+                    <AppText style={[styles.optText, active && styles.optTextActive]}>{t.labels.condition[c]}</AppText>
                   </Pressable>
                 );
               })}
@@ -167,23 +167,21 @@ export default function EditProfileScreen() {
           {/* Taste preferences — read by every AI feature (suggest, coach, weekly plan) */}
           <View style={styles.field}>
             <TextField
-              label="Taste preferences"
-              placeholder="e.g. không ăn hải sản, thích gà, ít cay..."
+              label={t.editProfile.tasteLabel}
+              placeholder={t.editProfile.tastePlaceholder}
               value={taste}
               onChangeText={setTaste}
               textContentType="none"
             />
-            <AppText variant="subtle" style={styles.hint}>
-              AI (gợi ý món, Coach, kế hoạch tuần) sẽ luôn tôn trọng khẩu vị này.
-            </AppText>
+            <AppText variant="subtle" style={styles.hint}>{t.editProfile.tasteHint}</AppText>
           </View>
 
           <View style={styles.actions}>
             <View style={styles.actionBtn}>
-              <Button title="Cancel" variant="secondary" onPress={() => router.back()} />
+              <Button title={t.common.cancel} variant="secondary" onPress={() => router.back()} />
             </View>
             <View style={styles.actionBtn}>
-              <Button title={isSaving ? "Saving..." : "Save"} onPress={handleSave} disabled={isSaving} />
+              <Button title={isSaving ? t.common.saving : t.common.save} onPress={handleSave} disabled={isSaving} />
             </View>
           </View>
         </Card>

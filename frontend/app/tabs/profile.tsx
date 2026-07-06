@@ -4,8 +4,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useT } from "@/i18n";
 import { initials } from "@/utils/name";
-import { goalLabel, activityLabel } from "@/utils/profileOptions";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -30,6 +30,7 @@ function SettingRow({ icon, label, value, last }: {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, stats, logout, fetchProfile, uploadAvatar } = useAuth();
+  const t = useT();
 
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
@@ -40,7 +41,7 @@ export default function ProfileScreen() {
   const handlePickAvatar = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow photo library access to change avatar.");
+      Alert.alert(t.profile.permissionNeeded, t.profile.avatarPermMsg);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -54,17 +55,17 @@ export default function ProfileScreen() {
     try {
       await uploadAvatar(result.assets[0].uri);
     } catch (e: any) {
-      Alert.alert("Upload failed", e.message || "Could not upload avatar.");
+      Alert.alert(t.profile.uploadFailed, e.message || t.profile.uploadFailedMsg);
     } finally {
       setIsUploadingAvatar(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert("Log out", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.profile.logout, t.profile.logoutMsg, [
+      { text: t.common.cancel, style: "cancel" },
       {
-        text: "Log out",
+        text: t.profile.logout,
         style: "destructive",
         onPress: () => {
           logout();
@@ -81,8 +82,8 @@ export default function ProfileScreen() {
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.titleBlock}>
-          <AppText variant="h1">Profile</AppText>
-          <AppText variant="muted">Your account and app settings.</AppText>
+          <AppText variant="h1">{t.profile.title}</AppText>
+          <AppText variant="muted">{t.profile.subtitle}</AppText>
         </View>
 
         {/* User card — avatar (tap to change) + name + edit button */}
@@ -103,7 +104,7 @@ export default function ProfileScreen() {
             <View style={styles.userInfo}>
               <AppText variant="h2">{displayName}</AppText>
               <AppText variant="muted" style={styles.userEmail}>{user?.email}</AppText>
-              {isUploadingAvatar && <AppText variant="muted" style={styles.uploadingText}>Uploading...</AppText>}
+              {isUploadingAvatar && <AppText variant="muted" style={styles.uploadingText}>{t.profile.uploading}</AppText>}
             </View>
             <Pressable
               onPress={() => router.push("/profile/edit" as any)}
@@ -119,35 +120,35 @@ export default function ProfileScreen() {
           <View style={styles.statsStrip}>
             <Card style={styles.statCard}>
               <AppText variant="h0" style={styles.statValue}>{stats.bmi ?? "—"}</AppText>
-              <AppText variant="subtle" style={styles.statLabel}>BMI</AppText>
+              <AppText variant="subtle" style={styles.statLabel}>{t.profile.bmi}</AppText>
               {stats.bmiCategory && <AppText variant="subtle" style={styles.statSub}>{stats.bmiCategory}</AppText>}
             </Card>
             <Card style={styles.statCard}>
               <AppText variant="h0" style={styles.statValue}>{stats.tdee ?? "—"}</AppText>
-              <AppText variant="subtle" style={styles.statLabel}>TDEE (kcal)</AppText>
+              <AppText variant="subtle" style={styles.statLabel}>{t.profile.tdee}</AppText>
             </Card>
             <Card style={styles.statCard}>
               <AppText variant="h0" style={styles.statValue}>{user?.calorieGoal ?? 2000}</AppText>
-              <AppText variant="subtle" style={styles.statLabel}>Goal (kcal)</AppText>
+              <AppText variant="subtle" style={styles.statLabel}>{t.profile.goalKcal}</AppText>
             </Card>
           </View>
         )}
 
         {/* Health details */}
-        <SectionLabel>Health details</SectionLabel>
+        <SectionLabel>{t.profile.healthDetails}</SectionLabel>
         <Card style={styles.detailCard}>
-          <SettingRow icon="👤" label="Gender" value={user?.gender ?? "—"} />
-          <SettingRow icon="🎂" label="Age" value={user?.age ? `${user.age} years` : "—"} />
-          <SettingRow icon="⚖️" label="Weight" value={user?.weight ? `${user.weight} kg` : "—"} />
-          <SettingRow icon="📏" label="Height" value={user?.height ? `${user.height} cm` : "—"} />
-          <SettingRow icon="🎯" label="Goal" value={goalLabel(user?.goal) ?? "—"} />
-          <SettingRow icon="🏃" label="Activity" value={activityLabel(user?.activityLevel) ?? "—"} />
-          <SettingRow icon="❤️" label="Conditions" value={user?.conditions?.length ? user.conditions.join(", ") : "None"} />
-          <SettingRow icon="🍜" label="Taste" value={user?.tastePreferences?.trim() ? user.tastePreferences : "—"} last />
+          <SettingRow icon="👤" label={t.profile.gender} value={user?.gender ?? "—"} />
+          <SettingRow icon="🎂" label={t.profile.age} value={user?.age ? t.profile.ageValue(user.age) : "—"} />
+          <SettingRow icon="⚖️" label={t.profile.weight} value={user?.weight ? t.profile.weightValue(user.weight) : "—"} />
+          <SettingRow icon="📏" label={t.profile.height} value={user?.height ? t.profile.heightValue(user.height) : "—"} />
+          <SettingRow icon="🎯" label={t.profile.goal} value={t.labels.goal[user?.goal ?? ""] ?? "—"} />
+          <SettingRow icon="🏃" label={t.profile.activity} value={t.labels.activity[user?.activityLevel ?? ""] ?? "—"} />
+          <SettingRow icon="❤️" label={t.profile.conditions} value={user?.conditions?.length ? user.conditions.map((c) => t.labels.condition[c] ?? c).join(", ") : t.profile.none} />
+          <SettingRow icon="🍜" label={t.profile.taste} value={user?.tastePreferences?.trim() ? user.tastePreferences : "—"} last />
         </Card>
 
         {/* Account */}
-        <SectionLabel>Account</SectionLabel>
+        <SectionLabel>{t.profile.account}</SectionLabel>
         <Card style={styles.detailCard}>
           {/* Settings entry — app preferences live in their own screen */}
           <Pressable
@@ -157,14 +158,14 @@ export default function ProfileScreen() {
             <View style={styles.accountIcon}>
               <Ionicons name="settings-outline" size={17} color={theme.colors.primary} />
             </View>
-            <AppText variant="body2" style={styles.accountLabel}>Settings</AppText>
+            <AppText variant="body2" style={styles.accountLabel}>{t.profile.settings}</AppText>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
           <Pressable onPress={handleLogout} style={({ pressed }) => [styles.accountRow, pressed && styles.dim]}>
             <View style={styles.accountIconDanger}>
               <Ionicons name="log-out-outline" size={17} color={theme.colors.danger} />
             </View>
-            <AppText variant="body2" style={styles.accountLabelDanger}>Log out</AppText>
+            <AppText variant="body2" style={styles.accountLabelDanger}>{t.profile.logout}</AppText>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
         </Card>
