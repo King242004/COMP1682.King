@@ -14,6 +14,23 @@ export const vi: Strings = {
     error: "Đã có lỗi xảy ra.",
     tryAgain: "Vui lòng thử lại.",
     checkConnection: "Kiểm tra kết nối rồi thử lại.",
+    kcal: "kcal",
+  },
+
+  exercise: {
+    title: "Ghi buổi tập",
+    subtitle: "Lượng calo đốt được ước tính bằng công thức MET.",
+    loggingFor: "Ghi cho",
+    weightWarn: "Đặt cân nặng trong Hồ sơ để ước tính chính xác. Tạm dùng 60 kg.",
+    activityName: "Tên hoạt động",
+    activityNamePlaceholder: "vd. Leo núi",
+    metValue: "Giá trị MET",
+    metPlaceholder: "vd. 8",
+    metHint: "MET = mức nặng gấp mấy lần lúc nghỉ. Đi bộ ≈ 3.5, chạy ≈ 8, cường độ cao ≈ 10+.",
+    duration: "Thời lượng (phút)",
+    durationPlaceholder: "vd. 30",
+    estimatedBurned: "Ước tính calo đốt",
+    failed: "Ghi buổi tập thất bại.",
   },
 
   auth: {
