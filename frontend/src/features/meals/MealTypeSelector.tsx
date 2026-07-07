@@ -1,14 +1,17 @@
 // One meal-type selector for Add + Edit (they used to ship two different
 // designs for the same action). Style follows the Soft UI tint pattern.
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
 import { MEAL_TYPE_META, type MealTypeKey } from "@/ui/mealTypes";
 
 export function MealTypeSelector({ value, onChange }: {
   value: MealTypeKey;
   onChange: (t: MealTypeKey) => void;
 }) {
+  const t = useT();
   return (
     <View style={styles.row}>
       {MEAL_TYPE_META.map((mt) => {
@@ -20,7 +23,7 @@ export function MealTypeSelector({ value, onChange }: {
             style={({ pressed }) => [styles.btn, active && styles.btnActive, pressed && styles.pressed]}
           >
             <Ionicons name={mt.icon as any} size={18} color={active ? mt.color : theme.colors.subtle} />
-            <Text style={[styles.label, active && styles.labelActive]}>{mt.label}</Text>
+            <AppText style={[styles.label, active && styles.labelActive]}>{t.labels.mealType[mt.key]}</AppText>
           </Pressable>
         );
       })}

@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useMeals } from "@/context/MealsContext";
+import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { MealTypeSelector } from "@/features/meals/MealTypeSelector";
 import { type MealTypeKey } from "@/ui/mealTypes";
@@ -20,11 +21,11 @@ type Errors = {
   fat?: string;
 };
 
-function validateNumber(val: string, field: string): string | undefined {
+function validateNumber(val: string, field: string, t: Strings): string | undefined {
   if (!val.trim()) return undefined;
   const n = Number(val);
-  if (isNaN(n) || n < 0) return `${field} must be a positive number`;
-  if (n > 9999) return `${field} seems too high`;
+  if (isNaN(n) || n < 0) return t.meals.numPositive(field);
+  if (n > 9999) return t.meals.numTooHigh(field);
   return undefined;
 }
 
@@ -32,6 +33,7 @@ export default function EditMealScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { meals, historyMeals, updateMeal, deleteMeal } = useMeals();
+  const t = useT();
   // Look in both lists - meal may have been opened from today's view OR meal history
   const meal = meals.find((m) => m.id === id) || historyMeals.find((m) => m.id === id);
 
@@ -60,17 +62,17 @@ export default function EditMealScreen() {
 
   const validate = (): Errors => {
     const e: Errors = {};
-    if (mealName.trim().length < 2) e.mealName = "Name must be at least 2 characters";
-    if (mealName.trim().length > 100) e.mealName = "Name is too long";
+    if (mealName.trim().length < 2) e.mealName = t.meals.nameMin;
+    if (mealName.trim().length > 100) e.mealName = t.meals.nameTooLong;
     const kcal = Number(calories);
-    if (!calories.trim()) e.calories = "Calories is required";
-    else if (isNaN(kcal) || kcal <= 0) e.calories = "Enter a valid calorie amount";
-    else if (kcal > 9999) e.calories = "Calories seems too high";
-    const pe = validateNumber(protein, "Protein");
+    if (!calories.trim()) e.calories = t.meals.caloriesRequired;
+    else if (isNaN(kcal) || kcal <= 0) e.calories = t.meals.caloriesInvalid;
+    else if (kcal > 9999) e.calories = t.meals.caloriesTooHigh;
+    const pe = validateNumber(protein, t.labels.protein, t);
     if (pe) e.protein = pe;
-    const ce = validateNumber(carbs, "Carbs");
+    const ce = validateNumber(carbs, t.labels.carbs, t);
     if (ce) e.carbs = ce;
-    const fe = validateNumber(fat, "Fat");
+    const fe = validateNumber(fat, t.labels.fat, t);
     if (fe) e.fat = fe;
     return e;
   };
@@ -78,7 +80,7 @@ export default function EditMealScreen() {
   const canSave = useMemo(() => Object.keys(validate()).length === 0, [mealName, calories, protein, carbs, fat]);
 
   const handleBlur = (field: string) => {
-    setTouched((t) => ({ ...t, [field]: true }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
     setErrors(validate());
   };
 
@@ -104,19 +106,19 @@ export default function EditMealScreen() {
       // replacing to History used to hijack the back stack.
       router.back();
     } catch (err: any) {
-      setErrors({ mealName: err.message || "Failed to save changes." });
+      setErrors({ mealName: err.message || t.meals.saveChangesFailed });
       setIsSaving(false); // only re-enable on failure — success navigates away
     }
   };
 
   const handleDelete = () => {
     Alert.alert(
-      "Delete meal",
-      `Delete "${mealName}"?`,
+      t.meals.deleteMealTitle,
+      t.meals.deleteMealMsg(mealName),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.common.cancel, style: "cancel" },
         {
-          text: "Delete",
+          text: t.common.delete,
           style: "destructive",
           onPress: async () => {
             if (!id) return;
@@ -134,7 +136,7 @@ export default function EditMealScreen() {
   if (!meal) {
     return (
       <Screen>
-        <AppText variant="muted">Meal not found.</AppText>
+        <AppText variant="muted">{t.meals.mealNotFound}</AppText>
       </Screen>
     );
   }
@@ -148,14 +150,14 @@ export default function EditMealScreen() {
       >
         {/* Header with Delete on the right */}
         <ScreenHeader
-          title="Edit meal"
+          title={t.meals.editTitle}
           right={
             <Pressable
               onPress={handleDelete}
               style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
             >
-              <Text style={styles.deleteEmoji}>🗑️</Text>
-              <AppText style={styles.deleteText}>Delete</AppText>
+              <AppText style={styles.deleteEmoji}>🗑️</AppText>
+              <AppText style={styles.deleteText}>{t.common.delete}</AppText>
             </Pressable>
           }
         />
@@ -168,10 +170,10 @@ export default function EditMealScreen() {
           <View style={styles.formFields}>
             <View style={styles.fieldWrap}>
               <TextField
-                label="Meal name"
-                placeholder="e.g. Chicken burrito bowl"
+                label={t.meals.mealName}
+                placeholder={t.meals.mealNamePlaceholder}
                 value={mealName}
-                onChangeText={(t) => { setMealName(t); setErrors((e) => ({ ...e, mealName: undefined })); }}
+                onChangeText={(v) => { setMealName(v); setErrors((e) => ({ ...e, mealName: undefined })); }}
                 textContentType="none"
                 inputProps={{ onBlur: () => handleBlur("mealName") }}
               />
@@ -182,10 +184,10 @@ export default function EditMealScreen() {
 
             <View style={styles.fieldWrap}>
               <TextField
-                label="Calories (kcal)"
-                placeholder="e.g. 650"
+                label={t.meals.calories}
+                placeholder={t.meals.caloriesPlaceholder}
                 value={calories}
-                onChangeText={(t) => { setCalories(t); setErrors((e) => ({ ...e, calories: undefined })); }}
+                onChangeText={(v) => { setCalories(v); setErrors((e) => ({ ...e, calories: undefined })); }}
                 keyboardType="number-pad"
                 textContentType="none"
                 inputProps={{ onBlur: () => handleBlur("calories") }}
@@ -198,10 +200,10 @@ export default function EditMealScreen() {
             <View style={styles.macroRow}>
               <View style={styles.macroField}>
                 <TextField
-                  label="Protein (g)"
-                  placeholder="Optional"
+                  label={t.meals.proteinG}
+                  placeholder={t.meals.optional}
                   value={protein}
-                  onChangeText={(t) => { setProtein(t); setErrors((e) => ({ ...e, protein: undefined })); }}
+                  onChangeText={(v) => { setProtein(v); setErrors((e) => ({ ...e, protein: undefined })); }}
                   keyboardType="number-pad"
                   textContentType="none"
                   inputProps={{ onBlur: () => handleBlur("protein") }}
@@ -212,10 +214,10 @@ export default function EditMealScreen() {
               </View>
               <View style={styles.macroField}>
                 <TextField
-                  label="Carbs (g)"
-                  placeholder="Optional"
+                  label={t.meals.carbsG}
+                  placeholder={t.meals.optional}
                   value={carbs}
-                  onChangeText={(t) => { setCarbs(t); setErrors((e) => ({ ...e, carbs: undefined })); }}
+                  onChangeText={(v) => { setCarbs(v); setErrors((e) => ({ ...e, carbs: undefined })); }}
                   keyboardType="number-pad"
                   textContentType="none"
                   inputProps={{ onBlur: () => handleBlur("carbs") }}
@@ -228,10 +230,10 @@ export default function EditMealScreen() {
 
             <View style={styles.fieldWrap}>
               <TextField
-                label="Fat (g)"
-                placeholder="Optional"
+                label={t.meals.fatG}
+                placeholder={t.meals.optional}
                 value={fat}
-                onChangeText={(t) => { setFat(t); setErrors((e) => ({ ...e, fat: undefined })); }}
+                onChangeText={(v) => { setFat(v); setErrors((e) => ({ ...e, fat: undefined })); }}
                 keyboardType="number-pad"
                 textContentType="none"
                 inputProps={{ onBlur: () => handleBlur("fat") }}
@@ -242,8 +244,8 @@ export default function EditMealScreen() {
             </View>
 
             <TextField
-              label="Note (optional)"
-              placeholder="e.g. ate out, less sugar than usual..."
+              label={t.meals.note}
+              placeholder={t.meals.notePlaceholder}
               value={note}
               onChangeText={setNote}
               textContentType="none"
@@ -251,13 +253,13 @@ export default function EditMealScreen() {
           </View>
         </Card>
 
-        <Button title={isSaving ? "Saving..." : "Save changes"} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
+        <Button title={isSaving ? t.common.saving : t.meals.saveChanges} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
 
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [styles.cancel, pressed && styles.dim]}
         >
-          <AppText style={styles.cancelText}>Cancel</AppText>
+          <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
         </Pressable>
       </ScrollView>
     </Screen>

@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMeals, Meal } from "@/context/MealsContext";
+import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
 import { dateKey } from "@/utils/date";
@@ -19,19 +20,20 @@ function hhmm(iso: string) {
   return `${h}:${m}`;
 }
 
-function dateLabel(dateStr: string) {
+function dateLabel(dateStr: string, t: Strings) {
   const d = new Date(dateStr + "T00:00:00");
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  if (d.toDateString() === today.toDateString()) return t.meals.today;
+  if (d.toDateString() === yesterday.toDateString()) return t.meals.yesterday;
   return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
 }
 
 export default function MealHistoryScreen() {
   const router = useRouter();
   const { historyMeals, fetchMealHistory } = useMeals();
+  const t = useT();
 
   useEffect(() => {
     fetchMealHistory();
@@ -44,7 +46,7 @@ export default function MealHistoryScreen() {
     const date = meal.date;
     if (!seen.has(date)) {
       seen.add(date);
-      grouped.push({ date, label: dateLabel(date), meals: [] });
+      grouped.push({ date, label: dateLabel(date, t), meals: [] });
     }
     grouped.find((g) => g.date === date)?.meals.push(meal);
   }
@@ -57,20 +59,18 @@ export default function MealHistoryScreen() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View>
-            <ScreenHeader title="Meal History" />
-            <AppText variant="muted" style={styles.subtitle}>Tap a meal to view details or edit.</AppText>
+            <ScreenHeader title={t.meals.historyTitle} />
+            <AppText variant="muted" style={styles.subtitle}>{t.meals.historySubtitle}</AppText>
           </View>
         }
         ListEmptyComponent={
           <Card style={styles.emptyCard}>
             <View style={styles.emptyBody}>
-              <AppText variant="h2">No meals yet</AppText>
-              <AppText variant="muted">
-                Add a meal manually or scan one to start tracking calories.
-              </AppText>
+              <AppText variant="h2">{t.meals.noMealsYet}</AppText>
+              <AppText variant="muted">{t.meals.noMealsSub}</AppText>
               <View style={styles.emptyAction}>
                 <Button
-                  title="Add meal"
+                  title={t.meals.addTitle}
                   variant="secondary"
                   onPress={() => router.push("/meals/add")}
                 />
@@ -105,7 +105,7 @@ export default function MealHistoryScreen() {
                       <View style={styles.rowMeta}>
                         <View style={styles.metaItem}>
                           <Ionicons name="flame" size={13} color={theme.colors.accent2} />
-                          <AppText variant="subtle">{item.calories.toLocaleString()} kcal</AppText>
+                          <AppText variant="subtle">{item.calories.toLocaleString()} {t.common.kcal}</AppText>
                         </View>
                         {loggedSameDay && (
                           <View style={styles.metaItem}>
@@ -114,7 +114,7 @@ export default function MealHistoryScreen() {
                           </View>
                         )}
                         {item.mealType && (
-                          <AppText variant="subtle" style={styles.capitalize}>· {item.mealType}</AppText>
+                          <AppText variant="subtle">· {t.labels.mealType[item.mealType]}</AppText>
                         )}
                       </View>
                     </View>
