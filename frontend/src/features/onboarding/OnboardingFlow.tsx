@@ -6,7 +6,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { resolveLanguage } from "@/utils/language";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -28,69 +28,22 @@ function calcTDEE(w: number, h: number, age: number, gender: "male" | "female", 
 export function OnboardingFlow() {
   const router = useRouter();
   const { user, updateProfile } = useAuth();
-  const vi = resolveLanguage(user?.language) === "vi";
-
-  const L = vi
-    ? {
-        introTitle: "Chào mừng đến MealMate 👋",
-        introSub: "Người bạn đồng hành bữa ăn của bạn. Trả lời vài câu hỏi để AI hiểu bạn ngay từ đầu nhé (~1 phút).",
-        featScan: "Chụp ảnh món ăn — AI tự nhận diện và tính calo",
-        featCoach: "AI Coach tư vấn theo mục tiêu, bệnh lý và khẩu vị của bạn",
-        featPlan: "Tự lên thực đơn tuần với món Việt quen thuộc",
-        start: "Bắt đầu", skip: "Bỏ qua", next: "Tiếp tục", back: "Quay lại",
-        finish: "Hoàn tất", saving: "Đang lưu...",
-        goalTitle: "Mục tiêu của bạn là gì?",
-        goalSub: "AI sẽ điều chỉnh calo và món ăn theo mục tiêu này.",
-        bodyTitle: "Về cơ thể bạn",
-        bodySub: "Để tính nhu cầu calo mỗi ngày (TDEE) cho riêng bạn.",
-        gender: "Giới tính", male: "Nam", female: "Nữ",
-        age: "Tuổi", weight: "Cân nặng (kg)", height: "Chiều cao (cm)",
-        activity: "Mức vận động",
-        tdeeLabel: "Nhu cầu calo của bạn", tdeeGoal: "Mục tiêu mỗi ngày",
-        healthTitle: "Sức khoẻ & khẩu vị",
-        healthSub: "AI sẽ né các món không hợp với bạn.",
-        conditions: "Bệnh nền (nếu có)",
-        taste: "Khẩu vị",
-        tastePh: "vd: không ăn hải sản, thích gà, ít cay...",
-        saveErr: "Chưa lưu được hồ sơ, bạn có thể cập nhật lại trong Profile nhé.",
-      }
-    : {
-        introTitle: "Welcome to MealMate 👋",
-        introSub: "Your meal companion. Answer a few questions so the AI understands you from day one (~1 minute).",
-        featScan: "Snap a photo — AI recognizes the dish and counts calories",
-        featCoach: "AI Coach advises around your goal, conditions and taste",
-        featPlan: "Generates a weekly menu with familiar Vietnamese dishes",
-        start: "Get started", skip: "Skip", next: "Continue", back: "Back",
-        finish: "Finish", saving: "Saving...",
-        goalTitle: "What's your goal?",
-        goalSub: "The AI adapts calories and dishes to this goal.",
-        bodyTitle: "About your body",
-        bodySub: "Used to calculate your personal daily calorie needs (TDEE).",
-        gender: "Gender", male: "Male", female: "Female",
-        age: "Age", weight: "Weight (kg)", height: "Height (cm)",
-        activity: "Activity level",
-        tdeeLabel: "Your daily calorie needs", tdeeGoal: "Daily goal",
-        healthTitle: "Health & taste",
-        healthSub: "The AI will steer clear of foods that don't suit you.",
-        conditions: "Health conditions (if any)",
-        taste: "Taste preferences",
-        tastePh: "e.g. no seafood, love chicken, less spicy...",
-        saveErr: "Couldn't save your profile — you can update it later in Profile.",
-      };
+  const t = useT();
+  const L = t.onboarding;
 
   const GOALS = [
-    { key: "lose_weight", icon: "trending-down", label: vi ? "Giảm cân" : "Lose weight" },
-    { key: "gain_muscle", icon: "barbell", label: vi ? "Tăng cơ" : "Gain muscle" },
-    { key: "eat_healthy", icon: "leaf", label: vi ? "Ăn lành mạnh" : "Eat healthy" },
+    { key: "lose_weight", icon: "trending-down", label: t.labels.goal.lose_weight },
+    { key: "gain_muscle", icon: "barbell", label: t.labels.goal.gain_muscle },
+    { key: "eat_healthy", icon: "leaf", label: t.labels.goal.eat_healthy },
   ];
   const ACTIVITIES = [
-    { key: "sedentary", label: vi ? "Ít vận động" : "Sedentary" },
-    { key: "moderate", label: vi ? "Vừa phải" : "Moderate" },
-    { key: "active", label: vi ? "Năng động" : "Active" },
+    { key: "sedentary", label: t.labels.activity.sedentary },
+    { key: "moderate", label: t.labels.activity.moderate },
+    { key: "active", label: t.labels.activity.active },
   ];
   const CONDITIONS = [
-    { key: "diabetes", label: vi ? "Tiểu đường" : "Diabetes" },
-    { key: "hypertension", label: vi ? "Huyết áp cao" : "Hypertension" },
+    { key: "diabetes", label: t.labels.condition.diabetes },
+    { key: "hypertension", label: t.labels.condition.hypertension },
   ];
 
   const [step, setStep] = useState<Step>("intro");
@@ -270,7 +223,7 @@ export function OnboardingFlow() {
                 <AppText variant="subtle" style={styles.smallLabel}>{L.tdeeLabel}</AppText>
                 <View style={styles.tdeeRow}>
                   <AppText variant="h0" style={styles.tdeeNum}>{tdee.toLocaleString()}</AppText>
-                  <AppText variant="muted">kcal / {vi ? "ngày" : "day"}</AppText>
+                  <AppText variant="muted">kcal / {L.perDay}</AppText>
                 </View>
                 <AppText variant="subtle" style={styles.smallLabel}>
                   {L.tdeeGoal}: <AppText style={styles.tdeeGoal}>{goalCal?.toLocaleString()} kcal</AppText>
@@ -305,7 +258,7 @@ export function OnboardingFlow() {
             <View style={styles.fieldBlock}>
               <TextField label={L.taste} placeholder={L.tastePh} value={taste} onChangeText={setTaste} textContentType="none" />
               <AppText variant="subtle" style={styles.tasteHint}>
-                {vi ? "Gợi ý món, Coach và kế hoạch tuần sẽ luôn theo khẩu vị này." : "Suggestions, Coach and weekly plans will always respect this."}
+                {L.tasteHint}
               </AppText>
             </View>
 
