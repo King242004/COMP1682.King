@@ -1,6 +1,7 @@
 // Manual barcode entry — self-contained (owns its input + validation).
 import { useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, View } from "react-native";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -12,12 +13,13 @@ export function ManualBarcodeModal({ visible, onClose, onSubmit }: {
   onClose: () => void;
   onSubmit: (code: string) => void;
 }) {
+  const t = useT();
   const [code, setCode] = useState("");
 
   const submit = () => {
     const trimmed = code.trim();
     if (!/^\d{8,14}$/.test(trimmed)) {
-      Alert.alert("Invalid barcode", "Barcode must be 8 to 14 digits.");
+      Alert.alert(t.scan.invalidBarcode, t.scan.barcodeDigits);
       return;
     }
     setCode("");
@@ -35,22 +37,22 @@ export function ManualBarcodeModal({ visible, onClose, onSubmit }: {
         <Pressable onPress={(e) => e.stopPropagation()}>
           <Card style={styles.card}>
             <View style={styles.header}>
-              <AppText variant="h2">Enter barcode</AppText>
-              <AppText variant="muted" style={styles.subtitle}>Type the 8-14 digit number under the bars.</AppText>
+              <AppText variant="h2">{t.scan.enterBarcode}</AppText>
+              <AppText variant="muted" style={styles.subtitle}>{t.scan.barcodeHint}</AppText>
             </View>
             <TextField
-              label="Barcode number"
-              placeholder="e.g. 8934563138189"
+              label={t.scan.barcodeLabel}
+              placeholder={t.scan.barcodePlaceholder}
               value={code}
               onChangeText={setCode}
               keyboardType="number-pad"
             />
             <View style={styles.actions}>
               <View style={styles.flex1}>
-                <Button title="Cancel" variant="secondary" onPress={cancel} />
+                <Button title={t.common.cancel} variant="secondary" onPress={cancel} />
               </View>
               <View style={styles.flex1}>
-                <Button title="Look up" onPress={submit} />
+                <Button title={t.scan.lookUp} onPress={submit} />
               </View>
             </View>
           </Card>

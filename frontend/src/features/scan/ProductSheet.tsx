@@ -1,6 +1,7 @@
 // Bottom sheet with the Open Food Facts product found for a barcode.
 import { Image, Modal, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -13,13 +14,14 @@ export function ProductSheet({ visible, product, onAdd, onClose }: {
   onAdd: (p: Product) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.grabber} />
           <View style={styles.headerRow}>
-            <AppText variant="h2">Product found</AppText>
+            <AppText variant="h2">{t.scan.productFound}</AppText>
             <Pressable onPress={onClose} hitSlop={10}>
               <Ionicons name="close-circle" size={28} color={theme.colors.subtle} />
             </Pressable>
@@ -38,12 +40,12 @@ export function ProductSheet({ visible, product, onAdd, onClose }: {
                   <View style={styles.productInfo}>
                     <AppText variant="h2" style={styles.productName}>{product.name}</AppText>
                     {product.brand ? <AppText variant="muted" style={styles.brand}>{product.brand}</AppText> : null}
-                    {product.servingSize ? <AppText variant="subtle" style={styles.serving}>Per serving: {product.servingSize}</AppText> : null}
+                    {product.servingSize ? <AppText variant="subtle" style={styles.serving}>{t.scan.perServing(product.servingSize)}</AppText> : null}
                   </View>
                 </View>
                 <View style={styles.macroStrip}>
                   {[
-                    { label: "kcal", value: product.calories, color: theme.colors.primary },
+                    { label: t.common.kcal, value: product.calories, color: theme.colors.primary },
                     { label: "P", value: product.protein, color: theme.colors.accent2 },
                     { label: "C", value: product.carbs, color: theme.colors.accent },
                     { label: "F", value: product.fat, color: theme.colors.indigo },
@@ -57,7 +59,7 @@ export function ProductSheet({ visible, product, onAdd, onClose }: {
                 </View>
               </Card>
               <View style={styles.actionWrap}>
-                <Button title="Add to meal" size="lg" onPress={() => onAdd(product)} />
+                <Button title={t.scan.addToMeal} size="lg" onPress={() => onAdd(product)} />
               </View>
             </>
           )}

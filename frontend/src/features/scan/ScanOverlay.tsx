@@ -1,6 +1,7 @@
 // Overlay on top of the camera: top bar + mode toggle, viewfinder, bottom controls.
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import type { ScanMode } from "@/features/scan/api";
@@ -20,6 +21,7 @@ export function ScanOverlay({
   isScanning: boolean;
   cameraGranted: boolean;
 }) {
+  const t = useT();
   const isBarcode = mode === "barcode";
   const { width, height } = useWindowDimensions();
   const frameW = width - 72;       // clear scan window width
@@ -82,7 +84,7 @@ export function ScanOverlay({
         <View style={styles.topBar}>
           <View style={styles.topBarLeft}>
             <TopBtn icon="chevron-back" onPress={onClose} />
-            <AppText style={styles.title}>{isBarcode ? "Scan Barcode" : "Scan Meal"}</AppText>
+            <AppText style={styles.title}>{isBarcode ? t.scan.scanBarcode : t.scan.scanMeal}</AppText>
           </View>
           {cameraGranted && !isBarcode ? (
             <TopBtn icon="camera-reverse-outline" onPress={onFlipCamera} />
@@ -94,7 +96,7 @@ export function ScanOverlay({
         {/* Mode toggle: Photo | Barcode */}
         <View style={styles.toggleWrap}>
           <View style={styles.toggle}>
-            {([["photo", "Photo"], ["barcode", "Barcode"]] as [ScanMode, string][]).map(([key, label]) => {
+            {([["photo", t.scan.photo], ["barcode", t.scan.barcode]] as [ScanMode, string][]).map(([key, label]) => {
               const active = mode === key;
               return (
                 <Pressable key={key} onPress={() => onSwitchMode(key)} style={[styles.toggleBtn, active && styles.toggleBtnActive]}>
@@ -115,13 +117,11 @@ export function ScanOverlay({
           {!cameraGranted ? (
             <View style={styles.permBlock}>
               <Ionicons name="camera-outline" size={56} color="rgba(255,255,255,0.5)" />
-              <AppText style={styles.permTitle}>Camera not enabled</AppText>
+              <AppText style={styles.permTitle}>{t.scan.cameraNotEnabled}</AppText>
               {/* Accurate for hard-denied iOS: no in-app tap can re-trigger the
                   permission prompt — Settings is the only way back */}
               <AppText style={styles.permText}>
-                {isBarcode
-                  ? "Camera access is off. Enable it in Settings, or enter the barcode number manually below."
-                  : "Camera access is off. Enable it in Settings, or pick a photo from your library below."}
+                {isBarcode ? t.scan.camOffBarcode : t.scan.camOffPhoto}
               </AppText>
               {/* Hard-denied ("Don't allow") users can only fix it in Settings —
                   the OS silently blocks any further permission prompt */}
@@ -130,14 +130,14 @@ export function ScanOverlay({
                 style={({ pressed }) => [styles.settingsBtn, pressed && styles.dim]}
               >
                 <Ionicons name="settings-outline" size={15} color="#fff" />
-                <AppText style={styles.settingsBtnText}>Open Settings</AppText>
+                <AppText style={styles.settingsBtnText}>{t.scan.openSettings}</AppText>
               </Pressable>
             </View>
           ) : (
             // marginBottom is runtime math: sit near the top edge of the frame
             <View style={[styles.hintPill, { marginBottom: frameH - 56 }]}>
               <AppText style={styles.hintText}>
-                {isBarcode ? "Point camera at a barcode" : "Point camera at your meal"}
+                {isBarcode ? t.scan.pointBarcode : t.scan.pointMeal}
               </AppText>
             </View>
           )}
@@ -148,7 +148,7 @@ export function ScanOverlay({
           {isBarcode ? (
             // Barcode mode: auto live-scan. Center main action = enter code manually
             <>
-              <AppText style={styles.bottomHint}>Hold steady, the barcode is detected automatically</AppText>
+              <AppText style={styles.bottomHint}>{t.scan.holdSteady}</AppText>
               <View style={styles.controlRow}>
                 <IconBtn icon="images-outline" onPress={onLibrary} />
                 <Pressable
@@ -164,7 +164,7 @@ export function ScanOverlay({
           ) : (
             // Photo mode: library (left) | capture (center) | flash (right)
             <>
-              <AppText style={styles.bottomHint}>AI will automatically detect your food and estimate calories</AppText>
+              <AppText style={styles.bottomHint}>{t.scan.photoHint}</AppText>
               <View style={styles.controlRow}>
                 <IconBtn icon="images-outline" onPress={onLibrary} />
                 <Pressable

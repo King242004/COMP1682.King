@@ -1,6 +1,7 @@
 // Bottom sheet with the AI's top-3 dish guesses after a photo scan.
 import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -14,6 +15,7 @@ export function CandidatesSheet({ visible, candidates, previewUri, onPick, onMan
   onManual: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.backdrop}>
@@ -21,8 +23,8 @@ export function CandidatesSheet({ visible, candidates, previewUri, onPick, onMan
           <View style={styles.grabber} />
           <View style={styles.headerRow}>
             <View>
-              <AppText variant="h2">What did AI see?</AppText>
-              <AppText variant="muted" style={styles.subtitle}>Pick the closest match</AppText>
+              <AppText variant="h2">{t.scan.whatDidAiSee}</AppText>
+              <AppText variant="muted" style={styles.subtitle}>{t.scan.pickClosest}</AppText>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
               <Ionicons name="close-circle" size={28} color={theme.colors.subtle} />
@@ -45,7 +47,7 @@ export function CandidatesSheet({ visible, candidates, previewUri, onPick, onMan
                             <AppText variant="h2" style={styles.name}>{c.name}</AppText>
                             {isTop && (
                               <View style={styles.bestBadge}>
-                                <AppText style={styles.bestBadgeText}>BEST MATCH</AppText>
+                                <AppText style={styles.bestBadgeText}>{t.scan.bestMatch}</AppText>
                               </View>
                             )}
                           </View>
@@ -53,7 +55,7 @@ export function CandidatesSheet({ visible, candidates, previewUri, onPick, onMan
                             <AppText variant="muted" style={styles.portion}>{c.portionDescription}</AppText>
                           )}
                           <View style={styles.macroRow}>
-                            <AppText style={styles.kcal}>{c.calories} kcal</AppText>
+                            <AppText style={styles.kcal}>{c.calories} {t.common.kcal}</AppText>
                             <AppText style={styles.macros}>P {c.protein}g · C {c.carbs}g · F {c.fat}g</AppText>
                           </View>
                         </View>
@@ -68,7 +70,7 @@ export function CandidatesSheet({ visible, candidates, previewUri, onPick, onMan
               })}
               <Pressable onPress={onManual} style={styles.manualWrap}>
                 <View style={styles.manualBox}>
-                  <AppText style={styles.manualText}>None of these → enter manually</AppText>
+                  <AppText style={styles.manualText}>{t.scan.noneEnterManually}</AppText>
                 </View>
               </Pressable>
             </View>
