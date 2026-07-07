@@ -21,6 +21,7 @@ import {
 import { GenerateModal } from "@/features/plan/GenerateModal";
 import { GroceryModal } from "@/features/plan/GroceryModal";
 import { resolveLanguage } from "@/utils/language";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { MEAL_TYPE_META } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
@@ -44,35 +45,8 @@ export default function MealPlanScreen() {
   const router = useRouter();
   const { token, user, updateProfile } = useAuth();
   const lang = resolveLanguage(user?.language);
-  const L = lang === "vi"
-    ? {
-        generate: "✨ Tạo kế hoạch tuần bằng AI", generating: "AI đang lên kế hoạch...",
-        pastWeek: "Tuần này đã qua rồi, chuyển sang tuần hiện tại hoặc tuần sau nhé.",
-        redoDay: "Làm lại ngày này",
-        confirmTitle: "Bạn có chắc không?",
-        confirmWeekMsg: "Các món đang có từ hôm nay tới cuối tuần sẽ bị THAY bằng kế hoạch mới.",
-        confirmDayMsg: "Toàn bộ món của ngày này sẽ bị THAY bằng thực đơn mới.",
-        continue: "Tiếp tục", cancel: "Huỷ",
-        grocery: "🛒 Danh sách đi chợ", groceryLoading: "AI đang tổng hợp nguyên liệu...",
-        quota: "Hôm nay hết lượt AI miễn phí, thử lại sau nhé.", genErr: "Chưa tạo được kế hoạch, thử lại nhé.",
-        groceryErr: "Chưa tạo được danh sách, thử lại nhé.", error: "Lỗi",
-        pastDay: "Ngày này đã qua — chỉ xem lại thôi nhé.",
-        emptyHint: "Chưa có món nào cho ngày này — bấm nút ✨ bên dưới để AI lên thực đơn nhé.",
-      }
-    : {
-        generate: "✨ Generate my week with AI", generating: "AI is planning your week...",
-        pastWeek: "This week is already over — switch to the current or next week.",
-        redoDay: "Regenerate this day",
-        confirmTitle: "Are you sure?",
-        confirmWeekMsg: "Meals from today to the end of the week will be REPLACED by the new plan.",
-        confirmDayMsg: "All meals on this day will be REPLACED by a new menu.",
-        continue: "Continue", cancel: "Cancel",
-        grocery: "🛒 Grocery list", groceryLoading: "AI is building your list...",
-        quota: "Out of free AI quota today — try again later.", genErr: "Couldn't generate the plan. Please try again.",
-        groceryErr: "Couldn't build the list. Please try again.", error: "Error",
-        pastDay: "This day is over — view only.",
-        emptyHint: "Nothing planned for this day — tap the ✨ button below to let the AI build a menu.",
-      };
+  const t = useT();
+  const L = t.plan;
 
   const todayKey = dateKey(new Date());
   const [weekOffset, setWeekOffset] = useState(0);
@@ -316,9 +290,7 @@ export default function MealPlanScreen() {
     router.push({
       pathname: "/tabs/coach" as any,
       params: {
-        ask: lang === "vi"
-          ? `Hướng dẫn mình cách làm "${item.name}" tốt cho sức khoẻ nhé`
-          : `How do I cook "${item.name}" in a healthy way?`,
+        ask: t.community.cookQuestion(item.name),
         askId: String(Date.now()), // unique per tap — consumed once on the Coach tab
       },
     });
@@ -556,7 +528,6 @@ export default function MealPlanScreen() {
         onToggleRemember={() => setRememberTaste((v) => !v)}
         onCancel={() => setGenVisible(false)}
         onStart={runGenerate}
-        lang={lang}
       />
       <GroceryModal
         visible={groceryVisible}
@@ -564,7 +535,6 @@ export default function MealPlanScreen() {
         checked={groceryChecked}
         onToggle={toggleGroceryItem}
         onClose={() => setGroceryVisible(false)}
-        lang={lang}
       />
     </Screen>
   );

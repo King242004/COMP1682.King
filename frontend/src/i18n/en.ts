@@ -18,6 +18,48 @@ export const en = {
     errorTitle: "Error",
   },
 
+  plan: {
+    // weekly.tsx (const L = t.plan)
+    generate: "✨ Generate my week with AI",
+    generating: "AI is planning your week...",
+    pastWeek: "This week is already over — switch to the current or next week.",
+    redoDay: "Regenerate this day",
+    confirmTitle: "Are you sure?",
+    confirmWeekMsg: "Meals from today to the end of the week will be REPLACED by the new plan.",
+    confirmDayMsg: "All meals on this day will be REPLACED by a new menu.",
+    continue: "Continue",
+    cancel: "Cancel",
+    grocery: "🛒 Grocery list",
+    groceryLoading: "AI is building your list...",
+    quota: "Out of free AI quota today — try again later.",
+    genErr: "Couldn't generate the plan. Please try again.",
+    groceryErr: "Couldn't build the list. Please try again.",
+    error: "Error",
+    pastDay: "This day is over — view only.",
+    emptyHint: "Nothing planned for this day — tap the ✨ button below to let the AI build a menu.",
+    // GenerateModal
+    genWeekTitle: "Generate with AI",
+    genDayTitle: "Regenerate this day",
+    genWeekMsg: "The AI will plan from today to the end of the week based on your goal and conditions. Existing meals in that range will be replaced.",
+    genDayMsg: "The AI will replace all meals on this day with a new menu.",
+    genNotePlaceholder: "Preferences (optional): e.g. no seafood, love chicken...",
+    genRemember: "Remember these preferences — meal suggestions and Coach will follow them too",
+    genStart: "Generate",
+    // GroceryModal
+    groceryTitle: "Grocery list",
+    // SuggestMealCard
+    whatToEat: "What should I eat now?",
+    suggestPill: "Suggest",
+    add: "Add",
+    suggestQuota: "Out of AI requests for today — try again later.",
+    suggestErr: "Couldn't get suggestions. Please try again.",
+    slotShort: { breakfast: "breakfast", lunch: "lunch", dinner: "dinner", snack: "snack" } as Record<string, string>,
+    altFor: (name: string, kcal: string) => `Alternatives to ${name} · ${kcal} kcal left`,
+    forSlot: (slot: string, kcal: string) => `For your ${slot} · ${kcal} kcal left`,
+    plannedSwap: (slot: string, name: string) => `${name} is planned for ${slot} — want something else?`,
+    aiPicks: (slot: string) => `AI picks dishes for your ${slot} from what's left`,
+  },
+
   onboarding: {
     introTitle: "Welcome to MealMate 👋",
     introSub: "Your meal companion. Answer a few questions so the AI understands you from day one (~1 minute).",
