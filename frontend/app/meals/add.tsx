@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useMeals } from "@/context/MealsContext";
+import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { MealTypeSelector } from "@/features/meals/MealTypeSelector";
 import { type MealTypeKey } from "@/ui/mealTypes";
@@ -31,17 +32,18 @@ type Errors = {
   fat?: string;
 };
 
-function validateNumber(val: string, field: string): string | undefined {
+function validateNumber(val: string, field: string, t: Strings): string | undefined {
   if (!val.trim()) return undefined;
   const n = Number(val);
-  if (isNaN(n) || n < 0) return `${field} must be a positive number`;
-  if (n > 9999) return `${field} seems too high`;
+  if (isNaN(n) || n < 0) return t.meals.numPositive(field);
+  if (n > 9999) return t.meals.numTooHigh(field);
   return undefined;
 }
 
 export default function AddMealScreen() {
   const router = useRouter();
   const { addMeal } = useMeals();
+  const t = useT();
   const {
     mealType: defaultType,
     date: dateParam,
@@ -99,17 +101,17 @@ export default function AddMealScreen() {
 
   const validate = (): Errors => {
     const e: Errors = {};
-    if (mealName.trim().length < 2) e.mealName = "Name must be at least 2 characters";
-    if (mealName.trim().length > 100) e.mealName = "Name is too long";
+    if (mealName.trim().length < 2) e.mealName = t.meals.nameMin;
+    if (mealName.trim().length > 100) e.mealName = t.meals.nameTooLong;
     const kcal = Number(calories);
-    if (!calories.trim()) e.calories = "Calories is required";
-    else if (isNaN(kcal) || kcal <= 0) e.calories = "Enter a valid calorie amount";
-    else if (kcal > 9999) e.calories = "Calories seems too high";
-    const pe = validateNumber(protein, "Protein");
+    if (!calories.trim()) e.calories = t.meals.caloriesRequired;
+    else if (isNaN(kcal) || kcal <= 0) e.calories = t.meals.caloriesInvalid;
+    else if (kcal > 9999) e.calories = t.meals.caloriesTooHigh;
+    const pe = validateNumber(protein, t.labels.protein, t);
     if (pe) e.protein = pe;
-    const ce = validateNumber(carbs, "Carbs");
+    const ce = validateNumber(carbs, t.labels.carbs, t);
     if (ce) e.carbs = ce;
-    const fe = validateNumber(fat, "Fat");
+    const fe = validateNumber(fat, t.labels.fat, t);
     if (fe) e.fat = fe;
     return e;
   };
@@ -117,7 +119,7 @@ export default function AddMealScreen() {
   const canSave = useMemo(() => Object.keys(validate()).length === 0, [mealName, calories, protein, carbs, fat]);
 
   const handleBlur = (field: string) => {
-    setTouched((t) => ({ ...t, [field]: true }));
+    setTouched((prev) => ({ ...prev, [field]: true }));
     setErrors(validate());
   };
 
@@ -141,7 +143,7 @@ export default function AddMealScreen() {
       });
       router.back();
     } catch (err: any) {
-      setErrors({ mealName: err.message || "Failed to save meal." });
+      setErrors({ mealName: err.message || t.meals.saveFailed });
       setIsSaving(false); // only re-enable on failure — success navigates away
     }
   };
@@ -169,17 +171,17 @@ export default function AddMealScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <ScreenHeader title={isFromScan ? "Confirm scan" : "Add meal"} />
+          <ScreenHeader title={isFromScan ? t.meals.confirmScan : t.meals.addTitle} />
           <AppText variant="muted" style={styles.subtitle}>
             {isFromScan
-              ? "AI detected this meal. Review and adjust if needed."
+              ? t.meals.subtitleScan
               : isFromCommunity
-              ? "From a community post. Review and adjust if needed."
+              ? t.meals.subtitleCommunity
               : isPrefilled
-              ? "AI suggested this meal. Review and adjust if needed."
+              ? t.meals.subtitleSuggest
               : isBackdated
-              ? "Logging a meal you forgot to add."
-              : "Log your nutrition for today."}
+              ? t.meals.subtitleBackdate
+              : t.meals.subtitleToday}
           </AppText>
         </View>
 
@@ -188,7 +190,7 @@ export default function AddMealScreen() {
           <View style={styles.backdateBanner}>
             <Ionicons name="time-outline" size={16} color={theme.colors.primary} />
             <AppText style={styles.backdateText}>
-              Logging for <AppText style={styles.backdateDate}>{backdatedLabel}</AppText>
+              {t.meals.loggingFor} <AppText style={styles.backdateDate}>{backdatedLabel}</AppText>
             </AppText>
           </View>
         )}
@@ -199,11 +201,9 @@ export default function AddMealScreen() {
             <AppText style={styles.aiBadgeEmoji}>{isFromCommunity ? "🔖" : "🤖"}</AppText>
             <View style={styles.flex1}>
               <AppText style={styles.aiBadgeTitle}>
-                {isFromScan ? "AI detected" : isFromCommunity ? "From community" : "AI suggested"}
+                {isFromScan ? t.meals.badgeScan : isFromCommunity ? t.meals.badgeCommunity : t.meals.badgeSuggest}
               </AppText>
-              <AppText variant="subtle" style={styles.aiBadgeSub}>
-                You can edit any field before saving.
-              </AppText>
+              <AppText variant="subtle" style={styles.aiBadgeSub}>{t.meals.badgeSub}</AppText>
             </View>
           </View>
         )}
@@ -216,10 +216,10 @@ export default function AddMealScreen() {
           <View style={styles.formFields}>
             <View style={styles.fieldWrap}>
               <TextField
-                label="Meal name"
-                placeholder="e.g. Chicken burrito bowl"
+                label={t.meals.mealName}
+                placeholder={t.meals.mealNamePlaceholder}
                 value={mealName}
-                onChangeText={(t) => { setMealName(t); setErrors((e) => ({ ...e, mealName: undefined })); }}
+                onChangeText={(v) => { setMealName(v); setErrors((e) => ({ ...e, mealName: undefined })); }}
                 textContentType="none"
                 inputProps={{ onBlur: () => handleBlur("mealName") }}
               />
@@ -230,10 +230,10 @@ export default function AddMealScreen() {
 
             <View style={styles.fieldWrap}>
               <TextField
-                label="Calories (kcal)"
-                placeholder="e.g. 650"
+                label={t.meals.calories}
+                placeholder={t.meals.caloriesPlaceholder}
                 value={calories}
-                onChangeText={(t) => { setCalories(t); setErrors((e) => ({ ...e, calories: undefined })); }}
+                onChangeText={(v) => { setCalories(v); setErrors((e) => ({ ...e, calories: undefined })); }}
                 keyboardType="number-pad"
                 textContentType="none"
                 inputProps={{ onBlur: () => handleBlur("calories") }}
@@ -246,10 +246,10 @@ export default function AddMealScreen() {
             <View style={styles.macroRow}>
               <View style={styles.macroField}>
                 <TextField
-                  label="Protein (g)"
-                  placeholder="Optional"
+                  label={t.meals.proteinG}
+                  placeholder={t.meals.optional}
                   value={protein}
-                  onChangeText={(t) => { setProtein(t); setErrors((e) => ({ ...e, protein: undefined })); }}
+                  onChangeText={(v) => { setProtein(v); setErrors((e) => ({ ...e, protein: undefined })); }}
                   keyboardType="number-pad"
                   textContentType="none"
                   inputProps={{ onBlur: () => handleBlur("protein") }}
@@ -260,10 +260,10 @@ export default function AddMealScreen() {
               </View>
               <View style={styles.macroField}>
                 <TextField
-                  label="Carbs (g)"
-                  placeholder="Optional"
+                  label={t.meals.carbsG}
+                  placeholder={t.meals.optional}
                   value={carbs}
-                  onChangeText={(t) => { setCarbs(t); setErrors((e) => ({ ...e, carbs: undefined })); }}
+                  onChangeText={(v) => { setCarbs(v); setErrors((e) => ({ ...e, carbs: undefined })); }}
                   keyboardType="number-pad"
                   textContentType="none"
                   inputProps={{ onBlur: () => handleBlur("carbs") }}
@@ -276,10 +276,10 @@ export default function AddMealScreen() {
 
             <View style={styles.fieldWrap}>
               <TextField
-                label="Fat (g)"
-                placeholder="Optional"
+                label={t.meals.fatG}
+                placeholder={t.meals.optional}
                 value={fat}
-                onChangeText={(t) => { setFat(t); setErrors((e) => ({ ...e, fat: undefined })); }}
+                onChangeText={(v) => { setFat(v); setErrors((e) => ({ ...e, fat: undefined })); }}
                 keyboardType="number-pad"
                 textContentType="none"
                 inputProps={{ onBlur: () => handleBlur("fat") }}
@@ -291,8 +291,8 @@ export default function AddMealScreen() {
 
             {/* Meal model always had `note` — the form finally exposes it */}
             <TextField
-              label="Note (optional)"
-              placeholder="e.g. ate out, less sugar than usual..."
+              label={t.meals.note}
+              placeholder={t.meals.notePlaceholder}
               value={note}
               onChangeText={setNote}
               textContentType="none"
@@ -300,19 +300,19 @@ export default function AddMealScreen() {
           </View>
         </Card>
 
-        <Button title={isSaving ? "Saving..." : "Save meal"} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
+        <Button title={isSaving ? t.common.saving : t.meals.saveMeal} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
 
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [styles.cancel, pressed && styles.dim]}
         >
-          <AppText style={styles.cancelText}>Cancel</AppText>
+          <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
         </Pressable>
 
         {/* Quick Suggestions — chỉ hiện khi form trống (không prefill từ scan/AI) */}
         {!isPrefilled && (
           <View style={styles.suggestBlock}>
-            <AppText variant="h2" style={styles.suggestTitle}>Quick Suggestions</AppText>
+            <AppText variant="h2" style={styles.suggestTitle}>{t.meals.quickSuggestions}</AppText>
             <View style={styles.suggestWrap}>
               {QUICK_SUGGESTIONS.map((s) => (
                 <Pressable
@@ -321,7 +321,7 @@ export default function AddMealScreen() {
                   style={({ pressed }) => [styles.suggestChip, pressed && styles.suggestChipPressed]}
                 >
                   <AppText style={styles.suggestName}>{s.name}</AppText>
-                  <AppText style={styles.suggestKcal}>{s.calories} kcal</AppText>
+                  <AppText style={styles.suggestKcal}>{s.calories} {t.common.kcal}</AppText>
                 </Pressable>
               ))}
             </View>

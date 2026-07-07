@@ -2,6 +2,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
+import { useT } from "@/i18n";
 import { theme, macroGoals } from "@/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
@@ -46,6 +47,7 @@ export default function MealDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { meals, historyMeals, deleteMeal } = useMeals();
+  const t = useT();
   // Look in both lists — meal may be opened from today's view OR from history
   const meal = meals.find((m) => m.id === id) || historyMeals.find((m) => m.id === id);
   const goal = user?.calorieGoal ?? 2000;
@@ -53,8 +55,8 @@ export default function MealDetailScreen() {
   if (!meal) {
     return (
       <Screen style={styles.notFound}>
-        <AppText variant="muted">Meal not found.</AppText>
-        <Button title="Go back" variant="secondary" onPress={() => router.replace("/meals/history")} />
+        <AppText variant="muted">{t.meals.mealNotFound}</AppText>
+        <Button title={t.meals.goBack} variant="secondary" onPress={() => router.replace("/meals/history")} />
       </Screen>
     );
   }
@@ -69,12 +71,12 @@ export default function MealDetailScreen() {
 
   const handleDelete = () => {
     Alert.alert(
-      "Delete meal",
-      `Delete "${meal.name}"?`,
+      t.meals.deleteMealTitle,
+      t.meals.deleteMealMsg(meal.name),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.common.cancel, style: "cancel" },
         {
-          text: "Delete",
+          text: t.common.delete,
           style: "destructive",
           onPress: async () => {
             await deleteMeal(meal.id);
@@ -102,7 +104,7 @@ export default function MealDetailScreen() {
                 color={MEAL_TYPE_BY_KEY[meal.mealType]?.color ?? theme.colors.primary}
               />
             )}
-            <AppText variant="muted" style={styles.capitalize}>{meal.mealType ?? "Meal"}</AppText>
+            <AppText variant="muted">{meal.mealType ? t.labels.mealType[meal.mealType] : t.meals.mealFallback}</AppText>
             <AppText variant="subtle">·</AppText>
             <AppText variant="muted">{eatenDateLabel}</AppText>
             {loggedSameDay && (
@@ -118,10 +120,10 @@ export default function MealDetailScreen() {
         <Card style={styles.kcalCard}>
           <View style={styles.kcalRow}>
             <View style={styles.kcalBlock}>
-              <AppText variant="subtle" style={styles.kcalLabel}>Energy Total</AppText>
+              <AppText variant="subtle" style={styles.kcalLabel}>{t.meals.energyTotal}</AppText>
               <View style={styles.kcalNumRow}>
                 <AppText variant="h0" style={styles.kcalNum}>{meal.calories.toLocaleString()}</AppText>
-                <AppText variant="muted" style={styles.kcalUnit}>kcal</AppText>
+                <AppText variant="muted" style={styles.kcalUnit}>{t.common.kcal}</AppText>
               </View>
             </View>
             <ProgressRing eaten={meal.calories} goal={goal} size={64} stroke={6} />
@@ -130,28 +132,28 @@ export default function MealDetailScreen() {
 
         {/* Macros */}
         <Card style={styles.macroCard}>
-          <AppText variant="h2">Macros</AppText>
+          <AppText variant="h2">{t.meals.macros}</AppText>
           {meal.protein || meal.carbs || meal.fat ? (
             <View style={styles.macroList}>
               {meal.protein ? (
-                <MacroRow label="Protein" value={meal.protein} total={macroGoals(goal).protein} color={theme.colors.accent2} />
+                <MacroRow label={t.labels.protein} value={meal.protein} total={macroGoals(goal).protein} color={theme.colors.accent2} />
               ) : null}
               {meal.carbs ? (
-                <MacroRow label="Carbs" value={meal.carbs} total={macroGoals(goal).carbs} color={theme.colors.accent} />
+                <MacroRow label={t.labels.carbs} value={meal.carbs} total={macroGoals(goal).carbs} color={theme.colors.accent} />
               ) : null}
               {meal.fat ? (
-                <MacroRow label="Fat" value={meal.fat} total={macroGoals(goal).fat} color={theme.colors.indigo} />
+                <MacroRow label={t.labels.fat} value={meal.fat} total={macroGoals(goal).fat} color={theme.colors.indigo} />
               ) : null}
             </View>
           ) : (
-            <AppText variant="subtle">No macro data logged for this meal.</AppText>
+            <AppText variant="subtle">{t.meals.noMacroData}</AppText>
           )}
         </Card>
 
         {/* Note — shown only when the meal has one */}
         {!!meal.note?.trim() && (
           <Card style={styles.noteCard}>
-            <AppText variant="h2" style={styles.noteTitle}>Note</AppText>
+            <AppText variant="h2" style={styles.noteTitle}>{t.meals.noteHeading}</AppText>
             <AppText variant="muted" style={styles.noteText}>{meal.note}</AppText>
           </Card>
         )}
@@ -159,7 +161,7 @@ export default function MealDetailScreen() {
         {/* Actions */}
         <View style={styles.actions}>
           <Button
-            title="Edit meal"
+            title={t.meals.editMeal}
             size="lg"
             onPress={() => router.push({ pathname: "/meals/edit", params: { id: meal.id } })}
           />
@@ -167,7 +169,7 @@ export default function MealDetailScreen() {
             onPress={handleDelete}
             style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
           >
-            <AppText style={styles.deleteText}>Delete meal</AppText>
+            <AppText style={styles.deleteText}>{t.meals.deleteMeal}</AppText>
           </Pressable>
         </View>
       </ScrollView>
