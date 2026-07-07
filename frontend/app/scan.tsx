@@ -17,12 +17,14 @@ import { CandidatesSheet } from "@/features/scan/CandidatesSheet";
 import { ProductSheet } from "@/features/scan/ProductSheet";
 import { ManualBarcodeModal } from "@/features/scan/ManualBarcodeModal";
 import { mealSlotByHour } from "@/utils/mealSlot";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 
 export default function ScanScreen() {
   const router = useRouter();
   const { token } = useAuth();
+  const t = useT();
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>("back");
   const [mode, setMode] = useState<ScanMode>("photo");
@@ -50,7 +52,7 @@ export default function ScanScreen() {
   // ── Photo flow: upload → show candidates ───────────────────────────────────
   const processImage = async (uri: string) => {
     if (!token) {
-      Alert.alert("Not logged in", "Please log in again.");
+      Alert.alert(t.scan.notLoggedIn, t.scan.loginAgain);
       return;
     }
     const controller = new AbortController();
@@ -61,14 +63,14 @@ export default function ScanScreen() {
       const compressed = await compressImage(uri);
       const cs = await scanImage(compressed, token, controller.signal);
       if (cs.length === 0) {
-        Alert.alert("No food detected", "Couldn't identify food in this photo. Try another angle.");
+        Alert.alert(t.scan.noFood, t.scan.noFoodMsg);
         setPreviewUri(null);
         return;
       }
       setCandidates(cs);
     } catch (e: any) {
       if (e.name !== "AbortError") {
-        Alert.alert("Scan failed", e.message || "AI couldn't process this image.");
+        Alert.alert(t.scan.scanFailed, e.message || t.scan.scanFailedMsg);
       }
       setPreviewUri(null);
     } finally {
@@ -87,7 +89,7 @@ export default function ScanScreen() {
   const handlePickFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow photo library access to pick an image.");
+      Alert.alert(t.profile.permissionNeeded, t.scan.pickImagePerm);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -103,7 +105,7 @@ export default function ScanScreen() {
   const handleBarcodeFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Allow photo library access to pick an image.");
+      Alert.alert(t.profile.permissionNeeded, t.scan.pickImagePerm);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 1, allowsEditing: false });
@@ -114,10 +116,10 @@ export default function ScanScreen() {
       if (found && found.length > 0) {
         doBarcodeLookup(found[0].data);
       } else {
-        Alert.alert("No barcode found", "Couldn't detect a barcode in that image. Try another photo or enter the code manually.");
+        Alert.alert(t.scan.noBarcode, t.scan.noBarcodeMsg1);
       }
     } catch {
-      Alert.alert("No barcode found", "Couldn't read a barcode from that image.");
+      Alert.alert(t.scan.noBarcode, t.scan.noBarcodeMsg2);
     }
   };
 
@@ -128,12 +130,12 @@ export default function ScanScreen() {
       const result = await requestPermission();
       if (!result.granted) {
         Alert.alert(
-          "Camera permission denied",
-          "Please enable camera access in Settings to scan meals, or pick a photo from library instead.",
+          t.scan.cameraDenied,
+          t.scan.cameraDeniedMsg,
           [
-            { text: "Use library", onPress: handlePickFromLibrary },
-            { text: "Open Settings", onPress: () => Linking.openSettings() },
-            { text: "Cancel", style: "cancel" },
+            { text: t.scan.useLibrary, onPress: handlePickFromLibrary },
+            { text: t.scan.openSettings, onPress: () => Linking.openSettings() },
+            { text: t.common.cancel, style: "cancel" },
           ]
         );
         return;
@@ -145,14 +147,14 @@ export default function ScanScreen() {
       if (!photo?.uri) return;
       await processImage(photo.uri);
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Could not take photo.");
+      Alert.alert(t.common.errorTitle, e.message || t.scan.takePhotoError);
     }
   };
 
   // ── Barcode flow ───────────────────────────────────────────────────────────
   const doBarcodeLookup = async (code: string) => {
     if (!token) {
-      Alert.alert("Not logged in", "Please log in again.");
+      Alert.alert(t.scan.notLoggedIn, t.scan.loginAgain);
       return;
     }
     setIsScanning(true);
@@ -161,10 +163,10 @@ export default function ScanScreen() {
       setProduct(p);
     } catch (e: any) {
       Alert.alert(
-        "Product not found",
-        e.message || "This barcode isn't in the database. Try entering the meal manually.",
+        t.scan.productNotFound,
+        e.message || t.scan.productNotFoundMsg,
         [
-          { text: "Enter manually", onPress: handleManual },
+          { text: t.scan.enterManually, onPress: handleManual },
           { text: "OK", style: "cancel" },
         ]
       );
@@ -287,14 +289,14 @@ export default function ScanScreen() {
           {previewUri && <Image source={{ uri: previewUri }} style={styles.loadingPreview} />}
           <ActivityIndicator color="#fff" size="large" />
           <AppText style={styles.loadingTitle}>
-            {mode === "barcode" ? "Looking up product..." : "AI is analyzing your meal..."}
+            {mode === "barcode" ? t.scan.loadingBarcode : t.scan.loadingPhoto}
           </AppText>
           <AppText style={styles.loadingSub}>
-            {mode === "barcode" ? "Just a moment" : "This usually takes 5-10 seconds"}
+            {mode === "barcode" ? t.scan.loadingBarcodeSub : t.scan.loadingPhotoSub}
           </AppText>
           {mode === "photo" && (
             <Pressable onPress={handleCancelScan} style={({ pressed }) => [styles.cancelBtn, pressed && styles.dim]}>
-              <AppText style={styles.cancelText}>Cancel</AppText>
+              <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
             </Pressable>
           )}
         </View>

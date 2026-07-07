@@ -18,6 +18,64 @@ export const en = {
     errorTitle: "Error",
   },
 
+  scan: {
+    // Mode toggle + headers
+    scanBarcode: "Scan Barcode",
+    scanMeal: "Scan Meal",
+    photo: "Photo",
+    barcode: "Barcode",
+    // Camera-off / permission
+    cameraNotEnabled: "Camera not enabled",
+    camOffBarcode: "Camera access is off. Enable it in Settings, or enter the barcode number manually below.",
+    camOffPhoto: "Camera access is off. Enable it in Settings, or pick a photo from your library below.",
+    openSettings: "Open Settings",
+    // Hints
+    pointBarcode: "Point camera at a barcode",
+    pointMeal: "Point camera at your meal",
+    holdSteady: "Hold steady, the barcode is detected automatically",
+    photoHint: "AI will automatically detect your food and estimate calories",
+    // Loading
+    loadingBarcode: "Looking up product...",
+    loadingPhoto: "AI is analyzing your meal...",
+    loadingBarcodeSub: "Just a moment",
+    loadingPhotoSub: "This usually takes 5-10 seconds",
+    // Candidates sheet
+    whatDidAiSee: "What did AI see?",
+    pickClosest: "Pick the closest match",
+    bestMatch: "BEST MATCH",
+    noneEnterManually: "None of these → enter manually",
+    // Product sheet
+    productFound: "Product found",
+    perServing: (s: string) => `Per serving: ${s}`,
+    addToMeal: "Add to meal",
+    // Manual barcode modal
+    enterBarcode: "Enter barcode",
+    barcodeHint: "Type the 8-14 digit number under the bars.",
+    barcodeLabel: "Barcode number",
+    barcodePlaceholder: "e.g. 8934563138189",
+    lookUp: "Look up",
+    invalidBarcode: "Invalid barcode",
+    barcodeDigits: "Barcode must be 8 to 14 digits.",
+    // Alerts
+    notLoggedIn: "Not logged in",
+    loginAgain: "Please log in again.",
+    noFood: "No food detected",
+    noFoodMsg: "Couldn't identify food in this photo. Try another angle.",
+    scanFailed: "Scan failed",
+    scanFailedMsg: "AI couldn't process this image.",
+    pickImagePerm: "Allow photo library access to pick an image.",
+    noBarcode: "No barcode found",
+    noBarcodeMsg1: "Couldn't detect a barcode in that image. Try another photo or enter the code manually.",
+    noBarcodeMsg2: "Couldn't read a barcode from that image.",
+    cameraDenied: "Camera permission denied",
+    cameraDeniedMsg: "Please enable camera access in Settings to scan meals, or pick a photo from library instead.",
+    useLibrary: "Use library",
+    takePhotoError: "Could not take photo.",
+    productNotFound: "Product not found",
+    productNotFoundMsg: "This barcode isn't in the database. Try entering the meal manually.",
+    enterManually: "Enter manually",
+  },
+
   exercise: {
     title: "Log workout",
     subtitle: "Calories burned are estimated from the MET formula.",
