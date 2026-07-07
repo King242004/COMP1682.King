@@ -13,6 +13,7 @@ import { ProgressRing } from "@/ui/components/ProgressRing";
 import { getCurrentWeekDays, dayLabelsFixed } from "@/features/home/week";
 import { dateKey, weekNumber } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
+import { useT } from "@/i18n";
 import { theme, macroGoals, shadow } from "@/ui/theme";
 import { MEAL_TYPE_META, type MealTypeKey } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
@@ -68,7 +69,7 @@ export default function HomeScreen() {
       await markPlanEaten(token, p.id);
       await Promise.all([fetchMealsByDate(todayKey), loadPlanToday()]);
     } catch {
-      Alert.alert("Error", "Couldn't log this meal. Please try again.");
+      Alert.alert(t.common.errorTitle, t.home.logMealErr);
     } finally {
       eatingPlanRef.current = false;
     }
@@ -76,10 +77,10 @@ export default function HomeScreen() {
 
   // Remove a planned meal right from the Diary (edit lives in the Plan screen)
   const removePlanned = (p: PlanMeal) => {
-    Alert.alert("Remove from plan?", `Remove "${p.name}" from today's plan.`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.home.removePlanTitle, t.home.removePlanMsg(p.name), [
+      { text: t.common.cancel, style: "cancel" },
       {
-        text: "Remove",
+        text: t.home.remove,
         style: "destructive",
         onPress: async () => {
           if (!token) return;
@@ -98,6 +99,7 @@ export default function HomeScreen() {
   // the cache is stale (TTL) — this runs on EVERY focus, so without the TTL each
   // visit to Home would burn a free-tier AI request.
   const lang = resolveLanguage(user?.language);
+  const t = useT();
   const loadInsight = useCallback(async () => {
     if (!token || selectedDate !== todayKey) { setCoachInsight(null); return; }
     const cached = await getCachedInsight(todayKey, lang);
@@ -149,10 +151,10 @@ export default function HomeScreen() {
   );
 
   const onDeleteExercise = (item: Exercise) => {
-    Alert.alert("Delete workout?", `Remove "${item.name}" from your log.`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.home.deleteWorkoutTitle, t.home.removeFromLog(item.name), [
+      { text: t.common.cancel, style: "cancel" },
       {
-        text: "Delete",
+        text: t.common.delete,
         style: "destructive",
         onPress: async () => {
           if (!token) return;
@@ -193,7 +195,6 @@ export default function HomeScreen() {
     meals.filter((m) => m.mealType === type);
 
   const isToday = selectedDate === todayKey;
-  const vi = lang === "vi";
 
   return (
     <Screen padded={false} style={styles.screen}>
@@ -208,7 +209,7 @@ export default function HomeScreen() {
             Forward is disabled at the current week: the diary has no future weeks. */}
         <View style={styles.headerRow}>
           <AppText variant="h1">
-            {isToday ? "Today" : new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+            {isToday ? t.meals.today : new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
           </AppText>
           <View style={styles.weekNav}>
             <Pressable
@@ -219,7 +220,7 @@ export default function HomeScreen() {
               <Ionicons name="chevron-back" size={20} color={theme.colors.subtle} />
             </Pressable>
             <AppText variant="body2" style={[styles.weekLabel, weekOffset === 0 && styles.weekLabelCurrent]}>
-              Week {weekNumber(weekDays[0])}
+              {t.home.week(weekNumber(weekDays[0]))}
             </AppText>
             <Pressable
               onPress={() => changeWeek(1)}
@@ -272,30 +273,30 @@ export default function HomeScreen() {
           <View style={styles.summaryRow}>
             <View style={styles.eatenBlock}>
               <View style={styles.eatenNumBlock}>
-                <AppText variant="subtle" style={styles.smallLabel}>Eaten</AppText>
+                <AppText variant="subtle" style={styles.smallLabel}>{t.home.eaten}</AppText>
                 <View style={styles.baselineRow}>
                   <AppText variant="h0" style={styles.kcalBig}>{eaten.toLocaleString()}</AppText>
-                  <AppText variant="muted" style={styles.kcalGoal}>/ {goal.toLocaleString()} kcal</AppText>
+                  <AppText variant="muted" style={styles.kcalGoal}>/ {goal.toLocaleString()} {t.common.kcal}</AppText>
                 </View>
               </View>
               <View style={[styles.statusChip, eaten > goal && styles.statusChipOver]}>
                 <AppText style={[styles.statusChipText, eaten > goal && styles.statusChipTextOver]}>
                   {eaten > goal
-                    ? `${(eaten - goal).toLocaleString()} over goal`
-                    : `${remaining.toLocaleString()} kcal left`}
+                    ? t.home.overGoal((eaten - goal).toLocaleString())
+                    : t.home.kcalLeft(remaining.toLocaleString())}
                 </AppText>
               </View>
             </View>
-            <ProgressRing eaten={eaten} goal={goal} caption="of goal" />
+            <ProgressRing eaten={eaten} goal={goal} caption={t.home.ofGoal} />
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.macroRow}>
             {[
-              { label: "Carbs", value: totalCarbs, goal: macroGoals(goal).carbs, color: theme.colors.accent },
-              { label: "Fat", value: totalFat, goal: macroGoals(goal).fat, color: theme.colors.indigo },
-              { label: "Protein", value: totalProtein, goal: macroGoals(goal).protein, color: theme.colors.accent2 },
+              { label: t.labels.carbs, value: totalCarbs, goal: macroGoals(goal).carbs, color: theme.colors.accent },
+              { label: t.labels.fat, value: totalFat, goal: macroGoals(goal).fat, color: theme.colors.indigo },
+              { label: t.labels.protein, value: totalProtein, goal: macroGoals(goal).protein, color: theme.colors.accent2 },
             ].map((m) => (
               <View key={m.label} style={styles.macroCol}>
                 <AppText variant="subtle" style={styles.macroLabel}>{m.label}</AppText>
@@ -316,9 +317,9 @@ export default function HomeScreen() {
         {/* Diary */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText variant="h2">Diary</AppText>
+            <AppText variant="h2">{t.home.diary}</AppText>
             <Pressable onPress={() => router.push("/meals/history")} hitSlop={10}>
-              <AppText variant="subtle" style={styles.sectionLink}>View all</AppText>
+              <AppText variant="subtle" style={styles.sectionLink}>{t.home.viewAll}</AppText>
             </Pressable>
           </View>
 
@@ -345,12 +346,12 @@ export default function HomeScreen() {
                     <View style={[styles.iconBox, { backgroundColor: mt.bg }]}>
                       <Ionicons name={mt.icon as any} size={18} color={mt.color} />
                     </View>
-                    <AppText variant="h2" style={styles.cardTitleText}>{mt.label}</AppText>
+                    <AppText variant="h2" style={styles.cardTitleText}>{t.labels.mealType[mt.key]}</AppText>
                   </View>
                   <View style={styles.mealCardRight}>
                     {typeCalories > 0 && (
                       <AppText style={styles.typeKcal}>
-                        {typeCalories} <AppText variant="subtle" style={styles.typeKcalUnit}>kcal</AppText>
+                        {typeCalories} <AppText variant="subtle" style={styles.typeKcalUnit}>{t.common.kcal}</AppText>
                       </AppText>
                     )}
                     {/* Quick add — preselects this meal type AND the day being viewed.
@@ -374,7 +375,7 @@ export default function HomeScreen() {
                     style={({ pressed }) => [styles.mealRow, pressed && styles.rowPressed]}
                   >
                     <AppText variant="body2" numberOfLines={1} style={styles.mealName}>{m.name}</AppText>
-                    <AppText variant="subtle" style={styles.mealKcal}>{m.calories} kcal</AppText>
+                    <AppText variant="subtle" style={styles.mealKcal}>{m.calories} {t.common.kcal}</AppText>
                     <Ionicons name="chevron-forward" size={14} color={theme.colors.subtle} />
                   </Pressable>
                 ))}
@@ -383,14 +384,14 @@ export default function HomeScreen() {
                 {plannedForType.map((p) => (
                   <View key={p.id} style={styles.plannedRow}>
                     <AppText variant="body2" numberOfLines={1} style={styles.plannedName}>{p.name}</AppText>
-                    <AppText variant="subtle" style={styles.plannedKcal}>{p.calories} kcal</AppText>
+                    <AppText variant="subtle" style={styles.plannedKcal}>{p.calories} {t.common.kcal}</AppText>
                     <Pressable
                       onPress={() => eatPlanned(p)}
                       hitSlop={6}
                       style={({ pressed }) => [styles.eatBtn, pressed && styles.rowPressed]}
                     >
                       <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
-                      <AppText style={styles.eatBtnText}>Eat</AppText>
+                      <AppText style={styles.eatBtnText}>{t.home.eat}</AppText>
                     </Pressable>
                     <Pressable onPress={() => removePlanned(p)} hitSlop={8} style={({ pressed }) => pressed && styles.pressedDim}>
                       <Ionicons name="close" size={16} color={theme.colors.subtle} />
@@ -403,7 +404,7 @@ export default function HomeScreen() {
                 {typeMeals.length === 0 && plannedForType.length === 0 && (
                   isLoading
                     ? <Skeleton width="55%" height={14} />
-                    : <AppText variant="subtle" style={styles.emptyText}>No meals logged</AppText>
+                    : <AppText variant="subtle" style={styles.emptyText}>{t.progress.noMealsLogged}</AppText>
                 )}
 
                 {/* Slim macro split bar (percent details live in the summary card above) */}
@@ -422,14 +423,14 @@ export default function HomeScreen() {
         {/* Activity — section header outside (same rhythm as Diary), Log as header link */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText variant="h2">Activity</AppText>
+            <AppText variant="h2">{t.home.activity}</AppText>
             {/* Allow logging for today AND past days (back-dating), never the future */}
             {selectedDate <= todayKey && (
               <Pressable
                 onPress={() => router.push({ pathname: "/exercise/log-workout" as any, params: { date: selectedDate } })}
                 hitSlop={10}
               >
-                <AppText variant="subtle" style={styles.sectionLink}>Log workout</AppText>
+                <AppText variant="subtle" style={styles.sectionLink}>{t.exercise.title}</AppText>
               </Pressable>
             )}
           </View>
@@ -440,15 +441,15 @@ export default function HomeScreen() {
                 <Ionicons name="flame" size={18} color={theme.colors.accent2} />
               </View>
               <AppText variant="body2" style={styles.burnedText}>
-                {totalBurned > 0 ? `${totalBurned} kcal burned` : "No workout logged"}
+                {totalBurned > 0 ? t.home.kcalBurned(totalBurned) : t.home.noWorkout}
               </AppText>
             </View>
 
             {/* Net calories: eaten − burned */}
             {totalBurned > 0 && (
               <View style={styles.netRow}>
-                <AppText variant="subtle" style={styles.smallLabel}>Net calories (eaten − burned)</AppText>
-                <AppText style={styles.netVal}>{(eaten - totalBurned).toLocaleString()} kcal</AppText>
+                <AppText variant="subtle" style={styles.smallLabel}>{t.home.netCalories}</AppText>
+                <AppText style={styles.netVal}>{(eaten - totalBurned).toLocaleString()} {t.common.kcal}</AppText>
               </View>
             )}
 
@@ -457,7 +458,7 @@ export default function HomeScreen() {
               <View key={ex.id} style={styles.workoutRow}>
                 <View style={styles.flex1}>
                   <AppText variant="body2" numberOfLines={1} style={styles.mealName}>{ex.name}</AppText>
-                  <AppText variant="subtle" style={styles.workoutMeta}>{ex.durationMin} min · {ex.caloriesBurned} kcal</AppText>
+                  <AppText variant="subtle" style={styles.workoutMeta}>{ex.durationMin} {t.home.min} · {ex.caloriesBurned} {t.common.kcal}</AppText>
                 </View>
                 {/* Delete works on any viewed day, not just today */}
                 <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => pressed && styles.pressedDim}>
@@ -472,9 +473,9 @@ export default function HomeScreen() {
         {isToday && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <AppText variant="h2">{vi ? "Dành cho bạn" : "For you"}</AppText>
+              <AppText variant="h2">{t.home.forYou}</AppText>
               <Pressable onPress={() => router.push("/plan/weekly" as any)} hitSlop={10}>
-                <AppText variant="subtle" style={styles.sectionLink}>{vi ? "Xem tuần" : "View week"}</AppText>
+                <AppText variant="subtle" style={styles.sectionLink}>{t.home.viewWeek}</AppText>
               </Pressable>
             </View>
 
@@ -489,17 +490,15 @@ export default function HomeScreen() {
                   </View>
                   {/* Title + gray status line (same layout as the suggest card below) */}
                   <View style={styles.planTitleBlock}>
-                    <AppText variant="h2" style={styles.cardTitleText}>
-                      {vi ? "Kế hoạch tuần" : "Weekly plan"}
-                    </AppText>
+                    <AppText variant="h2" style={styles.cardTitleText}>{t.home.weeklyPlan}</AppText>
                     <AppText variant="subtle" numberOfLines={1} style={styles.smallLabel}>
                       {(() => {
                         const pending = planToday.filter((p) => !p.done);
                         return planToday.length === 0
-                          ? (vi ? "Chưa có kế hoạch — để AI tạo cho bạn ✨" : "No plan yet — let the AI build one ✨")
+                          ? t.home.planNone
                           : pending.length === 0
-                          ? (vi ? "Hoàn thành kế hoạch hôm nay 🎉" : "Today's plan is all done 🎉")
-                          : (vi ? `${pending.length} món đang chờ trong nhật ký` : `${pending.length} planned meals waiting in your diary`);
+                          ? t.home.planDone
+                          : t.home.planPending(pending.length);
                       })()}
                     </AppText>
                   </View>
@@ -542,7 +541,7 @@ export default function HomeScreen() {
                     )}
                   </View>
                   <AppText variant="muted" style={styles.coachSummary}>
-                    {coachInsight?.summary || "Get personalized analysis and ask anything about your nutrition."}
+                    {coachInsight?.summary || t.home.coachFallback}
                   </AppText>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
