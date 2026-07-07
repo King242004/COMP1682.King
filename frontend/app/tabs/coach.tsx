@@ -26,58 +26,20 @@ import { InsightCard } from "@/features/coach/InsightCard";
 import { ChatBubble } from "@/features/coach/ChatBubble";
 import { todayKey, dateKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Screen } from "@/ui/components/Screen";
 
-// Meal types for the quick-edit buttons on a suggested-meal card
-const MEAL_OPTS: [string, string][] = [
-  ["breakfast", "Breakfast"],
-  ["lunch", "Lunch"],
-  ["dinner", "Dinner"],
-  ["snack", "Snack"],
-];
+const MEAL_KEYS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
 export default function CoachTab() {
   const { token, user } = useAuth();
   const lang = resolveLanguage(user?.language);
-  const suggestions = lang === "vi"
-    ? ["Tối nay nên ăn gì?", "Cách làm ức gà healthy", "Tôi nên tập gì hôm nay?"]
-    : ["What should I eat tonight?", "How to cook healthy chicken breast", "What workout suits me?"];
-  const L = lang === "vi"
-    ? {
-        add: "Thêm vào nhật ký", logged: "Đã ghi", undo: "Hoàn tác", photo: "📷 Gửi ảnh món ăn",
-        intro: "Mình là Coach 👋 Mình có thể gợi ý và chỉ cách nấu món healthy hợp tình trạng của bạn, xem ảnh món ăn, ghi nhật ký, và khuyên bài tập. Thử hỏi mình nhé:",
-        placeholder: "Hỏi Coach điều gì đó...",
-        disclaimer: "Lời khuyên từ AI, không thay thế ý kiến bác sĩ. Có vấn đề sức khỏe hãy đi khám nhé.",
-        insightFail: "Chưa tải được phân tích hôm nay.",
-        photoAttached: "Đã đính kèm ảnh. Hỏi gì về món này cũng được.",
-        photoTitle: "Thêm ảnh món ăn", photoMsg: "Hỏi Coach về một món qua ảnh.",
-        camera: "Máy ảnh", library: "Thư viện ảnh", cancel: "Huỷ",
-        permTitle: "Cần quyền truy cập", permMsg: "Cho phép truy cập để đính kèm ảnh món ăn.",
-        imgErrTitle: "Lỗi ảnh", imgErrMsg: "Không xử lý được ảnh này, thử ảnh khác nhé.",
-        clearTitle: "Xoá đoạn chat?", clearMsg: "Toàn bộ lịch sử trò chuyện với Coach sẽ bị xoá.", clear: "Xoá",
-        addErr: "Chưa thêm được vào nhật ký.", undoErrTitle: "Chưa hoàn tác được", undoErrMsg: "Bạn xoá món trong nhật ký giúp mình nhé.",
-        error: "Lỗi",
-      }
-    : {
-        add: "Add to diary", logged: "Logged", undo: "Undo", photo: "📷 Send a food photo",
-        intro: "I'm Coach 👋 I can suggest and teach healthy recipes for your conditions, look at food photos, log meals, and advise workouts. Try asking:",
-        placeholder: "Ask your coach...",
-        disclaimer: "AI guidance, not medical advice. Consult a professional for health concerns.",
-        insightFail: "Couldn't load today's analysis right now.",
-        photoAttached: "Photo attached. Ask anything about it.",
-        photoTitle: "Add a food photo", photoMsg: "Ask the coach about a meal photo.",
-        camera: "Camera", library: "Photo library", cancel: "Cancel",
-        permTitle: "Permission needed", permMsg: "Allow access to attach a food photo.",
-        imgErrTitle: "Image error", imgErrMsg: "Couldn't process that photo. Try another.",
-        clearTitle: "Clear chat?", clearMsg: "This deletes your conversation history with the coach.", clear: "Clear",
-        addErr: "Couldn't add to your diary.", undoErrTitle: "Couldn't undo", undoErrMsg: "Please remove it from your diary instead.",
-        error: "Error",
-      };
-  const mealOpts: [string, string][] = lang === "vi"
-    ? [["breakfast", "Sáng"], ["lunch", "Trưa"], ["dinner", "Tối"], ["snack", "Phụ"]]
-    : MEAL_OPTS;
+  const t = useT();
+  const suggestions = t.coach.suggestions;
+  const L = t.coach;
+  const mealOpts: [string, string][] = MEAL_KEYS.map((k) => [k, t.coach.mealShort[k]]);
 
   const headerHeight = useHeaderHeight(); // bù chiều cao AppHeader của tab cho keyboard
   const scrollRef = useRef<ScrollView>(null);
@@ -182,8 +144,8 @@ export default function CoachTab() {
     } catch (e: any) {
       const quota = /quota/i.test(String(e?.message || ""));
       const errText = quota
-        ? (lang === "vi" ? "Hôm nay đã hết lượt AI miễn phí, thử lại sau nhé." : "Out of free AI quota today — please try again later.")
-        : (lang === "vi" ? "Xin lỗi, mình chưa trả lời được. Thử lại nhé." : "Sorry, I couldn't respond right now. Please try again.");
+        ? t.coach.quotaMsg
+        : t.coach.replyFail;
       setMessages((prev) => [...prev, { role: "coach", text: errText, createdAt: new Date().toISOString() }]);
     } finally {
       setSending(false);
@@ -193,7 +155,7 @@ export default function CoachTab() {
 
   // Tap an insight tip/warning → ask the coach to elaborate on it in chat
   const askAboutTip = (tip: string) =>
-    send(lang === "vi" ? `Nói rõ hơn giúp mình: "${tip}"` : `Tell me more about this: "${tip}"`);
+    send(t.coach.askTip(tip));
 
   // Deep-link question (e.g. tapping a plan dish → "how do I cook X?").
   // `askId` makes each tap unique; the ref consumes it once so switching back to
@@ -251,8 +213,8 @@ export default function CoachTab() {
     const now = new Date();
     const yesterday = new Date();
     yesterday.setDate(now.getDate() - 1);
-    if (d === dateKey(now)) return lang === "vi" ? "Hôm nay" : "Today";
-    if (d === dateKey(yesterday)) return lang === "vi" ? "Hôm qua" : "Yesterday";
+    if (d === dateKey(now)) return t.meals.today;
+    if (d === dateKey(yesterday)) return t.meals.yesterday;
     return new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
   const msgDay = (m: ChatMessage) => (m.createdAt ? dateKey(new Date(m.createdAt)) : todayKey());

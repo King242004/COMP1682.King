@@ -2,6 +2,7 @@
 // (tapping one sends it into the chat for elaboration).
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -20,6 +21,7 @@ export function InsightCard({ insight, loading, sending, failText, onAskTip }: {
   failText: string;
   onAskTip: (tip: string) => void;
 }) {
+  const t = useT();
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
@@ -46,7 +48,7 @@ export function InsightCard({ insight, loading, sending, failText, onAskTip }: {
           <AppText style={[styles.scoreText, { color }]}>{insight.score}</AppText>
         </View>
         <View style={styles.headBody}>
-          <AppText variant="h2" style={styles.title}>Health Score</AppText>
+          <AppText variant="h2" style={styles.title}>{t.coach.healthScore}</AppText>
           <AppText variant="muted" style={styles.summary}>{insight.summary}</AppText>
         </View>
       </View>
