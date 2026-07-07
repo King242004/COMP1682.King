@@ -18,6 +18,7 @@ import {
 import type { PlanMeal } from "@/features/plan/api";
 import { todayKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
@@ -28,7 +29,7 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
   const { user, token } = useAuth();
   const { meals } = useMeals(); // today's logged meals (parent only renders on today)
   const lang = resolveLanguage(user?.language);
-  const vi = lang === "vi";
+  const t = useT();
   const dateKey = todayKey();
 
   // User-initiated only (each call = 1 Gemini request), cached per
@@ -57,11 +58,7 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
       setSuggest(fresh);
       cacheSuggestions(dateKey, currentSlot, lang, fresh);
     } catch (e: any) {
-      setError(
-        e?.message === "QUOTA"
-          ? (vi ? "Hôm nay hết lượt AI rồi, thử lại sau nhé." : "Out of AI requests for today — try again later.")
-          : (vi ? "Không lấy được gợi ý, thử lại nhé." : "Couldn't get suggestions. Please try again.")
-      );
+      setError(e?.message === "QUOTA" ? t.plan.suggestQuota : t.plan.suggestErr);
     } finally {
       setLoading(false);
     }
@@ -73,16 +70,13 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
     router.push({
       pathname: "/tabs/coach" as any,
       params: {
-        ask: vi
-          ? `Hướng dẫn mình cách làm "${name}" tốt cho sức khoẻ nhé`
-          : `How do I cook "${name}" in a healthy way?`,
+        ask: t.community.cookQuestion(name),
         askId: String(Date.now()),
       },
     });
 
   const slot = suggest?.mealType || currentSlot;
-  const slotVi: Record<string, string> = { breakfast: "bữa sáng", lunch: "bữa trưa", dinner: "bữa tối", snack: "bữa phụ" };
-  const slotName = vi ? (slotVi[slot] || slot) : slot;
+  const slotName = t.plan.slotShort[slot] || slot;
   // Planned-but-uneaten dish for this slot → suggestions act as swap options
   const plannedForSlot = planToday.find((p) => p.mealType === slot && !p.done);
 
@@ -98,25 +92,15 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
           <Ionicons name="restaurant" size={17} color={theme.colors.accent} />
         </View>
         <View style={styles.headerBody}>
-          <AppText variant="h2" style={styles.title}>
-            {vi ? "Ăn gì bây giờ?" : "What should I eat now?"}
-          </AppText>
+          <AppText variant="h2" style={styles.title}>{t.plan.whatToEat}</AppText>
           <AppText variant="subtle" numberOfLines={2} style={styles.subtitle}>
             {suggest
               ? plannedForSlot
-                ? (vi
-                    ? `Món thay thế cho ${plannedForSlot.name} · còn ${suggest.remaining.toLocaleString()} kcal`
-                    : `Alternatives to ${plannedForSlot.name} · ${suggest.remaining.toLocaleString()} kcal left`)
-                : (vi
-                    ? `Gợi ý cho ${slotName} · còn ${suggest.remaining.toLocaleString()} kcal`
-                    : `For your ${slotName} · ${suggest.remaining.toLocaleString()} kcal left`)
+                ? t.plan.altFor(plannedForSlot.name, suggest.remaining.toLocaleString())
+                : t.plan.forSlot(slotName, suggest.remaining.toLocaleString())
               : plannedForSlot
-              ? (vi
-                  ? `Kế hoạch ${slotName} có ${plannedForSlot.name} — muốn đổi món khác?`
-                  : `${plannedForSlot.name} is planned for ${slotName} — want something else?`)
-              : (vi
-                  ? `AI chọn món cho ${slotName} theo calo còn lại`
-                  : `AI picks dishes for your ${slotName} from what's left`)}
+              ? t.plan.plannedSwap(slotName, plannedForSlot.name)
+              : t.plan.aiPicks(slotName)}
           </AppText>
         </View>
         {loading ? (
@@ -129,7 +113,7 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
         ) : (
           <View style={styles.suggestPill}>
             <Ionicons name="sparkles" size={13} color={theme.colors.accent} />
-            <AppText style={styles.suggestPillText}>{vi ? "Gợi ý" : "Suggest"}</AppText>
+            <AppText style={styles.suggestPillText}>{t.plan.suggestPill}</AppText>
           </View>
         )}
       </Pressable>
@@ -171,7 +155,7 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
               style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
             >
               <Ionicons name="add" size={14} color={theme.colors.accent} />
-              <AppText style={styles.addText}>{vi ? "Thêm" : "Add"}</AppText>
+              <AppText style={styles.addText}>{t.plan.add}</AppText>
             </Pressable>
           </View>
           {!!s.reason && <AppText variant="subtle" style={styles.reason}>{s.reason}</AppText>}

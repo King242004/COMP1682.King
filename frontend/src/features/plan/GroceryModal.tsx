@@ -2,20 +2,19 @@
 // together with the list, see plan api cacheGrocery).
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import type { GroceryGroup } from "@/features/plan/api";
-import type { Lang } from "@/utils/language";
 
-export function GroceryModal({ visible, groups, checked, onToggle, onClose, lang }: {
+export function GroceryModal({ visible, groups, checked, onToggle, onClose }: {
   visible: boolean;
   groups: GroceryGroup[] | null;
   checked: Record<string, boolean>;
   onToggle: (key: string) => void;
   onClose: () => void;
-  lang: Lang;
 }) {
-  const title = lang === "vi" ? "Danh sách đi chợ" : "Grocery list";
+  const title = useT().plan.groceryTitle;
 
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
