@@ -8,10 +8,11 @@ import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import type { Product } from "@/features/scan/api";
 
-export function ProductSheet({ visible, product, onAdd, onClose }: {
+export function ProductSheet({ visible, product, onAdd, onAskCoach, onClose }: {
   visible: boolean;
   product: Product | null;
   onAdd: (p: Product) => void;
+  onAskCoach: (p: Product) => void; // "Right for me?" → Coach judges vs. the user's conditions
   onClose: () => void;
 }) {
   const t = useT();
@@ -60,6 +61,15 @@ export function ProductSheet({ visible, product, onAdd, onClose }: {
               </Card>
               <View style={styles.actionWrap}>
                 <Button title={t.scan.addToMeal} size="lg" onPress={() => onAdd(product)} />
+                {/* USP moment: the Coach knows the user's conditions (diabetes, gout...)
+                    and verdicts this exact product for THEM */}
+                <Pressable
+                  onPress={() => onAskCoach(product)}
+                  style={({ pressed }) => [styles.askBtn, pressed && styles.askBtnPressed]}
+                >
+                  <Ionicons name="chatbubble-ellipses-outline" size={17} color={theme.colors.primary} />
+                  <AppText style={styles.askText}>{t.scan.suitsMe}</AppText>
+                </Pressable>
               </View>
             </>
           )}
@@ -98,5 +108,12 @@ const styles = StyleSheet.create({
   macroCol: { alignItems: "center", gap: 2 },
   macroVal: { fontSize: 17, fontWeight: "800" },
   macroLabel: { fontSize: 11 },
-  actionWrap: { marginTop: theme.space.lg },
+  actionWrap: { marginTop: theme.space.lg, gap: theme.space.sm },
+  askBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: 13, borderRadius: theme.radius.button,
+    backgroundColor: theme.colors.tint,
+  },
+  askBtnPressed: { backgroundColor: "rgba(8,145,178,0.18)" },
+  askText: { fontSize: 14, fontWeight: "700", color: theme.colors.primary },
 });

@@ -231,6 +231,24 @@ export default function ScanScreen() {
     barcodeLockRef.current = false;
   };
 
+  // "Right for me?" → Coach tab with the product's facts; the Coach grounds the
+  // verdict in the user's saved conditions (diabetes, gout, ...). REPLACE like
+  // the other scan exits so back() from Coach doesn't land on a live camera.
+  const handleAskCoach = (p: Product) => {
+    setProduct(null);
+    barcodeLockRef.current = false;
+    router.replace({
+      pathname: "/tabs/coach" as any,
+      params: {
+        ask: t.scan.suitsMeQuestion(
+          p.brand ? `${p.name} (${p.brand})` : p.name,
+          Math.round(p.calories), Math.round(p.protein), Math.round(p.carbs), Math.round(p.fat)
+        ),
+        askId: String(Date.now()), // unique per tap — consumed once on the Coach tab
+      },
+    });
+  };
+
   const switchMode = (m: ScanMode) => {
     setMode(m);
     barcodeLockRef.current = false;
@@ -315,6 +333,7 @@ export default function ScanScreen() {
         visible={!!product && !isScanning}
         product={product}
         onAdd={handleAddProduct}
+        onAskCoach={handleAskCoach}
         onClose={() => { setProduct(null); barcodeLockRef.current = false; }}
       />
       <ManualBarcodeModal
