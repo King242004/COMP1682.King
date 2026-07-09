@@ -236,7 +236,14 @@ export const en = {
   labels: {
     goal: { lose_weight: "Lose Weight", gain_muscle: "Gain Muscle", eat_healthy: "Eat Healthy" } as Record<string, string>,
     activity: { sedentary: "Sedentary", moderate: "Moderate", active: "Active" } as Record<string, string>,
-    condition: { diabetes: "Diabetes", hypertension: "Hypertension", none: "None" } as Record<string, string>,
+    condition: {
+      diabetes: "Diabetes",
+      hypertension: "Hypertension",
+      gout: "Gout",
+      high_cholesterol: "High cholesterol",
+      gastritis: "Gastritis / reflux",
+      none: "None",
+    } as Record<string, string>,
     gender: { male: "Male", female: "Female" } as Record<string, string>,
     mealType: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snacks" } as Record<string, string>,
     protein: "Protein",

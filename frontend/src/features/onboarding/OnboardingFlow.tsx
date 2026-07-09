@@ -44,6 +44,9 @@ export function OnboardingFlow() {
   const CONDITIONS = [
     { key: "diabetes", label: t.labels.condition.diabetes },
     { key: "hypertension", label: t.labels.condition.hypertension },
+    { key: "gout", label: t.labels.condition.gout },
+    { key: "high_cholesterol", label: t.labels.condition.high_cholesterol },
+    { key: "gastritis", label: t.labels.condition.gastritis },
   ];
 
   const [step, setStep] = useState<Step>("intro");
