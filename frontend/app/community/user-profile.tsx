@@ -85,7 +85,7 @@ export default function UserProfileScreen() {
     return (
       <Screen padded={false}>
         <View style={styles.stateBox}>
-          <ScreenHeader title="Profile" />
+          <ScreenHeader title={t.community.profile} />
           {loadError ? (
             <Card style={styles.errorCard}>
               <AppText style={styles.emptyEmoji}>📡</AppText>

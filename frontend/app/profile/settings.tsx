@@ -204,8 +204,8 @@ export default function SettingsScreen() {
           <View style={styles.langHead}>
             <IconBox icon="🌐" />
             <View style={styles.rowText}>
-              <AppText variant="body2" style={styles.rowTitle}>{t.settings.coachLanguage}</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>{t.settings.coachLanguageSub}</AppText>
+              <AppText variant="body2" style={styles.rowTitle}>{t.settings.appLanguage}</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>{t.settings.appLanguageSub}</AppText>
             </View>
           </View>
           <View style={styles.langBtns}>

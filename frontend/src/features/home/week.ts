@@ -1,6 +1,5 @@
-// Week strip helpers for the Home diary (Mon→Sun of the viewed week)
-
-export const dayLabelsFixed = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Week strip helpers for the Home diary (Mon→Sun of the viewed week).
+// Day labels live in the i18n catalog (t.labels.daysShort).
 
 export function getCurrentWeekDays(weekOffset = 0) {
   const days = [];

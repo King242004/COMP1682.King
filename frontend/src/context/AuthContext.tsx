@@ -3,6 +3,8 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 import { router } from "expo-router";
 import { apiRequest, BASE_URL, setOnUnauthorized } from "../utils/api";
+import { getStrings } from "../i18n";
+import { resolveLanguage } from "../utils/language";
 
 type User = {
   id: string;
@@ -68,6 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // apiRequest calls this on any 401 → force logout + back to login.
   const tokenRef = useRef<string | null>(null);
   tokenRef.current = token;
+  // Language ref: the 401 callback is registered once, so it reads the CURRENT
+  // language through a ref (AuthProvider sits above useT's own provider chain).
+  const langRef = useRef<string | null>(null);
+  langRef.current = user?.language ?? null;
   useEffect(() => {
     setOnUnauthorized(() => {
       // Only react while we believed we were logged in; Home fires several
@@ -75,7 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!tokenRef.current) return;
       tokenRef.current = null;
       logout();
-      Alert.alert("Session expired", "Please sign in again.");
+      const t = getStrings(resolveLanguage(langRef.current));
+      Alert.alert(t.auth.sessionExpiredTitle, t.auth.sessionExpiredMsg);
       router.replace("/auth/login");
     });
     return () => setOnUnauthorized(null);
