@@ -317,6 +317,8 @@ export default function MealPlanScreen() {
           <Pressable
             onPress={() => changeWeek(-1)}
             hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t.a11y.prevWeek}
             style={({ pressed }) => [styles.navBtn, pressed && styles.dim]}
           >
             <Ionicons name="chevron-back" size={22} color={theme.colors.subtle} />
@@ -331,6 +333,8 @@ export default function MealPlanScreen() {
           <Pressable
             onPress={() => changeWeek(1)}
             hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t.a11y.nextWeek}
             style={({ pressed }) => [styles.navBtn, pressed && styles.dim]}
           >
             <Ionicons name="chevron-forward" size={22} color={theme.colors.subtle} />
@@ -418,13 +422,31 @@ export default function MealPlanScreen() {
           </View>
         ) : (
           <>
-          {/* Time-aware hints: empty future/today day → point at the AI button; past day → view only */}
+          {/* Time-aware empty state: past day → view only; today/future → hint + a
+              Generate CTA RIGHT HERE (the main AI button sits below the fold) */}
           {dayPlan.length === 0 && (
-            <View style={styles.hintBox}>
-              <Ionicons name={isPast ? "time-outline" : "sparkles"} size={15} color={theme.colors.primary} style={styles.hintIcon} />
-              <AppText variant="subtle" style={styles.hintText}>
-                {isPast ? L.pastDay : L.emptyHint}
-              </AppText>
+            <View style={styles.emptyBlock}>
+              <View style={styles.hintBox}>
+                <Ionicons name={isPast ? "time-outline" : "sparkles"} size={15} color={theme.colors.primary} style={styles.hintIcon} />
+                <AppText variant="subtle" style={styles.hintText}>
+                  {isPast ? L.pastDay : L.emptyHint}
+                </AppText>
+              </View>
+              {!isPast && (
+                <Pressable
+                  onPress={() => openGenerate(plan.length === 0 ? "week" : "day")}
+                  disabled={generating}
+                  style={({ pressed }) => [
+                    styles.emptyCta,
+                    generating ? styles.emptyCtaDisabled : pressed && styles.emptyCtaPressed,
+                  ]}
+                >
+                  {generating && <ActivityIndicator color="#fff" size="small" />}
+                  <AppText style={styles.emptyCtaText}>
+                    {generating ? L.generating : plan.length === 0 ? L.generate : L.emptyDayCta}
+                  </AppText>
+                </Pressable>
+              )}
             </View>
           )}
           {MEAL_TYPE_META.map((mt) => {
@@ -471,11 +493,23 @@ export default function MealPlanScreen() {
                         ) : null}
 
                         {/* Ask the Coach how to cook this dish */}
-                        <Pressable onPress={() => askCoach(item)} hitSlop={10} style={({ pressed }) => pressed && styles.dim}>
+                        <Pressable
+                          onPress={() => askCoach(item)}
+                          hitSlop={10}
+                          accessibilityRole="button"
+                          accessibilityLabel={t.a11y.askCoach}
+                          style={({ pressed }) => pressed && styles.dim}
+                        >
                           <Ionicons name="chatbubble-ellipses-outline" size={17} color={theme.colors.primary} />
                         </Pressable>
 
-                        <Pressable onPress={() => onDelete(item)} hitSlop={10} style={({ pressed }) => pressed && styles.dim}>
+                        <Pressable
+                          onPress={() => onDelete(item)}
+                          hitSlop={10}
+                          accessibilityRole="button"
+                          accessibilityLabel={t.a11y.deletePlanned}
+                          style={({ pressed }) => pressed && styles.dim}
+                        >
                           <Ionicons name="trash-outline" size={18} color={theme.colors.subtle} />
                         </Pressable>
                       </View>
@@ -602,10 +636,19 @@ const styles = StyleSheet.create({
 
   // Day content
   loadingWrap: { paddingVertical: theme.space.xl, alignItems: "center" },
+  emptyBlock: { gap: theme.space.md },
   hintBox: {
     flexDirection: "row", alignItems: "flex-start", gap: 8,
     backgroundColor: "rgba(8,145,178,0.05)", borderRadius: 12, padding: theme.space.md,
   },
+  emptyCta: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 14, paddingVertical: 13,
+  },
+  emptyCtaPressed: { backgroundColor: theme.colors.primary2 },
+  emptyCtaDisabled: { backgroundColor: theme.colors.border },
+  emptyCtaText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   hintIcon: { marginTop: 1 },
   hintText: { flex: 1, fontSize: 12 },
   mealSection: { gap: 8 },

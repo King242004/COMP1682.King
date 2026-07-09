@@ -2,6 +2,23 @@
 // (it's typed as `typeof en`, so missing/extra keys fail the type-check).
 // Strings with runtime values are functions, e.g. remaining: (n) => `${n} left`.
 export const en = {
+  // Screen-reader labels for icon-only buttons (accessibilityLabel)
+  a11y: {
+    prevWeek: "Previous week",
+    nextWeek: "Next week",
+    addMeal: "Add meal",
+    deleteWorkout: "Delete workout",
+    removePlanned: "Remove planned meal",
+    send: "Send message",
+    attachPhoto: "Attach photo",
+    clearChat: "Clear chat history",
+    askCoach: "Ask the Coach",
+    deletePlanned: "Delete planned meal",
+    search: "Search people",
+    createPost: "New post",
+    myProfile: "My community profile",
+  },
+
   common: {
     save: "Save",
     saving: "Saving...",
@@ -19,7 +36,6 @@ export const en = {
   },
 
   home: {
-    week: (n: number) => `Week ${n}`,
     eaten: "Eaten",
     overGoal: (n: string) => `${n} over goal`,
     kcalLeft: (n: string) => `${n} kcal left`,
@@ -65,7 +81,8 @@ export const en = {
     groceryErr: "Couldn't build the list. Please try again.",
     error: "Error",
     pastDay: "This day is over — view only.",
-    emptyHint: "Nothing planned for this day — tap the ✨ button below to let the AI build a menu.",
+    emptyHint: "Nothing planned for this day yet.",
+    emptyDayCta: "✨ Plan this day with AI",
     mealPlanTitle: "Meal Plan",
     thisWeek: "This week",
     nothingPlanned: "Nothing planned",

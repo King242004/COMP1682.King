@@ -18,10 +18,11 @@ export function ConsistencyRow({ summaries, goal, daysLogged }: {
       </View>
       <View style={styles.row}>
         {summaries.map((day) => {
+          // Over-goal = warning orange, not danger red (red = errors/destructive)
           const bg = day.onTrack
             ? theme.colors.accent
             : day.calories > goal
-            ? theme.colors.danger
+            ? theme.colors.accent2
             : day.calories > 0
             ? theme.colors.primary
             : theme.colors.tint;
@@ -53,7 +54,7 @@ export function ConsistencyRow({ summaries, goal, daysLogged }: {
           <AppText variant="subtle" style={styles.legendText}>{t.progress.logged}</AppText>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: theme.colors.danger }]} />
+          <View style={[styles.legendDot, { backgroundColor: theme.colors.accent2 }]} />
           <AppText variant="subtle" style={styles.legendText}>{t.progress.overGoalShort}</AppText>
         </View>
       </View>

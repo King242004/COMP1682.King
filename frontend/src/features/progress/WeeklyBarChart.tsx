@@ -21,8 +21,9 @@ export function WeeklyBarChart({ summaries, goal, maxCalories, title }: {
         <View style={[styles.bars, many && styles.barsTight]}>
           {summaries.map((day, i) => {
             const barH = Math.max(4, (day.calories / maxCalories) * 80);
+            // Over-goal = warning orange, not danger red (red = errors/destructive)
             const barColor = day.calories > goal
-              ? theme.colors.danger
+              ? theme.colors.accent2
               : day.onTrack
               ? theme.colors.accent
               : day.isToday
@@ -59,7 +60,7 @@ export function WeeklyBarChart({ summaries, goal, maxCalories, title }: {
           <AppText variant="subtle" style={styles.legendText}>{t.progress.onTrackRange}</AppText>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: theme.colors.danger }]} />
+          <View style={[styles.legendDot, { backgroundColor: theme.colors.accent2 }]} />
           <AppText variant="subtle" style={styles.legendText}>{t.progress.overGoalShort}</AppText>
         </View>
       </View>

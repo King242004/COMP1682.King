@@ -12,6 +12,7 @@ import { buildDaySummaries } from "@/features/progress/summary";
 import { WeightSection } from "@/features/weight/WeightSection";
 import { mealStreak } from "@/utils/streak";
 import { MacroBar } from "@/features/progress/MacroBar";
+import { useAnimatedNumber } from "@/ui/useAnimatedNumber";
 import { WeeklyBarChart } from "@/features/progress/WeeklyBarChart";
 import { MacroRatioList } from "@/features/progress/MacroRatioList";
 import { ConsistencyRow } from "@/features/progress/ConsistencyRow";
@@ -40,6 +41,8 @@ export default function ProgressScreen() {
 
   const summaries = buildDaySummaries(historyMeals, goal, range);
   const todaySummary = summaries[summaries.length - 1];
+  // Animated: today's big kcal number rolls to its value on load/updates
+  const todayCaloriesAnimated = useAnimatedNumber(todaySummary.calories);
   const maxCalories = summaries.reduce((max, s) => Math.max(max, s.calories), 0) || 1;
   const daysWithMeals = summaries.filter((s) => s.calories > 0);
 
@@ -63,8 +66,9 @@ export default function ProgressScreen() {
   const avgFat = daysWithMeals.length > 0
     ? Math.round(daysWithMeals.reduce((s, d) => s + d.fat, 0) / daysWithMeals.length) : 0;
 
+  // Over-goal = warning orange (danger red stays for destructive/error states)
   const todayBarColor = todaySummary.calories > goal
-    ? theme.colors.danger
+    ? theme.colors.accent2
     : todaySummary.onTrack
     ? theme.colors.accent
     : theme.colors.primary;
@@ -118,7 +122,7 @@ export default function ProgressScreen() {
             <Card style={styles.todayCard}>
               <AppText variant="subtle" style={styles.todayLabel}>{t.progress.today}</AppText>
               <View style={styles.todayValueRow}>
-                <AppText variant="h0" style={styles.todayValue}>{todaySummary.calories.toLocaleString()}</AppText>
+                <AppText variant="h0" style={styles.todayValue}>{todayCaloriesAnimated.toLocaleString()}</AppText>
                 <AppText variant="muted">/ {goal.toLocaleString()} {t.common.kcal}</AppText>
               </View>
               <View style={styles.todayTrack}>
@@ -254,7 +258,7 @@ export default function ProgressScreen() {
                     <View style={styles.summaryRight}>
                       <AppText style={[styles.summaryKcal, {
                         color: day.calories === 0 ? theme.colors.subtle
-                          : day.calories > goal ? theme.colors.danger
+                          : day.calories > goal ? theme.colors.accent2
                           : day.onTrack ? theme.colors.accent
                           : theme.colors.primary,
                       }]}>

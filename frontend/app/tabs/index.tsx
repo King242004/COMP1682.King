@@ -11,7 +11,7 @@ import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachI
 import { SuggestMealCard } from "@/features/plan/SuggestMealCard";
 import { ProgressRing } from "@/ui/components/ProgressRing";
 import { getCurrentWeekDays } from "@/features/home/week";
-import { dateKey, weekNumber } from "@/utils/date";
+import { dateKey } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { useT } from "@/i18n";
 import { theme, macroGoals, shadow } from "@/ui/theme";
@@ -20,6 +20,7 @@ import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { Skeleton } from "@/ui/components/Skeleton";
+import { useAnimatedNumber } from "@/ui/useAnimatedNumber";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -171,7 +172,8 @@ export default function HomeScreen() {
   };
 
   const goal = user?.calorieGoal ?? 2000;
-  const eaten = dailyTotals.calories;
+  // Animated: the big number + ring + status chip roll to new values together
+  const eaten = useAnimatedNumber(dailyTotals.calories);
   const remaining = Math.max(0, goal - eaten);
 
   const totalCarbs = dailyTotals.carbs;
@@ -215,17 +217,26 @@ export default function HomeScreen() {
             <Pressable
               onPress={() => changeWeek(-1)}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t.a11y.prevWeek}
               style={({ pressed }) => [styles.navBtn, pressed && styles.pressedDim]}
             >
               <Ionicons name="chevron-back" size={20} color={theme.colors.subtle} />
             </Pressable>
+            {/* Same week-label language as the Plan screen: "This week" or a date range */}
             <AppText variant="body2" style={[styles.weekLabel, weekOffset === 0 && styles.weekLabelCurrent]}>
-              {t.home.week(weekNumber(weekDays[0]))}
+              {weekOffset === 0
+                ? t.plan.thisWeek
+                : weekDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+                  " – " +
+                  weekDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}
             </AppText>
             <Pressable
               onPress={() => changeWeek(1)}
               disabled={weekOffset === 0}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t.a11y.nextWeek}
               style={({ pressed }) => [styles.navBtn, weekOffset === 0 ? styles.navBtnDisabled : pressed && styles.pressedDim]}
             >
               <Ionicons name="chevron-forward" size={20} color={theme.colors.subtle} />
@@ -338,8 +349,11 @@ export default function HomeScreen() {
               ? planToday.filter((p) => p.mealType === mt.key && !p.done)
               : [];
 
+            const isEmptySlot = typeMeals.length === 0 && plannedForType.length === 0;
+
             return (
-              <Card key={mt.key} style={styles.mealCard}>
+              /* Empty slots collapse to a slim card — full-height cards are for real content */
+              <Card key={mt.key} style={[styles.mealCard, isEmptySlot && styles.mealCardEmpty]}>
                 {/* Header: icon + label | tổng kcal + nút thêm món bên phải */}
                 <View style={styles.mealCardHeader}>
                   <View style={styles.mealCardTitle}>
@@ -360,6 +374,8 @@ export default function HomeScreen() {
                     <Pressable
                       onPress={() => router.push({ pathname: "/meals/add", params: { mealType: mt.key, date: selectedDate } })}
                       hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t.a11y.addMeal} — ${t.labels.mealType[mt.key]}`}
                       style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
                     >
                       <Ionicons name="add" size={17} color={theme.colors.primary} />
@@ -393,7 +409,13 @@ export default function HomeScreen() {
                       <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
                       <AppText style={styles.eatBtnText}>{t.home.eat}</AppText>
                     </Pressable>
-                    <Pressable onPress={() => removePlanned(p)} hitSlop={8} style={({ pressed }) => pressed && styles.pressedDim}>
+                    <Pressable
+                      onPress={() => removePlanned(p)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={t.a11y.removePlanned}
+                      style={({ pressed }) => pressed && styles.pressedDim}
+                    >
                       <Ionicons name="close" size={16} color={theme.colors.subtle} />
                     </Pressable>
                   </View>
@@ -461,7 +483,13 @@ export default function HomeScreen() {
                   <AppText variant="subtle" style={styles.workoutMeta}>{ex.durationMin} {t.home.min} · {ex.caloriesBurned} {t.common.kcal}</AppText>
                 </View>
                 {/* Delete works on any viewed day, not just today */}
-                <Pressable onPress={() => onDeleteExercise(ex)} hitSlop={6} style={({ pressed }) => pressed && styles.pressedDim}>
+                <Pressable
+                  onPress={() => onDeleteExercise(ex)}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.a11y.deleteWorkout}
+                  style={({ pressed }) => pressed && styles.pressedDim}
+                >
                   <Ionicons name="trash-outline" size={16} color={theme.colors.subtle} />
                 </Pressable>
               </View>
@@ -629,9 +657,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(5,150,105,0.12)",
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
   },
-  statusChipOver: { backgroundColor: "rgba(229,72,77,0.10)" },
+  // Over-goal = WARNING orange (accent2), not danger red — red is reserved for
+  // destructive/error states; eating over budget is a nudge, not an emergency
+  statusChipOver: { backgroundColor: "rgba(255,138,61,0.12)" },
   statusChipText: { fontSize: 13, fontWeight: "700", color: theme.colors.accent },
-  statusChipTextOver: { color: theme.colors.danger },
+  statusChipTextOver: { color: theme.colors.accent2 },
   macroRow: { flexDirection: "row", gap: 12 },
   macroCol: { flex: 1, alignItems: "center", gap: 6, paddingHorizontal: 4 },
   macroLabel: { fontSize: 11 },
@@ -647,6 +677,7 @@ const styles = StyleSheet.create({
 
   // Diary meal cards
   mealCard: { padding: theme.space.lg, gap: 10 },
+  mealCardEmpty: { paddingVertical: theme.space.md, gap: 6 },
   mealCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   mealCardTitle: { flexDirection: "row", alignItems: "center", gap: 10 },
   mealCardRight: { flexDirection: "row", alignItems: "center", gap: 10 },

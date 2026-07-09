@@ -125,12 +125,16 @@ export default function CommunityScreen() {
                 {/* Discover: search people + follow suggestions */}
                 <Pressable
                   onPress={() => router.push("/community/discover")}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.a11y.search}
                   style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
                 >
                   <Ionicons name="search" size={19} color={theme.colors.primary} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push("/community/post-create")}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.a11y.createPost}
                   style={({ pressed }) => [styles.postBtn, pressed && styles.postBtnPressed]}
                 >
                   <Ionicons name="add" size={22} color="#fff" />
@@ -139,6 +143,8 @@ export default function CommunityScreen() {
                 {user && (
                   <Pressable
                     onPress={() => router.push({ pathname: "/community/user-profile", params: { id: user.id } })}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.a11y.myProfile}
                     style={({ pressed }) => [styles.myAvatar, pressed && styles.pressed]}
                   >
                     {user.avatar ? (
@@ -176,7 +182,9 @@ export default function CommunityScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: { paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40, gap: theme.space.sm },
+  // paddingTop 60 = safe-area top (no tab header above anymore) — same value
+  // every pushed screen uses
+  listContent: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.sm },
   gridColumn: { gap: theme.space.sm },
   header: { gap: theme.space.md, marginBottom: theme.space.sm },
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

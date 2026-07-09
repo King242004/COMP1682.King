@@ -17,11 +17,12 @@ import { SectionLabel } from "@/ui/components/SectionLabel";
 import { TextField } from "@/ui/components/TextField";
 import { resolveLanguage, type Lang } from "@/utils/language";
 
-// Reusable icon square for settings rows
-function IconBox({ icon, bg }: { icon: string; bg?: string }) {
+// Reusable icon square for settings rows — Ionicons, not emoji, so every row
+// renders crisply and matches the icon language of the rest of the app
+function IconBox({ icon, bg, color }: { icon: string; bg?: string; color?: string }) {
   return (
     <View style={[styles.iconBox, bg ? { backgroundColor: bg } : null]}>
-      <AppText style={styles.iconBoxText}>{icon}</AppText>
+      <Ionicons name={icon as any} size={17} color={color ?? theme.colors.primary} />
     </View>
   );
 }
@@ -202,7 +203,7 @@ export default function SettingsScreen() {
             }}
             style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}
           >
-            <IconBox icon="🎯" />
+            <IconBox icon="flag" />
             <View style={styles.rowText}>
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.dailyCalorieGoal}</AppText>
               <AppText variant="subtle" style={styles.rowSub}>{t.settings.goalRowSub}</AppText>
@@ -230,7 +231,7 @@ export default function SettingsScreen() {
         <SectionLabel>{t.settings.insights}</SectionLabel>
         <Card style={styles.card}>
           <Pressable onPress={() => router.push("/profile/progress" as any)} style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}>
-            <IconBox icon="📊" bg="rgba(5,150,105,0.12)" />
+            <IconBox icon="stats-chart" bg="rgba(5,150,105,0.12)" color={theme.colors.accent} />
             <View style={styles.rowText}>
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.progressStats}</AppText>
               <AppText variant="subtle" style={styles.rowSub}>{t.settings.progressSub}</AppText>
@@ -243,7 +244,7 @@ export default function SettingsScreen() {
         <SectionLabel>{t.settings.reminders}</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.rowStatic}>
-            <IconBox icon="⏰" bg="rgba(255,138,61,0.12)" />
+            <IconBox icon="alarm" bg="rgba(255,138,61,0.12)" color={theme.colors.accent2} />
             {/* Tap the text side to change the time; the switch keeps its own hit area */}
             <Pressable
               onPress={() => { setTimeInput(reminderTime); setTimeModalVisible(true); }}
@@ -268,7 +269,7 @@ export default function SettingsScreen() {
             onPress={() => setPwEditing((v) => !v)}
             style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}
           >
-            <IconBox icon="🔑" />
+            <IconBox icon="key" />
             <View style={styles.rowText}>
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.changePassword}</AppText>
               <AppText variant="subtle" style={styles.rowSub}>{t.settings.changePasswordSub}</AppText>
@@ -315,7 +316,7 @@ export default function SettingsScreen() {
         <SectionLabel>{t.settings.language}</SectionLabel>
         <Card style={styles.langCard}>
           <View style={styles.langHead}>
-            <IconBox icon="🌐" />
+            <IconBox icon="globe-outline" />
             <View style={styles.rowText}>
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.appLanguage}</AppText>
               <AppText variant="subtle" style={styles.rowSub}>{t.settings.appLanguageSub}</AppText>
@@ -342,7 +343,7 @@ export default function SettingsScreen() {
         <SectionLabel>{t.settings.privacy}</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.rowStatic}>
-            <IconBox icon="🔒" />
+            <IconBox icon="lock-closed" />
             <View style={styles.rowText}>
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.privateProfile}</AppText>
               <AppText variant="subtle" style={styles.rowSub}>{t.settings.privateProfileSub}</AppText>
@@ -399,7 +400,6 @@ const styles = StyleSheet.create({
   card: { paddingVertical: 4, paddingHorizontal: theme.space.lg },
 
   iconBox: { width: 34, height: 34, borderRadius: 11, backgroundColor: theme.colors.tintSoft, alignItems: "center", justifyContent: "center" },
-  iconBoxText: { fontSize: 15 },
 
   rowTappable: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
   rowStatic: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },

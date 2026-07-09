@@ -256,7 +256,13 @@ export default function CoachTab() {
             <AppText variant="h1">AI Coach</AppText>
           </View>
           {messages.length > 0 && (
-            <Pressable onPress={onClear} hitSlop={8} style={({ pressed }) => pressed && styles.dim}>
+            <Pressable
+              onPress={onClear}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t.a11y.clearChat}
+              style={({ pressed }) => pressed && styles.dim}
+            >
               <Ionicons name="trash-outline" size={20} color={theme.colors.subtle} />
             </Pressable>
           )}
@@ -374,6 +380,8 @@ export default function CoachTab() {
           <Pressable
             onPress={attachImage}
             disabled={sending}
+            accessibilityRole="button"
+            accessibilityLabel={t.a11y.attachPhoto}
             style={({ pressed }) => [styles.cameraBtn, pressed && styles.cameraBtnPressed]}
           >
             <Ionicons name="camera-outline" size={20} color={theme.colors.primary} />
@@ -390,6 +398,8 @@ export default function CoachTab() {
           <Pressable
             onPress={() => send(input)}
             disabled={(!input.trim() && !pendingImage) || sending}
+            accessibilityRole="button"
+            accessibilityLabel={t.a11y.send}
             style={({ pressed }) => [
               styles.sendBtn,
               ((!input.trim() && !pendingImage) || sending) && styles.sendBtnDisabled,
@@ -408,7 +418,8 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   dim: { opacity: 0.5 },
   pressedFaint: { opacity: 0.8 },
-  container: { flex: 1, paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg },
+  // paddingTop 60 = safe-area top (Coach got its ~90px back — no AppHeader above)
+  container: { flex: 1, paddingHorizontal: theme.space.lg, paddingTop: 60 },
 
   titleRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",

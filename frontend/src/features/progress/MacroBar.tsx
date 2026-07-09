@@ -8,7 +8,8 @@ export function MacroBar({ label, value, total, color }: {
 }) {
   const ratio = total > 0 ? Math.min(value / total, 1) : 0;
   const pct = Math.round(ratio * 100);
-  const pctColor = pct >= 100 ? theme.colors.danger : pct >= 80 ? theme.colors.accent : theme.colors.subtle;
+  // ≥100% = warning orange, not danger red (red = errors/destructive)
+  const pctColor = pct >= 100 ? theme.colors.accent2 : pct >= 80 ? theme.colors.accent : theme.colors.subtle;
   return (
     <View style={styles.wrap}>
       <View style={styles.row}>
