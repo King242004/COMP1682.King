@@ -15,13 +15,15 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 import { Ionicons } from "@expo/vector-icons";
 
+// Fallback chips for brand-new users with an empty history — familiar
+// Vietnamese staples (the app's whole angle), not Western sample dishes.
 const QUICK_SUGGESTIONS = [
-  { name: "Oatmeal", calories: 150, protein: 5, carbs: 27, fat: 3, mealType: "breakfast" as MealTypeKey },
-  { name: "Chicken Rice", calories: 450, protein: 35, carbs: 48, fat: 8, mealType: "lunch" as MealTypeKey },
-  { name: "Greek Salad", calories: 320, protein: 8, carbs: 18, fat: 24, mealType: "lunch" as MealTypeKey },
-  { name: "Grilled Salmon", calories: 380, protein: 42, carbs: 0, fat: 22, mealType: "dinner" as MealTypeKey },
-  { name: "Banana", calories: 89, protein: 1, carbs: 23, fat: 0, mealType: "snack" as MealTypeKey },
-  { name: "Pho Bo", calories: 420, protein: 28, carbs: 52, fat: 10, mealType: "lunch" as MealTypeKey },
+  { name: "Bánh mì trứng", calories: 380, protein: 14, carbs: 40, fat: 18, mealType: "breakfast" as MealTypeKey },
+  { name: "Phở bò", calories: 420, protein: 28, carbs: 52, fat: 10, mealType: "lunch" as MealTypeKey },
+  { name: "Cơm tấm sườn", calories: 600, protein: 27, carbs: 68, fat: 24, mealType: "lunch" as MealTypeKey },
+  { name: "Bún thịt nướng", calories: 450, protein: 25, carbs: 55, fat: 14, mealType: "dinner" as MealTypeKey },
+  { name: "Gỏi cuốn (2 cuốn)", calories: 160, protein: 9, carbs: 22, fat: 4, mealType: "snack" as MealTypeKey },
+  { name: "Sữa chua ít đường", calories: 100, protein: 5, carbs: 12, fat: 3, mealType: "snack" as MealTypeKey },
 ];
 
 type Errors = {
@@ -42,7 +44,7 @@ function validateNumber(val: string, field: string, t: Strings): string | undefi
 
 export default function AddMealScreen() {
   const router = useRouter();
-  const { addMeal } = useMeals();
+  const { addMeal, historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
   const {
     mealType: defaultType,
@@ -85,7 +87,8 @@ export default function AddMealScreen() {
   const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate meals
   const isPrefilled = !!prefillName;
   const isFromCommunity = source === "community"; // "Try this meal" from a community post
-  const isFromScan = isPrefilled && source !== "suggest" && !isFromCommunity;
+  const isFromRepeat = source === "repeat"; // "Log again" from a past meal's detail
+  const isFromScan = isPrefilled && source !== "suggest" && !isFromCommunity && !isFromRepeat;
 
   useEffect(() => {
     setMealName(prefillName ?? "");
@@ -98,6 +101,37 @@ export default function AddMealScreen() {
     setTouched({});
     setMealType(defaultType ?? "breakfast");
   }, [defaultType, prefillName]);
+
+  // Recent dishes power the quick chips (people eat the same things often).
+  // Only needed when the form starts empty — prefilled flows skip the fetch.
+  useEffect(() => {
+    if (!isPrefilled) fetchMealHistory();
+  }, [isPrefilled]);
+
+  // Newest first, one chip per dish name; static Vietnamese staples only for
+  // brand-new accounts with an empty history
+  const recentDishes = useMemo(() => {
+    const seen = new Set<string>();
+    const out: typeof QUICK_SUGGESTIONS = [];
+    const sorted = [...historyMeals].sort((a, b) => (a.date < b.date ? 1 : -1));
+    for (const m of sorted) {
+      const k = m.name.trim().toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push({
+        name: m.name,
+        calories: m.calories,
+        protein: m.protein ?? 0,
+        carbs: m.carbs ?? 0,
+        fat: m.fat ?? 0,
+        mealType: m.mealType as MealTypeKey,
+      });
+      if (out.length >= 8) break;
+    }
+    return out;
+  }, [historyMeals]);
+
+  const quickList = recentDishes.length > 0 ? recentDishes : QUICK_SUGGESTIONS;
 
   const validate = (): Errors => {
     const e: Errors = {};
@@ -177,6 +211,8 @@ export default function AddMealScreen() {
               ? t.meals.subtitleScan
               : isFromCommunity
               ? t.meals.subtitleCommunity
+              : isFromRepeat
+              ? t.meals.subtitleRepeat
               : isPrefilled
               ? t.meals.subtitleSuggest
               : isBackdated
@@ -198,10 +234,16 @@ export default function AddMealScreen() {
         {/* Prefill badge (scan, AI suggestion, or community post) */}
         {isPrefilled && (
           <View style={styles.aiBadge}>
-            <AppText style={styles.aiBadgeEmoji}>{isFromCommunity ? "🔖" : "🤖"}</AppText>
+            <AppText style={styles.aiBadgeEmoji}>{isFromCommunity ? "🔖" : isFromRepeat ? "🔁" : "🤖"}</AppText>
             <View style={styles.flex1}>
               <AppText style={styles.aiBadgeTitle}>
-                {isFromScan ? t.meals.badgeScan : isFromCommunity ? t.meals.badgeCommunity : t.meals.badgeSuggest}
+                {isFromScan
+                  ? t.meals.badgeScan
+                  : isFromCommunity
+                  ? t.meals.badgeCommunity
+                  : isFromRepeat
+                  ? t.meals.badgeRepeat
+                  : t.meals.badgeSuggest}
               </AppText>
               <AppText variant="subtle" style={styles.aiBadgeSub}>{t.meals.badgeSub}</AppText>
             </View>
@@ -309,12 +351,15 @@ export default function AddMealScreen() {
           <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
         </Pressable>
 
-        {/* Quick Suggestions — chỉ hiện khi form trống (không prefill từ scan/AI) */}
+        {/* Quick chips — the user's own recent dishes (fallback: starter list).
+            Only when the form starts empty (no scan/AI/community prefill). */}
         {!isPrefilled && (
           <View style={styles.suggestBlock}>
-            <AppText variant="h2" style={styles.suggestTitle}>{t.meals.quickSuggestions}</AppText>
+            <AppText variant="h2" style={styles.suggestTitle}>
+              {recentDishes.length > 0 ? t.meals.recent : t.meals.quickSuggestions}
+            </AppText>
             <View style={styles.suggestWrap}>
-              {QUICK_SUGGESTIONS.map((s) => (
+              {quickList.map((s) => (
                 <Pressable
                   key={s.name}
                   onPress={() => fillSuggestion(s)}

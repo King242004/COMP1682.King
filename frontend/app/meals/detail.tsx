@@ -7,6 +7,7 @@ import { theme, macroGoals } from "@/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
 import { dateKey } from "@/utils/date";
+import { mealSlotByHour } from "@/utils/mealSlot";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
@@ -160,9 +161,30 @@ export default function MealDetailScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
+          {/* Repeat a favourite dish: prefill the Add form for TODAY (slot by
+              current hour) so the user can tweak before saving — 2 taps total */}
+          <Button
+            title={t.meals.logAgain}
+            size="lg"
+            onPress={() =>
+              router.push({
+                pathname: "/meals/add",
+                params: {
+                  prefillName: meal.name,
+                  prefillCalories: String(meal.calories),
+                  prefillProtein: String(meal.protein ?? 0),
+                  prefillCarbs: String(meal.carbs ?? 0),
+                  prefillFat: String(meal.fat ?? 0),
+                  mealType: mealSlotByHour(new Date().getHours()),
+                  source: "repeat",
+                },
+              })
+            }
+          />
           <Button
             title={t.meals.editMeal}
             size="lg"
+            variant="secondary"
             onPress={() => router.push({ pathname: "/meals/edit", params: { id: meal.id } })}
           />
           <Pressable
