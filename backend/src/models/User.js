@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String, default: null },
     gender: { type: String, enum: ["male", "female"], default: null },
     age: { type: Number, default: null },
-    weight: { type: Number, default: null }, // kg
+    weight: { type: Number, default: null }, // kg — kept in sync with the newest WeightLog
+    targetWeight: { type: Number, default: null }, // kg — goal weight for the journey
     height: { type: Number, default: null }, // cm
     goal: {
       type: String,

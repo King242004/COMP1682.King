@@ -56,7 +56,7 @@ exports.getProfile = async (req, res) => {
 
 // ─── Update Profile ───────────────────────────────────────────────────────────
 exports.updateProfile = async (req, res) => {
-  const { name, gender, age, weight, height, goal, activityLevel, conditions, calorieGoal, avatar, language, tastePreferences, isPrivate } = req.body;
+  const { name, gender, age, weight, height, goal, activityLevel, conditions, calorieGoal, avatar, language, tastePreferences, isPrivate, targetWeight } = req.body;
 
   // Validation
   if (age && (age < 10 || age > 120))
@@ -64,6 +64,10 @@ exports.updateProfile = async (req, res) => {
 
   if (weight && (weight < 20 || weight > 300))
     return res.status(400).json({ message: "Weight must be between 20 and 300 kg." });
+
+  // null clears the target; a number must be a sane body weight
+  if (targetWeight !== undefined && targetWeight !== null && (targetWeight < 20 || targetWeight > 300))
+    return res.status(400).json({ message: "Target weight must be between 20 and 300 kg." });
 
   if (height && (height < 50 || height > 250))
     return res.status(400).json({ message: "Height must be between 50 and 250 cm." });
@@ -108,6 +112,7 @@ exports.updateProfile = async (req, res) => {
       // !== undefined so an empty string can CLEAR saved preferences
       ...(tastePreferences !== undefined && { tastePreferences: String(tastePreferences).trim().slice(0, 300) }),
       ...(isPrivate !== undefined && { isPrivate: !!isPrivate }),
+      ...(targetWeight !== undefined && { targetWeight }),
     },
     { new: true }
   ).select("-password");

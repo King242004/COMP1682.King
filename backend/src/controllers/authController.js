@@ -17,6 +17,7 @@ const publicUser = (u) => ({
   gender: u.gender ?? null,
   age: u.age ?? null,
   weight: u.weight ?? null,
+  targetWeight: u.targetWeight ?? null,
   height: u.height ?? null,
   activityLevel: u.activityLevel ?? null,
   conditions: u.conditions || [],
