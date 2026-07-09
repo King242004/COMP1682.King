@@ -110,7 +110,7 @@ export default function PostEditScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title="Edit post" />
+        <ScreenHeader title={t.community.editPost} />
 
         {/* Caption */}
         <Card style={styles.captionCard}>

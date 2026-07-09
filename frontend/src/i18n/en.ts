@@ -66,6 +66,13 @@ export const en = {
     error: "Error",
     pastDay: "This day is over — view only.",
     emptyHint: "Nothing planned for this day — tap the ✨ button below to let the AI build a menu.",
+    mealPlanTitle: "Meal Plan",
+    thisWeek: "This week",
+    nothingPlanned: "Nothing planned",
+    kcalPlanned: "kcal planned",
+    eaten: "Eaten",
+    couldntLog: "Couldn't log meal",
+    removePlanMsg: (name: string) => `Delete "${name}" from this day's plan.`,
     // GenerateModal
     genWeekTitle: "Generate with AI",
     genDayTitle: "Regenerate this day",
@@ -249,6 +256,24 @@ export const en = {
     protein: "Protein",
     carbs: "Carbs",
     fat: "Fat",
+    daysShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  },
+
+  // App shell: header greeting + bottom tab bar + FAB sheet
+  nav: {
+    goodMorning: "Good morning",
+    goodAfternoon: "Good afternoon",
+    goodEvening: "Good evening",
+    fallbackName: "there",
+    home: "Home",
+    community: "Community",
+    coach: "Coach",
+    profile: "Profile",
+    addMealTitle: "Add a meal",
+    scanMeal: "Scan meal",
+    scanMealSub: "Take a photo to auto-detect food",
+    addManually: "Add manually",
+    addManuallySub: "Enter meal name and calories",
   },
 
   meals: {
@@ -383,8 +408,8 @@ export const en = {
     mealReminderSub: "Daily at 7:00 PM",
     reminderPermMsg: "Allow notifications to get daily meal reminders.",
     language: "Language",
-    coachLanguage: "AI Coach language",
-    coachLanguageSub: "The Coach replies in this language. Defaults to your phone's.",
+    appLanguage: "App language",
+    appLanguageSub: "The whole app and the AI Coach use this language. Defaults to your phone's.",
     privacy: "Privacy",
     privateProfile: "Private profile",
     privateProfileSub: "Hide your posts from Explore and other people. Only you can see them.",
@@ -552,6 +577,8 @@ export const en = {
     failedReset: "Failed to reset password.",
     resetSuccessTitle: "Success",
     resetSuccessMsg: "Password changed successfully!",
+    sessionExpiredTitle: "Session expired",
+    sessionExpiredMsg: "Please sign in again.",
   },
 };
 

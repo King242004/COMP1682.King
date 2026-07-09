@@ -10,7 +10,7 @@ import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/fe
 import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/features/coach/api";
 import { SuggestMealCard } from "@/features/plan/SuggestMealCard";
 import { ProgressRing } from "@/ui/components/ProgressRing";
-import { getCurrentWeekDays, dayLabelsFixed } from "@/features/home/week";
+import { getCurrentWeekDays } from "@/features/home/week";
 import { dateKey, weekNumber } from "@/utils/date";
 import { resolveLanguage } from "@/utils/language";
 import { useT } from "@/i18n";
@@ -255,7 +255,7 @@ export default function HomeScreen() {
                 ]}
               >
                 <AppText style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
-                  {dayLabelsFixed[i]}
+                  {t.labels.daysShort[i]}
                 </AppText>
                 <AppText style={[styles.dayNum, isSelected ? styles.dayNumSelected : logged && styles.dayNumLogged]}>
                   {d.getDate()}

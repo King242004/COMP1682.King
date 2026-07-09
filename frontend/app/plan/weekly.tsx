@@ -30,7 +30,6 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { dateKey } from "@/utils/date";
 
-const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Monday of the week containing `base`, shifted by `weekOffset` weeks
 function mondayOf(base: Date, weekOffset: number) {
@@ -262,15 +261,15 @@ export default function MealPlanScreen() {
     } catch (e: any) {
       // revert on failure
       setPlan((prev) => prev.map((p) => (p.id === item.id ? { ...p, done: false } : p)));
-      Alert.alert("Couldn't log meal", e.message || "Please try again.");
+      Alert.alert(L.couldntLog, e.message || t.common.tryAgain);
     }
   };
 
   const onDelete = (item: PlanMeal) => {
-    Alert.alert("Remove from plan?", `Delete "${item.name}" from this day's plan.`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.home.removePlanTitle, L.removePlanMsg(item.name), [
+      { text: t.common.cancel, style: "cancel" },
       {
-        text: "Delete",
+        text: t.common.delete,
         style: "destructive",
         onPress: async () => {
           if (!token) return;
@@ -309,7 +308,7 @@ export default function MealPlanScreen() {
     <Screen padded={false}>
       {/* Fixed header — stays visible while the list scrolls */}
       <View style={styles.headerWrap}>
-        <ScreenHeader title="Meal Plan" />
+        <ScreenHeader title={L.mealPlanTitle} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -324,7 +323,7 @@ export default function MealPlanScreen() {
           </Pressable>
           <AppText variant="body2" style={styles.weekLabel}>
             {weekOffset === 0
-              ? "This week"
+              ? L.thisWeek
               : weekDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
                 " – " +
                 weekDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}
@@ -357,7 +356,7 @@ export default function MealPlanScreen() {
                 ]}
               >
                 <AppText style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
-                  {dayLabels[i]}
+                  {t.labels.daysShort[i]}
                 </AppText>
                 <AppText style={[styles.dayNum, isToday && styles.dayNumToday, isSelected && styles.dayNumSelected]}>
                   {d.getDate()}
@@ -376,7 +375,7 @@ export default function MealPlanScreen() {
               <AppText variant="subtle" style={styles.smallLabel}>{selectedLabel}</AppText>
               <View style={styles.baselineRow}>
                 <AppText variant="h0" style={styles.totalKcal}>{dayTotals.calories.toLocaleString()}</AppText>
-                <AppText variant="muted" style={styles.totalGoal}>/ {goal.toLocaleString()} kcal planned</AppText>
+                <AppText variant="muted" style={styles.totalGoal}>/ {goal.toLocaleString()} {L.kcalPlanned}</AppText>
               </View>
             </View>
             {/* Regenerate just this day (today or future only) */}
@@ -434,11 +433,11 @@ export default function MealPlanScreen() {
               <View key={mt.key} style={styles.mealSection}>
                 <View style={styles.mealSectionHead}>
                   <Ionicons name={mt.icon as any} size={16} color={mt.color} />
-                  <AppText variant="h2" style={styles.mealSectionTitle}>{mt.label}</AppText>
+                  <AppText variant="h2" style={styles.mealSectionTitle}>{t.labels.mealType[mt.key]}</AppText>
                 </View>
 
                 {items.length === 0 ? (
-                  <AppText variant="subtle" style={styles.nothingText}>Nothing planned</AppText>
+                  <AppText variant="subtle" style={styles.nothingText}>{L.nothingPlanned}</AppText>
                 ) : (
                   items.map((item) => (
                     <Card key={item.id} style={[styles.dishCard, item.done && styles.dishCardDone]}>
@@ -448,23 +447,26 @@ export default function MealPlanScreen() {
                             {item.name}
                           </AppText>
                           <AppText variant="subtle" style={styles.dishMacros}>
-                            {item.calories} kcal · P {item.protein} · C {item.carbs} · F {item.fat}
+                            {item.calories} {t.common.kcal} · P {item.protein} · C {item.carbs} · F {item.fat}
                           </AppText>
                         </View>
 
                         {item.done ? (
                           <View style={styles.eatenChip}>
                             <Ionicons name="checkmark-circle" size={20} color={theme.colors.accent} />
-                            <AppText style={styles.eatenText}>Eaten</AppText>
+                            <AppText style={styles.eatenText}>{L.eaten}</AppText>
                           </View>
-                        ) : !isPast ? (
+                        ) : selectedDate === todayKey ? (
+                          /* Eat = log into the diary NOW → only meaningful on today.
+                             Past is read-only; a FUTURE plan can't be "eaten" yet
+                             (backend markEaten enforces the same rule). */
                           <Pressable
                             onPress={() => onMarkEaten(item)}
                             hitSlop={6}
                             style={({ pressed }) => [styles.eatBtn, pressed && styles.eatBtnPressed]}
                           >
                             <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
-                            <AppText style={styles.eatenText}>Eat</AppText>
+                            <AppText style={styles.eatenText}>{t.home.eat}</AppText>
                           </Pressable>
                         ) : null}
 

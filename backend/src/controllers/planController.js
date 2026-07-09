@@ -8,6 +8,12 @@ const { CONDITION_GUIDE } = require("../services/coachContext");
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
+// Local YYYY-MM-DD for "today" — string compare works for date keys
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // ─── Add Plan Meal ──────────────────────────────────────────────────────────
 exports.addPlanMeal = async (req, res) => {
   const { name, mealType, calories, protein, carbs, fat, note, date } = req.body;
@@ -270,6 +276,12 @@ exports.markEaten = async (req, res) => {
 
   if (planMeal.done)
     return res.status(400).json({ message: "This meal is already marked as eaten." });
+
+  // Time rule: the diary records the past — a FUTURE planned meal cannot be
+  // "eaten" yet (would create a future-dated diary entry, which mealController
+  // itself forbids). Mirrors the meal add/update guards.
+  if (planMeal.date > todayKey())
+    return res.status(400).json({ message: "Cannot mark a future planned meal as eaten." });
 
   const meal = await Meal.create({
     user: req.user.id,

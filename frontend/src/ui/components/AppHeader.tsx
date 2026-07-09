@@ -1,18 +1,21 @@
 // Blue app header shown on all 4 tabs: avatar + greeting + streak pill.
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { mealStreak } from "@/utils/streak";
+import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
+import { AppText } from "./AppText";
 
-function greetingForHour(h: number) {
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+function greetingForHour(h: number, t: Strings) {
+  if (h < 12) return t.nav.goodMorning;
+  if (h < 18) return t.nav.goodAfternoon;
+  return t.nav.goodEvening;
 }
 
 export function AppHeader() {
   const { user } = useAuth();
+  const t = useT();
   // historyMeals = all logged days (`meals` only holds one day). Streak logic is
   // shared in utils/streak so every screen shows the same number.
   const { historyMeals } = useMeals();
@@ -22,11 +25,11 @@ export function AppHeader() {
     <View style={styles.header}>
       <View style={styles.left}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{(user?.name ?? "U")[0].toUpperCase()}</Text>
+          <AppText style={styles.avatarText}>{(user?.name ?? "U")[0].toUpperCase()}</AppText>
         </View>
         <View>
-          <Text style={styles.greeting}>{greetingForHour(new Date().getHours())}</Text>
-          <Text style={styles.name}>{user?.name ?? "there"}</Text>
+          <AppText style={styles.greeting}>{greetingForHour(new Date().getHours(), t)}</AppText>
+          <AppText style={styles.name}>{user?.name ?? t.nav.fallbackName}</AppText>
         </View>
       </View>
 
@@ -34,8 +37,8 @@ export function AppHeader() {
         {/* Frosted pill — same visual language as the avatar circle on this header */}
         {streak > 0 && (
           <View style={styles.streakPill}>
-            <Text style={styles.streakEmoji}>🔥</Text>
-            <Text style={styles.streakNum}>{streak}</Text>
+            <AppText style={styles.streakEmoji}>🔥</AppText>
+            <AppText style={styles.streakNum}>{streak}</AppText>
           </View>
         )}
         {/* Bell button removed: it had no onPress (dead button). Bring it back when a

@@ -9,6 +9,7 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { buildDaySummaries } from "@/features/progress/summary";
+import { mealStreak } from "@/utils/streak";
 import { MacroBar } from "@/features/progress/MacroBar";
 import { WeeklyBarChart } from "@/features/progress/WeeklyBarChart";
 import { MacroRatioList } from "@/features/progress/MacroRatioList";
@@ -48,15 +49,9 @@ export default function ProgressScreen() {
     ? daysWithMeals.reduce((best, s) => (s.distToGoal < best.distToGoal ? s : best), daysWithMeals[0])
     : null;
 
-  // Streak = consecutive logged days counting back from today
-  const streak = (() => {
-    let count = 0;
-    for (let i = summaries.length - 1; i >= 0; i--) {
-      if (summaries[i].calories > 0) count++;
-      else break;
-    }
-    return count;
-  })();
+  // Streak — SAME helper as the AppHeader 🔥 pill, so the two never disagree
+  // (the old local loop capped at the 7-day window: header said 12, here said 7)
+  const streak = mealStreak(historyMeals.map((m) => m.date));
 
   const avgProtein = daysWithMeals.length > 0
     ? Math.round(daysWithMeals.reduce((s, d) => s + d.protein, 0) / daysWithMeals.length) : 0;

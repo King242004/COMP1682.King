@@ -1,10 +1,12 @@
 // Custom bottom tab bar (Home · Community · [+] · Coach · Profile) with the
 // center FAB opening the add-meal sheet (Scan / Add manually).
 import { useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
+import { AppText } from "./AppText";
 
 function FABModal({ visible, onClose, onScan, onAdd }: {
   visible: boolean;
@@ -12,19 +14,20 @@ function FABModal({ visible, onClose, onScan, onAdd }: {
   onScan: () => void;
   onAdd: () => void;
 }) {
+  const t = useT();
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>Add a meal</Text>
+          <AppText style={styles.sheetTitle}>{t.nav.addMealTitle}</AppText>
 
           <Pressable onPress={onScan} style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}>
             <View style={[styles.optionIcon, styles.optionIconScan]}>
               <Ionicons name="scan" size={22} color="#fff" />
             </View>
             <View style={styles.flex1}>
-              <Text style={styles.optionTitle}>Scan meal</Text>
-              <Text style={styles.optionSub}>Take a photo to auto-detect food</Text>
+              <AppText style={styles.optionTitle}>{t.nav.scanMeal}</AppText>
+              <AppText style={styles.optionSub}>{t.nav.scanMealSub}</AppText>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
           </Pressable>
@@ -34,8 +37,8 @@ function FABModal({ visible, onClose, onScan, onAdd }: {
               <Ionicons name="pencil" size={22} color="#fff" />
             </View>
             <View style={styles.flex1}>
-              <Text style={styles.optionTitle}>Add manually</Text>
-              <Text style={styles.optionSub}>Enter meal name and calories</Text>
+              <AppText style={styles.optionTitle}>{t.nav.addManually}</AppText>
+              <AppText style={styles.optionSub}>{t.nav.addManuallySub}</AppText>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
           </Pressable>
@@ -45,21 +48,23 @@ function FABModal({ visible, onClose, onScan, onAdd }: {
   );
 }
 
+// Tab metadata; labels resolve from the i18n catalog by key
 const LEFT_TABS = [
-  { name: "index", icon: "home-outline", activeIcon: "home", label: "Home" },
-  { name: "community", icon: "people-outline", activeIcon: "people", label: "Community" },
+  { name: "index", icon: "home-outline", activeIcon: "home", labelKey: "home" as const },
+  { name: "community", icon: "people-outline", activeIcon: "people", labelKey: "community" as const },
 ];
 const RIGHT_TABS = [
-  { name: "coach", icon: "sparkles-outline", activeIcon: "sparkles", label: "Coach" },
-  { name: "profile", icon: "person-outline", activeIcon: "person", label: "Profile" },
+  { name: "coach", icon: "sparkles-outline", activeIcon: "sparkles", labelKey: "coach" as const },
+  { name: "profile", icon: "person-outline", activeIcon: "person", labelKey: "profile" as const },
 ];
 
 export function TabBar({ state, navigation }: any) {
   const router = useRouter();
+  const t = useT();
   const current = state.routes[state.index]?.name;
   const [modalVisible, setModalVisible] = useState(false);
 
-  const renderTab = (tab: (typeof LEFT_TABS)[number]) => {
+  const renderTab = (tab: { name: string; icon: string; activeIcon: string; labelKey: "home" | "community" | "coach" | "profile" }) => {
     const active = current === tab.name;
     return (
       <Pressable
@@ -72,7 +77,7 @@ export function TabBar({ state, navigation }: any) {
           size={22}
           color={active ? theme.colors.primary : theme.colors.subtle}
         />
-        <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
+        <AppText style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.nav[tab.labelKey]}</AppText>
       </Pressable>
     );
   };
