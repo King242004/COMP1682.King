@@ -16,12 +16,12 @@ export type DaySummary = {
   ratio: number;      // calories / goal
 };
 
-// The trailing 7 days (oldest → today), midnight-aligned.
-export function getLast7Days() {
+// The trailing N days (oldest → today), midnight-aligned.
+export function getLastNDays(n: number) {
   const days: Date[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  for (let i = 6; i >= 0; i--) {
+  for (let i = n - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     days.push(d);
@@ -29,10 +29,10 @@ export function getLast7Days() {
   return days;
 }
 
-// Build per-day nutrition summaries from history for the last 7 days.
-export function buildDaySummaries(historyMeals: Meal[], goal: number): DaySummary[] {
+// Build per-day nutrition summaries from history for the trailing window.
+export function buildDaySummaries(historyMeals: Meal[], goal: number, days = 7): DaySummary[] {
   const todayKey = dateKey(new Date());
-  return getLast7Days().map((d) => {
+  return getLastNDays(days).map((d) => {
     const key = dateKey(d);
     // Match on meal.date (logged day) not createdAt (insertion timestamp)
     const dayMeals = historyMeals.filter((m) => m.date === key);

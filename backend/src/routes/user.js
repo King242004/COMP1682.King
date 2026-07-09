@@ -11,7 +11,7 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many attempts — please try again later." },
 });
-const { uploadAvatar, sendPasswordOTP, verifyOTP, resetPassword, changeName } = require("../controllers/userController");
+const { uploadAvatar, sendPasswordOTP, verifyOTP, resetPassword, changeName, changePassword } = require("../controllers/userController");
 const protect = require("../middleware/auth");
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
@@ -61,6 +61,26 @@ router.post("/avatar", protect, upload.single("image"), uploadAvatar);
  *         description: Name updated successfully
  */
 router.put("/name", protect, changeName);
+
+/**
+ * @swagger
+ * /user/change-password:
+ *   post:
+ *     summary: Change password while logged in (requires the current password)
+ *     tags: [User]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword: { type: string }
+ *               newPassword: { type: string }
+ *     responses:
+ *       200: { description: Changed }
+ */
+router.post("/change-password", protect, changePassword);
 
 /**
  * @swagger
