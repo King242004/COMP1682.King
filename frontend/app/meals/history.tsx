@@ -162,5 +162,4 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, gap: 4 },
   rowMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
   metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  capitalize: { textTransform: "capitalize" },
 });

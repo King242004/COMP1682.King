@@ -2,6 +2,7 @@ const User = require("../models/User");
 const Meal = require("../models/Meal");
 const Exercise = require("../models/Exercise");
 const WeightLog = require("../models/WeightLog");
+const { autoGoal } = require("./calorieGoal");
 
 // Shift a YYYY-MM-DD string by N days
 function shiftDate(dateStr, days) {
@@ -30,7 +31,7 @@ async function buildContext(userId, date) {
   // Independent queries — run in parallel to keep AI endpoints snappy
   const weekStart = shiftDate(date, -6); // last 7 days (incl. `date`)
   const [user, todayMeals, todayExercises, weekMeals, weightLogs] = await Promise.all([
-    User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal tastePreferences targetWeight"),
+    User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal customGoal tastePreferences targetWeight"),
     Meal.find({ user: userId, date }).sort({ createdAt: 1 }),
     Exercise.find({ user: userId, date }).sort({ createdAt: 1 }),
     Meal.find({ user: userId, date: { $gte: weekStart, $lte: date } }),
@@ -56,6 +57,16 @@ async function buildContext(userId, date) {
       calorieGoal: user?.calorieGoal || 2000,
       tastePreferences: user?.tastePreferences || "",
       targetWeight: user?.targetWeight || null,
+      // Custom-goal drift nudge: when the user typed their own goal but their
+      // body metrics now suggest a clearly different TDEE-based target (>300
+      // kcal apart), the AI may gently suggest reviewing it — never pushy.
+      goalDriftKcal: (() => {
+        if (!user?.customGoal) return null;
+        const suggested = autoGoal(user);
+        if (!suggested) return null;
+        const drift = suggested - (user.calorieGoal || 2000);
+        return Math.abs(drift) > 300 ? { suggested, drift } : null;
+      })(),
       // Weight trend from the log (newest first): latest entry + change vs the
       // oldest of the last 10 entries — enough for "you're down 1.2kg" advice
       weightTrend: weightLogs.length
@@ -104,6 +115,10 @@ function contextToText(ctx) {
     ? t.exercises.map((e) => `  - ${e.name}: ${e.durationMin} min, ${e.caloriesBurned} kcal burned`).join("\n")
     : "  - (no workouts logged)";
 
+  const driftLine = p.goalDriftKcal
+    ? `- NOTE: the user's SELF-SET calorie goal (${p.calorieGoal} kcal) differs from the TDEE-based estimate for their current body metrics (~${p.goalDriftKcal.suggested} kcal). At most ONCE, and only if relevant, you may gently suggest reviewing the goal (Settings → Daily calorie goal → "Use auto"). Never insist.`
+    : "";
+
   const weightLine = p.weightTrend
     ? `- Weight trend: ${p.weightTrend.latestKg} kg on ${p.weightTrend.latestDate} (${p.weightTrend.changeKg > 0 ? "+" : ""}${p.weightTrend.changeKg} kg since ${p.weightTrend.sinceDate})${p.targetWeight ? ` — target: ${p.targetWeight} kg` : ""}`
     : p.targetWeight
@@ -116,7 +131,7 @@ function contextToText(ctx) {
 - Health conditions: ${conditions}
 - Taste preferences (MUST respect — allergies/dislikes): ${p.tastePreferences || "none saved"}
 - Daily calorie goal: ${p.calorieGoal} kcal
-- Weight: ${p.weight ?? "unknown"} kg, Height: ${p.height ?? "unknown"} cm, Age: ${p.age ?? "unknown"}, Gender: ${p.gender ?? "unknown"}${weightLine ? "\n" + weightLine : ""}
+- Weight: ${p.weight ?? "unknown"} kg, Height: ${p.height ?? "unknown"} cm, Age: ${p.age ?? "unknown"}, Gender: ${p.gender ?? "unknown"}${weightLine ? "\n" + weightLine : ""}${driftLine ? "\n" + driftLine : ""}
 
 TODAY (${t.date})
 Meals:

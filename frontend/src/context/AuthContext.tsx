@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 import { router } from "expo-router";
 import { apiRequest, BASE_URL, setOnUnauthorized } from "../utils/api";
+import { cancelNotification } from "../utils/notifications";
 import { getStrings } from "../i18n";
 import { resolveLanguage } from "../utils/language";
 
@@ -11,6 +12,7 @@ type User = {
   name: string;
   email: string;
   calorieGoal: number;
+  customGoal?: boolean; // true = user typed the goal; false = follows TDEE
   goal: string;
   gender?: string | null;
   age?: number | null;
@@ -31,6 +33,12 @@ type Stats = {
   tdee: number | null;
 };
 
+// Profile update payload: calorieGoal accepts `null` = "Use auto" — the
+// backend switches back to TDEE mode and recomputes (number = custom goal).
+type ProfileUpdate = Partial<Omit<User, "calorieGoal">> & {
+  calorieGoal?: number | null;
+};
+
 type AuthContextType = {
   user: User | null;
   stats: Stats | null;
@@ -40,7 +48,7 @@ type AuthContextType = {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchProfile: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>;
+  updateProfile: (data: ProfileUpdate) => Promise<void>;
   changeName: (name: string) => Promise<void>;
   uploadAvatar: (localUri: string) => Promise<void>;
 };
@@ -111,7 +119,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStats(null);
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("user");
-    await AsyncStorage.removeItem("meals");
+    // Per-user data must not survive into the NEXT account on this device:
+    // cached AI insight/plan/grocery + the meal reminder all belong to the
+    // user who just left.
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const stale = keys.filter(
+        (k) =>
+          k.startsWith("coach_insight_") ||
+          k.startsWith("plan_week_") ||
+          k.startsWith("grocery_") ||
+          k === "mealReminderId" ||
+          k === "mealReminderTime"
+      );
+      const reminderId = await AsyncStorage.getItem("mealReminderId");
+      await cancelNotification(reminderId);
+      if (stale.length) await AsyncStorage.multiRemove(stale);
+    } catch {
+      // cache cleanup is best-effort — never block the logout itself
+    }
   };
 
   const fetchProfile = async () => {
@@ -121,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStats(data.stats);
   };
 
-  const updateProfile = async (data: Partial<User>) => {
+  const updateProfile = async (data: ProfileUpdate) => {
     if (!token) return;
     const res = await apiRequest("/profile", "PUT", data, token);
     setUser((prev) => ({ ...prev, ...res.user, id: res.user._id ?? prev?.id }));

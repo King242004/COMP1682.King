@@ -14,6 +14,7 @@ const publicUser = (u) => ({
   email: u.email,
   goal: u.goal,
   calorieGoal: u.calorieGoal,
+  customGoal: !!u.customGoal,
   gender: u.gender ?? null,
   age: u.age ?? null,
   weight: u.weight ?? null,

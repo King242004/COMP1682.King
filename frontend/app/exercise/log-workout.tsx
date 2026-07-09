@@ -34,9 +34,14 @@ export default function AddExerciseScreen() {
 
   const isCustom = selected?.custom === true;
 
-  // Effective MET + name (custom entry pulls from the typed fields)
+  // Effective MET + name (custom entry pulls from the typed fields).
+  // The LOCALIZED label is what gets saved as the workout name.
   const met = isCustom ? Number(customMet) : selected?.met ?? 0;
-  const name = isCustom ? customName.trim() : selected?.name ?? "";
+  const name = isCustom
+    ? customName.trim()
+    : selected
+    ? t.exercise.activities[selected.key] ?? selected.key
+    : "";
   const durationNum = Number(duration);
 
   const estimate = useMemo(() => {
@@ -101,19 +106,19 @@ export default function AddExerciseScreen() {
         {/* Activity picker */}
         <View style={styles.groups}>
           {ACTIVITY_GROUPS.map((grp) => (
-            <View key={grp.group} style={styles.group}>
-              <AppText variant="subtle" style={styles.groupLabel}>{grp.group}</AppText>
+            <View key={grp.key} style={styles.group}>
+              <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.groups[grp.key] ?? grp.key}</AppText>
               <View style={styles.chipWrap}>
                 {grp.items.map((a) => {
-                  const active = selected?.name === a.name;
+                  const active = selected?.key === a.key;
                   return (
                     <Pressable
-                      key={a.name}
+                      key={a.key}
                       onPress={() => { setSelected(a); setError(null); }}
                       style={({ pressed }) => [styles.chip, active ? styles.chipActive : styles.chipIdle, pressed && styles.pressed]}
                     >
                       <AppText style={styles.chipIcon}>{a.icon}</AppText>
-                      <AppText style={[styles.chipText, active && styles.chipTextActive]}>{a.name}</AppText>
+                      <AppText style={[styles.chipText, active && styles.chipTextActive]}>{t.exercise.activities[a.key] ?? a.key}</AppText>
                     </Pressable>
                   );
                 })}

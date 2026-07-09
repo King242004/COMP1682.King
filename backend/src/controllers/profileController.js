@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { calculateTDEE, autoGoal } = require("../services/calorieGoal");
 
 // ─── Calculate BMI ────────────────────────────────────────────────────────────
 const calculateBMI = (weight, height) => {
@@ -13,27 +14,6 @@ const getBMICategory = (bmi) => {
   if (bmi < 25) return "Normal";
   if (bmi < 30) return "Overweight";
   return "Obese";
-};
-
-// ─── Calculate TDEE ───────────────────────────────────────────────────────────
-const calculateTDEE = (weight, height, age, gender, activityLevel) => {
-  if (!weight || !height || !age || !gender) return null;
-
-  // Mifflin-St Jeor formula
-  let bmr;
-  if (gender === "male") {
-    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-  } else {
-    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
-  }
-
-  const multipliers = {
-    sedentary: 1.2,
-    moderate: 1.55,
-    active: 1.725,
-  };
-
-  return Math.round(bmr * (multipliers[activityLevel] || 1.55));
 };
 
 // ─── Get Profile ──────────────────────────────────────────────────────────────
@@ -84,15 +64,36 @@ exports.updateProfile = async (req, res) => {
   if (language && !["vi", "en"].includes(language))
     return res.status(400).json({ message: "Language must be vi or en." });
 
-  // Auto calculate TDEE as calorie goal if not manually set
-  let finalCalorieGoal = calorieGoal;
-  if (!calorieGoal) {
-    const tdee = calculateTDEE(weight, height, age, gender, activityLevel);
-    if (tdee) {
-      if (goal === "lose_weight") finalCalorieGoal = tdee - 500;
-      else if (goal === "gain_muscle") finalCalorieGoal = tdee + 300;
-      else finalCalorieGoal = tdee;
-    }
+  if (calorieGoal !== undefined && calorieGoal !== null &&
+      (typeof calorieGoal !== "number" || calorieGoal < 800 || calorieGoal > 10000))
+    return res.status(400).json({ message: "Calorie goal must be between 800 and 10,000 kcal." });
+
+  // ── Calorie goal modes ────────────────────────────────────────────────────
+  // calorieGoal: number → the user typed it (custom, NEVER auto-overwritten)
+  // calorieGoal: null   → "Use auto": back to TDEE mode + recompute now
+  // calorieGoal absent  → keep the current mode; auto mode follows body changes
+  const current = await User.findById(req.user.id).select(
+    "customGoal weight height age gender activityLevel goal"
+  );
+  if (!current) return res.status(404).json({ message: "User not found." });
+
+  const customGoal =
+    typeof calorieGoal === "number" ? true : calorieGoal === null ? false : current.customGoal;
+
+  let finalCalorieGoal;
+  if (typeof calorieGoal === "number") {
+    finalCalorieGoal = calorieGoal;
+  } else if (!customGoal) {
+    // Recompute from the MERGED profile (incoming values win over stored ones)
+    // so updating just the weight still refreshes the goal in auto mode.
+    finalCalorieGoal = autoGoal({
+      weight: weight ?? current.weight,
+      height: height ?? current.height,
+      age: age ?? current.age,
+      gender: gender ?? current.gender,
+      activityLevel: activityLevel ?? current.activityLevel,
+      goal: goal ?? current.goal,
+    });
   }
 
   const updated = await User.findByIdAndUpdate(
@@ -107,6 +108,7 @@ exports.updateProfile = async (req, res) => {
       ...(activityLevel && { activityLevel }),
       ...(conditions && { conditions }),
       ...(finalCalorieGoal && { calorieGoal: finalCalorieGoal }),
+      customGoal,
       ...(avatar !== undefined && { avatar }),
       ...(language && { language }),
       // !== undefined so an empty string can CLEAR saved preferences

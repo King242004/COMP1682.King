@@ -46,10 +46,18 @@ export async function apiRequest(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await res.json();
+  // Guard the parse: a proxy/crash can still return non-JSON (HTML error page) —
+  // surface a readable message instead of a cryptic "JSON Parse error".
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
   if (!res.ok) {
     if (res.status === 401) onUnauthorized?.();
-    throw new Error(data.message || "Something went wrong");
+    throw new Error(data?.message || `Request failed (${res.status})`);
   }
+  if (data === null) throw new Error("Server returned an invalid response");
   return data;
 }

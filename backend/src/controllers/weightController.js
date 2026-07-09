@@ -1,5 +1,21 @@
 const WeightLog = require("../models/WeightLog");
 const User = require("../models/User");
+const { autoGoal } = require("../services/calorieGoal");
+
+// Weight changed → profile weight syncs; in AUTO goal mode the calorie goal
+// follows too (custom goals are never touched — same rule as profileController).
+async function syncUserWeight(userId, newWeight) {
+  const u = await User.findById(userId).select(
+    "customGoal height age gender activityLevel goal"
+  );
+  if (!u) return;
+  const updates = { weight: newWeight };
+  if (!u.customGoal) {
+    const g = autoGoal({ ...u.toObject(), weight: newWeight });
+    if (g) updates.calorieGoal = g;
+  }
+  await User.updateOne({ _id: userId }, { $set: updates });
+}
 
 // Local YYYY-MM-DD for "today" — string compare works for date keys
 function todayKey() {
@@ -37,7 +53,7 @@ exports.logWeight = async (req, res) => {
   // must not overwrite the current weight)
   const newest = await WeightLog.findOne({ user: req.user.id }).sort({ date: -1 }).select("date weightKg");
   if (newest && newest.date === day) {
-    await User.updateOne({ _id: req.user.id }, { $set: { weight: rounded } });
+    await syncUserWeight(req.user.id, rounded);
   }
 
   res.status(201).json({ message: "Weight logged.", log });
@@ -69,7 +85,7 @@ exports.deleteWeight = async (req, res) => {
 
   // Keep User.weight pointing at whatever is now the newest entry
   const newest = await WeightLog.findOne({ user: req.user.id }).sort({ date: -1 }).select("weightKg");
-  if (newest) await User.updateOne({ _id: req.user.id }, { $set: { weight: newest.weightKg } });
+  if (newest) await syncUserWeight(req.user.id, newest.weightKg);
 
   res.json({ message: "Entry deleted." });
 };
