@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Meal = require("../models/Meal");
 const Exercise = require("../models/Exercise");
+const WeightLog = require("../models/WeightLog");
 
 // Shift a YYYY-MM-DD string by N days
 function shiftDate(dateStr, days) {
@@ -28,11 +29,12 @@ function sumMacros(meals) {
 async function buildContext(userId, date) {
   // Independent queries — run in parallel to keep AI endpoints snappy
   const weekStart = shiftDate(date, -6); // last 7 days (incl. `date`)
-  const [user, todayMeals, todayExercises, weekMeals] = await Promise.all([
-    User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal tastePreferences"),
+  const [user, todayMeals, todayExercises, weekMeals, weightLogs] = await Promise.all([
+    User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal tastePreferences targetWeight"),
     Meal.find({ user: userId, date }).sort({ createdAt: 1 }),
     Exercise.find({ user: userId, date }).sort({ createdAt: 1 }),
     Meal.find({ user: userId, date: { $gte: weekStart, $lte: date } }),
+    WeightLog.find({ user: userId }).sort({ date: -1 }).limit(10), // newest first
   ]);
 
   const todayTotals = sumMacros(todayMeals);
@@ -53,6 +55,17 @@ async function buildContext(userId, date) {
       conditions: user?.conditions || [],
       calorieGoal: user?.calorieGoal || 2000,
       tastePreferences: user?.tastePreferences || "",
+      targetWeight: user?.targetWeight || null,
+      // Weight trend from the log (newest first): latest entry + change vs the
+      // oldest of the last 10 entries — enough for "you're down 1.2kg" advice
+      weightTrend: weightLogs.length
+        ? {
+            latestKg: weightLogs[0].weightKg,
+            latestDate: weightLogs[0].date,
+            changeKg: Math.round((weightLogs[0].weightKg - weightLogs[weightLogs.length - 1].weightKg) * 10) / 10,
+            sinceDate: weightLogs[weightLogs.length - 1].date,
+          }
+        : null,
     },
     today: {
       date,
@@ -91,13 +104,19 @@ function contextToText(ctx) {
     ? t.exercises.map((e) => `  - ${e.name}: ${e.durationMin} min, ${e.caloriesBurned} kcal burned`).join("\n")
     : "  - (no workouts logged)";
 
+  const weightLine = p.weightTrend
+    ? `- Weight trend: ${p.weightTrend.latestKg} kg on ${p.weightTrend.latestDate} (${p.weightTrend.changeKg > 0 ? "+" : ""}${p.weightTrend.changeKg} kg since ${p.weightTrend.sinceDate})${p.targetWeight ? ` — target: ${p.targetWeight} kg` : ""}`
+    : p.targetWeight
+    ? `- Target weight: ${p.targetWeight} kg (no weight logs yet)`
+    : "";
+
   return `USER PROFILE
 - Name: ${p.name}
 - Goal: ${p.goal}
 - Health conditions: ${conditions}
 - Taste preferences (MUST respect — allergies/dislikes): ${p.tastePreferences || "none saved"}
 - Daily calorie goal: ${p.calorieGoal} kcal
-- Weight: ${p.weight ?? "unknown"} kg, Height: ${p.height ?? "unknown"} cm, Age: ${p.age ?? "unknown"}, Gender: ${p.gender ?? "unknown"}
+- Weight: ${p.weight ?? "unknown"} kg, Height: ${p.height ?? "unknown"} cm, Age: ${p.age ?? "unknown"}, Gender: ${p.gender ?? "unknown"}${weightLine ? "\n" + weightLine : ""}
 
 TODAY (${t.date})
 Meals:

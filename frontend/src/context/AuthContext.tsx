@@ -15,6 +15,7 @@ type User = {
   gender?: string | null;
   age?: number | null;
   weight?: number | null;
+  targetWeight?: number | null;
   height?: number | null;
   activityLevel?: string | null;
   conditions?: string[];

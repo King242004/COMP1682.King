@@ -9,13 +9,14 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { buildDaySummaries } from "@/features/progress/summary";
+import { WeightSection } from "@/features/weight/WeightSection";
 import { mealStreak } from "@/utils/streak";
 import { MacroBar } from "@/features/progress/MacroBar";
 import { WeeklyBarChart } from "@/features/progress/WeeklyBarChart";
 import { MacroRatioList } from "@/features/progress/MacroRatioList";
 import { ConsistencyRow } from "@/features/progress/ConsistencyRow";
 
-type Tab = "calories" | "macros" | "trends";
+type Tab = "calories" | "macros" | "trends" | "weight";
 
 export default function ProgressScreen() {
   const { user } = useAuth();
@@ -28,6 +29,7 @@ export default function ProgressScreen() {
     { key: "calories", label: t.progress.tabCalories },
     { key: "macros", label: t.progress.tabNutrition },
     { key: "trends", label: t.progress.tabWeekly },
+    { key: "weight", label: t.weight.tab },
   ];
 
   useEffect(() => { fetchMealHistory(); }, []);
@@ -264,6 +266,9 @@ export default function ProgressScreen() {
             <ConsistencyRow summaries={summaries} goal={goal} daysLogged={daysWithMeals.length} />
           </>
         )}
+
+        {/* WEIGHT TAB — journey tracking, self-contained in features/weight */}
+        {activeTab === "weight" && <WeightSection />}
       </ScrollView>
     </Screen>
   );

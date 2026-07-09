@@ -28,6 +28,7 @@ app.use("/api/auth", authLimiter, require("./src/routes/auth"));
 app.use("/api/meals", require("./src/routes/meal"));
 app.use("/api/plan", require("./src/routes/plan"));
 app.use("/api/exercise", require("./src/routes/exercise"));
+app.use("/api/weight", require("./src/routes/weight"));
 app.use("/api/coach", require("./src/routes/coach"));
 app.use("/api/profile", require("./src/routes/profile"));
 app.use("/api/user", require("./src/routes/user"));
