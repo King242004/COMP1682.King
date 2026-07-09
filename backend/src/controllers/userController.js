@@ -123,6 +123,30 @@ exports.resetPassword = async (req, res) => {
   res.json({ message: "Password changed successfully." });
 };
 
+// ─── Change Password (logged-in) ──────────────────────────────────────────────
+// Requires the CURRENT password — a stolen unlocked phone can't silently take
+// over the account. Forgot-password (OTP) remains the logged-out path.
+exports.changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword)
+    return res.status(400).json({ message: "Current and new password are required." });
+
+  if (newPassword.length < 6 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword))
+    return res.status(400).json({ message: "Password must be at least 6 characters, include one uppercase letter and one number." });
+
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ message: "User not found." });
+
+  const match = await bcrypt.compare(currentPassword, user.password);
+  if (!match) return res.status(400).json({ message: "Current password is incorrect." });
+
+  user.password = await bcrypt.hash(newPassword, 10);
+  await user.save();
+
+  res.json({ message: "Password changed successfully." });
+};
+
 // ─── Change Name ──────────────────────────────────────────────────────────────
 exports.changeName = async (req, res) => {
   const { name } = req.body;

@@ -24,6 +24,7 @@ export default function ProgressScreen() {
   const { historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
   const [activeTab, setActiveTab] = useState<Tab>("calories");
+  const [range, setRange] = useState<7 | 30>(7); // stats window (7 or 30 trailing days)
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "calories", label: t.progress.tabCalories },
@@ -37,7 +38,7 @@ export default function ProgressScreen() {
   const goal = user?.calorieGoal ?? 2000;
   const { protein: proteinGoal, carbs: carbsGoal, fat: fatGoal } = macroGoals(goal);
 
-  const summaries = buildDaySummaries(historyMeals, goal);
+  const summaries = buildDaySummaries(historyMeals, goal, range);
   const todaySummary = summaries[summaries.length - 1];
   const maxCalories = summaries.reduce((max, s) => Math.max(max, s.calories), 0) || 1;
   const daysWithMeals = summaries.filter((s) => s.calories > 0);
@@ -71,10 +72,27 @@ export default function ProgressScreen() {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+        {/* Header + 7/30-day window toggle */}
         <View>
-          <ScreenHeader title={t.progress.title} />
-          <AppText variant="muted" style={styles.subtitle}>{t.progress.subtitle}</AppText>
+          <ScreenHeader
+            title={t.progress.title}
+            right={
+              <View style={styles.rangeToggle}>
+                {([7, 30] as const).map((r) => (
+                  <Pressable
+                    key={r}
+                    onPress={() => setRange(r)}
+                    style={[styles.rangeBtn, range === r && styles.rangeBtnActive]}
+                  >
+                    <AppText style={[styles.rangeText, range === r && styles.rangeTextActive]}>
+                      {r === 7 ? t.progress.range7 : t.progress.range30}
+                    </AppText>
+                  </Pressable>
+                ))}
+              </View>
+            }
+          />
+          <AppText variant="muted" style={styles.subtitle}>{t.progress.subtitle(range)}</AppText>
         </View>
 
         {/* Tabs */}
@@ -118,7 +136,12 @@ export default function ProgressScreen() {
               </View>
             </Card>
 
-            <WeeklyBarChart summaries={summaries} goal={goal} maxCalories={maxCalories} />
+            <WeeklyBarChart
+              summaries={summaries}
+              goal={goal}
+              maxCalories={maxCalories}
+              title={range === 7 ? t.progress.thisWeek : t.progress.lastNDays(30)}
+            />
 
             {/* Stats row */}
             <View style={styles.statsRow}>
@@ -127,7 +150,7 @@ export default function ProgressScreen() {
                 <AppText variant="subtle" style={styles.statLabel}>{t.progress.avgKcalDay}</AppText>
               </Card>
               <Card style={styles.statCard}>
-                <AppText variant="h2" style={styles.statAccent}>{daysOnTrack}/7</AppText>
+                <AppText variant="h2" style={styles.statAccent}>{daysOnTrack}/{range}</AppText>
                 <AppText variant="subtle" style={styles.statLabel}>{t.progress.daysOnTrack}</AppText>
               </Card>
               <Card style={styles.statCard}>
@@ -263,7 +286,12 @@ export default function ProgressScreen() {
               </Card>
             )}
 
-            <ConsistencyRow summaries={summaries} goal={goal} daysLogged={daysWithMeals.length} />
+            {/* Consistency stays a WEEK widget — 30 dots would be unreadable */}
+            <ConsistencyRow
+              summaries={summaries.slice(-7)}
+              goal={goal}
+              daysLogged={summaries.slice(-7).filter((s) => s.calories > 0).length}
+            />
           </>
         )}
 
@@ -277,6 +305,11 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
   subtitle: { marginTop: -8 },
+  rangeToggle: { flexDirection: "row", gap: 4, backgroundColor: theme.colors.tintSoft, borderRadius: 10, padding: 3 },
+  rangeBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  rangeBtnActive: { backgroundColor: theme.colors.primary },
+  rangeText: { fontSize: 12, fontWeight: "700", color: theme.colors.subtle },
+  rangeTextActive: { color: "#fff" },
   tabRow: { flexDirection: "row", gap: 6 },
   tabBtn: { flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 10, backgroundColor: theme.colors.tintSoft },
   tabBtnActive: { backgroundColor: theme.colors.primary },
