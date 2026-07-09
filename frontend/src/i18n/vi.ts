@@ -21,7 +21,14 @@ export const vi: Strings = {
   labels: {
     goal: { lose_weight: "Giảm cân", gain_muscle: "Tăng cơ", eat_healthy: "Ăn lành mạnh" },
     activity: { sedentary: "Ít vận động", moderate: "Vừa phải", active: "Năng động" },
-    condition: { diabetes: "Tiểu đường", hypertension: "Cao huyết áp", none: "Không có" },
+    condition: {
+      diabetes: "Tiểu đường",
+      hypertension: "Cao huyết áp",
+      gout: "Gút",
+      high_cholesterol: "Mỡ máu cao",
+      gastritis: "Đau dạ dày / trào ngược",
+      none: "Không có",
+    },
     gender: { male: "Nam", female: "Nữ" },
     mealType: { breakfast: "Bữa sáng", lunch: "Bữa trưa", dinner: "Bữa tối", snack: "Bữa phụ" },
     protein: "Đạm",

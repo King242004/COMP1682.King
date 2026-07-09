@@ -113,4 +113,14 @@ LAST 7 DAYS
 - Average calories on logged days: ${ctx.week.avgCalories} kcal`;
 }
 
-module.exports = { buildContext, contextToText };
+// One-line dietary guidance per supported condition — the SINGLE source every
+// AI prompt (coach chat/insight, suggest-meal, weekly plan) appends so a new
+// condition only needs to be added here + the FE picker list.
+const CONDITION_GUIDE =
+  "diabetes: low sugar/refined carbs; " +
+  "hypertension: low sodium/salty food; " +
+  "gout: avoid purine-rich foods (organ meats, shellfish, red meat, beer); " +
+  "high_cholesterol: limit saturated/fried fat, prefer lean protein & fiber; " +
+  "gastritis: avoid spicy/sour/acidic food, alcohol and coffee, prefer gentle meals";
+
+module.exports = { buildContext, contextToText, CONDITION_GUIDE };

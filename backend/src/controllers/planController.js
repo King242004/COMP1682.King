@@ -4,6 +4,7 @@ const Meal = require("../models/Meal");
 const User = require("../models/User");
 const { insightModels } = require("../config/gemini");
 const { generateWithFallback } = require("../services/aiGenerate");
+const { CONDITION_GUIDE } = require("../services/coachContext");
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
@@ -91,7 +92,7 @@ exports.generatePlan = async (req, res) => {
 
 USER PROFILE:
 - Goal: ${user?.goal || "eat_healthy"} | Daily calorie target: ${goalCal} kcal
-- Health conditions: ${conditions} (diabetes: low sugar/refined carbs; hypertension: low sodium)
+- Health conditions: ${conditions} (${CONDITION_GUIDE})
 - Weight: ${user?.weight ?? "unknown"} kg, Height: ${user?.height ?? "unknown"} cm, Age: ${user?.age ?? "unknown"}, Gender: ${user?.gender ?? "unknown"}, Activity: ${user?.activityLevel || "moderate"}
 
 REQUIREMENTS:

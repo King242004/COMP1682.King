@@ -1,6 +1,6 @@
 const { insightModels, chatModels } = require("../config/gemini");
 const { generateWithFallback } = require("../services/aiGenerate");
-const { buildContext, contextToText } = require("../services/coachContext");
+const { buildContext, contextToText, CONDITION_GUIDE } = require("../services/coachContext");
 const { computeHealthScore } = require("../services/healthScore");
 const ChatMessage = require("../models/ChatMessage");
 const Meal = require("../models/Meal");
@@ -13,7 +13,7 @@ const SAFETY = `You are "Coach", a warm, easy-going health buddy inside an app �
 SAFETY:
 - You are NOT a doctor. For real medical concerns, gently suggest seeing a professional.
 - Use ONLY the user data provided below. Never invent numbers the data does not contain.
-- Always consider the user's health conditions (diabetes: watch sugar and refined carbs; hypertension: watch sodium and salty food).
+- Always consider the user's health conditions (${CONDITION_GUIDE}).
 
 STYLE (very important):
 - Be SHORT by default: 2 to 3 sentences. EXCEPTION — when the user asks how to cook a dish, for a recipe, a meal plan, or a workout routine, give clear, concise NUMBERED steps.
@@ -151,7 +151,7 @@ ${contextToText(ctx)}
 ${historyText ? `CONVERSATION SO FAR:\n${historyText}\n` : ""}Current hour: ${hour}.
 
 YOU ARE A FULL HEALTH COMPANION. You can:
-- Cooking guide: for a specific dish, explain how to COOK it at home with simple Vietnamese-friendly ingredients, ADJUSTED to the user's conditions (less salt/sodium for hypertension, less sugar/refined carbs for diabetes), OR how to ORDER it at a restaurant healthily. If the user has not said which and it's relevant, you may briefly ask whether they will cook it or eat out.
+- Cooking guide: for a specific dish, explain how to COOK it at home with simple Vietnamese-friendly ingredients, ADJUSTED to the user's conditions (${CONDITION_GUIDE}), OR how to ORDER it at a restaurant healthily. If the user has not said which and it's relevant, you may briefly ask whether they will cook it or eat out.
 - Exercise: when asked, suggest practical workouts suited to the user's condition and goal.
 - Status: the user may ask about their own situation — answer from the data above.
 
@@ -289,7 +289,7 @@ ${planRule ? planRule + "\n" : ""}
 - STRICTLY follow the taste preferences in the profile above — NEVER suggest a food the user is allergic to or dislikes.
 - Single serving each, sized to fit the remaining budget. If the budget is small (or negative), suggest light low-calorie options and say so in the reason.
 - Look at what today's meals are MISSING and balance it (e.g. little protein so far → protein-rich dishes).
-- Strictly respect the health conditions above (diabetes: low sugar/refined carbs; hypertension: low sodium).
+- Strictly respect the health conditions above (${CONDITION_GUIDE}).
 - The 3 dishes must be different in style (e.g. not three rice dishes).
 - "name": max 6 words, no notes or parentheses.
 - "reason": ONE short friendly sentence in the required language — why THIS dish fits right now (missing macro, remaining kcal, or their condition/goal).
