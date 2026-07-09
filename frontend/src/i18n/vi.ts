@@ -435,6 +435,9 @@ export const vi: Strings = {
     productFound: "Đã tìm thấy sản phẩm",
     perServing: (s: string) => `Mỗi khẩu phần: ${s}`,
     addToMeal: "Thêm vào bữa ăn",
+    suitsMe: "Hợp với tôi không? Hỏi Coach",
+    suitsMeQuestion: (name: string, kcal: number, p: number, c: number, f: number) =>
+      `Mình vừa quét sản phẩm "${name}" — mỗi khẩu phần ${kcal} kcal, đạm ${p}g, tinh bột ${c}g, béo ${f}g. Sản phẩm này có hợp với tình trạng sức khoẻ của mình không?`,
     enterBarcode: "Nhập mã vạch",
     barcodeHint: "Nhập dãy 8-14 số dưới các vạch.",
     barcodeLabel: "Số mã vạch",

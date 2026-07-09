@@ -195,6 +195,9 @@ export const en = {
     productFound: "Product found",
     perServing: (s: string) => `Per serving: ${s}`,
     addToMeal: "Add to meal",
+    suitsMe: "Right for me? Ask Coach",
+    suitsMeQuestion: (name: string, kcal: number, p: number, c: number, f: number) =>
+      `I just scanned "${name}" — ${kcal} kcal, protein ${p}g, carbs ${c}g, fat ${f}g per serving. Is this product suitable for my health conditions?`,
     // Manual barcode modal
     enterBarcode: "Enter barcode",
     barcodeHint: "Type the 8-14 digit number under the bars.",
