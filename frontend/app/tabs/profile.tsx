@@ -12,14 +12,15 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { SectionLabel } from "@/ui/components/SectionLabel";
 
-// Settings-style row: tinted icon square + label + value on the right
+// Settings-style row: tinted icon square + label + value on the right.
+// Ionicons (not emoji) so the rows match the app's icon language.
 function SettingRow({ icon, label, value, last }: {
   icon: string; label: string; value: string; last?: boolean;
 }) {
   return (
     <View style={[styles.row, last && styles.rowLast]}>
       <View style={styles.rowIcon}>
-        <AppText style={styles.rowIconText}>{icon}</AppText>
+        <Ionicons name={icon as any} size={16} color={theme.colors.primary} />
       </View>
       <AppText variant="body2" style={styles.rowLabel}>{label}</AppText>
       <AppText variant="body2" style={styles.rowValue}>{value}</AppText>
@@ -137,14 +138,14 @@ export default function ProfileScreen() {
         {/* Health details */}
         <SectionLabel>{t.profile.healthDetails}</SectionLabel>
         <Card style={styles.detailCard}>
-          <SettingRow icon="👤" label={t.profile.gender} value={user?.gender ?? "—"} />
-          <SettingRow icon="🎂" label={t.profile.age} value={user?.age ? t.profile.ageValue(user.age) : "—"} />
-          <SettingRow icon="⚖️" label={t.profile.weight} value={user?.weight ? t.profile.weightValue(user.weight) : "—"} />
-          <SettingRow icon="📏" label={t.profile.height} value={user?.height ? t.profile.heightValue(user.height) : "—"} />
-          <SettingRow icon="🎯" label={t.profile.goal} value={t.labels.goal[user?.goal ?? ""] ?? "—"} />
-          <SettingRow icon="🏃" label={t.profile.activity} value={t.labels.activity[user?.activityLevel ?? ""] ?? "—"} />
-          <SettingRow icon="❤️" label={t.profile.conditions} value={user?.conditions?.length ? user.conditions.map((c) => t.labels.condition[c] ?? c).join(", ") : t.profile.none} />
-          <SettingRow icon="🍜" label={t.profile.taste} value={user?.tastePreferences?.trim() ? user.tastePreferences : "—"} last />
+          <SettingRow icon="person" label={t.profile.gender} value={user?.gender ?? "—"} />
+          <SettingRow icon="calendar" label={t.profile.age} value={user?.age ? t.profile.ageValue(user.age) : "—"} />
+          <SettingRow icon="scale" label={t.profile.weight} value={user?.weight ? t.profile.weightValue(user.weight) : "—"} />
+          <SettingRow icon="resize" label={t.profile.height} value={user?.height ? t.profile.heightValue(user.height) : "—"} />
+          <SettingRow icon="flag" label={t.profile.goal} value={t.labels.goal[user?.goal ?? ""] ?? "—"} />
+          <SettingRow icon="walk" label={t.profile.activity} value={t.labels.activity[user?.activityLevel ?? ""] ?? "—"} />
+          <SettingRow icon="heart" label={t.profile.conditions} value={user?.conditions?.length ? user.conditions.map((c) => t.labels.condition[c] ?? c).join(", ") : t.profile.none} />
+          <SettingRow icon="restaurant" label={t.profile.taste} value={user?.tastePreferences?.trim() ? user.tastePreferences : "—"} last />
         </Card>
 
         {/* Account */}
@@ -177,14 +178,14 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40, gap: theme.space.lg },
+  // paddingTop 60 = safe-area top (no tab header above anymore)
+  content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
   titleBlock: { gap: 4 },
 
   // Setting/detail row
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: theme.colors.border },
   rowLast: { borderBottomWidth: 0 },
   rowIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: theme.colors.tintSoft, alignItems: "center", justifyContent: "center" },
-  rowIconText: { fontSize: 15 },
   rowLabel: { flex: 1, color: theme.colors.muted },
   rowValue: { fontWeight: "700", textTransform: "capitalize" },
 

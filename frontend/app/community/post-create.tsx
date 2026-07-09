@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals, type Meal } from "@/context/MealsContext";
 import { createPost } from "@/features/community/api";
+import { compressImage } from "@/features/scan/api";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -38,7 +39,11 @@ export default function PostCreateScreen() {
       quality: 0.7,
       allowsEditing: true,
     });
-    if (!result.canceled && result.assets?.[0]?.uri) setImageUri(result.assets[0].uri);
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      // Compress once at pick time (1024px / 0.5 jpeg — same pipeline as scan):
+      // a full-res phone photo is 3-8 MB, needless upload + Cloudinary cost
+      setImageUri(await compressImage(result.assets[0].uri));
+    }
   };
 
   const canPost = (caption.trim().length > 0 || imageUri || selectedMeal) && !posting;

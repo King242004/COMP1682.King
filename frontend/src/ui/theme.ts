@@ -59,13 +59,15 @@ export function macroGoals(calorieGoal: number) {
 
 export function shadow(level: 1 | 2 | 3 = 2) {
   // Soft, premium shadow that works on iOS + Android.
+  // Level 1 = quiet RESTING shadow for ordinary cards — kept subtle so level 2+
+  // (hero/summary cards) visibly float above them (depth hierarchy, not noise).
   if (level === 1) {
     return {
       shadowColor: theme.colors.shadow,
-      shadowOpacity: 0.45,
-      shadowOffset: { width: 0, height: 6 },
-      shadowRadius: 14,
-      elevation: 2,
+      shadowOpacity: 0.22,
+      shadowOffset: { width: 0, height: 3 },
+      shadowRadius: 8,
+      elevation: 1,
     } as const;
   }
 

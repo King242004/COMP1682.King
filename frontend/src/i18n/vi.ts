@@ -2,6 +2,22 @@ import type { Strings } from "./en";
 
 // Vietnamese catalog — must mirror en.ts exactly (typed as Strings).
 export const vi: Strings = {
+  a11y: {
+    prevWeek: "Tuần trước",
+    nextWeek: "Tuần sau",
+    addMeal: "Thêm món",
+    deleteWorkout: "Xoá buổi tập",
+    removePlanned: "Bỏ món đã lên kế hoạch",
+    send: "Gửi tin nhắn",
+    attachPhoto: "Đính kèm ảnh",
+    clearChat: "Xoá lịch sử trò chuyện",
+    askCoach: "Hỏi Coach",
+    deletePlanned: "Xoá món trong kế hoạch",
+    search: "Tìm người",
+    createPost: "Đăng bài mới",
+    myProfile: "Trang cá nhân của tôi",
+  },
+
   common: {
     save: "Lưu",
     saving: "Đang lưu...",
@@ -284,7 +300,6 @@ export const vi: Strings = {
   },
 
   home: {
-    week: (n: number) => `Tuần ${n}`,
     eaten: "Đã ăn",
     overGoal: (n: string) => `vượt ${n}`,
     kcalLeft: (n: string) => `còn ${n} kcal`,
@@ -329,7 +344,8 @@ export const vi: Strings = {
     groceryErr: "Chưa tạo được danh sách, thử lại nhé.",
     error: "Lỗi",
     pastDay: "Ngày này đã qua — chỉ xem lại thôi nhé.",
-    emptyHint: "Chưa có món nào cho ngày này — bấm nút ✨ bên dưới để AI lên thực đơn nhé.",
+    emptyHint: "Chưa có món nào cho ngày này.",
+    emptyDayCta: "✨ Để AI lên thực đơn ngày này",
     mealPlanTitle: "Kế hoạch bữa ăn",
     thisWeek: "Tuần này",
     nothingPlanned: "Chưa có món nào",
