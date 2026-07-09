@@ -101,7 +101,10 @@ export default function SettingsScreen() {
     if (reminderOn) {
       const oldId = await AsyncStorage.getItem("mealReminderId");
       await cancelNotification(oldId);
-      const id = await scheduleDailyReminder(parsed[0], parsed[1]);
+      const id = await scheduleDailyReminder(parsed[0], parsed[1], {
+        title: t.settings.reminderNotifTitle,
+        body: t.settings.reminderNotifBody,
+      });
       if (id) await AsyncStorage.setItem("mealReminderId", id);
     }
   };
@@ -144,22 +147,15 @@ export default function SettingsScreen() {
   };
 
   const handleAutoGoal = async () => {
-    // Backend recomputes calorieGoal from TDEE when calorieGoal is absent —
-    // resend current body metrics so it has the inputs to calculate
+    // calorieGoal: null = explicit "back to auto (TDEE)" — the backend flips
+    // customGoal off and recomputes from the stored profile metrics
     if (!user?.weight || !user?.height || !user?.age || !user?.gender) {
       Alert.alert(t.settings.missingInfo, t.settings.missingInfoMsg);
       return;
     }
     setIsSavingGoal(true);
     try {
-      await updateProfile({
-        gender: user.gender ?? undefined,
-        age: user.age ?? undefined,
-        weight: user.weight ?? undefined,
-        height: user.height ?? undefined,
-        goal: user.goal,
-        activityLevel: user.activityLevel ?? undefined,
-      });
+      await updateProfile({ calorieGoal: null });
       setEditingGoal(false);
     } catch (e: any) {
       Alert.alert(t.common.errorTitle, e.message || t.settings.failedGoal);
@@ -172,7 +168,10 @@ export default function SettingsScreen() {
   const toggleReminder = async (value: boolean) => {
     if (value) {
       const [h, m] = parseTime(reminderTime) ?? [19, 0];
-      const id = await scheduleDailyReminder(h, m);
+      const id = await scheduleDailyReminder(h, m, {
+        title: t.settings.reminderNotifTitle,
+        body: t.settings.reminderNotifBody,
+      });
       if (!id) {
         Alert.alert(t.profile.permissionNeeded, t.settings.reminderPermMsg);
         return;

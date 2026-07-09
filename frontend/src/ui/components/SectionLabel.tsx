@@ -1,5 +1,4 @@
 import { StyleSheet } from "react-native";
-import { theme } from "../theme";
 import { AppText } from "./AppText";
 
 // Small uppercase label above a settings/profile card section.

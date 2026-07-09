@@ -209,7 +209,6 @@ const styles = StyleSheet.create({
   },
   titleBlock: { gap: 4, marginTop: -10 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
-  capitalize: { textTransform: "capitalize" },
   kcalCard: { padding: theme.space.xl },
   kcalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   kcalBlock: { gap: 4 },

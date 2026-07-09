@@ -26,7 +26,12 @@ export async function ensureNotificationPermissions() {
   return status === "granted";
 }
 
-export async function scheduleDailyReminder(hour: number, minute: number) {
+// `content` comes from the i18n catalog so the reminder speaks the app language
+export async function scheduleDailyReminder(
+  hour: number,
+  minute: number,
+  content: { title: string; body: string }
+) {
   const hasPermission = await ensureNotificationPermissions();
   if (!hasPermission) return null;
 
@@ -34,10 +39,7 @@ export async function scheduleDailyReminder(hour: number, minute: number) {
   if (!Notifications) return null;
 
   const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "Log your meals",
-      body: "Take 10 seconds to log what you just ate in MealMate.",
-    },
+    content,
     // DAILY trigger repeats every day at hour:minute (new expo-notifications API
     // requires an explicit `type` on the trigger object)
     trigger: {

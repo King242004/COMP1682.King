@@ -38,5 +38,19 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get("/", (req, res) => res.json({ message: "MealMate API running" }));
 
+// Global error handler — MUST stay after all routes. Express 5 forwards
+// rejected promises from async handlers here; without this, an unexpected
+// error (bad ObjectId → CastError, DB down, ...) returns an HTML page that
+// the app's JSON client can't parse.
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  if (err.name === "CastError")
+    return res.status(400).json({ message: "Invalid id." });
+  if (err.type === "entity.parse.failed" || err.type === "entity.too.large")
+    return res.status(400).json({ message: "Invalid request body." });
+  console.error("Unhandled error:", err);
+  res.status(500).json({ message: "Something went wrong. Please try again." });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

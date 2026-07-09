@@ -10,60 +10,61 @@ export type Exercise = {
 };
 
 // MET values from the Compendium of Physical Activities (common subset).
+// `key` looks up the localized label in t.exercise.groups / t.exercise.activities.
 // `custom` marks the "Other" entry where the user types their own MET.
-export type Activity = { name: string; met: number; icon: string; custom?: boolean };
+export type Activity = { key: string; met: number; icon: string; custom?: boolean };
 
-export const ACTIVITY_GROUPS: { group: string; items: Activity[] }[] = [
+export const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
   {
-    group: "Cardio",
+    key: "cardio",
     items: [
-      { name: "Walking", met: 3.5, icon: "🚶" },
-      { name: "Brisk walking", met: 4.3, icon: "🚶‍♂️" },
-      { name: "Jogging", met: 8.0, icon: "🏃" },
-      { name: "Running (fast)", met: 11, icon: "🏃‍♂️" },
-      { name: "Cycling", met: 6.0, icon: "🚴" },
-      { name: "Swimming", met: 6.0, icon: "🏊" },
-      { name: "Jump rope", met: 10, icon: "🪢" },
-      { name: "Stair climbing", met: 8.0, icon: "🪜" },
-      { name: "Elliptical", met: 5.0, icon: "🎚️" },
+      { key: "walking", met: 3.5, icon: "🚶" },
+      { key: "brisk_walking", met: 4.3, icon: "🚶‍♂️" },
+      { key: "jogging", met: 8.0, icon: "🏃" },
+      { key: "running_fast", met: 11, icon: "🏃‍♂️" },
+      { key: "cycling", met: 6.0, icon: "🚴" },
+      { key: "swimming", met: 6.0, icon: "🏊" },
+      { key: "jump_rope", met: 10, icon: "🪢" },
+      { key: "stair_climbing", met: 8.0, icon: "🪜" },
+      { key: "elliptical", met: 5.0, icon: "🎚️" },
     ],
   },
   {
-    group: "Strength / Gym",
+    key: "strength",
     items: [
-      { name: "Weights (light)", met: 3.5, icon: "🏋️" },
-      { name: "Weights (heavy)", met: 6.0, icon: "🏋️‍♂️" },
-      { name: "Bodyweight", met: 3.8, icon: "🤸" },
-      { name: "HIIT", met: 8.0, icon: "🔥" },
-      { name: "CrossFit", met: 8.0, icon: "💥" },
+      { key: "weights_light", met: 3.5, icon: "🏋️" },
+      { key: "weights_heavy", met: 6.0, icon: "🏋️‍♂️" },
+      { key: "bodyweight", met: 3.8, icon: "🤸" },
+      { key: "hiit", met: 8.0, icon: "🔥" },
+      { key: "crossfit", met: 8.0, icon: "💥" },
     ],
   },
   {
-    group: "Flexibility / Light",
+    key: "flexibility",
     items: [
-      { name: "Yoga", met: 3.0, icon: "🧘" },
-      { name: "Pilates", met: 3.0, icon: "🧎" },
-      { name: "Stretching", met: 2.5, icon: "🙆" },
+      { key: "yoga", met: 3.0, icon: "🧘" },
+      { key: "pilates", met: 3.0, icon: "🧎" },
+      { key: "stretching", met: 2.5, icon: "🙆" },
     ],
   },
   {
-    group: "Sports",
+    key: "sports",
     items: [
-      { name: "Football", met: 7.0, icon: "⚽" },
-      { name: "Basketball", met: 6.5, icon: "🏀" },
-      { name: "Badminton", met: 5.5, icon: "🏸" },
-      { name: "Tennis", met: 7.0, icon: "🎾" },
-      { name: "Volleyball", met: 4.0, icon: "🏐" },
-      { name: "Pickleball", met: 4.5, icon: "🥒" },
+      { key: "football", met: 7.0, icon: "⚽" },
+      { key: "basketball", met: 6.5, icon: "🏀" },
+      { key: "badminton", met: 5.5, icon: "🏸" },
+      { key: "tennis", met: 7.0, icon: "🎾" },
+      { key: "volleyball", met: 4.0, icon: "🏐" },
+      { key: "pickleball", met: 4.5, icon: "🥒" },
     ],
   },
   {
-    group: "Other",
+    key: "other",
     items: [
-      { name: "Dancing", met: 5.0, icon: "🕺" },
-      { name: "Hiking", met: 6.0, icon: "🥾" },
-      { name: "Boxing", met: 7.5, icon: "🥊" },
-      { name: "Other", met: 0, icon: "➕", custom: true },
+      { key: "dancing", met: 5.0, icon: "🕺" },
+      { key: "hiking", met: 6.0, icon: "🥾" },
+      { key: "boxing", met: 7.5, icon: "🥊" },
+      { key: "other", met: 0, icon: "➕", custom: true },
     ],
   },
 ];

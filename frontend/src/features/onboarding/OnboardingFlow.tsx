@@ -27,7 +27,7 @@ function calcTDEE(w: number, h: number, age: number, gender: "male" | "female", 
 
 export function OnboardingFlow() {
   const router = useRouter();
-  const { user, updateProfile } = useAuth();
+  const { updateProfile } = useAuth();
   const t = useT();
   const L = t.onboarding;
 

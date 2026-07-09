@@ -23,6 +23,9 @@ const userSchema = new mongoose.Schema(
     },
     conditions: [{ type: String }], // e.g. ["diabetes", "hypertension"]
     calorieGoal: { type: Number, default: 2000 },
+    // true = the user typed their own calorie goal (Settings) — the app must
+    // NEVER auto-recalculate over it. false = goal follows TDEE automatically.
+    customGoal: { type: Boolean, default: false },
     language: { type: String, enum: ["vi", "en"] }, // AI Coach reply language (unset = follow device)
     // Saved taste preferences ("không ăn hải sản, thích gà") — read by ALL AI
     // features (meal suggestions, weekly plan, coach) so the user types it once.

@@ -96,9 +96,10 @@ export default function EditMealScreen() {
       await updateMeal(id, {
         name: mealName.trim(),
         calories: Number(calories),
-        protein: protein.trim() ? Number(protein) : undefined,
-        carbs: carbs.trim() ? Number(carbs) : undefined,
-        fat: fat.trim() ? Number(fat) : undefined,
+        // Cleared field = 0, same rule as Add (undefined would silently KEEP the old value)
+        protein: protein.trim() ? Number(protein) : 0,
+        carbs: carbs.trim() ? Number(carbs) : 0,
+        fat: fat.trim() ? Number(fat) : 0,
         mealType,
         note: note.trim(), // empty string clears a previous note
       });
