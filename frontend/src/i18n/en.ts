@@ -669,6 +669,7 @@ export const en = {
     verifyOtp: "Verify OTP",
     changePassword: "Change Password",
     resendOtp: "Resend OTP",
+    otpResent: "We sent a new code to your email.",
     backToSignIn: "Back to Sign In",
     // Validation / errors
     otpMustBe6: "Please enter the 6-digit OTP.",

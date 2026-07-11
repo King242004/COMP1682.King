@@ -648,6 +648,7 @@ export const vi: Strings = {
     verifyOtp: "Xác minh OTP",
     changePassword: "Đổi mật khẩu",
     resendOtp: "Gửi lại OTP",
+    otpResent: "Đã gửi mã mới tới email của bạn.",
     backToSignIn: "Về đăng nhập",
     otpMustBe6: "Vui lòng nhập mã OTP 6 số.",
     passwordsNoMatch: "Mật khẩu không khớp.",

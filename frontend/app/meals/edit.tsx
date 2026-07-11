@@ -6,6 +6,7 @@ import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { MealTypeSelector } from "@/features/meals/MealTypeSelector";
 import { type MealTypeKey } from "@/ui/mealTypes";
+import { parseDecimal } from "@/utils/number";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
@@ -23,7 +24,7 @@ type Errors = {
 
 function validateNumber(val: string, field: string, t: Strings): string | undefined {
   if (!val.trim()) return undefined;
-  const n = Number(val);
+  const n = parseDecimal(val);
   if (isNaN(n) || n < 0) return t.meals.numPositive(field);
   if (n > 9999) return t.meals.numTooHigh(field);
   return undefined;
@@ -64,7 +65,7 @@ export default function EditMealScreen() {
     const e: Errors = {};
     if (mealName.trim().length < 2) e.mealName = t.meals.nameMin;
     if (mealName.trim().length > 100) e.mealName = t.meals.nameTooLong;
-    const kcal = Number(calories);
+    const kcal = parseDecimal(calories);
     if (!calories.trim()) e.calories = t.meals.caloriesRequired;
     else if (isNaN(kcal) || kcal <= 0) e.calories = t.meals.caloriesInvalid;
     else if (kcal > 9999) e.calories = t.meals.caloriesTooHigh;
@@ -95,11 +96,11 @@ export default function EditMealScreen() {
     try {
       await updateMeal(id, {
         name: mealName.trim(),
-        calories: Number(calories),
+        calories: parseDecimal(calories),
         // Cleared field = 0, same rule as Add (undefined would silently KEEP the old value)
-        protein: protein.trim() ? Number(protein) : 0,
-        carbs: carbs.trim() ? Number(carbs) : 0,
-        fat: fat.trim() ? Number(fat) : 0,
+        protein: protein.trim() ? parseDecimal(protein) : 0,
+        carbs: carbs.trim() ? parseDecimal(carbs) : 0,
+        fat: fat.trim() ? parseDecimal(fat) : 0,
         mealType,
         note: note.trim(), // empty string clears a previous note
       });
@@ -205,7 +206,7 @@ export default function EditMealScreen() {
                   placeholder={t.meals.optional}
                   value={protein}
                   onChangeText={(v) => { setProtein(v); setErrors((e) => ({ ...e, protein: undefined })); }}
-                  keyboardType="number-pad"
+                  keyboardType="decimal-pad"
                   textContentType="none"
                   inputProps={{ onBlur: () => handleBlur("protein") }}
                 />
@@ -219,7 +220,7 @@ export default function EditMealScreen() {
                   placeholder={t.meals.optional}
                   value={carbs}
                   onChangeText={(v) => { setCarbs(v); setErrors((e) => ({ ...e, carbs: undefined })); }}
-                  keyboardType="number-pad"
+                  keyboardType="decimal-pad"
                   textContentType="none"
                   inputProps={{ onBlur: () => handleBlur("carbs") }}
                 />
@@ -235,7 +236,7 @@ export default function EditMealScreen() {
                 placeholder={t.meals.optional}
                 value={fat}
                 onChangeText={(v) => { setFat(v); setErrors((e) => ({ ...e, fat: undefined })); }}
-                keyboardType="number-pad"
+                keyboardType="decimal-pad"
                 textContentType="none"
                 inputProps={{ onBlur: () => handleBlur("fat") }}
               />
