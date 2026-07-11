@@ -42,6 +42,23 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  // ─── Resend: actually requests a NEW code (used to just jump back to the
+  // email step without sending anything). Server cooldown (60s) surfaces as an
+  // error message if tapped too soon.
+  const handleResendOTP = async () => {
+    setOtp("");
+    setError("");
+    setIsLoading(true);
+    try {
+      await apiRequest("/user/send-otp", "POST", { email: email.trim() });
+      Alert.alert(t.auth.otpTitle, t.auth.otpResent);
+    } catch (e: any) {
+      setError(e.message || t.auth.failedSendOtp);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // ─── Step 2: Verify OTP ─────────────────────────────────────────────────────
   // Actually asks the server (used to advance locally — any 6 digits "passed").
   // Wrong guesses count toward the 5-attempt limit; the 5th burns the code.
@@ -189,12 +206,13 @@ export default function ForgotPasswordScreen() {
             }
           />
 
-          {/* Resend OTP */}
+          {/* Resend OTP — sends a real new code (stays on this step) */}
           {step === "otp" && (
             <Button
               title={t.auth.resendOtp}
               variant="ghost"
-              onPress={() => { setStep("email"); setOtp(""); setError(""); }}
+              disabled={isLoading}
+              onPress={handleResendOTP}
             />
           )}
 

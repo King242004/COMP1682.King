@@ -61,8 +61,8 @@ export default function CoachTab() {
       return;
     }
     const result = source === "camera"
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: "images", quality: 0.7 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.7 });
     if (result.canceled || !result.assets?.[0]?.uri) return;
     const compressed = await compressToBase64(result.assets[0].uri);
     if (compressed) setPendingImage(compressed);

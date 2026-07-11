@@ -47,7 +47,10 @@ export default function MealPlanScreen() {
   const t = useT();
   const L = t.plan;
 
-  const todayKey = dateKey(new Date());
+  // State (not a per-render const) so an app left open past midnight can
+  // follow the day change — refreshed in the focus effect below (same rule
+  // as Home's rollover handling).
+  const [todayKey, setTodayKey] = useState(dateKey(new Date()));
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [plan, setPlan] = useState<PlanMeal[]>([]);
@@ -225,8 +228,15 @@ export default function MealPlanScreen() {
     });
   };
 
-  // Reload on focus (e.g. returning from add screen) and whenever the week changes
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  // Reload on focus (e.g. returning from add screen) and whenever the week changes.
+  // Also day rollover: "today" moves on if the app stayed open past midnight.
+  useFocusEffect(
+    useCallback(() => {
+      const fresh = dateKey(new Date());
+      if (fresh !== todayKey) setTodayKey(fresh);
+      load();
+    }, [load, todayKey])
+  );
 
   // Planned meals for the selected day
   const dayPlan = useMemo(() => plan.filter((p) => p.date === selectedDate), [plan, selectedDate]);
