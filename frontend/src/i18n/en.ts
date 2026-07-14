@@ -260,8 +260,8 @@ export const en = {
     // Localized labels for the activity picker (data/METs live in features/exercise/api.ts)
     groups: {
       cardio: "Cardio",
-      strength: "Strength / Gym",
-      flexibility: "Flexibility / Light",
+      strength: "Strength/Gym",
+      flexibility: "Flexibility/Light",
       sports: "Sports",
       other: "Other",
     } as Record<string, string>,
@@ -305,7 +305,7 @@ export const en = {
       hypertension: "Hypertension",
       gout: "Gout",
       high_cholesterol: "High cholesterol",
-      gastritis: "Gastritis / reflux",
+      gastritis: "Gastritis/reflux",
       none: "None",
     } as Record<string, string>,
     gender: { male: "Male", female: "Female" } as Record<string, string>,

@@ -42,7 +42,7 @@ export const vi: Strings = {
       hypertension: "Cao huyết áp",
       gout: "Gút",
       high_cholesterol: "Mỡ máu cao",
-      gastritis: "Đau dạ dày / trào ngược",
+      gastritis: "Viêm dạ dày / trào ngược",
       none: "Không có",
     },
     gender: { male: "Nam", female: "Nữ" },
