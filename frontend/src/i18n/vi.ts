@@ -491,7 +491,7 @@ export const vi: Strings = {
     useLibrary: "Dùng thư viện",
     takePhotoError: "Không chụp được ảnh.",
     productNotFound: "Không tìm thấy sản phẩm",
-    productNotFoundMsg: "Mã vạch này không có trong cơ sở dữ liệu. Thử nhập món thủ công.",
+    productNotFoundMsg: "Sản phẩm chưa có trong cơ sở dữ liệu cộng đồng — nhiều hàng Việt nội địa chưa được đóng góp. Bạn có thể nhập tay theo bảng dinh dưỡng trên bao bì nhé.",
     enterManually: "Nhập thủ công",
   },
 
