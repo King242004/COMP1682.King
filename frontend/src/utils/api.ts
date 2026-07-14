@@ -1,16 +1,21 @@
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 // Tự động lấy IP của laptop (máy chạy Metro) để gọi backend, không cần sửa tay
 // mỗi khi đổi mạng. Trong Expo Go, điện thoại luôn cùng mạng với Metro nên IP này
 // chính là IP backend (cùng laptop, cổng 5000).
 function getDevHost(): string | null {
+  // Bản web: trang được serve từ chính máy dev → hostname của trang là host backend
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    return window.location.hostname;
+  }
   const hostUri =
     Constants.expoConfig?.hostUri ||
     (Constants as any).expoGoConfig?.hostUri ||
     (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
     (Constants as any).manifest?.debuggerHost;
   if (!hostUri) return null;
-  return hostUri.split(":")[0]; // bỏ cổng (vd "192.168.1.22:8081" → "192.168.1.22")
+  return hostUri.split(":")[0]; // bỏ cổng (vd "192.168.1.37:8081" → "192.168.1.37")
 }
 
 const devHost = getDevHost();
@@ -18,7 +23,7 @@ const devHost = getDevHost();
 // Tự động khi chạy Expo Go, fallback IP cứng nếu không lấy được.
 export const BASE_URL = devHost
   ? `http://${devHost}:5000/api`
-  : "http://192.168.1.22:5000/api";
+  : "http://192.168.1.37:5000/api";
 
 // Called when the server rejects our token (401 = expired/invalid JWT).
 // AuthContext registers a handler that force-logs-out and returns to login —

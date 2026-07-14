@@ -581,7 +581,8 @@ export const en = {
     postDetailTitle: "Post",
     posting: "Posting...",
     saveChanges: "Save changes",
-    ago: "ago",
+    timeAgoText: (n: number, unit: "now" | "m" | "h" | "d") =>
+      unit === "now" ? "just now" : `${n}${unit} ago`,
     feedEmptyTitle: "Your feed is empty",
     feedEmptySub: "Follow people in Explore to see their meals here.",
     exploreEmptyTitle: "No posts yet",

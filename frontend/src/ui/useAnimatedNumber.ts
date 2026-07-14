@@ -21,8 +21,17 @@ export function useAnimatedNumber(value: number, duration = 450): number {
       if (p < 1) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
+    // Safety net: rAF can be throttled/paused (backgrounded app) — make sure
+    // the FINAL value always lands even if no frame ever fires.
+    const settle = setTimeout(() => {
+      if (displayRef.current !== value) {
+        displayRef.current = value;
+        setDisplay(value);
+      }
+    }, duration + 150);
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      clearTimeout(settle);
     };
   }, [value, duration]);
 
