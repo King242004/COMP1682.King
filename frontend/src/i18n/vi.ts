@@ -565,7 +565,8 @@ export const vi: Strings = {
     postDetailTitle: "Bài viết",
     posting: "Đang đăng...",
     saveChanges: "Lưu thay đổi",
-    ago: "trước",
+    timeAgoText: (n: number, unit: "now" | "m" | "h" | "d") =>
+      unit === "now" ? "vừa xong" : `${n} ${unit === "m" ? "phút" : unit === "h" ? "giờ" : "ngày"} trước`,
     feedEmptyTitle: "Bảng tin trống",
     feedEmptySub: "Theo dõi mọi người trong Khám phá để thấy món của họ ở đây.",
     exploreEmptyTitle: "Chưa có bài nào",
