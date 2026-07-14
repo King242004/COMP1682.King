@@ -25,7 +25,8 @@ STYLE (very important):
 - When the user says they ARE eating a dish, react warmly and you may ask a quick follow-up (homemade or bought, eaten with what) to personalize the tip. Do NOT assume "dặn quán"/eating out unless they said so.
 - Warm, casual, encouraging. Vary wording AND substance — never repeat the same canned advice.
 - Prefer Vietnamese dishes when suggesting food.
-- Plain text only: no markdown, no asterisks, no bold, no headings, no tables.`;
+- Plain text only: no markdown, no asterisks, no bold, no headings, no tables.
+- NEVER use the em dash character (—) in any reply; use a comma, colon or period instead.`;
 
 function todayKey() {
   const d = new Date();
@@ -93,7 +94,7 @@ ${langDirective(req.query.language)} Every string value in the JSON must be in t
       console.error("Coach insight AI error:", e.message);
       // Graceful fallback so the score still shows even if AI/quota fails
       ai = {
-        summary: score >= 70 ? "You're doing well today — keep it up!" : "Let's get today on track.",
+        summary: score >= 70 ? "You're doing well today, keep it up!" : "Let's get today on track.",
         tips: [],
         warnings: [],
       };
@@ -161,7 +162,7 @@ The user just said: "${userText}"
 Respond with ONLY valid JSON:
 { "reply": "<your short, friendly answer in the required language>", "meal": null, "eating": false }
 
-- "reply": 2-3 short sentences, like a friend. Do NOT greet or use the user's name unless this is the very first message. Do NOT mention logging or diaries — the app shows an "Add" button for that.
+- "reply": 2-3 short sentences, like a friend. Do NOT greet or use the user's name unless this is the very first message. Do NOT mention logging or diaries; the app shows an "Add" button for that.
 - "meal": whenever a SPECIFIC dish is discussed (asking about it, planning it, OR eating it), fill it so the app can show cooking tips + nutrition. Use null only for general talk with no dish.
   Shape: { "name": "<dish>", "calories": <kcal number>, "protein": <g>, "carbs": <g>, "fat": <g>, "mealType": "breakfast|lunch|dinner|snack" }.
   For "name", use the dish EXACTLY as the user described it. Do NOT add a cooking method they did not mention (if they said "ức gà", name it "ức gà", not "ức gà nướng").
@@ -170,7 +171,7 @@ Respond with ONLY valid JSON:
   Pick mealType by current hour: under 11 breakfast, 11-14 lunch, 14-17 snack, 17-21 dinner, otherwise snack.
 
 EXAMPLES (match this interactive behavior, not the exact words):
-User: "Tôi ăn bánh mì được không?" => {"reply":"Được nha! Mà bánh mì gì vậy — thịt, trứng hay chay? Bạn tự làm hay mua ngoài, ăn kèm gì không? Cho mình biết để tư vấn sát hơn.","meal":{"name":"bánh mì","calories":350,"protein":12,"carbs":45,"fat":12,"mealType":"breakfast"},"eating":false}
+User: "Tôi ăn bánh mì được không?" => {"reply":"Được nha! Mà bánh mì gì vậy: thịt, trứng hay chay? Bạn tự làm hay mua ngoài, ăn kèm gì không? Cho mình biết để tư vấn sát hơn.","meal":{"name":"bánh mì","calories":350,"protein":12,"carbs":45,"fat":12,"mealType":"breakfast"},"eating":false}
 User: "Tôi ăn phở được không?" => {"reply":"Phở ổn đó! Bạn ăn phở bò hay gà, tự nấu hay ra quán? Mình mách cho hợp.","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
 User: "Tôi đang ăn phở" => {"reply":"Ngon miệng nha! Bạn ăn kèm rau không? Thêm rau giá với ít nước béo là cân bằng hơn đó.","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":true}
 User asks the SAME thing a 3rd time => {"reply":"Bạn hỏi lại nè 😄 Vẫn ổn như mình nói. Hay bạn đang phân vân điều gì khác về nó?","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
@@ -197,7 +198,7 @@ Always read the history first so repeated or follow-up questions feel natural, n
       (parsed.reply || "").trim() ||
       (req.body.language === "vi"
         ? "Mình chưa nghĩ ra câu trả lời, bạn thử hỏi lại nhé."
-        : "I couldn't come up with a reply — try asking again.");
+        : "I couldn't come up with a reply. Try asking again.");
 
     // Suggested meal (NOT logged here — the app shows an "Add" button when eating).
     let meal = null;

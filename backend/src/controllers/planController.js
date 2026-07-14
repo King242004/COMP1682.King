@@ -109,6 +109,7 @@ REQUIREMENTS:
 - Adjust every dish choice to the health conditions above.
 - HARD CONSTRAINT: NO dish may contain ANY ingredient the health conditions forbid (per the guide above). Example: gout → absolutely no shrimp/tôm, crab, shellfish, organ meats, red meat. Before finalizing each dish, CHECK its ingredients against the conditions; when in doubt, pick a safer dish.
 - Also give ONE short workout suggestion per day (max ~15 words) suited to the user's conditions and goal; a rest day is allowed.
+- Never use the em dash character (—) in any text; use a comma instead.
 - Write dish names and workout text in ${langName}.${
       prefs
         ? `\n- USER FOOD PREFERENCES (MUST follow strictly — avoid disliked/allergy foods): ${prefs}`
@@ -192,6 +193,7 @@ Create a realistic grocery shopping list for ONE person to cook these dishes at 
 - Group items into 3-5 sensible categories (e.g. meat/fish, vegetables & herbs, dry goods & spices, others).
 - Assume a Vietnamese market/supermarket; skip water and basic items everyone has (salt, cooking oil) unless a dish needs something special.
 - Keep it concise: quantities are rough estimates for one person.
+- Never use the em dash character (—) in any text.
 - Write everything in ${langName}.
 
 Return ONLY valid JSON:
