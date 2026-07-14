@@ -239,7 +239,7 @@ export const en = {
     useLibrary: "Use library",
     takePhotoError: "Could not take photo.",
     productNotFound: "Product not found",
-    productNotFoundMsg: "This barcode isn't in the database. Try entering the meal manually.",
+    productNotFoundMsg: "This product isn't in the community database yet — many local Vietnamese products haven't been added. You can enter it manually from the nutrition label.",
     enterManually: "Enter manually",
   },
 
