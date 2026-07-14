@@ -82,7 +82,8 @@ Write a short daily analysis for this user. Return ONLY valid JSON:
   "summary": "1-2 sentence friendly overview of how today is going",
   "tips": ["2-3 short, actionable tips tailored to their goal and remaining calories"],
   "warnings": ["0-2 warnings ONLY if relevant to their health conditions or a clear imbalance; empty array if none"]
-}`;
+}
+${langDirective(req.query.language)} Every string value in the JSON must be in that language — no other language.`;
 
     let ai = { summary: "", tips: [], warnings: [] };
     try {

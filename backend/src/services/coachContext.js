@@ -153,7 +153,7 @@ LAST 7 DAYS
 const CONDITION_GUIDE =
   "diabetes: low sugar/refined carbs; " +
   "hypertension: low sodium/salty food; " +
-  "gout: avoid purine-rich foods (organ meats, shellfish, red meat, beer); " +
+  "gout: STRICTLY NO purine-rich foods — organ meats, ALL shellfish (shrimp/tôm, crab/cua, mussels, snails), red meat, beer; " +
   "high_cholesterol: limit saturated/fried fat, prefer lean protein & fiber; " +
   "gastritis: avoid spicy/sour/acidic food, alcohol and coffee, prefer gentle meals";
 
