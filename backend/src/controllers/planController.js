@@ -107,6 +107,7 @@ REQUIREMENTS:
 - Each day: breakfast, lunch, dinner and optionally one snack. Daily total within ±10% of ${goalCal} kcal.
 - Prefer common Vietnamese dishes that are easy to cook or buy. Vary dishes across the week — do not repeat the same dish two days in a row.
 - Adjust every dish choice to the health conditions above.
+- HARD CONSTRAINT: NO dish may contain ANY ingredient the health conditions forbid (per the guide above). Example: gout → absolutely no shrimp/tôm, crab, shellfish, organ meats, red meat. Before finalizing each dish, CHECK its ingredients against the conditions; when in doubt, pick a safer dish.
 - Also give ONE short workout suggestion per day (max ~15 words) suited to the user's conditions and goal; a rest day is allowed.
 - Write dish names and workout text in ${langName}.${
       prefs
