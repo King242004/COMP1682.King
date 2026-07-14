@@ -1,4 +1,4 @@
-// English catalog — the source-of-truth shape. vi.ts must mirror this exactly
+// English catalog, the source-of-truth shape. vi.ts must mirror this exactly
 // (it's typed as `typeof en`, so missing/extra keys fail the type-check).
 // Strings with runtime values are functions, e.g. remaining: (n) => `${n} left`.
 export const en = {
@@ -51,7 +51,7 @@ export const en = {
     forYou: "For you",
     viewWeek: "View week",
     weeklyPlan: "Weekly plan",
-    planNone: "No plan yet — let the AI build one ✨",
+    planNone: "No plan yet, let the AI build one ✨",
     planDone: "Today's plan is all done 🎉",
     planPending: (n: number) => `${n} planned meals waiting in your diary`,
     coachFallback: "Get personalized analysis and ask anything about your nutrition.",
@@ -67,7 +67,7 @@ export const en = {
     // weekly.tsx (const L = t.plan)
     generate: "✨ Generate my week with AI",
     generating: "AI is planning your week...",
-    pastWeek: "This week is already over — switch to the current or next week.",
+    pastWeek: "This week is already over, switch to the current or next week.",
     redoDay: "Regenerate this day",
     confirmTitle: "Are you sure?",
     confirmWeekMsg: "Meals from today to the end of the week will be REPLACED by the new plan.",
@@ -76,11 +76,11 @@ export const en = {
     cancel: "Cancel",
     grocery: "🛒 Grocery list",
     groceryLoading: "AI is building your list...",
-    quota: "Out of free AI quota today — try again later.",
+    quota: "Out of free AI quota today, try again later.",
     genErr: "Couldn't generate the plan. Please try again.",
     groceryErr: "Couldn't build the list. Please try again.",
     error: "Error",
-    pastDay: "This day is over — view only.",
+    pastDay: "This day is over, view only.",
     emptyHint: "Nothing planned for this day yet.",
     emptyDayCta: "✨ Plan this day with AI",
     mealPlanTitle: "Meal Plan",
@@ -96,7 +96,7 @@ export const en = {
     genWeekMsg: "The AI will plan from today to the end of the week based on your goal and conditions. Existing meals in that range will be replaced.",
     genDayMsg: "The AI will replace all meals on this day with a new menu.",
     genNotePlaceholder: "Preferences (optional): e.g. no seafood, love chicken...",
-    genRemember: "Remember these preferences — meal suggestions and Coach will follow them too",
+    genRemember: "Remember these preferences, meal suggestions and Coach will follow them too",
     genStart: "Generate",
     // GroceryModal
     groceryTitle: "Grocery list",
@@ -104,19 +104,19 @@ export const en = {
     whatToEat: "What should I eat now?",
     suggestPill: "Suggest",
     add: "Add",
-    suggestQuota: "Out of AI requests for today — try again later.",
+    suggestQuota: "Out of AI requests for today, try again later.",
     suggestErr: "Couldn't get suggestions. Please try again.",
     slotShort: { breakfast: "breakfast", lunch: "lunch", dinner: "dinner", snack: "snack" } as Record<string, string>,
     altFor: (name: string, kcal: string) => `Alternatives to ${name} · ${kcal} kcal left`,
     forSlot: (slot: string, kcal: string) => `For your ${slot} · ${kcal} kcal left`,
-    plannedSwap: (slot: string, name: string) => `${name} is planned for ${slot} — want something else?`,
+    plannedSwap: (slot: string, name: string) => `${name} is planned for ${slot}, want something else?`,
     aiPicks: (slot: string) => `AI picks dishes for your ${slot} from what's left`,
   },
 
   onboarding: {
     introTitle: "Welcome to MealMate 👋",
     introSub: "Your meal companion. Answer a few questions so the AI understands you from day one (~1 minute).",
-    featScan: "Snap a photo — AI recognizes the dish and counts calories",
+    featScan: "Snap a photo, AI recognizes the dish and counts calories",
     featCoach: "AI Coach advises around your goal, conditions and taste",
     featPlan: "Generates a weekly menu with familiar Vietnamese dishes",
     start: "Get started",
@@ -145,7 +145,7 @@ export const en = {
     tastePh: "e.g. no seafood, love chicken, less spicy...",
     tasteHint: "Suggestions, Coach and weekly plans will always respect this.",
     perDay: "day",
-    saveErr: "Couldn't save your profile — you can update it later in Profile.",
+    saveErr: "Couldn't save your profile, you can update it later in Profile.",
   },
 
   coach: {
@@ -176,7 +176,7 @@ export const en = {
     error: "Error",
     suggestions: ["What should I eat tonight?", "How to cook healthy chicken breast", "What workout suits me?"],
     mealShort: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" } as Record<string, string>,
-    quotaMsg: "Out of free AI quota today — please try again later.",
+    quotaMsg: "Out of free AI quota today, please try again later.",
     replyFail: "Sorry, I couldn't respond right now. Please try again.",
     askTip: (tip: string) => `Tell me more about this: "${tip}"`,
     healthScore: "Health Score",
@@ -214,7 +214,7 @@ export const en = {
     addToMeal: "Add to meal",
     suitsMe: "Right for me? Ask Coach",
     suitsMeQuestion: (name: string, kcal: number, p: number, c: number, f: number) =>
-      `I just scanned "${name}" — ${kcal} kcal, protein ${p}g, carbs ${c}g, fat ${f}g per serving. Is this product suitable for my health conditions?`,
+      `I just scanned "${name}", ${kcal} kcal, protein ${p}g, carbs ${c}g, fat ${f}g per serving. Is this product suitable for my health conditions?`,
     // Manual barcode modal
     enterBarcode: "Enter barcode",
     barcodeHint: "Type the 8-14 digit number under the bars.",
@@ -239,7 +239,7 @@ export const en = {
     useLibrary: "Use library",
     takePhotoError: "Could not take photo.",
     productNotFound: "Product not found",
-    productNotFoundMsg: "This product isn't in the community database yet — many local Vietnamese products haven't been added. You can enter it manually from the nutrition label.",
+    productNotFoundMsg: "This product isn't in the community database yet, many local Vietnamese products haven't been added. You can enter it manually from the nutrition label.",
     enterManually: "Enter manually",
   },
 
@@ -296,7 +296,7 @@ export const en = {
     } as Record<string, string>,
   },
 
-  // Shared label lists — used by Profile display, Edit pickers, and Community
+  // Shared label lists, used by Profile display, Edit pickers, and Community
   labels: {
     goal: { lose_weight: "Lose Weight", gain_muscle: "Gain Muscle", eat_healthy: "Eat Healthy" } as Record<string, string>,
     activity: { sedentary: "Sedentary", moderate: "Moderate", active: "Active" } as Record<string, string>,
@@ -347,7 +347,7 @@ export const en = {
     badgeCommunity: "From community",
     badgeSuggest: "AI suggested",
     badgeRepeat: "Logging again",
-    subtitleRepeat: "Same dish as before — adjust anything if needed.",
+    subtitleRepeat: "Same dish as before, adjust anything if needed.",
     badgeSub: "You can edit any field before saving.",
     logAgain: "Log again today",
     recent: "Your recent meals",
@@ -466,7 +466,7 @@ export const en = {
     progressSub: "Calories, nutrition and weekly trends",
     reminders: "Reminders",
     mealReminder: "Meal reminder",
-    mealReminderSub: (time: string) => `Daily at ${time} — tap to change`,
+    mealReminderSub: (time: string) => `Daily at ${time}, tap to change`,
     reminderPermMsg: "Allow notifications to get daily meal reminders.",
     reminderTimeTitle: "Reminder time",
     reminderTimeSub: "24h format, e.g. 19:30.",
@@ -509,7 +509,7 @@ export const en = {
     saveFailed: "Couldn't save. Please try again.",
     chartTitle: "Trend",
     emptyTitle: "No weight logged yet",
-    emptySub: "Log your weight regularly — the chart and the AI Coach will follow your journey.",
+    emptySub: "Log your weight regularly, the chart and the AI Coach will follow your journey.",
     entries: "Entries",
     deleteTitle: "Delete entry?",
     deleteMsg: (d: string) => `Remove the entry for ${d}.`,
@@ -549,15 +549,15 @@ export const en = {
     dailyMacroRatio: "Daily macro ratio",
     noData: "No data",
     streakBang: (n: number) => `${n} day streak!`,
-    streakSub: "Keep it up — log meals every day to maintain your streak.",
+    streakSub: "Keep it up, log meals every day to maintain your streak.",
     weeklySummary: "Weekly summary",
     mealsLogged: (n: number) => `${n} meal${n !== 1 ? "s" : ""} logged`,
     noMealsLogged: "No meals logged",
     over: (n: string) => `+${n} over`,
     under: (n: string) => `${n} under`,
     closestToGoal: "🏆 Closest to goal",
-    closestOnTrack: (day: string, cal: string) => `${day} — ${cal} kcal ✓ On track!`,
-    closestOff: (day: string, cal: string, diff: string) => `${day} — ${cal} kcal (${diff} kcal from goal)`,
+    closestOnTrack: (day: string, cal: string) => `${day}, ${cal} kcal ✓ On track!`,
+    closestOff: (day: string, cal: string, diff: string) => `${day}, ${cal} kcal (${diff} kcal from goal)`,
     consistency: "Consistency",
     daysLoggedOf7: (n: number) => `${n}/7 days logged`,
     logged: "Logged",
@@ -626,7 +626,7 @@ export const en = {
   },
 
   auth: {
-    tagline: "Your AI meal companion — scan your food, get advice, eat right for you.",
+    tagline: "Your AI meal companion, scan your food, get advice, eat right for you.",
     email: "Email",
     emailPlaceholder: "you@example.com",
     password: "Password",
@@ -653,7 +653,7 @@ export const en = {
     passwordChecklistUpper: "One uppercase letter",
     passwordChecklistNumber: "One number",
     passwordChecklistLength: "At least 6 characters",
-    // Forgot password — step titles/subtitles
+    // Forgot password, step titles/subtitles
     forgotTitle: "Forgot Password",
     forgotSubtitle: "Enter your email to receive an OTP.",
     otpTitle: "Enter OTP",

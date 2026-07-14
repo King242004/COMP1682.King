@@ -165,7 +165,7 @@ export function WeightSection() {
           <View style={styles.summaryCol}>
             <AppText variant="subtle" style={styles.summaryLabel}>{t.weight.current}</AppText>
             <View style={styles.baseline}>
-              <AppText variant="h0" style={styles.currentKg}>{current ?? "—"}</AppText>
+              <AppText variant="h0" style={styles.currentKg}>{current ?? "-"}</AppText>
               {current != null && <AppText variant="muted" style={styles.kgUnit}>kg</AppText>}
             </View>
           </View>
@@ -176,7 +176,7 @@ export function WeightSection() {
               <Ionicons name="pencil" size={11} color={theme.colors.subtle} />
             </View>
             <View style={styles.baseline}>
-              <AppText variant="h0" style={styles.targetKg}>{target ?? "—"}</AppText>
+              <AppText variant="h0" style={styles.targetKg}>{target ?? "-"}</AppText>
               {target != null && <AppText variant="muted" style={styles.kgUnit}>kg</AppText>}
             </View>
           </Pressable>

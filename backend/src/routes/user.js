@@ -9,7 +9,7 @@ const otpLimiter = rateLimit({
   limit: 10,
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  message: { message: "Too many attempts — please try again later." },
+  message: { message: "Too many attempts. Please try again later." },
 });
 const { uploadAvatar, sendPasswordOTP, verifyOTP, resetPassword, changeName, changePassword } = require("../controllers/userController");
 const protect = require("../middleware/auth");

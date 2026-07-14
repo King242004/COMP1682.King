@@ -150,7 +150,7 @@ export default function ProgressScreen() {
             {/* Stats row */}
             <View style={styles.statsRow}>
               <Card style={styles.statCard}>
-                <AppText variant="h2" style={styles.statPrimary}>{avgCalories > 0 ? avgCalories.toLocaleString() : "—"}</AppText>
+                <AppText variant="h2" style={styles.statPrimary}>{avgCalories > 0 ? avgCalories.toLocaleString() : "-"}</AppText>
                 <AppText variant="subtle" style={styles.statLabel}>{t.progress.avgKcalDay}</AppText>
               </Card>
               <Card style={styles.statCard}>
@@ -262,7 +262,7 @@ export default function ProgressScreen() {
                           : day.onTrack ? theme.colors.accent
                           : theme.colors.primary,
                       }]}>
-                        {day.calories > 0 ? `${day.calories.toLocaleString()} ${t.common.kcal}` : "—"}
+                        {day.calories > 0 ? `${day.calories.toLocaleString()} ${t.common.kcal}` : "-"}
                       </AppText>
                       {day.calories > 0 && (
                         <AppText variant="subtle" style={styles.summaryDelta}>

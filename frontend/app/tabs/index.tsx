@@ -375,7 +375,7 @@ export default function HomeScreen() {
                       onPress={() => router.push({ pathname: "/meals/add", params: { mealType: mt.key, date: selectedDate } })}
                       hitSlop={8}
                       accessibilityRole="button"
-                      accessibilityLabel={`${t.a11y.addMeal} — ${t.labels.mealType[mt.key]}`}
+                      accessibilityLabel={`${t.a11y.addMeal}, ${t.labels.mealType[mt.key]}`}
                       style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
                     >
                       <Ionicons name="add" size={17} color={theme.colors.primary} />

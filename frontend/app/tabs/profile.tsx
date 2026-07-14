@@ -120,12 +120,12 @@ export default function ProfileScreen() {
         {stats && (
           <View style={styles.statsStrip}>
             <Card style={styles.statCard}>
-              <AppText variant="h0" style={styles.statValue}>{stats.bmi ?? "—"}</AppText>
+              <AppText variant="h0" style={styles.statValue}>{stats.bmi ?? "-"}</AppText>
               <AppText variant="subtle" style={styles.statLabel}>{t.profile.bmi}</AppText>
               {stats.bmiCategory && <AppText variant="subtle" style={styles.statSub}>{stats.bmiCategory}</AppText>}
             </Card>
             <Card style={styles.statCard}>
-              <AppText variant="h0" style={styles.statValue}>{stats.tdee ?? "—"}</AppText>
+              <AppText variant="h0" style={styles.statValue}>{stats.tdee ?? "-"}</AppText>
               <AppText variant="subtle" style={styles.statLabel}>{t.profile.tdee}</AppText>
             </Card>
             <Card style={styles.statCard}>
@@ -138,14 +138,14 @@ export default function ProfileScreen() {
         {/* Health details */}
         <SectionLabel>{t.profile.healthDetails}</SectionLabel>
         <Card style={styles.detailCard}>
-          <SettingRow icon="person" label={t.profile.gender} value={user?.gender ?? "—"} />
-          <SettingRow icon="calendar" label={t.profile.age} value={user?.age ? t.profile.ageValue(user.age) : "—"} />
-          <SettingRow icon="scale" label={t.profile.weight} value={user?.weight ? t.profile.weightValue(user.weight) : "—"} />
-          <SettingRow icon="resize" label={t.profile.height} value={user?.height ? t.profile.heightValue(user.height) : "—"} />
-          <SettingRow icon="flag" label={t.profile.goal} value={t.labels.goal[user?.goal ?? ""] ?? "—"} />
-          <SettingRow icon="walk" label={t.profile.activity} value={t.labels.activity[user?.activityLevel ?? ""] ?? "—"} />
+          <SettingRow icon="person" label={t.profile.gender} value={user?.gender ?? "-"} />
+          <SettingRow icon="calendar" label={t.profile.age} value={user?.age ? t.profile.ageValue(user.age) : "-"} />
+          <SettingRow icon="scale" label={t.profile.weight} value={user?.weight ? t.profile.weightValue(user.weight) : "-"} />
+          <SettingRow icon="resize" label={t.profile.height} value={user?.height ? t.profile.heightValue(user.height) : "-"} />
+          <SettingRow icon="flag" label={t.profile.goal} value={t.labels.goal[user?.goal ?? ""] ?? "-"} />
+          <SettingRow icon="walk" label={t.profile.activity} value={t.labels.activity[user?.activityLevel ?? ""] ?? "-"} />
           <SettingRow icon="heart" label={t.profile.conditions} value={user?.conditions?.length ? user.conditions.map((c) => t.labels.condition[c] ?? c).join(", ") : t.profile.none} />
-          <SettingRow icon="restaurant" label={t.profile.taste} value={user?.tastePreferences?.trim() ? user.tastePreferences : "—"} last />
+          <SettingRow icon="restaurant" label={t.profile.taste} value={user?.tastePreferences?.trim() ? user.tastePreferences : "-"} last />
         </Card>
 
         {/* Account */}
