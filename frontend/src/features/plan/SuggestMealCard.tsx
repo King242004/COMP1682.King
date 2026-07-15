@@ -17,6 +17,7 @@ import {
 } from "@/features/plan/suggest";
 import type { PlanMeal } from "@/features/plan/api";
 import { todayKey } from "@/utils/date";
+import { aiResetWhen } from "@/utils/aiQuota";
 import { resolveLanguage } from "@/utils/language";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -58,7 +59,7 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
       setSuggest(fresh);
       cacheSuggestions(dateKey, currentSlot, lang, fresh);
     } catch (e: any) {
-      setError(e?.message === "QUOTA" ? t.plan.suggestQuota : t.plan.suggestErr);
+      setError(e?.message === "QUOTA" ? t.plan.suggestQuota(aiResetWhen(t)) : t.plan.suggestErr);
     } finally {
       setLoading(false);
     }

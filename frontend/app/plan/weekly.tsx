@@ -29,6 +29,7 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { dateKey } from "@/utils/date";
+import { aiResetWhen } from "@/utils/aiQuota";
 
 
 // Monday of the week containing `base`, shifted by `weekOffset` weeks
@@ -185,7 +186,7 @@ export default function MealPlanScreen() {
       await load();
     } catch (e: any) {
       const quota = /quota/i.test(String(e?.message || ""));
-      Alert.alert(L.error, quota ? L.quota : L.genErr);
+      Alert.alert(L.error, quota ? L.quota(aiResetWhen(t)) : L.genErr);
     } finally {
       setGenerating(false);
     }
@@ -213,7 +214,7 @@ export default function MealPlanScreen() {
       setGroceryVisible(true);
     } catch (e: any) {
       const quota = /quota/i.test(String(e?.message || ""));
-      Alert.alert(L.error, quota ? L.quota : L.groceryErr);
+      Alert.alert(L.error, quota ? L.quota(aiResetWhen(t)) : L.groceryErr);
     } finally {
       setGroceryLoading(false);
     }

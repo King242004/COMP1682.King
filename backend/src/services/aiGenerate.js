@@ -5,7 +5,11 @@ async function generateWithFallback(models, payload) {
   let lastErr;
   for (const model of models) {
     try {
-      return await model.generateContent(payload);
+      const result = await model.generateContent(payload);
+      // Succeeded on a BACKUP key → the primary key's quota is exhausted.
+      // Callers may surface this as a "free AI turns running low" hint.
+      result.aiQuotaLow = (model.__keyIndex ?? 0) > 0;
+      return result;
     } catch (e) {
       lastErr = e;
       console.warn("AI model failed, trying next:", String(e?.message || "").slice(0, 140));

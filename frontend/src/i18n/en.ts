@@ -33,6 +33,8 @@ export const en = {
     checkConnection: "Check your connection and try again.",
     kcal: "kcal",
     errorTitle: "Error",
+    // Gemini free quota resets at a FIXED daily mark (midnight Pacific)
+    aiResetAt: (time: string, isToday: boolean) => `around ${time} ${isToday ? "today" : "tomorrow"}`,
   },
 
   home: {
@@ -76,7 +78,7 @@ export const en = {
     cancel: "Cancel",
     grocery: "🛒 Grocery list",
     groceryLoading: "AI is building your list...",
-    quota: "Out of free AI quota today, try again later.",
+    quota: (when: string) => `Out of free AI turns for today. New turns arrive ${when}.`,
     genErr: "Couldn't generate the plan. Please try again.",
     groceryErr: "Couldn't build the list. Please try again.",
     error: "Error",
@@ -104,7 +106,7 @@ export const en = {
     whatToEat: "What should I eat now?",
     suggestPill: "Suggest",
     add: "Add",
-    suggestQuota: "Out of AI requests for today, try again later.",
+    suggestQuota: (when: string) => `Out of AI turns for today. New turns arrive ${when}.`,
     suggestErr: "Couldn't get suggestions. Please try again.",
     slotShort: { breakfast: "breakfast", lunch: "lunch", dinner: "dinner", snack: "snack" } as Record<string, string>,
     altFor: (name: string, kcal: string) => `Alternatives to ${name} · ${kcal} kcal left`,
@@ -176,7 +178,8 @@ export const en = {
     error: "Error",
     suggestions: ["What should I eat tonight?", "How to cook healthy chicken breast", "What workout suits me?"],
     mealShort: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" } as Record<string, string>,
-    quotaMsg: "Out of free AI quota today, please try again later.",
+    quotaMsg: (when: string) => `I'm out of free AI turns for today. New turns arrive ${when}, see you then!`,
+    quotaLowBanner: "⚡ Free AI turns are running low today",
     replyFail: "Sorry, I couldn't respond right now. Please try again.",
     askTip: (tip: string) => `Tell me more about this: "${tip}"`,
     healthScore: "Health Score",

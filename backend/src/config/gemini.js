@@ -30,11 +30,20 @@ const clients = KEYS.map((k) => new GoogleGenerativeAI(k));
 // flash quota is exhausted.
 const TEXT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
 const VISION_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
+// Chat quality must stay CONSISTENT (health advice) → no lite fallback here.
+// gemini-flash-latest is an alias of the newest flash, so quality is identical.
+const CHAT_MODELS = ["gemini-2.5-flash", "gemini-flash-latest"];
 
 // Build one model instance for every (key × model name) combo, in order.
+// __keyIndex marks WHICH key the instance belongs to: when a request only
+// succeeds on key 2+, the primary quota is exhausted → "running low" signal.
 function buildModels(names, generationConfig) {
-  return clients.flatMap((client) =>
-    names.map((model) => client.getGenerativeModel({ model, generationConfig }))
+  return clients.flatMap((client, keyIndex) =>
+    names.map((model) => {
+      const m = client.getGenerativeModel({ model, generationConfig });
+      m.__keyIndex = keyIndex;
+      return m;
+    })
   );
 }
 
@@ -50,6 +59,6 @@ const visionModels = buildModels(VISION_MODELS, { temperature: 0.2, responseMime
 const insightModels = buildModels(TEXT_MODELS, { temperature: 0.3, responseMimeType: "application/json", ...NO_THINKING });
 
 // Coach conversation — JSON { reply, meal } (also handles attached food photos).
-const chatModels = buildModels(TEXT_MODELS, { temperature: 0.75, responseMimeType: "application/json" });
+const chatModels = buildModels(CHAT_MODELS, { temperature: 0.75, responseMimeType: "application/json" });
 
 module.exports = { visionModels, insightModels, chatModels };
