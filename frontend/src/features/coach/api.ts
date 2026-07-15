@@ -59,7 +59,7 @@ export async function chatWithCoach(
   history: ChatMessage[],
   language: Lang,
   image?: { base64: string; mimeType: string }
-): Promise<{ reply: string; meal: SuggestedMeal | null; eating: boolean; messageId: string | null }> {
+): Promise<{ reply: string; meal: SuggestedMeal | null; eating: boolean; messageId: string | null; aiQuotaLow: boolean }> {
   // Only send role+text of history (strip local image uris). Image sent as base64.
   const slimHistory = history.map((h) => ({ role: h.role, text: h.text }));
   const data = await apiRequest(
@@ -68,7 +68,14 @@ export async function chatWithCoach(
     { message, history: slimHistory, language, image: image?.base64, mimeType: image?.mimeType },
     token
   );
-  return { reply: stripMarkdown(data.reply || ""), meal: data.meal || null, eating: !!data.eating, messageId: data.messageId || null };
+  return {
+    reply: stripMarkdown(data.reply || ""),
+    meal: data.meal || null,
+    eating: !!data.eating,
+    messageId: data.messageId || null,
+    // Reply came from a BACKUP key → today's free quota is running low
+    aiQuotaLow: !!data.aiQuotaLow,
+  };
 }
 
 // Log the meal suggested in a coach message (persisted server-side). Returns the created meal id.

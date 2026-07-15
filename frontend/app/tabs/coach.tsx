@@ -25,6 +25,7 @@ import { TypingDots } from "@/features/coach/TypingDots";
 import { InsightCard } from "@/features/coach/InsightCard";
 import { ChatBubble } from "@/features/coach/ChatBubble";
 import { todayKey, dateKey } from "@/utils/date";
+import { aiResetWhen } from "@/utils/aiQuota";
 import { resolveLanguage } from "@/utils/language";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -50,6 +51,9 @@ export default function CoachTab() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingImage, setPendingImage] = useState<{ uri: string; base64: string } | null>(null);
+  // True once a reply had to come from a backup API key → show the slim
+  // "free AI turns running low" strip (real signal, not a guess)
+  const [quotaLow, setQuotaLow] = useState(false);
 
   // Pick a food photo from camera or library, then compress to base64
   const pickImage = async (source: "camera" | "library") => {
@@ -139,12 +143,13 @@ export default function CoachTab() {
     setSending(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     try {
-      const { reply, meal, eating, messageId } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
+      const { reply, meal, eating, messageId, aiQuotaLow } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
+      if (aiQuotaLow) setQuotaLow(true);
       setMessages((prev) => [...prev, { id: messageId ?? undefined, role: "coach", text: reply, meal, eating, createdAt: new Date().toISOString() }]);
     } catch (e: any) {
       const quota = /quota/i.test(String(e?.message || ""));
       const errText = quota
-        ? t.coach.quotaMsg
+        ? t.coach.quotaMsg(aiResetWhen(t))
         : t.coach.replyFail;
       setMessages((prev) => [...prev, { role: "coach", text: errText, createdAt: new Date().toISOString() }]);
     } finally {
@@ -267,6 +272,13 @@ export default function CoachTab() {
             </Pressable>
           )}
         </View>
+
+        {/* Slim heads-up when today's free AI quota is running low (backup key in use) */}
+        {quotaLow && (
+          <View style={styles.quotaLowStrip}>
+            <AppText style={styles.quotaLowText}>{t.coach.quotaLowBanner}</AppText>
+          </View>
+        )}
 
         <View style={styles.chatArea}>
         <ScrollView
@@ -445,6 +457,12 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10, padding: 10,
   },
+  quotaLowStrip: {
+    backgroundColor: "rgba(255,138,61,0.10)",
+    borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10,
+    marginBottom: theme.space.sm,
+  },
+  quotaLowText: { fontSize: 11, fontWeight: "600", color: theme.colors.accent2, textAlign: "center" },
   disclaimerText: { fontSize: 11, flex: 1 },
 
   typingBubble: {

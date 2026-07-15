@@ -238,8 +238,9 @@ Always read the history first so repeated or follow-up questions feel natural, n
       { user: req.user.id, role: "coach", text: reply, meal: meal || null, mealEating: eating },
     ]);
 
-    // messageId of the coach turn lets the app log/undo the suggested meal later
-    res.json({ reply, meal, eating, image: imageUrl, messageId: docs[1]._id });
+    // messageId of the coach turn lets the app log/undo the suggested meal later.
+    // aiQuotaLow: reply came from a backup key → free quota is running low.
+    res.json({ reply, meal, eating, image: imageUrl, messageId: docs[1]._id, aiQuotaLow: result.aiQuotaLow || undefined });
   } catch (err) {
     console.error("Coach chat error:", err.message);
     // Distinguish "out of quota" (429) so the app can show a clearer message.
