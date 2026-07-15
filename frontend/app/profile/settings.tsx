@@ -28,9 +28,27 @@ function IconBox({ icon, bg, color }: { icon: string; bg?: string; color?: strin
 }
 
 export default function SettingsScreen() {
-  const { user, token, updateProfile } = useAuth();
+  const { user, token, updateProfile, deleteAccount } = useAuth();
   const router = useRouter();
   const t = useT();
+
+  // Delete account (right to erasure): password-confirmed modal
+  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [deletePw, setDeletePw] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const handleDeleteAccount = async () => {
+    if (!deletePw || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteAccount(deletePw);
+      setDeleteVisible(false);
+      router.replace("/auth/login");
+    } catch (e: any) {
+      Alert.alert(t.common.errorTitle, e.message || t.settings.deleteFailed);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const [reminderOn, setReminderOn] = useState(false);
   // Reminder time is a user choice now (was hardcoded 19:00)
@@ -357,9 +375,62 @@ export default function SettingsScreen() {
           </View>
         </Card>
 
+        {/* YOUR DATA — transparency notice + right to erasure */}
+        <SectionLabel>{t.settings.dataSection}</SectionLabel>
+        <Card style={styles.card}>
+          <AppText variant="subtle" style={styles.dataNotice}>{t.settings.dataNotice}</AppText>
+          <Pressable
+            onPress={() => { setDeletePw(""); setDeleteVisible(true); }}
+            style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}
+          >
+            <IconBox icon="trash" bg="rgba(229,72,77,0.10)" color={theme.colors.danger} />
+            <View style={styles.rowText}>
+              <AppText variant="body2" style={styles.deleteTitle}>{t.settings.deleteAccount}</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>{t.settings.deleteAccountSub}</AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
+          </Pressable>
+        </Card>
+
         {/* ABOUT */}
         <AppText variant="subtle" style={styles.version}>MealMate · v1.0.0</AppText>
       </ScrollView>
+
+      {/* Delete-account confirm: warning + password (destructive, cannot be undone) */}
+      <Modal transparent visible={deleteVisible} animationType="fade" onRequestClose={() => !deleting && setDeleteVisible(false)}>
+        <Pressable style={styles.backdrop} onPress={() => !deleting && setDeleteVisible(false)}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <Card style={styles.timeCard}>
+              <View style={styles.timeHead}>
+                <AppText variant="h2" style={styles.deleteTitle}>{t.settings.deleteConfirmTitle}</AppText>
+                <AppText variant="muted" style={styles.rowSub}>{t.settings.deleteConfirmMsg}</AppText>
+              </View>
+              <TextField
+                label={t.settings.currentPassword}
+                placeholder="••••••••"
+                value={deletePw}
+                onChangeText={setDeletePw}
+                secureTextEntry
+                textContentType="password"
+              />
+              <View style={styles.timeActions}>
+                <View style={styles.flex1}>
+                  <Button title={t.common.cancel} variant="secondary" onPress={() => setDeleteVisible(false)} disabled={deleting} />
+                </View>
+                <View style={styles.flex1}>
+                  <Pressable
+                    onPress={handleDeleteAccount}
+                    disabled={!deletePw || deleting}
+                    style={({ pressed }) => [styles.deleteBtn, (!deletePw || deleting) && styles.deleteBtnDisabled, pressed && styles.dim]}
+                  >
+                    <AppText style={styles.deleteBtnText}>{deleting ? t.settings.deleting : t.settings.deleteForever}</AppText>
+                  </Pressable>
+                </View>
+              </View>
+            </Card>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Reminder-time input (24h HH:MM) */}
       <Modal transparent visible={timeModalVisible} animationType="fade" onRequestClose={() => setTimeModalVisible(false)}>
@@ -433,4 +504,15 @@ const styles = StyleSheet.create({
   langBtnTextActive: { color: theme.colors.primary },
 
   version: { textAlign: "center", fontSize: 11, marginTop: 4 },
+
+  // Your data + delete account
+  dataNotice: { fontSize: 12, lineHeight: 18, paddingTop: theme.space.md },
+  deleteTitle: { fontWeight: "600", color: theme.colors.danger },
+  deleteBtn: {
+    height: 48, borderRadius: theme.radius.button,
+    backgroundColor: theme.colors.danger,
+    alignItems: "center", justifyContent: "center",
+  },
+  deleteBtnDisabled: { backgroundColor: theme.colors.border },
+  deleteBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 });

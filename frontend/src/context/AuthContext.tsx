@@ -51,6 +51,7 @@ type AuthContextType = {
   updateProfile: (data: ProfileUpdate) => Promise<void>;
   changeName: (name: string) => Promise<void>;
   uploadAvatar: (localUri: string) => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -162,6 +163,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("user", JSON.stringify({ ...user, ...res.user }));
   };
 
+  // Permanently deletes the account + ALL server-side data (password-confirmed),
+  // then clears local state exactly like a logout.
+  const deleteAccount = async (password: string) => {
+    if (!token) return;
+    await apiRequest("/user/account", "DELETE", { password }, token);
+    await logout();
+  };
+
   // Avatar upload uses multipart/form-data (image file), NOT JSON like other endpoints
   // So we bypass apiRequest helper and call fetch directly
   const uploadAvatar = async (localUri: string) => {
@@ -193,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, stats, token, isLoading, login, register, logout, fetchProfile, updateProfile, changeName, uploadAvatar }}>
+    <AuthContext.Provider value={{ user, stats, token, isLoading, login, register, logout, fetchProfile, updateProfile, changeName, uploadAvatar, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );
