@@ -1,6 +1,7 @@
 const { insightModels, chatModels } = require("../config/gemini");
 const { generateWithFallback } = require("../services/aiGenerate");
 const { buildContext, contextToText, CONDITION_GUIDE } = require("../services/coachContext");
+const { filterDishes } = require("../services/conditionFilter");
 const { computeHealthScore } = require("../services/healthScore");
 const ChatMessage = require("../models/ChatMessage");
 const Meal = require("../models/Meal");
@@ -301,9 +302,8 @@ Return ONLY valid JSON:
 
     const result = await generateWithFallback(insightModels, prompt);
     const parsed = JSON.parse(result.response.text());
-    const suggestions = (Array.isArray(parsed.suggestions) ? parsed.suggestions : [])
+    const mapped = (Array.isArray(parsed.suggestions) ? parsed.suggestions : [])
       .filter((s) => s && s.name && s.calories != null)
-      .slice(0, 3)
       .map((s) => ({
         name: String(s.name).trim(),
         calories: Math.max(0, Math.round(Number(s.calories) || 0)),
@@ -312,6 +312,12 @@ Return ONLY valid JSON:
         fat: Math.max(0, Math.round(Number(s.fat) || 0)),
         reason: String(s.reason || "").trim(),
       }));
+    // Layer-2 safety: drop any dish that violates the user's health conditions
+    // (the prompt is layer 1 — this makes it deterministic)
+    const { kept, removed } = filterDishes(mapped, ctx.profile.conditions);
+    if (removed.length)
+      console.warn("Suggest condition-filter removed:", removed.map((r) => `${r.name} (${r.condition})`).join(", "));
+    const suggestions = kept.slice(0, 3);
     if (!suggestions.length) throw new Error("Empty suggestions from AI");
 
     res.json({ mealType: slot, remaining, suggestions });

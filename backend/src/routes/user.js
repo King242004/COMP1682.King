@@ -11,7 +11,7 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many attempts. Please try again later." },
 });
-const { uploadAvatar, sendPasswordOTP, verifyOTP, resetPassword, changeName, changePassword } = require("../controllers/userController");
+const { uploadAvatar, sendPasswordOTP, verifyOTP, resetPassword, changeName, changePassword, deleteAccount } = require("../controllers/userController");
 const protect = require("../middleware/auth");
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
@@ -81,6 +81,17 @@ router.put("/name", protect, changeName);
  *       200: { description: Changed }
  */
 router.post("/change-password", protect, changePassword);
+
+/**
+ * @swagger
+ * /user/account:
+ *   delete:
+ *     summary: Permanently delete the account and all user data (requires password)
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete("/account", protect, deleteAccount);
 
 /**
  * @swagger

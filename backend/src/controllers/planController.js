@@ -5,6 +5,7 @@ const User = require("../models/User");
 const { insightModels } = require("../config/gemini");
 const { generateWithFallback } = require("../services/aiGenerate");
 const { CONDITION_GUIDE } = require("../services/coachContext");
+const { filterDishes } = require("../services/conditionFilter");
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
@@ -150,17 +151,23 @@ Return ONLY valid JSON:
         workoutDocs.push({ user: req.user.id, date: day.date, text: String(day.workout).trim().slice(0, 200) });
       }
     }
-    if (mealDocs.length === 0)
+    // Layer-2 safety: deterministically drop any dish that violates the user's
+    // health conditions (the prompt is layer 1 — this guarantees it)
+    const { kept: safeMealDocs, removed } = filterDishes(mealDocs, user?.conditions || []);
+    if (removed.length)
+      console.warn("Plan condition-filter removed:", removed.map((r) => `${r.name} (${r.condition})`).join(", "));
+
+    if (safeMealDocs.length === 0)
       return res.status(500).json({ message: "AI plan came back empty. Please try again." });
 
     // Replace the whole week (user confirmed in the app before calling this)
     const range = { user: req.user.id, date: { $gte: startDate, $lte: endDate } };
     await PlanMeal.deleteMany(range);
     await PlanWorkout.deleteMany(range);
-    await PlanMeal.insertMany(mealDocs);
+    await PlanMeal.insertMany(safeMealDocs);
     if (workoutDocs.length) await PlanWorkout.insertMany(workoutDocs);
 
-    res.json({ message: "Plan generated.", meals: mealDocs.length, workouts: workoutDocs.length });
+    res.json({ message: "Plan generated.", meals: safeMealDocs.length, workouts: workoutDocs.length });
   } catch (err) {
     console.error("Plan generate error:", err.message);
     const quota = /429|quota|rate limit|too many requests/i.test(String(err.message || ""));

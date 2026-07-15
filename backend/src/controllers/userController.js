@@ -3,6 +3,14 @@ const cloudinary = require("../config/cloudinary");
 const { sendOTP } = require("../config/mailer");
 const User = require("../models/User");
 const OTP = require("../models/OTP");
+const Meal = require("../models/Meal");
+const Exercise = require("../models/Exercise");
+const PlanMeal = require("../models/PlanMeal");
+const PlanWorkout = require("../models/PlanWorkout");
+const WeightLog = require("../models/WeightLog");
+const Post = require("../models/Post");
+const Follow = require("../models/Follow");
+const ChatMessage = require("../models/ChatMessage");
 
 // ─── Upload Avatar ────────────────────────────────────────────────────────────
 // upload_stream is callback-based (it returns a stream, NOT a promise) — wrap it
@@ -145,6 +153,48 @@ exports.changePassword = async (req, res) => {
   await user.save();
 
   res.json({ message: "Password changed successfully." });
+};
+
+// ─── Delete Account (right to erasure) ────────────────────────────────────────
+// Permanently removes the user and EVERY piece of their data. Requires the
+// current password so a stolen unlocked phone can't wipe the account.
+exports.deleteAccount = async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ message: "Password is required." });
+
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ message: "User not found." });
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(400).json({ message: "Password is incorrect." });
+
+  const uid = req.user.id;
+
+  // Best-effort Cloudinary cleanup (post + chat images that carry a publicId)
+  const [posts, chats] = await Promise.all([
+    Post.find({ user: uid }).select("imagePublicId"),
+    ChatMessage.find({ user: uid }).select("imagePublicId"),
+  ]);
+  const publicIds = [...posts, ...chats].map((d) => d.imagePublicId).filter(Boolean);
+  await Promise.allSettled(publicIds.map((id) => cloudinary.uploader.destroy(id)));
+
+  // Purge every collection that references this user
+  await Promise.all([
+    Meal.deleteMany({ user: uid }),
+    Exercise.deleteMany({ user: uid }),
+    PlanMeal.deleteMany({ user: uid }),
+    PlanWorkout.deleteMany({ user: uid }),
+    WeightLog.deleteMany({ user: uid }),
+    Post.deleteMany({ user: uid }),
+    ChatMessage.deleteMany({ user: uid }),
+    Follow.deleteMany({ $or: [{ follower: uid }, { following: uid }] }),
+    // Their likes/saves on OTHER people's posts
+    Post.updateMany({}, { $pull: { likes: uid, saves: uid } }),
+    OTP.deleteMany({ email: user.email }),
+  ]);
+
+  await user.deleteOne();
+  res.json({ message: "Account deleted." });
 };
 
 // ─── Change Name ──────────────────────────────────────────────────────────────
