@@ -30,11 +30,12 @@ function sumMacros(meals) {
 async function buildContext(userId, date) {
   // Independent queries — run in parallel to keep AI endpoints snappy
   const weekStart = shiftDate(date, -6); // last 7 days (incl. `date`)
-  const [user, todayMeals, todayExercises, weekMeals, weightLogs] = await Promise.all([
+  const [user, todayMeals, todayExercises, weekMeals, weekExercises, weightLogs] = await Promise.all([
     User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal customGoal tastePreferences targetWeight"),
     Meal.find({ user: userId, date }).sort({ createdAt: 1 }),
     Exercise.find({ user: userId, date }).sort({ createdAt: 1 }),
     Meal.find({ user: userId, date: { $gte: weekStart, $lte: date } }),
+    Exercise.find({ user: userId, date: { $gte: weekStart, $lte: date } }),
     WeightLog.find({ user: userId }).sort({ date: -1 }).limit(10), // newest first
   ]);
 
@@ -43,6 +44,10 @@ async function buildContext(userId, date) {
   const loggedDays = new Set(weekMeals.map((m) => m.date));
   const weekTotals = sumMacros(weekMeals);
   const avgCalories = loggedDays.size > 0 ? Math.round(weekTotals.calories / loggedDays.size) : 0;
+  // Week workout picture — without it the coach answers "is my training enough?"
+  // blind (it only saw TODAY's workouts before)
+  const activeDays = new Set(weekExercises.map((e) => e.date)).size;
+  const weekBurned = weekExercises.reduce((s, e) => s + e.caloriesBurned, 0);
 
   return {
     profile: {
@@ -99,6 +104,9 @@ async function buildContext(userId, date) {
     week: {
       loggedDays: loggedDays.size,
       avgCalories,
+      workouts: weekExercises.length,
+      activeDays,
+      burnedKcal: weekBurned,
     },
   };
 }
@@ -144,7 +152,8 @@ Net calories (eaten - burned): ${t.totals.calories - t.totalBurned} kcal
 
 LAST 7 DAYS
 - Days logged: ${ctx.week.loggedDays}/7
-- Average calories on logged days: ${ctx.week.avgCalories} kcal`;
+- Average calories on logged days: ${ctx.week.avgCalories} kcal
+- Workouts: ${ctx.week.workouts} session(s) across ${ctx.week.activeDays} day(s), ${ctx.week.burnedKcal} kcal burned total`;
 }
 
 // One-line dietary guidance per supported condition — the SINGLE source every
