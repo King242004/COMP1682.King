@@ -60,8 +60,11 @@ export async function chatWithCoach(
   language: Lang,
   image?: { base64: string; mimeType: string }
 ): Promise<{ reply: string; meal: SuggestedMeal | null; eating: boolean; messageId: string | null; aiQuotaLow: boolean }> {
-  // Only send role+text of history (strip local image uris). Image sent as base64.
-  const slimHistory = history.map((h) => ({ role: h.role, text: h.text }));
+  // Sliding window: the AI only needs recent conversational flow — durable
+  // facts (profile, conditions, meals...) are re-grounded from the DB every
+  // request anyway. Sending ALL 100 loaded messages just bloats tokens/latency.
+  // Only role+text is sent (local image uris stripped). Image goes as base64.
+  const slimHistory = history.slice(-16).map((h) => ({ role: h.role, text: h.text }));
   const data = await apiRequest(
     "/coach/chat",
     "POST",
