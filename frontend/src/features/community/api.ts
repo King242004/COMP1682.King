@@ -4,7 +4,7 @@ export type FeedPost = {
   id: string;
   caption: string;
   image: string | null;   // first image (legacy readers / grid tile)
-  images: string[];       // all images, Instagram-style (max 5)
+  images: string[];       // all images, Instagram-style (max 10)
   meal: { name: string; calories: number; protein: number; carbs: number; fat: number } | null;
   likeCount: number;
   isLiked: boolean;
@@ -119,7 +119,7 @@ export async function createPost(
     form.append("carbs", String(input.meal.carbs));
     form.append("fat", String(input.meal.fat));
   }
-  for (const uri of (input.imageUris || []).slice(0, 5)) {
+  for (const uri of (input.imageUris || []).slice(0, 10)) {
     const filename = uri.split("/").pop() || "post.jpg";
     const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
     form.append("images", { uri, name: filename, type: ext === "png" ? "image/png" : "image/jpeg" } as any);

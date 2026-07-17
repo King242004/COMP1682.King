@@ -60,7 +60,7 @@ exports.createPost = async (req, res) => {
   let images = [];
   try {
     // Sequential upload keeps memory flat (each file is a buffer in RAM)
-    for (const f of files.slice(0, 5)) {
+    for (const f of files.slice(0, 10)) {
       images.push(await uploadToCloudinary(f.buffer));
     }
   } catch {
