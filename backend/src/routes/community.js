@@ -41,7 +41,8 @@ router.use(protect);
  *     responses:
  *       201: { description: Post created }
  */
-router.post("/posts", upload.single("image"), createPost);
+// Instagram-style: up to 5 images per post
+router.post("/posts", upload.array("images", 5), createPost);
 
 /**
  * @swagger
@@ -120,7 +121,8 @@ router.delete("/posts/:id", deletePost);
  *               removeMeal: { type: boolean }
  *     responses: { 200: { description: Post updated } }
  */
-router.patch("/posts/:id", upload.single("image"), updatePost);
+// Edits touch caption/meal only (photos are fixed at post time) → plain JSON
+router.patch("/posts/:id", updatePost);
 
 /**
  * @swagger

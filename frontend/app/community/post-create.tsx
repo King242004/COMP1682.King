@@ -22,13 +22,15 @@ export default function PostCreateScreen() {
   const t = useT();
 
   const [caption, setCaption] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUris, setImageUris] = useState<string[]>([]); // Instagram-style, max 5
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [posting, setPosting] = useState(false);
 
   useEffect(() => { fetchMealHistory(); }, []);
 
-  const pickImage = async () => {
+  const MAX_IMAGES = 5;
+
+  const pickImages = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert(t.profile.permissionNeeded, t.community.photoPermPost);
@@ -37,16 +39,19 @@ export default function PostCreateScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
       quality: 0.7,
-      allowsEditing: true,
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_IMAGES - imageUris.length,
     });
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      // Compress once at pick time (1024px / 0.5 jpeg — same pipeline as scan):
-      // a full-res phone photo is 3-8 MB, needless upload + Cloudinary cost
-      setImageUri(await compressImage(result.assets[0].uri));
-    }
+    if (result.canceled || !result.assets?.length) return;
+    // Compress each at pick time (1024px / 0.5 jpeg — same pipeline as scan):
+    // full-res phone photos are 3-8 MB each, needless upload + Cloudinary cost
+    const compressed = await Promise.all(result.assets.map((a) => compressImage(a.uri)));
+    setImageUris((prev) => [...prev, ...compressed].slice(0, MAX_IMAGES));
   };
 
-  const canPost = (caption.trim().length > 0 || imageUri || selectedMeal) && !posting;
+  const removeImage = (uri: string) => setImageUris((prev) => prev.filter((u) => u !== uri));
+
+  const canPost = (caption.trim().length > 0 || imageUris.length > 0 || selectedMeal) && !posting;
 
   const handlePost = async () => {
     if (!token || !canPost) return;
@@ -54,7 +59,7 @@ export default function PostCreateScreen() {
     try {
       await createPost(token, {
         caption: caption.trim(),
-        imageUri,
+        imageUris,
         meal: selectedMeal
           ? {
               name: selectedMeal.name,
@@ -100,18 +105,29 @@ export default function PostCreateScreen() {
           <AppText variant="subtle" style={styles.charCount}>{caption.length}/500</AppText>
         </Card>
 
-        {/* Image */}
-        {imageUri ? (
-          <View style={styles.imageBox}>
-            <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
-            <Pressable onPress={() => setImageUri(null)} style={styles.removeImageBtn}>
-              <Ionicons name="close" size={20} color="#fff" />
-            </Pressable>
-          </View>
+        {/* Images — Instagram-style strip: thumbnails with a per-image ✕ and an
+            "add more" tile while under the 5-image cap */}
+        {imageUris.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbRow}>
+            {imageUris.map((uri) => (
+              <View key={uri} style={styles.thumbBox}>
+                <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
+                <Pressable onPress={() => removeImage(uri)} hitSlop={6} style={styles.removeImageBtn}>
+                  <Ionicons name="close" size={14} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+            {imageUris.length < MAX_IMAGES && (
+              <Pressable onPress={pickImages} style={styles.addThumb}>
+                <Ionicons name="add" size={26} color={theme.colors.subtle} />
+                <AppText variant="subtle" style={styles.addThumbCount}>{imageUris.length}/{MAX_IMAGES}</AppText>
+              </Pressable>
+            )}
+          </ScrollView>
         ) : (
-          <Pressable onPress={pickImage}>
+          <Pressable onPress={pickImages}>
             <Card style={styles.addPhotoCard}>
-              <Ionicons name="image-outline" size={32} color={theme.colors.subtle} />
+              <Ionicons name="images-outline" size={32} color={theme.colors.subtle} />
               <AppText variant="muted">{t.community.addPhoto}</AppText>
             </Card>
           </Pressable>
@@ -153,12 +169,19 @@ const styles = StyleSheet.create({
   captionCard: { padding: theme.space.lg },
   captionInput: { minHeight: 90, fontSize: 15, color: theme.colors.text, textAlignVertical: "top" },
   charCount: { fontSize: 11, textAlign: "right" },
-  imageBox: { borderRadius: theme.radius.card, overflow: "hidden" },
-  image: { width: "100%", aspectRatio: 1 },
+  thumbRow: { gap: theme.space.sm },
+  thumbBox: { borderRadius: 14, overflow: "hidden" },
+  thumb: { width: 110, height: 110 },
   removeImageBtn: {
-    position: "absolute", top: 10, right: 10, backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 18, width: 36, height: 36, alignItems: "center", justifyContent: "center",
+    position: "absolute", top: 6, right: 6, backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 12, width: 24, height: 24, alignItems: "center", justifyContent: "center",
   },
+  addThumb: {
+    width: 110, height: 110, borderRadius: 14,
+    borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,
+    alignItems: "center", justifyContent: "center", gap: 2,
+  },
+  addThumbCount: { fontSize: 11 },
   addPhotoCard: {
     padding: theme.space.xl, alignItems: "center", gap: 8,
     borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,

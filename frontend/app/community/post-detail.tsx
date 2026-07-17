@@ -22,6 +22,9 @@ export default function PostDetailScreen() {
   const [post, setPost] = useState<FeedPost | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Multi-image carousel: current page + measured page width (paging needs it)
+  const [imageIndex, setImageIndex] = useState(0);
+  const [carouselWidth, setCarouselWidth] = useState(0);
 
   const load = useCallback(async () => {
     if (!token || !id) return;
@@ -172,9 +175,33 @@ export default function PostDetailScreen() {
             <AppText variant="body2" style={styles.caption}>{post.caption}</AppText>
           )}
 
-          {post.image && (
+          {/* Images — single shows plain; 2+ becomes an Instagram-style swipe
+              carousel with dot indicators */}
+          {post.images && post.images.length > 1 ? (
+            <View onLayout={(e) => setCarouselWidth(e.nativeEvent.layout.width)}>
+              {carouselWidth > 0 && (
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(e) =>
+                  setImageIndex(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, e.nativeEvent.layoutMeasurement.width)))
+                }
+              >
+                {post.images.map((uri) => (
+                  <Image key={uri} source={{ uri }} style={[styles.postImage, { width: carouselWidth }]} resizeMode="cover" />
+                ))}
+              </ScrollView>
+              )}
+              <View style={styles.dotRow}>
+                {post.images.map((uri, i) => (
+                  <View key={uri} style={[styles.dot, i === imageIndex && styles.dotActive]} />
+                ))}
+              </View>
+            </View>
+          ) : post.image ? (
             <Image source={{ uri: post.image }} style={styles.postImage} resizeMode="cover" />
-          )}
+          ) : null}
 
           {/* Nutrition snapshot */}
           {post.meal && (
@@ -274,6 +301,9 @@ const styles = StyleSheet.create({
   timeText: { fontSize: 11 },
   caption: { paddingHorizontal: theme.space.lg, paddingBottom: theme.space.md },
   postImage: { width: "100%", aspectRatio: 1 },
+  dotRow: { flexDirection: "row", justifyContent: "center", gap: 5, marginTop: 8 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.border },
+  dotActive: { backgroundColor: theme.colors.primary },
   mealChip: {
     flexDirection: "row", alignItems: "center", gap: 10,
     margin: theme.space.lg, marginBottom: 0, padding: theme.space.md,

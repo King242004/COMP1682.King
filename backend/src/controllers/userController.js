@@ -172,10 +172,13 @@ exports.deleteAccount = async (req, res) => {
 
   // Best-effort Cloudinary cleanup (post + chat images that carry a publicId)
   const [posts, chats] = await Promise.all([
-    Post.find({ user: uid }).select("imagePublicId"),
+    Post.find({ user: uid }).select("imagePublicId images"),
     ChatMessage.find({ user: uid }).select("imagePublicId"),
   ]);
-  const publicIds = [...posts, ...chats].map((d) => d.imagePublicId).filter(Boolean);
+  const publicIds = [
+    ...posts.flatMap((p) => [p.imagePublicId, ...(p.images || []).map((i) => i.publicId)]),
+    ...chats.map((d) => d.imagePublicId),
+  ].filter(Boolean);
   await Promise.allSettled(publicIds.map((id) => cloudinary.uploader.destroy(id)));
 
   // Purge every collection that references this user

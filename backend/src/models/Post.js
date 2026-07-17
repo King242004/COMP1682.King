@@ -4,9 +4,19 @@ const postSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     caption: { type: String, default: "", maxlength: 500 },
+    // Legacy single-image fields — kept in sync with images[0] on new posts so
+    // older documents and any .image reader keep working.
     image: { type: String, default: null },
     // Cloudinary public_id so deletePost can remove the file (older posts lack it)
     imagePublicId: { type: String, default: null },
+    // Instagram-style multi image (max 5). Images are FIXED at post time —
+    // editing a post only changes caption/meal, never the photos.
+    images: [
+      {
+        url: { type: String, required: true },
+        publicId: { type: String, default: null },
+      },
+    ],
     // Frozen snapshot of the meal at post time — so editing/deleting the original
     // meal never breaks an existing post. Null if the post isn't about a meal.
     meal: {
