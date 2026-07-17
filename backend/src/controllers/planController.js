@@ -1,6 +1,7 @@
 const PlanMeal = require("../models/PlanMeal");
 const PlanWorkout = require("../models/PlanWorkout");
 const Meal = require("../models/Meal");
+const Exercise = require("../models/Exercise");
 const User = require("../models/User");
 const { insightModels } = require("../config/gemini");
 const { generateWithFallback } = require("../services/aiGenerate");
@@ -109,7 +110,7 @@ REQUIREMENTS:
 - Prefer common Vietnamese dishes that are easy to cook or buy. Vary dishes across the week — do not repeat the same dish two days in a row.
 - Adjust every dish choice to the health conditions above.
 - HARD CONSTRAINT: NO dish may contain ANY ingredient the health conditions forbid (per the guide above). Example: gout → absolutely no shrimp/tôm, crab, shellfish, organ meats, red meat. Before finalizing each dish, CHECK its ingredients against the conditions; when in doubt, pick a safer dish.
-- Also give ONE short workout suggestion per day (max ~15 words) suited to the user's conditions and goal; a rest day is allowed.
+- Also give ONE workout suggestion per day suited to the user's conditions and goal; a rest day is allowed. "workout" is an OBJECT: "text" = friendly one-liner (max ~15 words); "name" = short activity name only (max 4 words, e.g. "Đi bộ nhanh"); "met" = realistic MET value (2-12); "durationMin" = 10-90. On a REST day set "rest": true and give only "text".
 - Never use the em dash character (—) in any text; use a comma instead.
 - Write dish names and workout text in ${langName}.${
       prefs
@@ -118,7 +119,7 @@ REQUIREMENTS:
     }
 
 Return ONLY valid JSON:
-{"days":[{"date":"YYYY-MM-DD","workout":"...","meals":[{"name":"...","mealType":"breakfast|lunch|dinner|snack","calories":0,"protein":0,"carbs":0,"fat":0}]}]}`;
+{"days":[{"date":"YYYY-MM-DD","workout":{"text":"...","name":"...","met":0,"durationMin":0,"rest":false},"meals":[{"name":"...","mealType":"breakfast|lunch|dinner|snack","calories":0,"protein":0,"carbs":0,"fat":0}]}]}`;
 
     const result = await generateWithFallback(insightModels, prompt);
     let parsed;
@@ -147,8 +148,25 @@ Return ONLY valid JSON:
           date: day.date,
         });
       }
-      if (day.workout && String(day.workout).trim()) {
-        workoutDocs.push({ user: req.user.id, date: day.date, text: String(day.workout).trim().slice(0, 200) });
+      // Workout: object with structured fields (one-tap logging) — tolerate the
+      // old plain-string form; rest days store text only (no loggable fields)
+      const w = day.workout;
+      if (w) {
+        const text = String((typeof w === "object" ? w.text : w) || "").trim().slice(0, 200);
+        if (text) {
+          const met = Number(w.met);
+          const dur = Math.round(Number(w.durationMin));
+          const structured =
+            typeof w === "object" && !w.rest && w.name && met >= 1.5 && met <= 15 && dur >= 5 && dur <= 180;
+          workoutDocs.push({
+            user: req.user.id,
+            date: day.date,
+            text,
+            name: structured ? String(w.name).trim().slice(0, 60) : null,
+            met: structured ? Math.round(met * 10) / 10 : null,
+            durationMin: structured ? dur : null,
+          });
+        }
       }
     }
     // Layer-2 safety: deterministically drop any dish that violates the user's
@@ -271,6 +289,40 @@ exports.deletePlanMeal = async (req, res) => {
 
   await planMeal.deleteOne();
   res.json({ message: "Planned meal deleted." });
+};
+
+// ─── Mark plan workout done ─────────────────────────────────────────────────
+// One-tap confirm of the AI-suggested workout: creates a REAL Exercise entry
+// (calorie burn from the user's current weight) and flips `done`. Mirrors the
+// meal markEaten rules: owner-only, idempotent, never for a future day.
+exports.markWorkoutDone = async (req, res) => {
+  const pw = await PlanWorkout.findById(req.params.id);
+  if (!pw) return res.status(404).json({ message: "Planned workout not found." });
+  if (pw.user.toString() !== req.user.id)
+    return res.status(403).json({ message: "Not authorized." });
+  if (pw.done) return res.status(400).json({ message: "Already marked as done." });
+  if (!pw.name || !pw.met || !pw.durationMin)
+    return res.status(400).json({ message: "This day has no loggable workout." });
+  if (pw.date > todayKey())
+    return res.status(400).json({ message: "Cannot complete a future workout." });
+
+  const user = await User.findById(req.user.id).select("weight");
+  const w = user?.weight > 0 ? user.weight : 60;
+  const caloriesBurned = Math.round(pw.met * w * (pw.durationMin / 60));
+
+  const exercise = await Exercise.create({
+    user: req.user.id,
+    name: pw.name,
+    met: pw.met,
+    durationMin: pw.durationMin,
+    caloriesBurned,
+    date: pw.date,
+  });
+
+  pw.done = true;
+  await pw.save();
+
+  res.json({ message: "Workout logged.", planWorkout: pw, exercise });
 };
 
 // ─── Mark as eaten ──────────────────────────────────────────────────────────

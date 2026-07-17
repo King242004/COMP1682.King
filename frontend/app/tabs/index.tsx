@@ -5,8 +5,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
-import { getExercisesByDate, deleteExercise, type Exercise } from "@/features/exercise/api";
-import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/features/plan/api";
+import { getExercisesByDate, deleteExercise, getExerciseHistory, type Exercise } from "@/features/exercise/api";
+import { getPlanMeals, markPlanEaten, deletePlanMeal, markPlanWorkoutDone, type PlanMeal, type PlanDayWorkout } from "@/features/plan/api";
 import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/features/coach/api";
 import { SuggestMealCard } from "@/features/plan/SuggestMealCard";
 import { ProgressRing } from "@/ui/components/ProgressRing";
@@ -34,7 +34,7 @@ export default function HomeScreen() {
   const [totalBurned, setTotalBurned] = useState(0);
   const [coachInsight, setCoachInsight] = useState<CoachInsight | null>(null);
   const [planToday, setPlanToday] = useState<PlanMeal[]>([]);
-  const [planWorkout, setPlanWorkout] = useState<string | null>(null);
+  const [planWorkout, setPlanWorkout] = useState<PlanDayWorkout | null>(null);
 
   const loadExercises = useCallback(async () => {
     if (!token) return;
@@ -47,6 +47,21 @@ export default function HomeScreen() {
       setTotalBurned(0);
     }
   }, [token, selectedDate]);
+
+  // Weekly workout goal: days with at least one workout THIS week vs a target
+  // from the activity level (sedentary 3 / moderate 4 / active 5)
+  const [weekActiveDays, setWeekActiveDays] = useState(0);
+  const weekTarget = ({ sedentary: 3, moderate: 4, active: 5 } as Record<string, number>)[user?.activityLevel ?? ""] ?? 4;
+  const loadWeekActivity = useCallback(async () => {
+    if (!token) return;
+    try {
+      const days = getCurrentWeekDays(0);
+      const list = await getExerciseHistory(token, dateKey(days[0]), dateKey(days[6]));
+      setWeekActiveDays(new Set(list.map((e) => e.date)).size);
+    } catch {
+      // keep last value
+    }
+  }, [token]);
 
   // Today's plan (meals not yet eaten + AI workout tip) for the Home card
   const loadPlanToday = useCallback(async () => {
@@ -73,6 +88,25 @@ export default function HomeScreen() {
       Alert.alert(t.common.errorTitle, t.home.logMealErr);
     } finally {
       eatingPlanRef.current = false;
+    }
+  };
+
+  // One-tap "✓ Done" on today's AI workout → logs a real Exercise, then the
+  // Activity card refreshes to show the burn
+  const workoutDoneRef = useRef(false);
+  const doPlanWorkout = async (w: PlanDayWorkout) => {
+    if (!token || !w.id || workoutDoneRef.current) return;
+    workoutDoneRef.current = true;
+    setPlanWorkout({ ...w, done: true }); // optimistic
+    try {
+      await markPlanWorkoutDone(token, w.id);
+      loadExercises();
+      loadWeekActivity();
+    } catch {
+      setPlanWorkout({ ...w, done: false });
+      Alert.alert(t.common.errorTitle, t.common.tryAgain);
+    } finally {
+      workoutDoneRef.current = false;
     }
   };
 
@@ -125,11 +159,12 @@ export default function HomeScreen() {
       fetchMealsByDate(selectedDate),
       fetchMealHistory(),
       loadExercises(),
+      loadWeekActivity(),
       loadInsight(),
       loadPlanToday(),
     ]);
     setRefreshing(false);
-  }, [selectedDate, loadExercises, loadInsight, loadPlanToday]);
+  }, [selectedDate, loadExercises, loadWeekActivity, loadInsight, loadPlanToday]);
 
   // Refetch on focus (and when the selected date changes) so meals/workouts logged
   // elsewhere — e.g. "Eat" from the Meal Plan — show up on return.
@@ -146,9 +181,10 @@ export default function HomeScreen() {
       fetchMealsByDate(selectedDate);
       fetchMealHistory();
       loadExercises();
+      loadWeekActivity();
       loadInsight();
       loadPlanToday();
-    }, [selectedDate, todayKey, loadExercises, loadInsight, loadPlanToday])
+    }, [selectedDate, todayKey, loadExercises, loadWeekActivity, loadInsight, loadPlanToday])
   );
 
   const onDeleteExercise = (item: Exercise) => {
@@ -163,6 +199,7 @@ export default function HomeScreen() {
           setTotalBurned((prev) => prev - item.caloriesBurned);
           try {
             await deleteExercise(token, item.id);
+            loadWeekActivity();
           } catch {
             loadExercises(); // resync on failure
           }
@@ -467,6 +504,16 @@ export default function HomeScreen() {
               </AppText>
             </View>
 
+            {/* Weekly goal dots — habit loop: days trained this week vs target */}
+            <View style={styles.weekDotsRow}>
+              {Array.from({ length: weekTarget }).map((_, i) => (
+                <View key={i} style={[styles.weekDot, i < weekActiveDays && styles.weekDotOn]} />
+              ))}
+              <AppText variant="subtle" style={styles.weekDotsLabel}>
+                {t.home.weekWorkouts(weekActiveDays, weekTarget)}
+              </AppText>
+            </View>
+
             {/* Net calories: eaten − burned */}
             {totalBurned > 0 && (
               <View style={styles.netRow}>
@@ -536,7 +583,19 @@ export default function HomeScreen() {
                 {!!planWorkout && (
                   <View style={styles.workoutTip}>
                     <AppText style={styles.tipEmoji}>🏃</AppText>
-                    <AppText variant="subtle" style={styles.tipText}>{planWorkout}</AppText>
+                    <AppText variant="subtle" style={styles.tipText}>{planWorkout.text}</AppText>
+                    {planWorkout.done ? (
+                      <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
+                    ) : planWorkout.name ? (
+                      <Pressable
+                        onPress={() => doPlanWorkout(planWorkout)}
+                        hitSlop={6}
+                        style={({ pressed }) => [styles.eatBtn, pressed && styles.rowPressed]}
+                      >
+                        <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
+                        <AppText style={styles.eatBtnText}>{t.plan.markWorkoutDone}</AppText>
+                      </Pressable>
+                    ) : null}
                   </View>
                 )}
               </Card>
@@ -716,6 +775,10 @@ const styles = StyleSheet.create({
 
   // Activity
   activityHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  weekDotsRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  weekDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.tint },
+  weekDotOn: { backgroundColor: theme.colors.accent },
+  weekDotsLabel: { fontSize: 11, marginLeft: 4 },
   flameBox: { backgroundColor: "rgba(255,138,61,0.12)" },
   burnedText: { fontWeight: "700" },
   netRow: {

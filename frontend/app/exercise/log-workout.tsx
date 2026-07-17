@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
-import { addExercise, estimateBurned, ACTIVITY_GROUPS, type Activity } from "@/features/exercise/api";
+import { addExercise, estimateBurned, getExerciseHistory, ACTIVITY_GROUPS, type Activity } from "@/features/exercise/api";
+import { GUIDED_ROUTINES } from "@/features/exercise/guided";
+import { resolveLanguage } from "@/utils/language";
 import { todayKey } from "@/utils/date";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -33,6 +35,46 @@ export default function AddExerciseScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const isCustom = selected?.custom === true;
+  const lang = resolveLanguage(user?.language);
+
+  // "Recent" one-tap chips: the user's own last workouts (people repeat the
+  // same 2-3 activities) — tap = everything prefilled, just hit Save.
+  type RecentWorkout = { name: string; met: number; durationMin: number };
+  const [recent, setRecent] = useState<RecentWorkout[]>([]);
+  useEffect(() => {
+    if (!token) return;
+    getExerciseHistory(token)
+      .then((list) => {
+        const seen = new Set<string>();
+        const out: RecentWorkout[] = [];
+        for (const e of list) {
+          const k = e.name.trim().toLowerCase();
+          if (seen.has(k)) continue;
+          seen.add(k);
+          out.push({ name: e.name, met: e.met, durationMin: e.durationMin });
+          if (out.length >= 5) break;
+        }
+        setRecent(out);
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const applyRecent = (r: RecentWorkout) => {
+    // Match a catalog activity by its CURRENT localized label; otherwise fall
+    // back to the custom entry so the exact same name/MET is reused.
+    const all = ACTIVITY_GROUPS.flatMap((g) => g.items);
+    const match = all.find((a) => !a.custom && (t.exercise.activities[a.key] ?? a.key) === r.name);
+    if (match) {
+      setSelected(match);
+    } else {
+      const custom = all.find((a) => a.custom)!;
+      setSelected(custom);
+      setCustomName(r.name);
+      setCustomMet(String(r.met));
+    }
+    setDuration(String(r.durationMin));
+    setError(null);
+  };
 
   // Effective MET + name (custom entry pulls from the typed fields).
   // The LOCALIZED label is what gets saved as the workout name.
@@ -100,6 +142,43 @@ export default function AddExerciseScreen() {
           <View style={styles.warnBanner}>
             <AppText style={styles.warnEmoji}>⚠️</AppText>
             <AppText variant="subtle" style={styles.warnText}>{t.exercise.weightWarn}</AppText>
+          </View>
+        )}
+
+        {/* Guided routines — follow along step by step; finishing auto-logs */}
+        <View style={styles.group}>
+          <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.guidedSection}</AppText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.guidedRow}>
+            {GUIDED_ROUTINES.map((r) => (
+              <Pressable
+                key={r.key}
+                onPress={() => router.push({ pathname: "/exercise/guided" as any, params: { routine: r.key } })}
+                style={({ pressed }) => [styles.guidedCard, pressed && styles.pressed]}
+              >
+                <AppText style={styles.guidedIcon}>{r.icon}</AppText>
+                <AppText style={styles.guidedTitle} numberOfLines={2}>{r.title[lang]}</AppText>
+                <AppText variant="subtle" style={styles.guidedMeta}>{r.durationMin} {t.home.min} · MET {r.met}</AppText>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Recent workouts — one tap prefills everything */}
+        {recent.length > 0 && (
+          <View style={styles.group}>
+            <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.recent}</AppText>
+            <View style={styles.chipWrap}>
+              {recent.map((r) => (
+                <Pressable
+                  key={r.name}
+                  onPress={() => applyRecent(r)}
+                  style={({ pressed }) => [styles.chip, styles.chipIdle, pressed && styles.pressed]}
+                >
+                  <AppText style={styles.chipIcon}>🔁</AppText>
+                  <AppText style={styles.chipText}>{r.name} · {r.durationMin}′</AppText>
+                </Pressable>
+              ))}
+            </View>
           </View>
         )}
 
@@ -215,6 +294,16 @@ const styles = StyleSheet.create({
 
   card: { padding: theme.space.lg, gap: theme.space.md },
   metHint: { fontSize: 11 },
+
+  guidedRow: { gap: theme.space.sm },
+  guidedCard: {
+    width: 150, padding: theme.space.md, gap: 4,
+    borderRadius: 14, borderWidth: 1, borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  guidedIcon: { fontSize: 22 },
+  guidedTitle: { fontSize: 13, fontWeight: "700", color: theme.colors.text },
+  guidedMeta: { fontSize: 11 },
   durationCard: { padding: theme.space.lg },
 
   estimateCard: {

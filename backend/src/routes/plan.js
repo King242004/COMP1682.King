@@ -6,6 +6,7 @@ const {
   updatePlanMeal,
   deletePlanMeal,
   markEaten,
+  markWorkoutDone,
   generatePlan,
   groceryList,
 } = require("../controllers/planController");
@@ -144,6 +145,16 @@ router.post("/:id/eaten", markEaten);
  *       200: { description: Plan generated and saved }
  *       429: { description: Out of AI quota }
  */
+/**
+ * @swagger
+ * /plan/workout/{id}/done:
+ *   post:
+ *     summary: One-tap confirm the AI-suggested workout (creates a real Exercise)
+ *     tags: [Plan]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post("/workout/:id/done", markWorkoutDone);
+
 router.post("/generate", generatePlan);
 
 /**

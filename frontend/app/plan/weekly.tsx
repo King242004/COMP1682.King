@@ -9,6 +9,7 @@ import {
   getPlanMeals,
   deletePlanMeal,
   markPlanEaten,
+  markPlanWorkoutDone,
   generateWeekPlan,
   getGroceryList,
   getCachedGrocery,
@@ -16,6 +17,7 @@ import {
   getCachedPlanWeek,
   cachePlanWeek,
   type PlanMeal,
+  type PlanDayWorkout,
   type GroceryGroup,
 } from "@/features/plan/api";
 import { GenerateModal } from "@/features/plan/GenerateModal";
@@ -55,7 +57,7 @@ export default function MealPlanScreen() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [plan, setPlan] = useState<PlanMeal[]>([]);
-  const [workouts, setWorkouts] = useState<Record<string, string>>({});
+  const [workouts, setWorkouts] = useState<Record<string, PlanDayWorkout>>({});
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   // Generate modal (week or single day) + optional taste note.
@@ -276,6 +278,23 @@ export default function MealPlanScreen() {
     }
   };
 
+  // One-tap "✓ Done" on the AI workout: logs a real Exercise server-side
+  const workoutDoneRef = useRef(false); // in-flight guard against double-tap
+  const onWorkoutDone = async (w: PlanDayWorkout) => {
+    if (!token || !w.id || workoutDoneRef.current) return;
+    workoutDoneRef.current = true;
+    // Optimistic flip
+    setWorkouts((prev) => ({ ...prev, [w.date]: { ...w, done: true } }));
+    try {
+      await markPlanWorkoutDone(token, w.id);
+    } catch (e: any) {
+      setWorkouts((prev) => ({ ...prev, [w.date]: { ...w, done: false } }));
+      Alert.alert(L.couldntLog, e.message || t.common.tryAgain);
+    } finally {
+      workoutDoneRef.current = false;
+    }
+  };
+
   const onDelete = (item: PlanMeal) => {
     Alert.alert(t.home.removePlanTitle, L.removePlanMsg(item.name), [
       { text: t.common.cancel, style: "cancel" },
@@ -418,11 +437,27 @@ export default function MealPlanScreen() {
             <AppText variant="subtle" style={styles.smallLabel}>C {Math.round(dayTotals.carbs)}g</AppText>
             <AppText variant="subtle" style={styles.smallLabel}>F {Math.round(dayTotals.fat)}g</AppText>
           </View>
-          {/* AI workout suggestion for the selected day */}
+          {/* AI workout suggestion for the selected day — structured suggestions
+              get a one-tap "✓ Done" (today/past only, mirrors the meal Eat rule) */}
           {!!workouts[selectedDate] && (
             <View style={styles.workoutTip}>
               <AppText style={styles.tipEmoji}>🏃</AppText>
-              <AppText variant="body2" style={styles.tipText}>{workouts[selectedDate]}</AppText>
+              <AppText variant="body2" style={styles.tipText}>{workouts[selectedDate].text}</AppText>
+              {workouts[selectedDate].done ? (
+                <View style={styles.workoutDoneChip}>
+                  <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
+                  <AppText style={styles.eatenText}>{L.workoutDone}</AppText>
+                </View>
+              ) : workouts[selectedDate].name && selectedDate <= todayKey ? (
+                <Pressable
+                  onPress={() => onWorkoutDone(workouts[selectedDate])}
+                  hitSlop={6}
+                  style={({ pressed }) => [styles.eatBtn, pressed && styles.eatBtnPressed]}
+                >
+                  <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
+                  <AppText style={styles.eatenText}>{L.markWorkoutDone}</AppText>
+                </Pressable>
+              ) : null}
             </View>
           )}
         </Card>
@@ -639,9 +674,10 @@ const styles = StyleSheet.create({
   redoText: { fontSize: 11, fontWeight: "700", color: theme.colors.primary },
   macroStrip: { flexDirection: "row", gap: 14, marginTop: 10 },
   workoutTip: {
-    flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 10,
+    flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10,
     backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 10,
   },
+  workoutDoneChip: { flexDirection: "row", alignItems: "center", gap: 4 },
   tipEmoji: { fontSize: 14 },
   tipText: { flex: 1, fontSize: 13 },
 
