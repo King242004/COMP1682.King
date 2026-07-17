@@ -17,10 +17,17 @@ function uploadToCloudinary(buffer) {
 // Shape a post document for the client: author info + like state, no raw likes array
 function shapePost(post, currentUserId) {
   const author = post.user || {};
+  // Multi-image posts carry images[]; legacy single-image posts fall back to [image]
+  const images = (post.images || []).length
+    ? post.images.map((i) => i.url)
+    : post.image
+    ? [post.image]
+    : [];
   return {
     id: post._id,
     caption: post.caption,
-    image: post.image,
+    image: images[0] || null,
+    images,
     meal: post.meal && post.meal.name ? post.meal : null,
     likeCount: post.likes.length,
     isLiked: post.likes.some((id) => id.toString() === currentUserId),
@@ -36,25 +43,28 @@ function shapePost(post, currentUserId) {
 }
 
 // ─── Create Post ────────────────────────────────────────────────────────────
+// Instagram-style: up to 5 images per post (upload.array in the route). The
+// photos are FIXED at post time — edits only touch caption/meal.
 exports.createPost = async (req, res) => {
   const { caption, mealName, calories, protein, carbs, fat } = req.body;
+  const files = req.files || [];
 
-  if ((!caption || !caption.trim()) && !req.file && !mealName)
+  if ((!caption || !caption.trim()) && files.length === 0 && !mealName)
     return res.status(400).json({ message: "Add a caption, photo, or meal to post." });
 
   if (caption && caption.length > 500)
     return res.status(400).json({ message: "Caption must be 500 characters or fewer." });
 
-  let imageUrl = null;
-  let imagePublicId = null;
-  if (req.file) {
-    try {
-      const up = await uploadToCloudinary(req.file.buffer);
-      imageUrl = up.url;
-      imagePublicId = up.publicId;
-    } catch {
-      return res.status(500).json({ message: "Image upload failed. Please try again." });
+  let images = [];
+  try {
+    // Sequential upload keeps memory flat (each file is a buffer in RAM)
+    for (const f of files.slice(0, 5)) {
+      images.push(await uploadToCloudinary(f.buffer));
     }
+  } catch {
+    // Best-effort rollback of the ones that DID land
+    await Promise.allSettled(images.map((i) => cloudinary.uploader.destroy(i.publicId)));
+    return res.status(500).json({ message: "Image upload failed. Please try again." });
   }
 
   // Build frozen meal snapshot only if a meal name was provided
@@ -71,8 +81,10 @@ exports.createPost = async (req, res) => {
   const post = await Post.create({
     user: req.user.id,
     caption: caption ? caption.trim() : "",
-    image: imageUrl,
-    imagePublicId,
+    // Legacy single-image fields mirror the first image (older readers)
+    image: images[0]?.url || null,
+    imagePublicId: images[0]?.publicId || null,
+    images,
     meal,
     likes: [],
   });
@@ -147,10 +159,12 @@ exports.deletePost = async (req, res) => {
   if (!post) return res.status(404).json({ message: "Post not found." });
   if (post.user.toString() !== req.user.id)
     return res.status(403).json({ message: "Not authorized to delete this post." });
-  // Best-effort Cloudinary cleanup — posts created before imagePublicId existed keep their file
-  if (post.imagePublicId) {
-    try { await cloudinary.uploader.destroy(post.imagePublicId); } catch {}
-  }
+  // Best-effort Cloudinary cleanup — ALL images of the post (multi + legacy;
+  // posts created before publicIds existed keep their files)
+  const publicIds = new Set(
+    [...(post.images || []).map((i) => i.publicId), post.imagePublicId].filter(Boolean)
+  );
+  await Promise.allSettled([...publicIds].map((id) => cloudinary.uploader.destroy(id)));
   await post.deleteOne();
   res.json({ message: "Post deleted." });
 };
@@ -187,7 +201,9 @@ exports.getSavedPosts = async (req, res) => {
   res.json({ posts: posts.map((p) => shapePost(p, req.user.id)) });
 };
 
-// ─── Edit own post (caption + optional image / meal changes) ─────────────────
+// ─── Edit own post (caption + meal only) ─────────────────────────────────────
+// Instagram rule: PHOTOS ARE FIXED once posted — editing never touches images
+// (avoids partial-carousel edit complexity and accidental media loss).
 exports.updatePost = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found." });
@@ -200,31 +216,11 @@ exports.updatePost = async (req, res) => {
     post.caption = req.body.caption.trim();
   }
 
-  // Image: a new upload replaces the old one; removeImage clears it. Either way,
-  // the previous Cloudinary file is destroyed best-effort (older posts lack an id).
-  if (req.file) {
-    if (post.imagePublicId) {
-      try { await cloudinary.uploader.destroy(post.imagePublicId); } catch {}
-    }
-    try {
-      const up = await uploadToCloudinary(req.file.buffer);
-      post.image = up.url;
-      post.imagePublicId = up.publicId;
-    } catch {
-      return res.status(500).json({ message: "Image upload failed. Please try again." });
-    }
-  } else if (req.body.removeImage === "true") {
-    if (post.imagePublicId) {
-      try { await cloudinary.uploader.destroy(post.imagePublicId); } catch {}
-    }
-    post.image = null;
-    post.imagePublicId = null;
-  }
-
-  if (req.body.removeMeal === "true") post.meal = undefined;
+  if (req.body.removeMeal === true || req.body.removeMeal === "true") post.meal = undefined;
 
   // A post must still carry something after the edit
-  if (!post.caption && !post.image && !(post.meal && post.meal.name))
+  const hasImage = !!post.image || (post.images || []).length > 0;
+  if (!post.caption && !hasImage && !(post.meal && post.meal.name))
     return res.status(400).json({ message: "A post needs a caption, photo, or meal." });
 
   await post.save();

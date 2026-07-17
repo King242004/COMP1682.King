@@ -44,6 +44,13 @@ export function PostTile({
           </View>
         )}
 
+        {/* Instagram-style stacked-copies badge when the post carries 2+ images */}
+        {post.images && post.images.length > 1 && (
+          <View style={styles.multiBadge}>
+            <Ionicons name="copy" size={13} color="#fff" />
+          </View>
+        )}
+
         {showAuthor && (
           <View style={styles.authorChip}>
             <View style={styles.authorAvatar}>
@@ -104,6 +111,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(22,78,99,0.72)",
   },
   kcalText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  multiBadge: {
+    position: "absolute", right: 8, top: 8,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center", justifyContent: "center",
+  },
   authorChip: {
     position: "absolute", left: 8, bottom: 8,
     maxWidth: "70%", // shrink-to-fit but never overlap the heart button

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -13,6 +12,8 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
+// Edit = caption + attached meal only. Photos are FIXED at post time
+// (Instagram rule) — they are shown here read-only for context.
 export default function PostEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -23,8 +24,6 @@ export default function PostEditScreen() {
   const [loadError, setLoadError] = useState(false);
 
   const [caption, setCaption] = useState("");
-  const [existingImage, setExistingImage] = useState<string | null>(null); // current server image, kept unless removed
-  const [newImageUri, setNewImageUri] = useState<string | null>(null);      // freshly picked replacement
   const [keepMeal, setKeepMeal] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -34,36 +33,15 @@ export default function PostEditScreen() {
       .then((p) => {
         setPost(p);
         setCaption(p.caption);
-        setExistingImage(p.image);
         setLoadError(false);
       })
       .catch(() => setLoadError(true));
   }, [token, id]);
 
-  const shownImage = newImageUri ?? existingImage;
-
-  const pickImage = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(t.profile.permissionNeeded, t.community.photoPermChange);
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images",
-      quality: 0.7,
-      allowsEditing: true,
-    });
-    if (!result.canceled && result.assets?.[0]?.uri) setNewImageUri(result.assets[0].uri);
-  };
-
-  const removeImage = () => {
-    setNewImageUri(null);
-    setExistingImage(null);
-  };
-
   // Post must keep something after the edit
   const hasMeal = !!post?.meal && keepMeal;
-  const canSave = (caption.trim().length > 0 || shownImage || hasMeal) && !saving;
+  const hasImages = (post?.images?.length ?? 0) > 0;
+  const canSave = (caption.trim().length > 0 || hasImages || hasMeal) && !saving;
 
   const handleSave = async () => {
     if (!token || !id || !canSave) return;
@@ -71,9 +49,6 @@ export default function PostEditScreen() {
     try {
       await updatePost(token, id, {
         caption: caption.trim(),
-        newImageUri,
-        // clear on server only if there was an image and it's now gone (no replacement)
-        removeImage: !newImageUri && !existingImage && !!post?.image,
         removeMeal: !!post?.meal && !keepMeal,
       });
       router.back(); // detail refetches on focus → shows the update
@@ -126,26 +101,13 @@ export default function PostEditScreen() {
           <AppText variant="subtle" style={styles.charCount}>{caption.length}/500</AppText>
         </Card>
 
-        {/* Image */}
-        {shownImage ? (
-          <View style={styles.imageBox}>
-            <Image source={{ uri: shownImage }} style={styles.image} resizeMode="cover" />
-            <View style={styles.imageActions}>
-              <Pressable onPress={pickImage} style={styles.imageActionBtn}>
-                <Ionicons name="swap-horizontal" size={18} color="#fff" />
-              </Pressable>
-              <Pressable onPress={removeImage} style={styles.imageActionBtn}>
-                <Ionicons name="close" size={20} color="#fff" />
-              </Pressable>
-            </View>
-          </View>
-        ) : (
-          <Pressable onPress={pickImage}>
-            <Card style={styles.addPhotoCard}>
-              <Ionicons name="image-outline" size={32} color={theme.colors.subtle} />
-              <AppText variant="muted">{t.community.addPhoto}</AppText>
-            </Card>
-          </Pressable>
+        {/* Photos — read-only thumbnails (fixed at post time) */}
+        {hasImages && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbRow}>
+            {post.images.map((uri) => (
+              <Image key={uri} source={{ uri }} style={styles.thumb} resizeMode="cover" />
+            ))}
+          </ScrollView>
         )}
 
         {/* Attached meal — can be kept or removed (not re-picked here) */}
@@ -186,17 +148,8 @@ const styles = StyleSheet.create({
   captionCard: { padding: theme.space.lg },
   captionInput: { minHeight: 90, fontSize: 15, color: theme.colors.text, textAlignVertical: "top" },
   charCount: { fontSize: 11, textAlign: "right" },
-  imageBox: { borderRadius: theme.radius.card, overflow: "hidden" },
-  image: { width: "100%", aspectRatio: 1 },
-  imageActions: { position: "absolute", top: 10, right: 10, flexDirection: "row", gap: 8 },
-  imageActionBtn: {
-    backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 18,
-    width: 36, height: 36, alignItems: "center", justifyContent: "center",
-  },
-  addPhotoCard: {
-    padding: theme.space.xl, alignItems: "center", gap: 8,
-    borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,
-  },
+  thumbRow: { gap: theme.space.sm },
+  thumb: { width: 90, height: 90, borderRadius: 12 },
   mealSection: { gap: theme.space.sm },
   sectionLabel: { fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginLeft: 4 },
   mealCard: { padding: theme.space.md, flexDirection: "row", alignItems: "center", gap: 10 },

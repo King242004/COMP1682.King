@@ -3,7 +3,8 @@ import { apiRequest, BASE_URL } from "@/utils/api";
 export type FeedPost = {
   id: string;
   caption: string;
-  image: string | null;
+  image: string | null;   // first image (legacy readers / grid tile)
+  images: string[];       // all images, Instagram-style (max 5)
   meal: { name: string; calories: number; protein: number; carbs: number; fat: number } | null;
   likeCount: number;
   isLiked: boolean;
@@ -100,12 +101,12 @@ export async function unfollowUser(token: string, userId: string): Promise<void>
   await apiRequest(`/community/follow/${userId}`, "DELETE", undefined, token);
 }
 
-// Create a post — multipart because it may include an image, so we bypass apiRequest
+// Create a post — multipart because it may include images (max 5, Instagram-style)
 export async function createPost(
   token: string,
   input: {
     caption?: string;
-    imageUri?: string | null;
+    imageUris?: string[];
     meal?: { name: string; calories: number; protein: number; carbs: number; fat: number } | null;
   }
 ): Promise<FeedPost> {
@@ -118,10 +119,10 @@ export async function createPost(
     form.append("carbs", String(input.meal.carbs));
     form.append("fat", String(input.meal.fat));
   }
-  if (input.imageUri) {
-    const filename = input.imageUri.split("/").pop() || "post.jpg";
+  for (const uri of (input.imageUris || []).slice(0, 5)) {
+    const filename = uri.split("/").pop() || "post.jpg";
     const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
-    form.append("image", { uri: input.imageUri, name: filename, type: ext === "png" ? "image/png" : "image/jpeg" } as any);
+    form.append("images", { uri, name: filename, type: ext === "png" ? "image/png" : "image/jpeg" } as any);
   }
 
   const res = await fetch(`${BASE_URL}/community/posts`, {
@@ -134,34 +135,21 @@ export async function createPost(
   return data.post;
 }
 
-// Edit an existing post — multipart because it may include a replacement image
+// Edit an existing post — caption + meal only (photos are FIXED at post time,
+// Instagram rule) → plain JSON, no multipart needed anymore.
 export async function updatePost(
   token: string,
   postId: string,
   input: {
     caption: string;
-    newImageUri?: string | null; // a freshly picked local image to upload
-    removeImage?: boolean;       // clear the current image (no replacement)
-    removeMeal?: boolean;        // drop the attached meal snapshot
+    removeMeal?: boolean; // drop the attached meal snapshot
   }
 ): Promise<FeedPost> {
-  const form = new FormData();
-  form.append("caption", input.caption);
-  if (input.removeMeal) form.append("removeMeal", "true");
-  if (input.newImageUri) {
-    const filename = input.newImageUri.split("/").pop() || "post.jpg";
-    const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
-    form.append("image", { uri: input.newImageUri, name: filename, type: ext === "png" ? "image/png" : "image/jpeg" } as any);
-  } else if (input.removeImage) {
-    form.append("removeImage", "true");
-  }
-
-  const res = await fetch(`${BASE_URL}/community/posts/${postId}`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Failed to update post");
+  const data = await apiRequest(
+    `/community/posts/${postId}`,
+    "PATCH",
+    { caption: input.caption, ...(input.removeMeal ? { removeMeal: true } : {}) },
+    token
+  );
   return data.post;
 }
