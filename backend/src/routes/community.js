@@ -41,8 +41,8 @@ router.use(protect);
  *     responses:
  *       201: { description: Post created }
  */
-// Instagram-style: up to 5 images per post
-router.post("/posts", upload.array("images", 5), createPost);
+// Instagram-style: up to 10 images per post
+router.post("/posts", upload.array("images", 10), createPost);
 
 /**
  * @swagger

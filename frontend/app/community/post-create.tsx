@@ -28,7 +28,7 @@ export default function PostCreateScreen() {
 
   useEffect(() => { fetchMealHistory(); }, []);
 
-  const MAX_IMAGES = 5;
+  const MAX_IMAGES = 10; // Instagram-style carousel cap
 
   const pickImages = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();

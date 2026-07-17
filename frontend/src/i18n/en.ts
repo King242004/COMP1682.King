@@ -611,7 +611,7 @@ export const en = {
     couldntSave: "Couldn't save",
     shareSomething: "Share something healthy...",
     addPhoto: "Add a photo",
-    photoRequiredHint: "A post needs at least one photo (up to 5)",
+    photoRequiredHint: "A post needs at least one photo (up to 10)",
     attachMeal: "Attach a meal (optional)",
     attachedMeal: "Attached meal",
     noLoggedMeals: "No logged meals yet.",
