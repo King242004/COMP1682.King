@@ -49,8 +49,10 @@ exports.createPost = async (req, res) => {
   const { caption, mealName, calories, protein, carbs, fat } = req.body;
   const files = req.files || [];
 
-  if ((!caption || !caption.trim()) && files.length === 0 && !mealName)
-    return res.status(400).json({ message: "Add a caption, photo, or meal to post." });
+  // Instagram rule: a post ALWAYS carries at least one photo — caption and
+  // meal snapshot are additions, never a substitute (keeps the grid visual)
+  if (files.length === 0)
+    return res.status(400).json({ message: "A post needs at least one photo." });
 
   if (caption && caption.length > 500)
     return res.status(400).json({ message: "Caption must be 500 characters or fewer." });

@@ -594,6 +594,7 @@ export const vi: Strings = {
     couldntSave: "Không lưu được",
     shareSomething: "Chia sẻ điều gì đó lành mạnh...",
     addPhoto: "Thêm ảnh",
+    photoRequiredHint: "Bài đăng cần ít nhất 1 ảnh (tối đa 5)",
     attachMeal: "Đính kèm món (tuỳ chọn)",
     attachedMeal: "Món đính kèm",
     noLoggedMeals: "Chưa ghi món nào.",

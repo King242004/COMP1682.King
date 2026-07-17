@@ -51,7 +51,8 @@ export default function PostCreateScreen() {
 
   const removeImage = (uri: string) => setImageUris((prev) => prev.filter((u) => u !== uri));
 
-  const canPost = (caption.trim().length > 0 || imageUris.length > 0 || selectedMeal) && !posting;
+  // Instagram rule: at least ONE photo is required — caption/meal are extras
+  const canPost = imageUris.length > 0 && !posting;
 
   const handlePost = async () => {
     if (!token || !canPost) return;
@@ -129,6 +130,7 @@ export default function PostCreateScreen() {
             <Card style={styles.addPhotoCard}>
               <Ionicons name="images-outline" size={32} color={theme.colors.subtle} />
               <AppText variant="muted">{t.community.addPhoto}</AppText>
+              <AppText variant="subtle" style={styles.photoRequiredHint}>{t.community.photoRequiredHint}</AppText>
             </Card>
           </Pressable>
         )}
@@ -182,6 +184,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center", gap: 2,
   },
   addThumbCount: { fontSize: 11 },
+  photoRequiredHint: { fontSize: 11 },
   addPhotoCard: {
     padding: theme.space.xl, alignItems: "center", gap: 8,
     borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,
