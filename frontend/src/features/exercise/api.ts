@@ -105,3 +105,15 @@ export async function addExercise(
 export async function deleteExercise(token: string, id: string): Promise<void> {
   await apiRequest(`/exercise/${id}`, "DELETE", undefined, token);
 }
+
+// Full or ranged history (newest first). Powers the "Recent" quick chips on
+// the log screen and the weekly-goal dots on Home.
+export async function getExerciseHistory(
+  token: string,
+  startDate?: string,
+  endDate?: string
+): Promise<Exercise[]> {
+  const range = startDate && endDate ? `?startDate=${startDate}&endDate=${endDate}` : "";
+  const data = await apiRequest(`/exercise/history${range}`, "GET", undefined, token);
+  return (data.exercises || []).map(mapExercise);
+}

@@ -32,16 +32,45 @@ function mapPlan(p: any): PlanMeal {
   };
 }
 
+// AI workout suggestion for one planned day. Structured fields (name/met/
+// durationMin) power the one-tap "✓ Done" — rest days carry text only.
+export type PlanDayWorkout = {
+  id: string;
+  date: string;
+  text: string;
+  name: string | null;
+  met: number | null;
+  durationMin: number | null;
+  done: boolean;
+};
+
+function mapWorkout(w: any): PlanDayWorkout {
+  return {
+    id: w._id || "",
+    date: w.date,
+    text: w.text,
+    name: w.name ?? null,
+    met: w.met ?? null,
+    durationMin: w.durationMin ?? null,
+    done: !!w.done,
+  };
+}
+
 export async function getPlanMeals(
   token: string,
   startDate: string,
   endDate: string
-): Promise<{ meals: PlanMeal[]; workouts: Record<string, string> }> {
+): Promise<{ meals: PlanMeal[]; workouts: Record<string, PlanDayWorkout> }> {
   const data = await apiRequest(`/plan?startDate=${startDate}&endDate=${endDate}`, "GET", undefined, token);
-  // Workouts come as [{date, text}] — index by date for easy per-day lookup
-  const workouts: Record<string, string> = {};
-  for (const w of data.planWorkouts || []) workouts[w.date] = w.text;
+  // Index workouts by date for easy per-day lookup
+  const workouts: Record<string, PlanDayWorkout> = {};
+  for (const w of data.planWorkouts || []) workouts[w.date] = mapWorkout(w);
   return { meals: (data.planMeals || []).map(mapPlan), workouts };
+}
+
+// One-tap confirm of the AI-suggested workout → creates a real Exercise entry
+export async function markPlanWorkoutDone(token: string, id: string): Promise<void> {
+  await apiRequest(`/plan/workout/${id}/done`, "POST", undefined, token);
 }
 
 // Ask the AI to generate the range (meals + daily workout tip). REPLACES the range.
@@ -72,14 +101,22 @@ export async function getGroceryList(
 // ─── Plan week cache (AsyncStorage) ───────────────────────────────────────────
 // Stale-while-revalidate: the weekly screen paints the cached week instantly and
 // refreshes from the network in the background — no more staring at a spinner.
-export type PlanWeekCache = { meals: PlanMeal[]; workouts: Record<string, string> };
+export type PlanWeekCache = { meals: PlanMeal[]; workouts: Record<string, PlanDayWorkout> };
 
 const planWeekKey = (weekStart: string) => `plan_week_${weekStart}`;
 
 export async function getCachedPlanWeek(weekStart: string): Promise<PlanWeekCache | null> {
   try {
     const raw = await AsyncStorage.getItem(planWeekKey(weekStart));
-    return raw ? (JSON.parse(raw) as PlanWeekCache) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PlanWeekCache;
+    // Legacy cache entries stored workouts as plain strings — normalize
+    for (const [date, w] of Object.entries(parsed.workouts || {})) {
+      if (typeof w === "string") {
+        parsed.workouts[date] = { id: "", date, text: w, name: null, met: null, durationMin: null, done: false };
+      }
+    }
+    return parsed;
   } catch {
     return null;
   }
