@@ -2,7 +2,7 @@
 // (features/exercise/guided.ts). Finishing auto-logs a real Exercise for
 // today, so the burn flows into net calories / Health Score / Coach.
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -25,22 +25,30 @@ export default function GuidedWorkoutScreen() {
   const { routine: routineKey } = useLocalSearchParams<{ routine: string }>();
   const routine = GUIDED_ROUTINES.find((r) => r.key === routineKey);
 
+  // Preview first ("what am I about to do?") — the timer only starts after
+  // the user explicitly taps Start.
+  const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(routine?.steps[0]?.seconds ?? 0);
-  const [running, setRunning] = useState(true);
+  const [running, setRunning] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const finishedRef = useRef(false);
 
+  const startSession = () => {
+    setStarted(true);
+    setRunning(true);
+  };
+
   // 1-second tick while running; advancing/finishing handled in the effect below
   useEffect(() => {
-    if (!running || !routine) return;
+    if (!started || !running || !routine) return;
     const id = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearInterval(id);
-  }, [running, routine]);
+  }, [started, running, routine]);
 
   // Step finished → next step, or the whole routine is done
   useEffect(() => {
-    if (!routine || secondsLeft > 0) return;
+    if (!started || !routine || secondsLeft > 0) return;
     if (stepIndex < routine.steps.length - 1) {
       setStepIndex((i) => i + 1);
       setSecondsLeft(routine.steps[stepIndex + 1].seconds);
@@ -100,6 +108,55 @@ export default function GuidedWorkoutScreen() {
   const ss = String(Math.max(0, secondsLeft) % 60).padStart(2, "0");
   const progress = (stepIndex + 1) / routine.steps.length;
 
+  const weightForEst = user?.weight && user.weight > 0 ? user.weight : 60;
+  const estKcal = Math.round(routine.met * weightForEst * (routine.durationMin / 60));
+
+  // Preview screen — shown until the user taps Start (no auto-run)
+  if (!started) {
+    return (
+      <Screen padded={false}>
+        <ScrollView contentContainerStyle={styles.previewContent} showsVerticalScrollIndicator={false}>
+          <ScreenHeader title={routine.title[lang]} />
+
+          {/* At-a-glance: total time + estimated burn */}
+          <View style={styles.previewStats}>
+            <View style={styles.previewStat}>
+              <AppText style={styles.previewStatIcon}>{routine.icon}</AppText>
+              <AppText variant="h2" style={styles.previewStatVal}>{routine.durationMin} {t.home.min}</AppText>
+            </View>
+            <View style={styles.previewDivider} />
+            <View style={styles.previewStat}>
+              <Ionicons name="flame" size={20} color={theme.colors.accent2} />
+              <AppText variant="h2" style={styles.previewStatVal}>~{estKcal} {t.common.kcal}</AppText>
+            </View>
+          </View>
+
+          {/* Every step with its time, so the user knows what's coming */}
+          <Card style={styles.stepsCard}>
+            {routine.steps.map((s, i) => (
+              <View key={i} style={[styles.stepRow, i > 0 && styles.stepRowDivider]}>
+                <View style={styles.stepNum}>
+                  <AppText style={styles.stepNumText}>{i + 1}</AppText>
+                </View>
+                <AppText variant="body2" style={styles.stepRowName}>{s[lang]}</AppText>
+                <AppText variant="subtle" style={styles.stepRowTime}>
+                  {s.seconds >= 60 ? `${Math.round(s.seconds / 60)}′` : `${s.seconds}s`}
+                </AppText>
+              </View>
+            ))}
+          </Card>
+
+          <AppText variant="subtle" style={styles.safety}>{t.exercise.safety}</AppText>
+
+          <Pressable onPress={startSession} style={({ pressed }) => [styles.startBtn, pressed && styles.pressed]}>
+            <Ionicons name="play" size={22} color="#fff" />
+            <AppText style={styles.startBtnText}>{t.exercise.guidedStart}</AppText>
+          </Pressable>
+        </ScrollView>
+      </Screen>
+    );
+  }
+
   return (
     <Screen padded={false}>
       <View style={styles.content}>
@@ -157,6 +214,32 @@ export default function GuidedWorkoutScreen() {
 const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   content: { flex: 1, paddingHorizontal: theme.space.lg, paddingTop: 60, gap: theme.space.lg },
+
+  // Preview (before Start)
+  previewContent: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
+  previewStats: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: theme.colors.surface, borderRadius: 14, paddingVertical: theme.space.lg,
+  },
+  previewStat: { flex: 1, alignItems: "center", gap: 6 },
+  previewStatIcon: { fontSize: 22 },
+  previewStatVal: { fontSize: 17 },
+  previewDivider: { width: 0.5, alignSelf: "stretch", backgroundColor: theme.colors.border },
+  stepsCard: { padding: theme.space.lg },
+  stepRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
+  stepRowDivider: { borderTopWidth: 0.5, borderTopColor: theme.colors.border },
+  stepNum: {
+    width: 24, height: 24, borderRadius: 12, backgroundColor: theme.colors.tint,
+    alignItems: "center", justifyContent: "center",
+  },
+  stepNumText: { fontSize: 12, fontWeight: "700", color: theme.colors.primary },
+  stepRowName: { flex: 1 },
+  stepRowTime: { fontSize: 12, fontWeight: "700" },
+  startBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: theme.colors.primary, borderRadius: 14, paddingVertical: 16,
+  },
+  startBtnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
 
   progressBlock: { gap: 8 },
   stepCount: { fontSize: 12, fontWeight: "700", textAlign: "center" },

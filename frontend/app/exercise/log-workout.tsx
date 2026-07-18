@@ -30,12 +30,16 @@ export default function AddExerciseScreen() {
   const [selected, setSelected] = useState<Activity | null>(null);
   const [duration, setDuration] = useState("");
   const [customName, setCustomName] = useState("");
-  const [customMet, setCustomMet] = useState("");
+  // Custom "Other" activity: pick an intensity (plain words), we map it to a
+  // MET behind the scenes — asking users for a raw MET number was confusing.
+  const [customIntensity, setCustomIntensity] = useState<"light" | "moderate" | "intense">("moderate");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isCustom = selected?.custom === true;
   const lang = resolveLanguage(user?.language);
+  const INTENSITY_MET = { light: 3, moderate: 5, intense: 8 } as const;
+  const customMet = String(INTENSITY_MET[customIntensity]);
 
   // "Recent" one-tap chips: the user's own last workouts (people repeat the
   // same 2-3 activities) — tap = everything prefilled, just hit Save.
@@ -72,7 +76,8 @@ export default function AddExerciseScreen() {
       const custom = SIMPLE_ACTIVITIES.find((a) => a.custom)!;
       setSelected(custom);
       setCustomName(r.name);
-      setCustomMet(String(r.met));
+      // Map the stored MET back to the nearest intensity bucket
+      setCustomIntensity(r.met <= 4 ? "light" : r.met <= 6.5 ? "moderate" : "intense");
     }
     setDuration(String(r.durationMin));
     setError(null);
@@ -159,7 +164,9 @@ export default function AddExerciseScreen() {
               >
                 <AppText style={styles.guidedIcon}>{r.icon}</AppText>
                 <AppText style={styles.guidedTitle} numberOfLines={2}>{r.title[lang]}</AppText>
-                <AppText variant="subtle" style={styles.guidedMeta}>{r.durationMin} {t.home.min} · MET {r.met}</AppText>
+                <AppText variant="subtle" style={styles.guidedMeta}>
+                  {r.durationMin} {t.home.min} · ~{estimateBurned(r.met, r.durationMin, user?.weight ?? null)} {t.common.kcal}
+                </AppText>
               </Pressable>
             ))}
           </ScrollView>
@@ -205,7 +212,7 @@ export default function AddExerciseScreen() {
           </View>
         </View>
 
-        {/* Custom activity fields */}
+        {/* Custom activity fields — name + intensity (plain words, no MET math) */}
         {isCustom && (
           <Card style={styles.card}>
             <TextField
@@ -215,15 +222,26 @@ export default function AddExerciseScreen() {
               onChangeText={setCustomName}
               textContentType="none"
             />
-            <TextField
-              label={t.exercise.metValue}
-              placeholder={t.exercise.metPlaceholder}
-              value={customMet}
-              onChangeText={setCustomMet}
-              keyboardType="decimal-pad"
-              textContentType="none"
-            />
-            <AppText variant="subtle" style={styles.metHint}>{t.exercise.metHint}</AppText>
+            <View>
+              <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.intensity}</AppText>
+              <View style={styles.durRow}>
+                {(["light", "moderate", "intense"] as const).map((lvl) => {
+                  const active = customIntensity === lvl;
+                  return (
+                    <Pressable
+                      key={lvl}
+                      onPress={() => { setCustomIntensity(lvl); setError(null); }}
+                      style={({ pressed }) => [styles.durChip, active ? styles.durChipActive : styles.durChipIdle, pressed && styles.pressed]}
+                    >
+                      <AppText style={[styles.durChipText, active && styles.durChipTextActive]}>
+                        {t.exercise.intensityLevel[lvl]}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <AppText variant="subtle" style={styles.metHint}>{t.exercise.intensityHint}</AppText>
+            </View>
           </Card>
         )}
 
