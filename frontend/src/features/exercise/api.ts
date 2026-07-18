@@ -69,6 +69,25 @@ export const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
   },
 ];
 
+// SIMPLE picker list — what real memory can answer ("tập gym cỡ 1 tiếng").
+// Coarse activity classes with AVERAGE METs; the detailed 26-item catalog
+// above stays for recent-chip matching and the custom entry. Manual logging
+// is the quick-estimate lane; precision lives in AI-assigned + guided flows.
+export const SIMPLE_ACTIVITIES: Activity[] = [
+  { key: "walking", met: 3.5, icon: "🚶" },
+  { key: "jogging", met: 8.0, icon: "🏃" },
+  { key: "cycling", met: 6.0, icon: "🚴" },
+  { key: "swimming", met: 6.0, icon: "🏊" },
+  { key: "gym", met: 5.0, icon: "🏋️" },          // averages light/heavy weights, HIIT...
+  { key: "sports", met: 6.5, icon: "⚽" },        // football, badminton, tennis...
+  { key: "yoga_stretch", met: 2.8, icon: "🧘" },  // yoga, pilates, stretching
+  { key: "dancing", met: 5.0, icon: "🕺" },
+  { key: "other", met: 0, icon: "➕", custom: true },
+];
+
+// Duration presets (minutes) — pick the nearest, don't recall the exact number
+export const DURATION_PRESETS = [15, 30, 45, 60, 90];
+
 // Live preview helper — mirrors the backend MET formula
 export function estimateBurned(met: number, durationMin: number, weight: number | null) {
   const w = weight && weight > 0 ? weight : 60;
