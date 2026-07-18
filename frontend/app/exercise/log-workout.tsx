@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
-import { addExercise, estimateBurned, getExerciseHistory, ACTIVITY_GROUPS, type Activity } from "@/features/exercise/api";
+import { addExercise, estimateBurned, getExerciseHistory, ACTIVITY_GROUPS, SIMPLE_ACTIVITIES, DURATION_PRESETS, type Activity } from "@/features/exercise/api";
 import { GUIDED_ROUTINES } from "@/features/exercise/guided";
 import { resolveLanguage } from "@/utils/language";
 import { todayKey } from "@/utils/date";
@@ -60,14 +60,16 @@ export default function AddExerciseScreen() {
   }, [token]);
 
   const applyRecent = (r: RecentWorkout) => {
-    // Match a catalog activity by its CURRENT localized label; otherwise fall
-    // back to the custom entry so the exact same name/MET is reused.
-    const all = ACTIVITY_GROUPS.flatMap((g) => g.items);
-    const match = all.find((a) => !a.custom && (t.exercise.activities[a.key] ?? a.key) === r.name);
+    // Match by CURRENT localized label: simple list first, then the detailed
+    // legacy catalog (old logs like "Tạ nặng"); else reuse via the custom entry.
+    const legacy = ACTIVITY_GROUPS.flatMap((g) => g.items);
+    const match = [...SIMPLE_ACTIVITIES, ...legacy].find(
+      (a) => !a.custom && (t.exercise.activities[a.key] ?? a.key) === r.name
+    );
     if (match) {
       setSelected(match);
     } else {
-      const custom = all.find((a) => a.custom)!;
+      const custom = SIMPLE_ACTIVITIES.find((a) => a.custom)!;
       setSelected(custom);
       setCustomName(r.name);
       setCustomMet(String(r.met));
@@ -182,28 +184,25 @@ export default function AddExerciseScreen() {
           </View>
         )}
 
-        {/* Activity picker */}
-        <View style={styles.groups}>
-          {ACTIVITY_GROUPS.map((grp) => (
-            <View key={grp.key} style={styles.group}>
-              <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.groups[grp.key] ?? grp.key}</AppText>
-              <View style={styles.chipWrap}>
-                {grp.items.map((a) => {
-                  const active = selected?.key === a.key;
-                  return (
-                    <Pressable
-                      key={a.key}
-                      onPress={() => { setSelected(a); setError(null); }}
-                      style={({ pressed }) => [styles.chip, active ? styles.chipActive : styles.chipIdle, pressed && styles.pressed]}
-                    >
-                      <AppText style={styles.chipIcon}>{a.icon}</AppText>
-                      <AppText style={[styles.chipText, active && styles.chipTextActive]}>{t.exercise.activities[a.key] ?? a.key}</AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          ))}
+        {/* Manual picker — ONE flat row of coarse activities (what real memory
+            can answer), no groups. "Khác" keeps the precise custom path. */}
+        <View style={styles.group}>
+          <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.pickManual}</AppText>
+          <View style={styles.chipWrap}>
+            {SIMPLE_ACTIVITIES.map((a) => {
+              const active = selected?.key === a.key;
+              return (
+                <Pressable
+                  key={a.key}
+                  onPress={() => { setSelected(a); setError(null); }}
+                  style={({ pressed }) => [styles.chip, active ? styles.chipActive : styles.chipIdle, pressed && styles.pressed]}
+                >
+                  <AppText style={styles.chipIcon}>{a.icon}</AppText>
+                  <AppText style={[styles.chipText, active && styles.chipTextActive]}>{t.exercise.activities[a.key] ?? a.key}</AppText>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* Custom activity fields */}
@@ -228,10 +227,28 @@ export default function AddExerciseScreen() {
           </Card>
         )}
 
-        {/* Duration */}
+        {/* Duration — pick the NEAREST preset ("cỡ 30 phút"); the exact input
+            below stays as the optional precise path */}
         <Card style={styles.durationCard}>
+          <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.duration}</AppText>
+          <View style={styles.durRow}>
+            {DURATION_PRESETS.map((m) => {
+              const active = duration === String(m);
+              return (
+                <Pressable
+                  key={m}
+                  onPress={() => { setDuration(String(m)); setError(null); }}
+                  style={({ pressed }) => [styles.durChip, active ? styles.durChipActive : styles.durChipIdle, pressed && styles.pressed]}
+                >
+                  <AppText style={[styles.durChipText, active && styles.durChipTextActive]}>
+                    {m < 60 ? `${m}′` : m === 60 ? "1h" : "1h30"}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
           <TextField
-            label={t.exercise.duration}
+            label={t.exercise.exactMinutes}
             placeholder={t.exercise.durationPlaceholder}
             value={duration}
             onChangeText={(v) => { setDuration(v); setError(null); }}
@@ -280,7 +297,6 @@ const styles = StyleSheet.create({
   warnEmoji: { fontSize: 16 },
   warnText: { fontSize: 12, flex: 1 },
 
-  groups: { gap: theme.space.md },
   group: { gap: 8 },
   groupLabel: { fontSize: 12, fontWeight: "700" },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -294,6 +310,16 @@ const styles = StyleSheet.create({
 
   card: { padding: theme.space.lg, gap: theme.space.md },
   metHint: { fontSize: 11 },
+
+  durRow: { flexDirection: "row", gap: 8 },
+  durChip: {
+    flex: 1, alignItems: "center", paddingVertical: 10,
+    borderRadius: 12, borderWidth: 1.5,
+  },
+  durChipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
+  durChipIdle: { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+  durChipText: { fontSize: 13, fontWeight: "700", color: theme.colors.subtle },
+  durChipTextActive: { color: theme.colors.primary },
 
   guidedRow: { gap: theme.space.sm },
   guidedCard: {
