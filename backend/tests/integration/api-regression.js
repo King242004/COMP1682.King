@@ -21,6 +21,28 @@ async function api(path, method = "GET", body, token, rawBody) {
   return { status: res.status, data };
 }
 
+// Smallest valid JPEG, used where an endpoint requires a real image upload
+const TINY_JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q==",
+  "base64"
+);
+
+// Multipart upload helper — the JSON api() helper cannot send files
+async function apiUpload(path, fields, files, token) {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  for (const [field, name] of files) {
+    form.append(field, new Blob([TINY_JPEG], { type: "image/jpeg" }), name);
+  }
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const data = await res.json().catch(() => null);
+  return { status: res.status, data };
+}
+
 const pad = (n) => String(n).padStart(2, "0");
 const todayKey = () => {
   const d = new Date();
@@ -120,15 +142,26 @@ const shift = (days) => {
   const otpUnknown = await api("/user/send-otp", "POST", { email: "khongtontai_" + Date.now() + "@test.com" });
   check("send-otp unknown email 404", otpUnknown.status === 404);
 
-  console.log("- COMMUNITY -");
-  const post = await api("/community/posts", "POST", { caption: "Bài test tự động" }, token);
-  check("create text post 201", post.status === 201);
-  const postId = post.data.post.id || post.data.post._id;
+  console.log("- COMMUNITY (Instagram rule: a post always carries a photo) -");
+  // Caption without a photo must be refused — a post is a visual artefact
+  const textOnly = await api("/community/posts", "POST", { caption: "Bài test tự động" }, token);
+  check("text-only post rejected 400", textOnly.status === 400, `got ${textOnly.status}`);
+
+  const post = await apiUpload("/community/posts", { caption: "Bài test tự động" }, [["images", "test.jpg"]], token);
+  check("create post with photo 201", post.status === 201, `got ${post.status}`);
+  // Guard: without this a failure above would crash the run and skip the rest
+  const postId = post.data?.post?.id || post.data?.post?._id || null;
   check("created post has id", !!postId);
-  const explore = await api("/community/posts/explore", "GET", undefined, token);
-  check("explore contains own post", explore.status === 200 && explore.data.posts.some((p) => (p.id || p._id) === postId));
-  const like = await api(`/community/posts/${postId}/like`, "POST", undefined, token);
-  check("like toggles", like.status === 200 && like.data.liked === true);
+
+  if (postId) {
+    const explore = await api("/community/posts/explore", "GET", undefined, token);
+    check("explore contains own post", explore.status === 200 && explore.data.posts.some((p) => (p.id || p._id) === postId));
+    const like = await api(`/community/posts/${postId}/like`, "POST", undefined, token);
+    check("like toggles", like.status === 200 && like.data.liked === true);
+  } else {
+    check("explore contains own post", false, "skipped, no post id");
+    check("like toggles", false, "skipped, no post id");
+  }
 
   console.log("- COACH history (non-AI) -");
   const chist = await api("/coach/history", "GET", undefined, token);
