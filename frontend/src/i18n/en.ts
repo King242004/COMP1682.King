@@ -59,7 +59,7 @@ export const en = {
     planNone: "No plan yet, let the AI build one ✨",
     planDone: "Today's plan is all done 🎉",
     planPending: (n: number) => `${n} planned meals waiting in your diary`,
-    coachFallback: "Get personalized analysis and ask anything about your nutrition.",
+    coachFallback: "See how your day is going, and ask anything about food.",
     logMealErr: "Couldn't log this meal. Please try again.",
     removePlanTitle: "Remove from plan?",
     removePlanMsg: (name: string) => `Remove "${name}" from today's plan.`,
@@ -122,9 +122,9 @@ export const en = {
 
   onboarding: {
     introTitle: "Welcome to MealMate 👋",
-    introSub: "Your meal companion. Answer a few questions so the AI understands you from day one (~1 minute).",
+    introSub: "Answer a few questions so the AI knows you from day one. About a minute.",
     featScan: "Snap a photo, AI recognizes the dish and counts calories",
-    featCoach: "AI Coach advises around your goal, conditions and taste",
+    featCoach: "AI Coach advises around your goal, health and taste",
     featPlan: "Generates a weekly menu with familiar Vietnamese dishes",
     start: "Get started",
     skip: "Skip",
@@ -247,7 +247,7 @@ export const en = {
     useLibrary: "Use library",
     takePhotoError: "Could not take photo.",
     productNotFound: "Product not found",
-    productNotFoundMsg: "This product isn't in the community database yet, many local Vietnamese products haven't been added. You can enter it manually from the nutrition label.",
+    productNotFoundMsg: "Could not find this product. Vietnamese brands are often missing, so just enter it from the label.",
     enterManually: "Enter manually",
   },
 
@@ -255,12 +255,12 @@ export const en = {
     title: "Log workout",
     subtitle: "Calories burned are estimated from the MET formula.",
     loggingFor: "Logging for",
-    weightWarn: "Set your weight in Profile for an accurate estimate. Using 60 kg for now.",
+    weightWarn: "Using 60 kg for now. Add your weight in Profile for a closer estimate.",
     activityName: "Activity name",
     activityNamePlaceholder: "e.g. Rock climbing",
     intensity: "Intensity",
     intensityLevel: { light: "Light", moderate: "Moderate", intense: "Intense" } as Record<string, string>,
-    intensityHint: "Light: breathing stays easy, you can chat normally (walking, yoga). Moderate: slightly out of breath but full sentences still work (brisk walk, cycling). Intense: breathing hard, only a few words at a time (running, football, HIIT).",
+    intensityHint: "Still chatting normally while you train? Pick Light. A bit breathless? Moderate. Can barely talk? Intense.",
     duration: "Duration (minutes)",
     durationPlaceholder: "e.g. 30",
     exactMinutes: "Exact minutes (optional)",
@@ -499,12 +499,12 @@ export const en = {
     reminderTimeSub: "24h format, e.g. 19:30.",
     reminderTimeLabel: "Time (HH:MM)",
     reminderScreenIntro:
-      "A reminder prompts you to record what you ate, so the default times sit a little after each meal rather than during it.",
+      "These remind you to log what you just ate, so the default times land a little after each meal.",
     reminderTapTime: "Tap a time to change it",
     reminderTip:
-      "Recording at least two meals a day is the strongest predictor of staying consistent, so lunch and dinner are a good place to start.",
+      "Turn on at least 2, usually lunch and dinner. Enough to build the habit without bugging you.",
     reminderBlindNote:
-      "Reminders are scheduled in advance, so they arrive at the set time whether or not the meal has already been recorded.",
+      "Reminders still arrive on time, even if you already logged that meal.",
     reminderNotifTitle: (meal: string) => `Log your ${meal.toLowerCase()}`,
     reminderNotifBody: "Take 10 seconds to record it in MealMate.",
     invalidTime: "Enter a valid time like 19:30.",
@@ -679,7 +679,7 @@ export const en = {
   },
 
   auth: {
-    tagline: "Your AI meal companion, scan your food, get advice, eat right for you.",
+    tagline: "Snap your meal, know straight away if it suits you.",
     email: "Email",
     emailPlaceholder: "you@example.com",
     password: "Password",

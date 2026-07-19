@@ -212,12 +212,12 @@ export const vi: Strings = {
     reminderTimeSub: "Định dạng 24h, vd 19:30.",
     reminderTimeLabel: "Giờ (HH:MM)",
     reminderScreenIntro:
-      "Nhắc nhở là để bạn nhớ GHI LẠI món đã ăn, nên giờ mặc định đặt sau bữa ăn một chút chứ không phải đúng lúc ăn.",
+      "Nhắc để bạn nhớ ghi lại món vừa ăn, nên giờ mặc định đặt sau bữa một chút.",
     reminderTapTime: "Chạm vào giờ để đổi",
     reminderTip:
-      "Ghi được ít nhất hai bữa mỗi ngày là dấu hiệu duy trì tốt nhất, nên bật bữa trưa và bữa tối là hợp lý để bắt đầu.",
+      "Bạn nên bật ít nhất 2 bữa, thường là trưa và tối. Đủ để tạo thói quen mà không làm phiền bạn.",
     reminderBlindNote:
-      "Nhắc nhở được đặt lịch trước, nên vẫn báo đúng giờ dù bữa đó đã được ghi hay chưa.",
+      "Nhắc nhở vẫn báo đúng giờ, kể cả khi bạn đã ghi bữa đó rồi.",
     reminderNotifTitle: (meal: string) => `Ghi lại ${meal.toLowerCase()} nào`,
     reminderNotifBody: "Dành 10 giây ghi lại trong MealMate nhé.",
     invalidTime: "Nhập giờ hợp lệ, vd 19:30.",
@@ -339,7 +339,7 @@ export const vi: Strings = {
     planNone: "Chưa có kế hoạch, để AI tạo cho bạn ✨",
     planDone: "Hoàn thành kế hoạch hôm nay 🎉",
     planPending: (n: number) => `${n} món đang chờ trong nhật ký`,
-    coachFallback: "Nhận phân tích cá nhân hoá và hỏi bất cứ điều gì về dinh dưỡng của bạn.",
+    coachFallback: "Xem nhận xét riêng cho bạn, hỏi gì về ăn uống cũng được.",
     logMealErr: "Chưa ghi được món này, thử lại nhé.",
     removePlanTitle: "Bỏ khỏi kế hoạch?",
     removePlanMsg: (name: string) => `Bỏ "${name}" khỏi kế hoạch hôm nay.`,
@@ -398,9 +398,9 @@ export const vi: Strings = {
 
   onboarding: {
     introTitle: "Chào mừng đến MealMate 👋",
-    introSub: "Người bạn đồng hành bữa ăn của bạn. Trả lời vài câu hỏi để AI hiểu bạn ngay từ đầu nhé (~1 phút).",
+    introSub: "Trả lời vài câu để AI hiểu bạn ngay từ đầu nhé, khoảng 1 phút thôi.",
     featScan: "Chụp ảnh món ăn, AI tự nhận diện và tính calo",
-    featCoach: "AI Coach tư vấn theo mục tiêu, bệnh lý và khẩu vị của bạn",
+    featCoach: "AI Coach tư vấn theo mục tiêu, sức khoẻ và khẩu vị của bạn",
     featPlan: "Tự lên thực đơn tuần với món Việt quen thuộc",
     start: "Bắt đầu",
     skip: "Bỏ qua",
@@ -515,7 +515,7 @@ export const vi: Strings = {
     useLibrary: "Dùng thư viện",
     takePhotoError: "Không chụp được ảnh.",
     productNotFound: "Không tìm thấy sản phẩm",
-    productNotFoundMsg: "Sản phẩm chưa có trong cơ sở dữ liệu cộng đồng, nhiều hàng Việt nội địa chưa được đóng góp. Bạn có thể nhập tay theo bảng dinh dưỡng trên bao bì nhé.",
+    productNotFoundMsg: "Chưa tìm thấy sản phẩm này, hàng Việt hay bị thiếu trong dữ liệu. Bạn nhập tay theo bảng dinh dưỡng trên bao bì nhé.",
     enterManually: "Nhập thủ công",
   },
 
@@ -523,12 +523,12 @@ export const vi: Strings = {
     title: "Ghi buổi tập",
     subtitle: "Lượng calo đốt được ước tính bằng công thức MET.",
     loggingFor: "Ghi cho",
-    weightWarn: "Đặt cân nặng trong Hồ sơ để ước tính chính xác. Tạm dùng 60 kg.",
+    weightWarn: "Đang tạm tính theo 60 kg. Điền cân nặng trong Hồ sơ để ra số sát hơn nhé.",
     activityName: "Tên hoạt động",
     activityNamePlaceholder: "vd. Leo núi",
     intensity: "Cường độ",
     intensityLevel: { light: "Nhẹ", moderate: "Vừa", intense: "Nặng" } as Record<string, string>,
-    intensityHint: "Nhẹ: thở nhẹ nhàng, nói chuyện thoải mái (đi bộ, yoga). Vừa: hơi hụt hơi nhưng vẫn nói được cả câu (đi bộ nhanh, đạp xe). Nặng: thở gấp, chỉ nói được vài từ (chạy bộ, đá bóng, HIIT).",
+    intensityHint: "Lúc tập vẫn nói chuyện bình thường thì chọn Nhẹ. Hơi hụt hơi thì Vừa. Thở không ra hơi thì Nặng.",
     duration: "Thời lượng (phút)",
     durationPlaceholder: "vd. 30",
     exactMinutes: "Số phút chính xác (tuỳ chọn)",
@@ -662,7 +662,7 @@ export const vi: Strings = {
   },
 
   auth: {
-    tagline: "Người bạn ăn uống AI, chụp món ăn, nhận tư vấn, ăn đúng cho bạn.",
+    tagline: "Chụp món ăn, biết ngay có hợp với bạn không.",
     email: "Email",
     emailPlaceholder: "you@example.com",
     password: "Mật khẩu",
