@@ -319,9 +319,9 @@ const styles = StyleSheet.create({
   warnText: { fontSize: 12, flex: 1 },
 
   group: { gap: 8 },
-  // Section labels need real separation from the row of chips or cards below,
-  // otherwise the label reads as a caption stuck to the first control
-  groupLabel: { fontSize: 12, fontWeight: "700", marginBottom: theme.space.md },
+  // 8px matches the label-to-input gap inside TextField, so a section label
+  // sits the same distance above its chips as a field label above its box
+  groupLabel: { fontSize: 12, fontWeight: "700", marginBottom: 8 },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5 },
   chipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },

@@ -99,8 +99,10 @@ export function TabBar({ state, navigation }: any) {
             onPress={() => setModalVisible(true)}
             style={({ pressed }) => pressed && styles.fabPressed}
           >
+            {/* Scan glyph, not a plain +, so the flagship food-scan entry is
+                not visually identical to the community new-post + button */}
             <View style={styles.fab}>
-              <Ionicons name="add" size={28} color="#FFFFFF" />
+              <Ionicons name="scan" size={26} color="#FFFFFF" />
             </View>
           </Pressable>
         </View>
