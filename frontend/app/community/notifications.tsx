@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { getNotifications, markNotificationsRead, type Notification } from "@/features/community/api";
 import { initials, timeAgoParts } from "@/features/community/helpers";
+import { dateKey } from "@/utils/date";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -51,8 +52,19 @@ export default function NotificationsScreen() {
     }
   };
 
+  // Match the app's own date style (Coach, meal history): granular for recent,
+  // then "Yesterday", then a real date — never a large day count like "45d".
+  const timeLabel = (iso: string) => {
+    const p = timeAgoParts(iso);
+    if (p.unit !== "d") return t.community.timeAgoText(p.n, p.unit);
+    const d = new Date(iso);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (dateKey(d) === dateKey(yesterday)) return t.meals.yesterday;
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
+
   const renderItem = ({ item }: { item: Notification }) => {
-    const p = timeAgoParts(item.createdAt);
     return (
       <Pressable
         onPress={() => openTarget(item)}
@@ -75,7 +87,7 @@ export default function NotificationsScreen() {
             {item.type === "like" ? t.community.notifLiked : t.community.notifFollowed}
           </AppText>
           <AppText variant="subtle" style={styles.time}>
-            {t.community.timeAgoText(p.n, p.unit)}
+            {timeLabel(item.createdAt)}
           </AppText>
         </View>
 
