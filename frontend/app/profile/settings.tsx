@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
-import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
-import { scheduleDailyReminder, cancelNotification } from "@/utils/notifications";
+import { enabledCount, loadReminders } from "@/utils/reminders";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -49,11 +48,12 @@ export default function SettingsScreen() {
     }
   };
 
-  const [reminderOn, setReminderOn] = useState(false);
-  // Reminder time is a user choice now (was hardcoded 19:00)
-  const [reminderTime, setReminderTime] = useState("19:00");
-  const [timeModalVisible, setTimeModalVisible] = useState(false);
-  const [timeInput, setTimeInput] = useState("19:00");
+  // Summary only. Reminders are configured on their own screen, so this
+  // refreshes on focus to pick up changes made there.
+  const [reminderCount, setReminderCount] = useState(0);
+  useFocusEffect(useCallback(() => {
+    loadReminders().then((r) => setReminderCount(enabledCount(r)));
+  }, []));
 
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState("");
@@ -83,41 +83,6 @@ export default function SettingsScreen() {
       Alert.alert(t.common.errorTitle, e.message || t.settings.failedLanguage);
     } finally {
       setSavingLang(false);
-    }
-  };
-
-  useEffect(() => {
-    AsyncStorage.getItem("mealReminderId").then((id) => setReminderOn(!!id));
-    AsyncStorage.getItem("mealReminderTime").then((v) => { if (v) setReminderTime(v); });
-  }, []);
-
-  // ── Reminder time: "HH:MM" (24h). Changing it while ON reschedules in place ─
-  const parseTime = (raw: string): [number, number] | null => {
-    const m = raw.trim().match(/^(\d{1,2}):(\d{2})$/);
-    if (!m) return null;
-    const h = Number(m[1]), min = Number(m[2]);
-    if (h > 23 || min > 59) return null;
-    return [h, min];
-  };
-
-  const saveReminderTime = async (raw: string) => {
-    const parsed = parseTime(raw);
-    if (!parsed) {
-      Alert.alert(t.common.errorTitle, t.settings.invalidTime);
-      return;
-    }
-    const label = `${String(parsed[0]).padStart(2, "0")}:${String(parsed[1]).padStart(2, "0")}`;
-    setTimeModalVisible(false);
-    setReminderTime(label);
-    await AsyncStorage.setItem("mealReminderTime", label);
-    if (reminderOn) {
-      const oldId = await AsyncStorage.getItem("mealReminderId");
-      await cancelNotification(oldId);
-      const id = await scheduleDailyReminder(parsed[0], parsed[1], {
-        title: t.settings.reminderNotifTitle,
-        body: t.settings.reminderNotifBody,
-      });
-      if (id) await AsyncStorage.setItem("mealReminderId", id);
     }
   };
 
@@ -154,28 +119,6 @@ export default function SettingsScreen() {
       Alert.alert(t.common.errorTitle, e.message || t.settings.failedGoal);
     } finally {
       setIsSavingGoal(false);
-    }
-  };
-
-  // ── Daily meal reminder via expo-notifications (time user-configurable) ─────
-  const toggleReminder = async (value: boolean) => {
-    if (value) {
-      const [h, m] = parseTime(reminderTime) ?? [19, 0];
-      const id = await scheduleDailyReminder(h, m, {
-        title: t.settings.reminderNotifTitle,
-        body: t.settings.reminderNotifBody,
-      });
-      if (!id) {
-        Alert.alert(t.profile.permissionNeeded, t.settings.reminderPermMsg);
-        return;
-      }
-      await AsyncStorage.setItem("mealReminderId", id);
-      setReminderOn(true);
-    } else {
-      const id = await AsyncStorage.getItem("mealReminderId");
-      await cancelNotification(id);
-      await AsyncStorage.removeItem("mealReminderId");
-      setReminderOn(false);
     }
   };
 
@@ -232,26 +175,22 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        {/* REMINDERS */}
+        {/* REMINDERS — one per meal type, managed on their own screen */}
         <SectionLabel>{t.settings.reminders}</SectionLabel>
         <Card style={styles.card}>
-          <View style={styles.rowStatic}>
+          <Pressable
+            onPress={() => router.push("/profile/reminders")}
+            style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}
+          >
             <IconBox icon="alarm" bg="rgba(255,138,61,0.12)" color={theme.colors.accent2} />
-            {/* Tap the text side to change the time; the switch keeps its own hit area */}
-            <Pressable
-              onPress={() => { setTimeInput(reminderTime); setTimeModalVisible(true); }}
-              style={({ pressed }) => [styles.rowText, pressed && styles.dim]}
-            >
+            <View style={styles.rowText}>
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.mealReminder}</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>{t.settings.mealReminderSub(reminderTime)}</AppText>
-            </Pressable>
-            <Switch
-              value={reminderOn}
-              onValueChange={toggleReminder}
-              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
+              <AppText variant="subtle" style={styles.rowSub}>
+                {reminderCount > 0 ? t.settings.mealReminderCount(reminderCount) : t.settings.mealReminderNone}
+              </AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
+          </Pressable>
         </Card>
 
         {/* SECURITY */}
@@ -372,35 +311,6 @@ export default function SettingsScreen() {
         </Pressable>
       </Modal>
 
-      {/* Reminder-time input (24h HH:MM) */}
-      <Modal transparent visible={timeModalVisible} animationType="fade" onRequestClose={() => setTimeModalVisible(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setTimeModalVisible(false)}>
-          <Pressable onPress={(e) => e.stopPropagation()}>
-            <Card style={styles.timeCard}>
-              <View style={styles.timeHead}>
-                <AppText variant="h2">{t.settings.reminderTimeTitle}</AppText>
-                <AppText variant="muted" style={styles.rowSub}>{t.settings.reminderTimeSub}</AppText>
-              </View>
-              <TextField
-                label={t.settings.reminderTimeLabel}
-                placeholder="19:30"
-                value={timeInput}
-                onChangeText={setTimeInput}
-                keyboardType="numbers-and-punctuation"
-                inputProps={{ autoFocus: true, maxLength: 5 }}
-              />
-              <View style={styles.timeActions}>
-                <View style={styles.flex1}>
-                  <Button title={t.common.cancel} variant="secondary" onPress={() => setTimeModalVisible(false)} />
-                </View>
-                <View style={styles.flex1}>
-                  <Button title={t.common.save} onPress={() => saveReminderTime(timeInput)} />
-                </View>
-              </View>
-            </Card>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </Screen>
   );
 }

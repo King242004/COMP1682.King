@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Alert, InteractionManager } from "react-native";
 import { router } from "expo-router";
 import { apiRequest, BASE_URL, setOnUnauthorized } from "../utils/api";
-import { cancelNotification } from "../utils/notifications";
+import { cancelAllReminders } from "../utils/reminders";
 import { getStrings } from "../i18n";
 import { resolveLanguage } from "../utils/language";
 
@@ -123,20 +123,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("user");
     // Per-user data must not survive into the NEXT account on this device:
-    // cached AI insight/plan/grocery + the meal reminder all belong to the
-    // user who just left.
+    // cached AI insight/plan/grocery + every scheduled meal reminder belong to
+    // the user who just left.
     try {
+      // Cancels each per-meal notification and clears both the current and the
+      // legacy storage keys
+      await cancelAllReminders();
       const keys = await AsyncStorage.getAllKeys();
       const stale = keys.filter(
         (k) =>
           k.startsWith("coach_insight_") ||
           k.startsWith("plan_week_") ||
-          k.startsWith("grocery_") ||
-          k === "mealReminderId" ||
-          k === "mealReminderTime"
+          k.startsWith("grocery_")
       );
-      const reminderId = await AsyncStorage.getItem("mealReminderId");
-      await cancelNotification(reminderId);
       if (stale.length) await AsyncStorage.multiRemove(stale);
     } catch {
       // cache cleanup is best-effort — never block the logout itself
