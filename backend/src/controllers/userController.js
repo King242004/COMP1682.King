@@ -11,6 +11,7 @@ const WeightLog = require("../models/WeightLog");
 const Post = require("../models/Post");
 const Follow = require("../models/Follow");
 const ChatMessage = require("../models/ChatMessage");
+const Notification = require("../models/Notification");
 
 // ─── Upload Avatar ────────────────────────────────────────────────────────────
 // upload_stream is callback-based (it returns a stream, NOT a promise) — wrap it
@@ -193,6 +194,8 @@ exports.deleteAccount = async (req, res) => {
     Follow.deleteMany({ $or: [{ follower: uid }, { following: uid }] }),
     // Their likes/saves on OTHER people's posts
     Post.updateMany({}, { $pull: { likes: uid, saves: uid } }),
+    // Notifications to them or triggered by them
+    Notification.deleteMany({ $or: [{ user: uid }, { actor: uid }] }),
     OTP.deleteMany({ email: user.email }),
   ]);
 

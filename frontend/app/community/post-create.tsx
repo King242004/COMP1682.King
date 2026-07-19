@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals, type Meal } from "@/context/MealsContext";
 import { createPost } from "@/features/community/api";
-import { compressImage } from "@/features/scan/api";
+import { PhotoPickerModal } from "@/features/community/PhotoPickerModal";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -22,32 +21,17 @@ export default function PostCreateScreen() {
   const t = useT();
 
   const [caption, setCaption] = useState("");
-  const [imageUris, setImageUris] = useState<string[]>([]); // Instagram-style, max 5
+  const [imageUris, setImageUris] = useState<string[]>([]); // Instagram-style, max 10
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [posting, setPosting] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => { fetchMealHistory(); }, []);
 
   const MAX_IMAGES = 10; // Instagram-style carousel cap
 
-  const pickImages = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(t.profile.permissionNeeded, t.community.photoPermPost);
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images",
-      quality: 0.7,
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_IMAGES - imageUris.length,
-    });
-    if (result.canceled || !result.assets?.length) return;
-    // Compress each at pick time (1024px / 0.5 jpeg — same pipeline as scan):
-    // full-res phone photos are 3-8 MB each, needless upload + Cloudinary cost
-    const compressed = await Promise.all(result.assets.map((a) => compressImage(a.uri)));
-    setImageUris((prev) => [...prev, ...compressed].slice(0, MAX_IMAGES));
-  };
+  // In-app Instagram-style gallery grid; the modal compresses on confirm
+  const pickImages = () => setPickerOpen(true);
 
   const removeImage = (uri: string) => setImageUris((prev) => prev.filter((u) => u !== uri));
 
@@ -107,7 +91,7 @@ export default function PostCreateScreen() {
         </Card>
 
         {/* Images — Instagram-style strip: thumbnails with a per-image ✕ and an
-            "add more" tile while under the 5-image cap */}
+            "add more" tile while under the 10-image cap */}
         {imageUris.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbRow}>
             {imageUris.map((uri) => (
@@ -162,6 +146,13 @@ export default function PostCreateScreen() {
 
         <Button title={posting ? t.community.posting : t.community.post} size="lg" disabled={!canPost} onPress={handlePost} />
       </ScrollView>
+
+      <PhotoPickerModal
+        visible={pickerOpen}
+        maxCount={MAX_IMAGES - imageUris.length}
+        onClose={() => setPickerOpen(false)}
+        onDone={(uris) => setImageUris((prev) => [...prev, ...uris].slice(0, MAX_IMAGES))}
+      />
     </Screen>
   );
 }

@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, StyleShe
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { getFeed, getExplore, toggleLike, type FeedPost } from "@/features/community/api";
+import { getFeed, getExplore, toggleLike, getUnreadCount, type FeedPost } from "@/features/community/api";
 import { PostTile } from "@/features/community/PostTile";
 import { initials } from "@/features/community/helpers";
 import { useT } from "@/i18n";
@@ -24,6 +24,7 @@ export default function CommunityScreen() {
   const [loading, setLoading] = useState(false);   // focus/initial load → centered spinner
   const [refreshing, setRefreshing] = useState(false); // pull-to-refresh only
   const [loadError, setLoadError] = useState(false);
+  const [unread, setUnread] = useState(0); // notification bell badge
 
   // Shared fetch. `mode` decides which spinner reflects this load:
   // "refresh" drives RefreshControl (user gesture), otherwise the centered loader.
@@ -47,6 +48,12 @@ export default function CommunityScreen() {
 
   // Single fetch trigger: fires on focus AND whenever `tab` changes while focused
   useFocusEffect(useCallback(() => { load(tab); }, [tab, load]));
+
+  // Refresh the bell badge whenever the tab regains focus (e.g. back from the
+  // notifications screen, which marks everything read)
+  useFocusEffect(useCallback(() => {
+    if (token) getUnreadCount(token).then(setUnread).catch(() => {});
+  }, [token]));
 
   // Optimistic like toggle, then sync count/state from the server response
   const onLike = async (post: FeedPost) => {
@@ -131,6 +138,20 @@ export default function CommunityScreen() {
                 >
                   <Ionicons name="search" size={19} color={theme.colors.primary} />
                 </Pressable>
+                {/* Notifications bell with unread badge */}
+                <Pressable
+                  onPress={() => { setUnread(0); router.push("/community/notifications"); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.a11y.notifications}
+                  style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
+                >
+                  <Ionicons name="notifications-outline" size={19} color={theme.colors.primary} />
+                  {unread > 0 && (
+                    <View style={styles.badge}>
+                      <AppText style={styles.badgeText}>{unread > 9 ? "9+" : unread}</AppText>
+                    </View>
+                  )}
+                </Pressable>
                 <Pressable
                   onPress={() => router.push("/community/post-create")}
                   accessibilityRole="button"
@@ -194,6 +215,14 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   searchBtnPressed: { backgroundColor: theme.colors.tint },
+  badge: {
+    position: "absolute", top: -2, right: -2,
+    minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+    backgroundColor: theme.colors.danger,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5, borderColor: theme.colors.bg,
+  },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   postBtn: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: "center", justifyContent: "center",

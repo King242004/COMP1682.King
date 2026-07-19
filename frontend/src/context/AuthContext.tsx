@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, InteractionManager } from "react-native";
 import { router } from "expo-router";
 import { apiRequest, BASE_URL, setOnUnauthorized } from "../utils/api";
 import { cancelNotification } from "../utils/notifications";
@@ -90,10 +90,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // parallel requests, so the ref-clear makes repeat 401s no-ops.
       if (!tokenRef.current) return;
       tokenRef.current = null;
-      logout();
+      // Same order as the manual logout: navigate first, tear down after the
+      // transition so the replace animation doesn't stutter
+      router.replace("/auth/login");
       const t = getStrings(resolveLanguage(langRef.current));
       Alert.alert(t.auth.sessionExpiredTitle, t.auth.sessionExpiredMsg);
-      router.replace("/auth/login");
+      InteractionManager.runAfterInteractions(() => { logout(); });
     });
     return () => setOnUnauthorized(null);
   }, []);

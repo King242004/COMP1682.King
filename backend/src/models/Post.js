@@ -9,8 +9,7 @@ const postSchema = new mongoose.Schema(
     image: { type: String, default: null },
     // Cloudinary public_id so deletePost can remove the file (older posts lack it)
     imagePublicId: { type: String, default: null },
-    // Instagram-style multi image (max 5). Images are FIXED at post time —
-    // editing a post only changes caption/meal, never the photos.
+    // Instagram-style multi image (max 10). Editing a post can add/remove images.
     images: [
       {
         url: { type: String, required: true },

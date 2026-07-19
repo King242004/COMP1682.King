@@ -1,7 +1,11 @@
-// Blue app header shown on all 4 tabs: avatar + greeting + streak pill.
-import { Platform, StyleSheet, View } from "react-native";
+// Blue app header for the Home tab: avatar + greeting + streak pill + bell.
+import { useCallback, useState } from "react";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
+import { getUnreadCount } from "@/features/community/api";
 import { mealStreak } from "@/utils/streak";
 import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -14,12 +18,20 @@ function greetingForHour(h: number, t: Strings) {
 }
 
 export function AppHeader() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const router = useRouter();
   const t = useT();
   // historyMeals = all logged days (`meals` only holds one day). Streak logic is
   // shared in utils/streak so every screen shows the same number.
   const { historyMeals } = useMeals();
   const streak = mealStreak(historyMeals.map((m) => m.date));
+
+  // Notification bell badge — refetched whenever Home regains focus (e.g. back
+  // from the notifications screen, which marks everything read)
+  const [unread, setUnread] = useState(0);
+  useFocusEffect(useCallback(() => {
+    if (token) getUnreadCount(token).then(setUnread).catch(() => {});
+  }, [token]));
 
   return (
     <View style={styles.header}>
@@ -41,8 +53,21 @@ export function AppHeader() {
             <AppText style={styles.streakNum}>{streak}</AppText>
           </View>
         )}
-        {/* Bell button removed: it had no onPress (dead button). Bring it back when a
-            notifications screen exists (e.g. proactive coach nudges in the backlog). */}
+        {/* Community notifications bell with unread badge */}
+        <Pressable
+          onPress={() => { setUnread(0); router.push("/community/notifications"); }}
+          accessibilityRole="button"
+          accessibilityLabel={t.a11y.notifications}
+          hitSlop={8}
+          style={({ pressed }) => [styles.bell, pressed && styles.bellPressed]}
+        >
+          <Ionicons name="notifications-outline" size={20} color="#fff" />
+          {unread > 0 && (
+            <View style={styles.badge}>
+              <AppText style={styles.badgeText}>{unread > 9 ? "9+" : unread}</AppText>
+            </View>
+          )}
+        </Pressable>
       </View>
     </View>
   );
@@ -79,4 +104,19 @@ const styles = StyleSheet.create({
   },
   streakEmoji: { fontSize: 14 },
   streakNum: { fontSize: 13, fontWeight: "800", color: "#FFFFFF" },
+  bell: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center", justifyContent: "center",
+  },
+  bellPressed: { backgroundColor: "rgba(255,255,255,0.28)" },
+  badge: {
+    position: "absolute", top: -3, right: -3,
+    minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4,
+    backgroundColor: theme.colors.danger,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1.5, borderColor: theme.colors.primary,
+  },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
 });

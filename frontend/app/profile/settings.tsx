@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { apiRequest } from "@/utils/api";
 import { useT } from "@/i18n";
 import { scheduleDailyReminder, cancelNotification } from "@/utils/notifications";
 import { theme } from "@/ui/theme";
@@ -28,7 +27,7 @@ function IconBox({ icon, bg, color }: { icon: string; bg?: string; color?: strin
 }
 
 export default function SettingsScreen() {
-  const { user, token, updateProfile, deleteAccount } = useAuth();
+  const { user, updateProfile, deleteAccount } = useAuth();
   const router = useRouter();
   const t = useT();
 
@@ -56,12 +55,6 @@ export default function SettingsScreen() {
   const [timeModalVisible, setTimeModalVisible] = useState(false);
   const [timeInput, setTimeInput] = useState("19:00");
 
-  // Change password (expandable card, mirrors the calorie-goal editor)
-  const [pwEditing, setPwEditing] = useState(false);
-  const [pwCurrent, setPwCurrent] = useState("");
-  const [pwNew, setPwNew] = useState("");
-  const [pwConfirm, setPwConfirm] = useState("");
-  const [pwSaving, setPwSaving] = useState(false);
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState("");
   const [isSavingGoal, setIsSavingGoal] = useState(false);
@@ -125,25 +118,6 @@ export default function SettingsScreen() {
         body: t.settings.reminderNotifBody,
       });
       if (id) await AsyncStorage.setItem("mealReminderId", id);
-    }
-  };
-
-  // ── Change password (requires the current one; forgot-flow stays on login) ──
-  const handleChangePassword = async () => {
-    if (pwNew.length < 6) return Alert.alert(t.common.errorTitle, t.auth.passwordTooShort);
-    if (!/[A-Z]/.test(pwNew)) return Alert.alert(t.common.errorTitle, t.auth.passwordNeedUpper);
-    if (!/[0-9]/.test(pwNew)) return Alert.alert(t.common.errorTitle, t.auth.passwordNeedNumber);
-    if (pwNew !== pwConfirm) return Alert.alert(t.common.errorTitle, t.auth.passwordsNoMatch);
-    setPwSaving(true);
-    try {
-      await apiRequest("/user/change-password", "POST", { currentPassword: pwCurrent, newPassword: pwNew }, token ?? undefined);
-      setPwEditing(false);
-      setPwCurrent(""); setPwNew(""); setPwConfirm("");
-      Alert.alert(t.auth.resetSuccessTitle, t.settings.passwordChanged);
-    } catch (e: any) {
-      Alert.alert(t.common.errorTitle, e.message || t.settings.changePasswordFailed);
-    } finally {
-      setPwSaving(false);
     }
   };
 
@@ -284,7 +258,7 @@ export default function SettingsScreen() {
         <SectionLabel>{t.settings.security}</SectionLabel>
         <Card style={styles.card}>
           <Pressable
-            onPress={() => setPwEditing((v) => !v)}
+            onPress={() => router.push("/profile/change-password")}
             style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}
           >
             <IconBox icon="key" />
@@ -292,42 +266,8 @@ export default function SettingsScreen() {
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.changePassword}</AppText>
               <AppText variant="subtle" style={styles.rowSub}>{t.settings.changePasswordSub}</AppText>
             </View>
-            <Ionicons name={pwEditing ? "chevron-up" : "chevron-forward"} size={16} color={theme.colors.subtle} />
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
-
-          {pwEditing && (
-            <View style={styles.pwEditor}>
-              <TextField
-                label={t.settings.currentPassword}
-                placeholder="••••••••"
-                value={pwCurrent}
-                onChangeText={setPwCurrent}
-                secureTextEntry
-                textContentType="password"
-              />
-              <TextField
-                label={t.auth.newPassword}
-                placeholder="••••••••"
-                value={pwNew}
-                onChangeText={setPwNew}
-                secureTextEntry
-                textContentType="newPassword"
-              />
-              <TextField
-                label={t.auth.confirmPassword}
-                placeholder="••••••••"
-                value={pwConfirm}
-                onChangeText={setPwConfirm}
-                secureTextEntry
-                textContentType="newPassword"
-              />
-              <Button
-                title={pwSaving ? t.common.saving : t.settings.changePassword}
-                onPress={handleChangePassword}
-                disabled={pwSaving || !pwCurrent || !pwNew || !pwConfirm}
-              />
-            </View>
-          )}
         </Card>
 
         {/* LANGUAGE */}
@@ -483,8 +423,6 @@ const styles = StyleSheet.create({
   goalEditor: { gap: theme.space.md, paddingBottom: theme.space.md },
   goalBtns: { flexDirection: "row", gap: theme.space.md },
   flex1: { flex: 1 },
-
-  pwEditor: { gap: theme.space.md, paddingBottom: theme.space.md },
 
   backdrop: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.45)",

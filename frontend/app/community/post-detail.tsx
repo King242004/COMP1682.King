@@ -193,6 +193,10 @@ export default function PostDetailScreen() {
                 ))}
               </ScrollView>
               )}
+              {/* Instagram-style "n/total" counter, top-right over the photo */}
+              <View style={styles.countPill}>
+                <AppText style={styles.countText}>{imageIndex + 1}/{post.images.length}</AppText>
+              </View>
               <View style={styles.dotRow}>
                 {post.images.map((uri, i) => (
                   <View key={uri} style={[styles.dot, i === imageIndex && styles.dotActive]} />
@@ -301,6 +305,12 @@ const styles = StyleSheet.create({
   timeText: { fontSize: 11 },
   caption: { paddingHorizontal: theme.space.lg, paddingBottom: theme.space.md },
   postImage: { width: "100%", aspectRatio: 1 },
+  countPill: {
+    position: "absolute", right: 10, top: 10,
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: theme.radius.pill,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  countText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   dotRow: { flexDirection: "row", justifyContent: "center", gap: 5, marginTop: 8 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.border },
   dotActive: { backgroundColor: theme.colors.primary },
