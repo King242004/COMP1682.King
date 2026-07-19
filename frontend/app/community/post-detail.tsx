@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { getPost, toggleLike, toggleSave, deletePost, type FeedPost } from "@/features/community/api";
-import { initials, timeAgoParts } from "@/features/community/helpers";
+import { initials, communityTime } from "@/features/community/helpers";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -166,7 +166,7 @@ export default function PostDetailScreen() {
             <View style={styles.flex1}>
               <AppText variant="body2" style={styles.bold}>{post.author.name}</AppText>
               <AppText variant="subtle" style={styles.timeText}>
-                {(() => { const p = timeAgoParts(post.createdAt); return t.community.timeAgoText(p.n, p.unit); })()}
+                {communityTime(post.createdAt, t)}
               </AppText>
             </View>
           </Pressable>

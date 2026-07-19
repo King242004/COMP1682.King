@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
-import { initials, timeAgoParts } from "./helpers";
+import { initials, communityTime } from "./helpers";
 import type { FeedPost } from "./api";
 
 // WEAR-style lookbook tile for the 2-column grids (feed, explore, profile, saved):
@@ -79,7 +79,7 @@ export function PostTile({
         <View style={styles.timeRow}>
           <Ionicons name="time-outline" size={11} color={theme.colors.subtle} />
           <AppText variant="subtle" style={styles.timeText}>
-            {(() => { const p = timeAgoParts(post.createdAt); return t.community.timeAgoText(p.n, p.unit); })()}
+            {communityTime(post.createdAt, t)}
           </AppText>
         </View>
       )}
