@@ -528,7 +528,6 @@ export const vi: Strings = {
     activityNamePlaceholder: "vd. Leo núi",
     intensity: "Cường độ",
     intensityLevel: { light: "Nhẹ", moderate: "Vừa", intense: "Nặng" } as Record<string, string>,
-    intensityHint: "Lúc tập vẫn nói chuyện bình thường thì chọn Nhẹ. Hơi hụt hơi thì Vừa. Thở không ra hơi thì Nặng.",
     duration: "Thời lượng (phút)",
     durationPlaceholder: "vd. 30",
     exactMinutes: "Số phút chính xác (tuỳ chọn)",

@@ -240,7 +240,6 @@ export default function AddExerciseScreen() {
                   );
                 })}
               </View>
-              <AppText variant="subtle" style={styles.metHint}>{t.exercise.intensityHint}</AppText>
             </View>
           </Card>
         )}
@@ -320,7 +319,9 @@ const styles = StyleSheet.create({
   warnText: { fontSize: 12, flex: 1 },
 
   group: { gap: 8 },
-  groupLabel: { fontSize: 12, fontWeight: "700" },
+  // Section labels need real separation from the row of chips or cards below,
+  // otherwise the label reads as a caption stuck to the first control
+  groupLabel: { fontSize: 12, fontWeight: "700", marginBottom: theme.space.md },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5 },
   chipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
@@ -331,7 +332,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
 
   card: { padding: theme.space.lg, gap: theme.space.md },
-  metHint: { fontSize: 11 },
 
   durRow: { flexDirection: "row", gap: 8 },
   durChip: {
