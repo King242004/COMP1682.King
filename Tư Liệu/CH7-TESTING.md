@@ -59,18 +59,20 @@ Testing was conducted continuously rather than as a terminal phase. Each develop
 |---|---|---|
 | Energy requirement calculation | 11 | 2 |
 | Condition filtering | 10 | 0 |
-| Authentication and account | 0 | 9 |
+| Authentication and password management | 0 | 8 |
+| Account deletion and data erasure | 0 | 4 |
 | Meal logging | 0 | 7 |
-| Exercise logging | 0 | 3 |
 | Meal planning | 0 | 6 |
-| Weight tracking | 0 | 4 |
-| Community | 0 | 4 |
-| Error handling | 0 | 3 |
+| Community | 0 | 5 |
+| Exercise logging | 0 | 3 |
+| Weight tracking | 0 | 3 |
+| Error handling | 0 | 2 |
 | Coach | 0 | 1 |
-| **Total** | **21** | **39** |
+| **Total** | **21** | **41** |
 
-> ⚠️ **Số liệu này đếm từ repo thật.** Nếu mày thêm test thì cập nhật lại bảng. Đếm bằng lệnh:
-> `npm test` và `npm run test:api` trong thư mục `backend`.
+Every test in both suites passes. Execution output is included in Appendix `[[X]]`.
+
+> ⚠️ **Số liệu đã đối chiếu với lần chạy thật ngày 19/7/2026.** Nếu thêm test thì cập nhật lại bảng, đếm bằng `npm test` và `npm run test:api` trong thư mục `backend`.
 
 ## 7.3 Test Cases
 
@@ -161,15 +163,17 @@ The integration suite exercises each API area against a live server and database
 | IT28 | Weight | Log a weight entry | 201 Created | Pass |
 | IT29 | Weight | Automatic goal follows a weight change | Recalculated to 2063 kcal at 68 kg | Pass |
 | IT30 | Weight | Custom goal survives a weight change | Remains 1800 kcal | Pass |
-| IT31 | Community | Create a post | 201 Created | Pass |
-| IT32 | Community | Created post carries an identifier | Identifier present | Pass |
-| IT33 | Community | Explore feed contains the user's own post | Post present | Pass |
-| IT34 | Community | Like toggles on and off | State toggles correctly | Pass |
-| IT35 | Coach | Retrieve conversation history | 200 with list | Pass |
-| IT36 | Account | Delete account with wrong password | 400 rejected | Pass |
-| IT37 | Account | Delete account with correct password | 200 succeeded | Pass |
-| IT38 | Account | Sign in after deletion | 400 rejected | Pass |
-| IT39 | Account | All meal data removed after deletion | No records remain | Pass |
+| IT31 | Community | Create a post carrying a caption but no photograph | 400 rejected | Pass |
+| IT32 | Community | Create a post with a photograph | 201 Created | Pass |
+| IT33 | Community | Created post carries an identifier | Identifier present | Pass |
+| IT34 | Community | Explore feed contains the user's own post | Post present | Pass |
+| IT35 | Community | Like toggles on and off | State toggles correctly | Pass |
+| IT36 | Coach | Retrieve conversation history | 200 with list | Pass |
+| IT37 | Account | Delete account with wrong password | 400 rejected | Pass |
+| IT38 | Account | Delete account with correct password | 200 succeeded | Pass |
+| IT39 | Account | Sign in after deletion | 400 rejected | Pass |
+| IT40 | Account | All meal data removed after deletion | No records remain | Pass |
+| IT41 | Weight | Weight entries returned for the user | List returned | Pass |
 
 Three groups of these cases deserve specific comment.
 
@@ -177,7 +181,11 @@ Three groups of these cases deserve specific comment.
 
 **Idempotency.** Case IT25 verifies that marking a planned meal as eaten twice does not create two diary entries. Without this guarantee, an accidental double tap would silently double the recorded energy intake for that meal.
 
-**Data erasure.** Cases IT36 to IT39 verify the right to erasure discussed in Section 4.7.1. Verifying that sign in fails after deletion is necessary but not sufficient, so IT39 additionally verifies that the underlying records are gone rather than merely inaccessible.
+**Data erasure.** Cases IT37 to IT40 verify the right to erasure discussed in Section 4.7.1. Verifying that sign in fails after deletion is necessary but not sufficient, so IT40 additionally verifies that the underlying records are gone rather than merely inaccessible.
+
+**A stale expectation discovered during documentation.** Case IT31 originally asserted that a post consisting of a caption without a photograph would be accepted. That assertion was written before the rule requiring every post to carry at least one photograph was introduced, and the test was not updated when the rule changed. Re-running the suite while preparing this chapter surfaced the discrepancy, which had two consequences. The check reported a failure that reflected an outdated expectation rather than a defect, and because the subsequent line read a field from a response that no longer contained it, the run terminated early and eight further checks did not execute.
+
+Both problems were corrected. The expectation was inverted so that the case now verifies the photograph requirement, a companion case was added to create a post correctly, and a guard was introduced so that a single failure no longer prevents the remaining checks from running. The episode is recorded here rather than quietly fixed because it illustrates a general risk. A test suite encodes the behaviour expected at the time it was written, so changing a business rule without revisiting the tests produces a suite that reports confidently on the wrong thing.
 
 > 💡 **Ghi chú:** ba đoạn này rất giá trị. Đặc biệt đoạn temporal validation, nó cho thấy mày nhận ra **một quy tắc chung áp dụng nhất quán qua nhiều tài nguyên** chứ không phải sửa lỗi lẻ tẻ từng chỗ.
 
@@ -260,8 +268,8 @@ The matrix links each functional requirement to the test cases that verify it, d
 | FR10 | User can mark a planned meal as eaten | IT24, IT25 | ✅ |
 | FR11 | Guidance is filtered by declared condition | UT12 to UT21 | ✅ |
 | FR12 | User can converse with the coach | IT35, UAT T5 | 🟡 Pending UAT |
-| FR13 | User can share and interact with community posts | IT31 to IT34 | ✅ |
-| FR14 | User can permanently delete their account and data | IT36 to IT39 | ✅ |
+| FR13 | User can share and interact with community posts | IT31 to IT35 | ✅ |
+| FR14 | User can permanently delete their account and data | IT37 to IT40 | ✅ |
 | FR15 | System handles errors without exposing internal detail | IT09, IT10 | ✅ |
 
 > ⚠️ Mã FR01 tới FR15 hiện là **tạm đặt**. Khi mày có dữ liệu khảo sát và lập bảng MoSCoW ở mục 4.5, phải **đánh lại mã cho khớp** rồi cập nhật bảng này.
@@ -272,7 +280,7 @@ The matrix links each functional requirement to the test cases that verify it, d
 
 Khung sẵn, mày điền số vào:
 
-Automated testing comprises 21 unit tests and 39 integration checks, all of which pass. Unit testing covers the energy calculation and condition filtering logic in full. Integration testing covers every API area, verifying authentication, validation, temporal rules, idempotency and data erasure against a live database.
+Automated testing comprises 21 unit tests and 41 integration checks, all of which pass. Unit testing covers the energy calculation and condition filtering logic in full. Integration testing covers every API area, verifying authentication, validation, temporal rules, idempotency and data erasure against a live database.
 
 `[[Bổ sung: tỉ lệ pass của kiểm thử chức năng, so với ngưỡng 90 phần trăm ở mục 5.4.2]]`
 
