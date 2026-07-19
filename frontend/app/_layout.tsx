@@ -48,6 +48,7 @@ export default function RootLayout() {
           <Stack.Screen name="profile/edit" />
           <Stack.Screen name="profile/settings" />
           <Stack.Screen name="profile/change-password" />
+          <Stack.Screen name="profile/reminders" />
           <Stack.Screen name="profile/progress" />
           <Stack.Screen name="community/notifications" />
           <Stack.Screen name="community/post-create" />
