@@ -83,6 +83,30 @@ export async function getPublicProfile(token: string, userId: string): Promise<P
   return apiRequest(`/community/users/${userId}`, "GET", undefined, token);
 }
 
+export type Notification = {
+  id: string;
+  type: "like" | "follow";
+  read: boolean;
+  createdAt: string;
+  actor: { id: string; name: string; avatar: string | null };
+  postId: string | null;
+  postThumb: string | null;
+};
+
+export async function getNotifications(token: string): Promise<Notification[]> {
+  const data = await apiRequest(`/community/notifications`, "GET", undefined, token);
+  return data.notifications || [];
+}
+
+export async function getUnreadCount(token: string): Promise<number> {
+  const data = await apiRequest(`/community/notifications/unread-count`, "GET", undefined, token);
+  return data.count || 0;
+}
+
+export async function markNotificationsRead(token: string): Promise<void> {
+  await apiRequest(`/community/notifications/read`, "POST", undefined, token);
+}
+
 export async function getFollowers(token: string, userId: string): Promise<DiscoverUser[]> {
   const data = await apiRequest(`/community/users/${userId}/followers`, "GET", undefined, token);
   return data.users || [];
@@ -135,21 +159,51 @@ export async function createPost(
   return data.post;
 }
 
-// Edit an existing post — caption + meal only (photos are FIXED at post time,
-// Instagram rule) → plain JSON, no multipart needed anymore.
+// Edit an existing post — caption, meal, and photos. keepUrls lists the
+// existing image URLs to keep (in order); newImageUris are appended. Plain
+// JSON when no new files, multipart otherwise.
 export async function updatePost(
   token: string,
   postId: string,
   input: {
     caption: string;
-    removeMeal?: boolean; // drop the attached meal snapshot
+    removeMeal?: boolean;     // drop the attached meal snapshot
+    keepUrls?: string[];      // existing image URLs to keep (omit = keep all)
+    newImageUris?: string[];  // local URIs to upload and append
   }
 ): Promise<FeedPost> {
-  const data = await apiRequest(
-    `/community/posts/${postId}`,
-    "PATCH",
-    { caption: input.caption, ...(input.removeMeal ? { removeMeal: true } : {}) },
-    token
-  );
+  const newUris = (input.newImageUris || []).slice(0, 10);
+
+  if (newUris.length === 0) {
+    const data = await apiRequest(
+      `/community/posts/${postId}`,
+      "PATCH",
+      {
+        caption: input.caption,
+        ...(input.removeMeal ? { removeMeal: true } : {}),
+        ...(input.keepUrls ? { keepUrls: input.keepUrls } : {}),
+      },
+      token
+    );
+    return data.post;
+  }
+
+  const form = new FormData();
+  form.append("caption", input.caption);
+  if (input.removeMeal) form.append("removeMeal", "true");
+  form.append("keepUrls", JSON.stringify(input.keepUrls || []));
+  for (const uri of newUris) {
+    const filename = uri.split("/").pop() || "post.jpg";
+    const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
+    form.append("images", { uri, name: filename, type: ext === "png" ? "image/png" : "image/jpeg" } as any);
+  }
+
+  const res = await fetch(`${BASE_URL}/community/posts/${postId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to save");
   return data.post;
 }

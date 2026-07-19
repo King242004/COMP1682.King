@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Image, InteractionManager, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -69,8 +69,11 @@ export default function ProfileScreen() {
         text: t.profile.logout,
         style: "destructive",
         onPress: () => {
-          logout();
+          // Navigate FIRST, tear down after the transition: clearing auth state
+          // re-renders every mounted screen + hits AsyncStorage, which stutters
+          // the animation when done up front
           router.replace("/auth/login");
+          InteractionManager.runAfterInteractions(() => { logout(); });
         },
       },
     ]);

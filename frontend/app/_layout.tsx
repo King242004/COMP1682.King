@@ -36,7 +36,9 @@ export default function RootLayout() {
       <MealsProvider>
         <Stack screenOptions={{ headerShown: false, headerBackButtonDisplayMode: "minimal", headerBackTitle: "" }}>
           <Stack.Screen name="index" />
-          <Stack.Screen name="auth/login" />
+          {/* Fade for the logout replace (tabs → login); a slide here reads as
+              a janky push since the whole app is being swapped out */}
+          <Stack.Screen name="auth/login" options={{ animation: "fade" }} />
           <Stack.Screen name="auth/register" />
           <Stack.Screen name="auth/forgot-password" />
           <Stack.Screen name="onboarding" />
@@ -45,7 +47,9 @@ export default function RootLayout() {
           <Stack.Screen name="scan" />
           <Stack.Screen name="profile/edit" />
           <Stack.Screen name="profile/settings" />
+          <Stack.Screen name="profile/change-password" />
           <Stack.Screen name="profile/progress" />
+          <Stack.Screen name="community/notifications" />
           <Stack.Screen name="community/post-create" />
           <Stack.Screen name="community/post-detail" />
           <Stack.Screen name="community/post-edit" />

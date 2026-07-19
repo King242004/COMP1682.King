@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { getPost, updatePost, type FeedPost } from "@/features/community/api";
+import { PhotoPickerModal } from "@/features/community/PhotoPickerModal";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -12,8 +13,8 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
-// Edit = caption + attached meal only. Photos are FIXED at post time
-// (Instagram rule) — they are shown here read-only for context.
+// Edit = caption + attached meal + photos. Existing photos can be removed
+// (keepUrls) and new ones added (picker), min 1 / max 10 like post-create.
 export default function PostEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -25,6 +26,9 @@ export default function PostEditScreen() {
 
   const [caption, setCaption] = useState("");
   const [keepMeal, setKeepMeal] = useState(true);
+  const [keepUrls, setKeepUrls] = useState<string[]>([]); // existing images kept
+  const [newUris, setNewUris] = useState<string[]>([]);   // freshly picked, local
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -33,15 +37,17 @@ export default function PostEditScreen() {
       .then((p) => {
         setPost(p);
         setCaption(p.caption);
+        setKeepUrls(p.images || []);
         setLoadError(false);
       })
       .catch(() => setLoadError(true));
   }, [token, id]);
 
-  // Post must keep something after the edit
-  const hasMeal = !!post?.meal && keepMeal;
-  const hasImages = (post?.images?.length ?? 0) > 0;
-  const canSave = (caption.trim().length > 0 || hasImages || hasMeal) && !saving;
+  const MAX_IMAGES = 10;
+  const totalImages = keepUrls.length + newUris.length;
+
+  // Photo-required rule: the post must keep at least one image after the edit
+  const canSave = totalImages > 0 && !saving;
 
   const handleSave = async () => {
     if (!token || !id || !canSave) return;
@@ -50,6 +56,8 @@ export default function PostEditScreen() {
       await updatePost(token, id, {
         caption: caption.trim(),
         removeMeal: !!post?.meal && !keepMeal,
+        keepUrls,
+        newImageUris: newUris,
       });
       router.back(); // detail refetches on focus → shows the update
     } catch (e: any) {
@@ -101,14 +109,45 @@ export default function PostEditScreen() {
           <AppText variant="subtle" style={styles.charCount}>{caption.length}/500</AppText>
         </Card>
 
-        {/* Photos — read-only thumbnails (fixed at post time) */}
-        {hasImages && (
+        {/* Photos — same strip as post-create: ✕ per image + add tile */}
+        <View style={styles.photoSection}>
+          <AppText variant="subtle" style={styles.sectionLabel}>{t.community.photosLabel}</AppText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbRow}>
-            {post.images.map((uri) => (
-              <Image key={uri} source={{ uri }} style={styles.thumb} resizeMode="cover" />
+            {keepUrls.map((uri) => (
+              <View key={uri} style={styles.thumbBox}>
+                <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
+                <Pressable
+                  onPress={() => setKeepUrls((prev) => prev.filter((u) => u !== uri))}
+                  hitSlop={6}
+                  style={styles.removeImageBtn}
+                >
+                  <Ionicons name="close" size={14} color="#fff" />
+                </Pressable>
+              </View>
             ))}
+            {newUris.map((uri) => (
+              <View key={uri} style={styles.thumbBox}>
+                <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
+                <Pressable
+                  onPress={() => setNewUris((prev) => prev.filter((u) => u !== uri))}
+                  hitSlop={6}
+                  style={styles.removeImageBtn}
+                >
+                  <Ionicons name="close" size={14} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+            {totalImages < MAX_IMAGES && (
+              <Pressable onPress={() => setPickerOpen(true)} style={styles.addThumb}>
+                <Ionicons name="add" size={26} color={theme.colors.subtle} />
+                <AppText variant="subtle" style={styles.addThumbCount}>{totalImages}/{MAX_IMAGES}</AppText>
+              </Pressable>
+            )}
           </ScrollView>
-        )}
+          {totalImages === 0 && (
+            <AppText variant="subtle" style={styles.photoRequiredHint}>{t.community.photoRequiredHint}</AppText>
+          )}
+        </View>
 
         {/* Attached meal — can be kept or removed (not re-picked here) */}
         {post.meal && (
@@ -135,6 +174,13 @@ export default function PostEditScreen() {
 
         <Button title={saving ? t.common.saving : t.community.saveChanges} size="lg" disabled={!canSave} onPress={handleSave} />
       </ScrollView>
+
+      <PhotoPickerModal
+        visible={pickerOpen}
+        maxCount={MAX_IMAGES - totalImages}
+        onClose={() => setPickerOpen(false)}
+        onDone={(uris) => setNewUris((prev) => [...prev, ...uris].slice(0, MAX_IMAGES - keepUrls.length))}
+      />
     </Screen>
   );
 }
@@ -148,8 +194,21 @@ const styles = StyleSheet.create({
   captionCard: { padding: theme.space.lg },
   captionInput: { minHeight: 90, fontSize: 15, color: theme.colors.text, textAlignVertical: "top" },
   charCount: { fontSize: 11, textAlign: "right" },
+  photoSection: { gap: theme.space.sm },
   thumbRow: { gap: theme.space.sm },
-  thumb: { width: 90, height: 90, borderRadius: 12 },
+  thumbBox: { borderRadius: 12, overflow: "hidden" },
+  thumb: { width: 90, height: 90 },
+  removeImageBtn: {
+    position: "absolute", top: 6, right: 6, backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 12, width: 24, height: 24, alignItems: "center", justifyContent: "center",
+  },
+  addThumb: {
+    width: 90, height: 90, borderRadius: 12,
+    borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,
+    alignItems: "center", justifyContent: "center", gap: 2,
+  },
+  addThumbCount: { fontSize: 11 },
+  photoRequiredHint: { fontSize: 11, marginLeft: 4 },
   mealSection: { gap: theme.space.sm },
   sectionLabel: { fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginLeft: 4 },
   mealCard: { padding: theme.space.md, flexDirection: "row", alignItems: "center", gap: 10 },

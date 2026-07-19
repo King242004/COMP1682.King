@@ -47,7 +47,7 @@ export function PostTile({
         {/* Instagram-style stacked-copies badge when the post carries 2+ images */}
         {post.images && post.images.length > 1 && (
           <View style={styles.multiBadge}>
-            <Ionicons name="copy" size={13} color="#fff" />
+            <Ionicons name="copy" size={14} color="#fff" />
           </View>
         )}
 
@@ -113,8 +113,8 @@ const styles = StyleSheet.create({
   kcalText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   multiBadge: {
     position: "absolute", right: 8, top: 8,
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: "rgba(0,0,0,0.5)", // bare icon washed out on bright photos, keep the dark pill
     alignItems: "center", justifyContent: "center",
   },
   authorChip: {

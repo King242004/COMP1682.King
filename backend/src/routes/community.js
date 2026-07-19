@@ -7,6 +7,7 @@ const {
   getPost, toggleLike, toggleSave, getSavedPosts,
   followUser, unfollowUser, getPublicProfile, getFollowers, getFollowing,
   searchUsers, getSuggestions,
+  getNotifications, getUnreadCount, markNotificationsRead,
 } = require("../controllers/communityController");
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
@@ -105,7 +106,7 @@ router.delete("/posts/:id", deletePost);
  * @swagger
  * /community/posts/{id}:
  *   patch:
- *     summary: Edit your own post (caption, image, or meal)
+ *     summary: Edit your own post (caption, meal, photos)
  *     tags: [Community]
  *     security: [{ bearerAuth: [] }]
  *     parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
@@ -115,14 +116,15 @@ router.delete("/posts/:id", deletePost);
  *           schema:
  *             type: object
  *             properties:
- *               image: { type: string, format: binary }
+ *               images: { type: array, items: { type: string, format: binary } }
+ *               keepUrls: { type: string, description: JSON array of existing image URLs to keep }
  *               caption: { type: string }
- *               removeImage: { type: boolean }
  *               removeMeal: { type: boolean }
  *     responses: { 200: { description: Post updated } }
  */
-// Edits touch caption/meal only (photos are fixed at post time) → plain JSON
-router.patch("/posts/:id", updatePost);
+// Caption/meal-only edits arrive as plain JSON (multer skips non-multipart);
+// photo edits arrive as multipart with keepUrls + new files
+router.patch("/posts/:id", upload.array("images", 10), updatePost);
 
 /**
  * @swagger
@@ -202,6 +204,39 @@ router.get("/users/search", searchUsers);
  *     responses: { 200: { description: Suggested users } }
  */
 router.get("/suggestions", getSuggestions);
+
+/**
+ * @swagger
+ * /community/notifications:
+ *   get:
+ *     summary: My in-app notifications (likes + follows)
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     responses: { 200: { description: Notification list } }
+ */
+router.get("/notifications", getNotifications);
+
+/**
+ * @swagger
+ * /community/notifications/unread-count:
+ *   get:
+ *     summary: Count of my unread notifications (badge)
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     responses: { 200: { description: Unread count } }
+ */
+router.get("/notifications/unread-count", getUnreadCount);
+
+/**
+ * @swagger
+ * /community/notifications/read:
+ *   post:
+ *     summary: Mark all my notifications as read
+ *     tags: [Community]
+ *     security: [{ bearerAuth: [] }]
+ *     responses: { 200: { description: Marked read } }
+ */
+router.post("/notifications/read", markNotificationsRead);
 
 /**
  * @swagger

@@ -2,6 +2,22 @@ const cloudinary = require("../config/cloudinary");
 const Post = require("../models/Post");
 const Follow = require("../models/Follow");
 const User = require("../models/User");
+const Notification = require("../models/Notification");
+
+// Create an in-app notification, ignoring the duplicate-key error when one
+// already exists for this (user, actor, type, post). Never notifies self.
+async function addNotification({ user, actor, type, post = null }) {
+  if (user.toString() === actor.toString()) return;
+  try {
+    await Notification.updateOne(
+      { user, actor, type, post },
+      { $setOnInsert: { user, actor, type, post }, $set: { read: false } },
+      { upsert: true }
+    );
+  } catch {
+    // best-effort — a failed notification must never break the like/follow
+  }
+}
 
 // Upload a buffer to Cloudinary, resolve with URL + public_id (kept for deletion)
 function uploadToCloudinary(buffer) {
@@ -43,8 +59,7 @@ function shapePost(post, currentUserId) {
 }
 
 // ─── Create Post ────────────────────────────────────────────────────────────
-// Instagram-style: up to 5 images per post (upload.array in the route). The
-// photos are FIXED at post time — edits only touch caption/meal.
+// Instagram-style: up to 10 images per post (upload.array in the route).
 exports.createPost = async (req, res) => {
   const { caption, mealName, calories, protein, carbs, fat } = req.body;
   const files = req.files || [];
@@ -167,6 +182,7 @@ exports.deletePost = async (req, res) => {
     [...(post.images || []).map((i) => i.publicId), post.imagePublicId].filter(Boolean)
   );
   await Promise.allSettled([...publicIds].map((id) => cloudinary.uploader.destroy(id)));
+  await Notification.deleteMany({ post: post._id }); // drop like-notifications for this post
   await post.deleteOne();
   res.json({ message: "Post deleted." });
 };
@@ -203,9 +219,10 @@ exports.getSavedPosts = async (req, res) => {
   res.json({ posts: posts.map((p) => shapePost(p, req.user.id)) });
 };
 
-// ─── Edit own post (caption + meal only) ─────────────────────────────────────
-// Instagram rule: PHOTOS ARE FIXED once posted — editing never touches images
-// (avoids partial-carousel edit complexity and accidental media loss).
+// ─── Edit own post (caption, meal, photos) ───────────────────────────────────
+// Photo edits: the client sends keepUrls (existing image URLs to keep, in
+// order) and/or new files; the final carousel = kept + new, capped at 10 and
+// never empty. When neither is sent, images stay untouched (old clients work).
 exports.updatePost = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found." });
@@ -219,6 +236,55 @@ exports.updatePost = async (req, res) => {
   }
 
   if (req.body.removeMeal === true || req.body.removeMeal === "true") post.meal = undefined;
+
+  const files = req.files || [];
+  if (req.body.keepUrls !== undefined || files.length > 0) {
+    // Legacy single-image posts get promoted into the images[] shape first
+    const current = (post.images || []).length
+      ? post.images
+      : post.image
+      ? [{ url: post.image, publicId: post.imagePublicId }]
+      : [];
+
+    // keepUrls arrives as a real array (JSON body) or a JSON string (multipart)
+    let keepUrls = req.body.keepUrls;
+    if (typeof keepUrls === "string") {
+      try { keepUrls = JSON.parse(keepUrls); } catch { keepUrls = null; }
+    }
+    if (keepUrls === undefined) keepUrls = current.map((i) => i.url);
+    if (!Array.isArray(keepUrls))
+      return res.status(400).json({ message: "keepUrls must be an array of image URLs." });
+
+    // Only URLs that actually belong to the post count (order preserved)
+    const kept = keepUrls
+      .map((u) => current.find((i) => i.url === u))
+      .filter(Boolean);
+
+    if (kept.length + files.length === 0)
+      return res.status(400).json({ message: "A post needs at least one photo." });
+    if (kept.length + files.length > 10)
+      return res.status(400).json({ message: "A post can carry at most 10 photos." });
+
+    const added = [];
+    try {
+      for (const f of files) {
+        added.push(await uploadToCloudinary(f.buffer));
+      }
+    } catch {
+      await Promise.allSettled(added.map((i) => cloudinary.uploader.destroy(i.publicId)));
+      return res.status(500).json({ message: "Image upload failed. Please try again." });
+    }
+
+    // Best-effort Cloudinary cleanup of the dropped images
+    const keptIds = new Set(kept.map((i) => i.publicId).filter(Boolean));
+    const dropped = current.filter((i) => i.publicId && !keptIds.has(i.publicId));
+    await Promise.allSettled(dropped.map((i) => cloudinary.uploader.destroy(i.publicId)));
+
+    post.images = [...kept, ...added];
+    // Legacy single-image fields mirror the first image (older readers)
+    post.image = post.images[0]?.url || null;
+    post.imagePublicId = post.images[0]?.publicId || null;
+  }
 
   // A post must still carry something after the edit
   const hasImage = !!post.image || (post.images || []).length > 0;
@@ -236,11 +302,16 @@ exports.toggleLike = async (req, res) => {
   if (!post) return res.status(404).json({ message: "Post not found." });
 
   const idx = post.likes.findIndex((id) => id.toString() === req.user.id);
+  const liked = idx < 0;
   if (idx >= 0) post.likes.splice(idx, 1);
   else post.likes.push(req.user.id);
   await post.save();
 
-  res.json({ liked: idx < 0, likeCount: post.likes.length });
+  // Notify the post owner on like; withdraw it on unlike
+  if (liked) await addNotification({ user: post.user, actor: req.user.id, type: "like", post: post._id });
+  else await Notification.deleteOne({ user: post.user, actor: req.user.id, type: "like", post: post._id });
+
+  res.json({ liked, likeCount: post.likes.length });
 };
 
 // ─── Follow / Unfollow ───────────────────────────────────────────────────────
@@ -258,12 +329,58 @@ exports.followUser = async (req, res) => {
     { $setOnInsert: { follower: req.user.id, following: targetId } },
     { upsert: true }
   );
+  await addNotification({ user: targetId, actor: req.user.id, type: "follow" });
   res.json({ following: true });
 };
 
 exports.unfollowUser = async (req, res) => {
   await Follow.deleteOne({ follower: req.user.id, following: req.params.id });
+  await Notification.deleteOne({ user: req.params.id, actor: req.user.id, type: "follow", post: null });
   res.json({ following: false });
+};
+
+// ─── Notifications: my in-app activity feed ──────────────────────────────────
+// Shapes each into { actor, type, postThumb } and drops any whose actor or post
+// no longer exists (deleted account / post).
+exports.getNotifications = async (req, res) => {
+  const notifs = await Notification.find({ user: req.user.id })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .populate("actor", "name avatar")
+    .populate("post", "image images");
+
+  const items = notifs
+    .filter((n) => n.actor && (n.type !== "like" || n.post))
+    .map((n) => {
+      const postImg = n.post
+        ? (n.post.images || []).length
+          ? n.post.images[0].url
+          : n.post.image
+        : null;
+      return {
+        id: n._id,
+        type: n.type,
+        read: n.read,
+        createdAt: n.createdAt,
+        actor: { id: n.actor._id, name: n.actor.name, avatar: n.actor.avatar || null },
+        postId: n.post ? n.post._id : null,
+        postThumb: postImg,
+      };
+    });
+
+  res.json({ notifications: items });
+};
+
+// Unread count — drives the badge on the Community bell
+exports.getUnreadCount = async (req, res) => {
+  const count = await Notification.countDocuments({ user: req.user.id, read: false });
+  res.json({ count });
+};
+
+// Mark all as read (called when the notifications screen opens)
+exports.markNotificationsRead = async (req, res) => {
+  await Notification.updateMany({ user: req.user.id, read: false }, { $set: { read: true } });
+  res.json({ message: "Marked read." });
 };
 
 // ─── Search users by name ────────────────────────────────────────────────────
