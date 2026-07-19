@@ -260,7 +260,6 @@ export const en = {
     activityNamePlaceholder: "e.g. Rock climbing",
     intensity: "Intensity",
     intensityLevel: { light: "Light", moderate: "Moderate", intense: "Intense" } as Record<string, string>,
-    intensityHint: "Still chatting normally while you train? Pick Light. A bit breathless? Moderate. Can barely talk? Intense.",
     duration: "Duration (minutes)",
     durationPlaceholder: "e.g. 30",
     exactMinutes: "Exact minutes (optional)",
