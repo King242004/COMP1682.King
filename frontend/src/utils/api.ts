@@ -20,8 +20,15 @@ function getDevHost(): string | null {
 
 const devHost = getDevHost();
 
-// Tự động khi chạy Expo Go, fallback IP cứng nếu không lấy được.
-export const BASE_URL = devHost
+// Deployed backend: set EXPO_PUBLIC_API_URL to the hosted root (no trailing
+// /api, e.g. https://mealmate-api.onrender.com). When present it wins, so the
+// app works off any network without the laptop running. When absent we fall
+// back to the auto-detected dev host, so local development is unchanged.
+const prodApi = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "");
+
+export const BASE_URL = prodApi
+  ? `${prodApi}/api`
+  : devHost
   ? `http://${devHost}:5000/api`
   : "http://192.168.1.37:5000/api";
 

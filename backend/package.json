@@ -9,6 +9,9 @@
     "test": "jest tests/unit",
     "test:api": "node tests/integration/api-regression.js"
   },
+  "engines": {
+    "node": "22.x"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
