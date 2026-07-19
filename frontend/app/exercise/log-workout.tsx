@@ -265,14 +265,18 @@ export default function AddExerciseScreen() {
               );
             })}
           </View>
-          <TextField
-            label={t.exercise.exactMinutes}
-            placeholder={t.exercise.durationPlaceholder}
-            value={duration}
-            onChangeText={(v) => { setDuration(v); setError(null); }}
-            keyboardType="number-pad"
-            textContentType="none"
-          />
+          {/* Breathing room so the optional field reads as a separate choice
+              rather than a caption attached to the chips above */}
+          <View style={styles.exactField}>
+            <TextField
+              label={t.exercise.exactMinutes}
+              placeholder={t.exercise.durationPlaceholder}
+              value={duration}
+              onChangeText={(v) => { setDuration(v); setError(null); }}
+              keyboardType="number-pad"
+              textContentType="none"
+            />
+          </View>
         </Card>
 
         {/* Live estimate */}
@@ -349,6 +353,7 @@ const styles = StyleSheet.create({
   guidedTitle: { fontSize: 13, fontWeight: "700", color: theme.colors.text },
   guidedMeta: { fontSize: 11 },
   durationCard: { padding: theme.space.lg },
+  exactField: { marginTop: theme.space.lg },
 
   estimateCard: {
     padding: theme.space.lg, alignItems: "center", gap: 4,
