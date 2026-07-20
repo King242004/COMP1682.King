@@ -186,14 +186,30 @@ Three modelling decisions are of particular note.
 
 ## 6.5 Deployment
 
-`[[⚠️ CẦN MÀY XÁC NHẬN VÀ BỔ SUNG]]`
+The system is deployed across three managed cloud services, so no component depends on the development machine.
 
-> 🔴 **Ta không viết mục này thay mày được vì cần thông tin thực tế.** Template ghi rõ sản phẩm phải "deployed or demonstrable, not only on localhost". Mày cần trả lời:
-> 1. Backend đã deploy lên đâu chưa (Render, Railway, Fly.io...) hay vẫn chạy localhost?
-> 2. Client đã build thành file cài được chưa, hay vẫn chạy qua Expo Go?
+**Table 6.4 Deployment topology**
+
+| Component | Platform | Notes |
+|---|---|---|
+| Application server | Render, Singapore region | Public HTTPS endpoint, free tier |
+| Database | MongoDB Atlas | Managed cluster with provider backup |
+| Media storage | Cloudinary | Image hosting and delivery |
+| Mobile client | Expo Go on a physical device | Loaded from the development server |
+
+The server is built from the `backend` directory of the repository and started with `npm start`. Deployment is continuous: a push to the `main` branch triggers an automatic rebuild, so the deployed service always reflects the committed source. The Node version is pinned in `package.json` so the hosted build does not drift from the version used in development. Configuration is supplied through environment variables held by the platform rather than in the repository, so no credential is committed.
+
+The client resolves its API address at startup. When an API URL is configured it is used directly, otherwise the client falls back to detecting the development host on the local network. This allows the same codebase to run against either the deployed server or a local one without code changes.
+
+Two deployment decisions have consequences worth stating.
+
+**Database network access is open to all addresses.** The hosting platform assigns dynamic outbound addresses, so restricting the database to a fixed address list is not possible. Access is instead controlled by mandatory credential authentication at the database layer. This is an accepted trade-off for a project of this scale and is revisited in Section 4.7.1.
+
+**The free hosting tier suspends an idle service.** After a period without traffic the service is suspended and the next request incurs a delay of roughly thirty seconds while it restarts. This is acceptable for a student project, and is mitigated during demonstrations and User Acceptance Testing by issuing a request shortly before the session begins.
+
+> 💡 **Ghi chú:** mục này viết dựa trên deploy thật ngày 20/7/2026. Ta đã tự gọi vào địa chỉ công khai và nhận đúng phản hồi của API, nên đây là mô tả thực tế chứ không phải dự định.
 >
-> **Nếu chưa deploy thì đây là RỦI RO ĐIỂM SỐ.** Backend deploy lên Render bậc miễn phí mất khoảng 30 phút. Ta hướng dẫn được nếu mày muốn làm.
-> Hiện tại có thể viết: cơ sở dữ liệu đã nằm trên MongoDB Atlas (dịch vụ đám mây, không phải localhost) và ảnh nằm trên Cloudinary, nên **phần dữ liệu đã ở trên đám mây thật**. Còn phần API và client thì cần mày xác nhận.
+> ⚠️ **Nhớ điền địa chỉ Render thật vào báo cáo** nếu thầy yêu cầu nêu cụ thể, hoặc đưa vào Appendix kèm ảnh chụp trang Swagger.
 
 ## 6.6 Project Management Evidence
 
@@ -222,7 +238,7 @@ Development proceeded in iterative cycles, each producing a working and tested i
 
 | # | Việc | Mức |
 |---|---|---|
-| 1 | Xác nhận tình trạng deploy backend và client (mục 6.5) | 🔴 Bắt buộc, có thể ảnh hưởng điểm |
+| 1 | ~~Deploy backend~~ ✅ **XONG 20/7**, mục 6.5 đã viết theo thực tế | Đã xong |
 | 2 | Lập bảng GitHub Projects cho việc còn lại, chụp ảnh (6.6) | 🔴 Bắt buộc, 15 phút |
 | 3 | Ảnh chụp lịch sử commit và biểu đồ contribution GitHub (6.6) | 🔴 Bắt buộc, 5 phút |
 | 4 | Ảnh chụp màn hình app chạy trên iPhone thật (6.1) | 🟡 Nên có, là điểm cộng |
