@@ -37,23 +37,48 @@
 
 ## BƯỚC 3 · Khai báo biến môi trường
 
-Kéo xuống mục **Environment Variables**, bấm **Add Environment Variable** cho từng dòng.
-Lấy giá trị từ file `backend/.env` trên máy mày, dán vào cột value.
+### Cách nhanh và chắc nhất
 
-Cần đủ **8 biến** (bỏ PORT, Render tự cấp):
+Bấm nút **"Add from .env"**, mở file `backend/.env` trên máy, **copy toàn bộ nội dung dán vào**. Render tự tách hết các biến, không sót cái nào, không gõ nhầm.
 
-| Key | Lấy giá trị từ đâu |
+Sau đó **xoá dòng PORT** đi là xong.
+
+### Nếu gõ tay thì cần đủ 10 biến
+
+Bỏ PORT (Render tự cấp), còn lại phải có đủ:
+
+| Key | Ghi chú |
 |---|---|
-| MONGODB_URI | dòng MONGODB_URI trong .env |
-| JWT_SECRET | dòng JWT_SECRET |
-| CLOUDINARY_CLOUD_NAME | .env |
-| CLOUDINARY_API_KEY | .env |
-| CLOUDINARY_API_SECRET | .env |
-| GMAIL_USER | .env |
-| GMAIL_APP_PASSWORD | .env |
-| GEMINI_API_KEY | .env |
+| MONGODB_URI | |
+| JWT_SECRET | |
+| CLOUDINARY_CLOUD_NAME | ⚠️ là tên cloud ngắn, KHÔNG phải chữ ".env" |
+| CLOUDINARY_API_KEY | |
+| CLOUDINARY_API_SECRET | |
+| GMAIL_USER | |
+| GMAIL_APP_PASSWORD | |
+| GEMINI_API_KEY | |
+| **GEMINI_API_KEY_2** | 🔴 dễ quên |
+| **GEMINI_API_KEY_3** | 🔴 dễ quên |
 
 > ⚠️ **KHÔNG thêm biến PORT.** Render tự đặt cổng riêng, mà server.js đã đọc `process.env.PORT` nên tự khớp.
+
+> 🔴 **Ba key Gemini phải khai đủ cả ba.** Code đọc từ ba biến riêng và xoay vòng khi một key hết hạn mức. Chỉ khai một key thì app vẫn chạy nhưng **hết lượt AI nhanh gấp ba lần**, rất dễ dính giữa buổi demo hoặc UAT.
+>
+> Kiểm tra sau khi deploy: trong tab Logs phải thấy dòng `Gemini: 3 API key(s) loaded`. Nếu thấy số 1 hoặc 2 là còn thiếu key.
+
+---
+
+### Phần Advanced: không cần làm gì
+
+Cứ để mặc định, nhưng nhớ một chỗ:
+
+| Mục | Làm gì |
+|---|---|
+| Secret Files | Bỏ qua |
+| **Health Check Path** | 🔴 **ĐỂ TRỐNG.** Chữ `/healthz` màu xám chỉ là gợi ý mẫu chứ chưa được đặt. Gõ nó vào là hỏng, vì app không có đường dẫn đó, Render kiểm tra thất bại rồi báo lỗi deploy |
+| Pre-Deploy Command | Để trống, app không cần chạy gì trước |
+| Auto-Deploy: On Commit | Giữ nguyên. Sau này push code lên GitHub là Render tự deploy lại |
+| Build Filters | Để mặc định |
 
 ---
 
@@ -75,8 +100,9 @@ MongoDB Atlas chặn IP lạ, mà Render có IP thay đổi. Cần mở:
 
 1. Bấm **Create Web Service**
 2. Render tự build, chờ khoảng 2 tới 4 phút
-3. Xem tab **Logs**, thấy 2 dòng này là thành công:
+3. Xem tab **Logs**, thấy đủ 3 dòng này là thành công:
    ```
+   Gemini: 3 API key(s) loaded     ← phải là 3, không phải 1
    Server running on port ...
    ✅ MongoDB connected
    ```
@@ -124,10 +150,13 @@ Nhớ điền đúng địa chỉ Render vào chỗ mô tả.
 |---|---|---|
 | 1 | Tạo tài khoản Render bằng GitHub | ⬜ |
 | 2 | Tạo Web Service, Root Directory = `backend` | ⬜ |
-| 3 | Khai 8 biến môi trường (không có PORT) | ⬜ |
-| 4 | Atlas Network Access mở `0.0.0.0/0` | ⬜ |
-| 5 | Build xong, thấy MongoDB connected trong Logs | ⬜ |
-| 6 | Mở được trang /api-docs | ⬜ |
-| 7 | Tạo frontend/.env với EXPO_PUBLIC_API_URL | ⬜ |
-| 8 | Restart Metro, test app gọi lên Render | ⬜ |
-| 9 | Viết mục 6.5 Deployment với địa chỉ thật | ⬜ |
+| 3 | Khai đủ **10 biến** (dùng Add from .env, xoá dòng PORT) | ⬜ |
+| 4 | Kiểm CLOUDINARY_CLOUD_NAME không phải chữ ".env" | ⬜ |
+| 5 | Kiểm có đủ GEMINI_API_KEY, _2 và _3 | ⬜ |
+| 6 | Advanced để trống, KHÔNG điền Health Check Path | ⬜ |
+| 7 | Atlas Network Access mở `0.0.0.0/0` | ⬜ |
+| 8 | Logs hiện `3 API key(s) loaded` và `MongoDB connected` | ⬜ |
+| 9 | Mở được trang /api-docs | ⬜ |
+| 10 | Tạo frontend/.env với EXPO_PUBLIC_API_URL | ⬜ |
+| 11 | Restart Metro, test app gọi lên Render | ⬜ |
+| 12 | Viết mục 6.5 Deployment với địa chỉ thật | ⬜ |
