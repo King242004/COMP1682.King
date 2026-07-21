@@ -1,4 +1,4 @@
-import { apiRequest, BASE_URL } from "@/utils/api";
+import { apiFetch, apiRequest } from "@/utils/api";
 
 export type FeedPost = {
   id: string;
@@ -22,14 +22,16 @@ export type PublicProfile = {
   postsHidden: boolean; // true when someone else views a private profile → hide the grid
 };
 
-export async function getFeed(token: string, page = 1): Promise<FeedPost[]> {
+export type FeedPage = { posts: FeedPost[]; page: number; hasMore: boolean };
+
+export async function getFeed(token: string, page = 1): Promise<FeedPage> {
   const data = await apiRequest(`/community/posts/feed?page=${page}`, "GET", undefined, token);
-  return data.posts || [];
+  return { posts: data.posts || [], page: data.page || page, hasMore: !!data.hasMore };
 }
 
-export async function getExplore(token: string, page = 1): Promise<FeedPost[]> {
+export async function getExplore(token: string, page = 1): Promise<FeedPage> {
   const data = await apiRequest(`/community/posts/explore?page=${page}`, "GET", undefined, token);
-  return data.posts || [];
+  return { posts: data.posts || [], page: data.page || page, hasMore: !!data.hasMore };
 }
 
 export type DiscoverUser = {
@@ -52,9 +54,9 @@ export async function getSuggestions(token: string): Promise<DiscoverUser[]> {
   return data.users || [];
 }
 
-export async function getUserPosts(token: string, userId: string): Promise<FeedPost[]> {
-  const data = await apiRequest(`/community/posts/user/${userId}`, "GET", undefined, token);
-  return data.posts || [];
+export async function getUserPosts(token: string, userId: string, page = 1): Promise<FeedPage> {
+  const data = await apiRequest(`/community/posts/user/${userId}?page=${page}`, "GET", undefined, token);
+  return { posts: data.posts || [], page: data.page || page, hasMore: !!data.hasMore };
 }
 
 export async function toggleLike(token: string, postId: string): Promise<{ liked: boolean; likeCount: number }> {
@@ -65,9 +67,9 @@ export async function toggleSave(token: string, postId: string): Promise<{ saved
   return apiRequest(`/community/posts/${postId}/save`, "POST", undefined, token);
 }
 
-export async function getSavedPosts(token: string): Promise<FeedPost[]> {
-  const data = await apiRequest(`/community/posts/saved`, "GET", undefined, token);
-  return data.posts || [];
+export async function getSavedPosts(token: string, page = 1): Promise<FeedPage> {
+  const data = await apiRequest(`/community/posts/saved?page=${page}`, "GET", undefined, token);
+  return { posts: data.posts || [], page: data.page || page, hasMore: !!data.hasMore };
 }
 
 export async function getPost(token: string, postId: string): Promise<FeedPost> {
@@ -149,13 +151,11 @@ export async function createPost(
     form.append("images", { uri, name: filename, type: ext === "png" ? "image/png" : "image/jpeg" } as any);
   }
 
-  const res = await fetch(`${BASE_URL}/community/posts`, {
+  const data = await apiFetch("/community/posts", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: form,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Failed to post");
+  }, { timeoutMs: 120_000 });
   return data.post;
 }
 
@@ -198,12 +198,10 @@ export async function updatePost(
     form.append("images", { uri, name: filename, type: ext === "png" ? "image/png" : "image/jpeg" } as any);
   }
 
-  const res = await fetch(`${BASE_URL}/community/posts/${postId}`, {
+  const data = await apiFetch(`/community/posts/${postId}`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}` },
     body: form,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Failed to save");
+  }, { timeoutMs: 120_000 });
   return data.post;
 }

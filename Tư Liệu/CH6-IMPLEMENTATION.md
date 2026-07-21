@@ -91,13 +91,15 @@ The implementation comprises 19,626 lines of application code, distributed as 4,
 
 The server follows a layered architecture in which each request passes through a route definition, an authentication guard, a controller and, where domain logic is shared, a service module. Ten route groups are mounted under the `/api` prefix, covering authentication, meals, meal planning, exercise, weight, the AI coach, profile, user account management, food scanning and the community feature.
 
-Three cross cutting concerns are handled at the application level in `server.js`.
+Four cross cutting concerns are handled at the application and authentication layers.
 
 **Fail fast database startup.** The server waits for the MongoDB connection before opening the HTTP port. If configuration is missing or the database cannot be reached, startup terminates with a clear error instead of accepting requests that are guaranteed to fail. This also makes deployment health easier to interpret because a running process means its required database dependency is available.
 
 **Request size limit.** The JSON body limit was raised to 15 megabytes because the AI coach accepts food photographs encoded as base64 within the chat payload. The Express default of 100 kilobytes would reject these requests.
 
 **Brute force protection.** A rate limiter restricts the authentication routes to 30 attempts per IP address in any 15 minute window. The limiter is applied only to `/api/auth` because every other route is protected by a JSON Web Token, so an attacker cannot make useful unauthenticated requests against them.
+
+**Verified email ownership.** Registration is a two-step workflow. The first request sends a six-digit code through Brevo, while the second creates the account only after the submitted code proves access to that mailbox. Codes are generated with Node's cryptographic random number generator, bound to both the normalised email and a purpose (`registration` or `password_reset`), stored only as an HMAC digest, limited to five incorrect attempts, replaced on resend and deleted after successful use. Registration and recovery requests also return generic responses where revealing account existence would permit user enumeration.
 
 **Global error handling.** A terminal error middleware converts unexpected failures into JSON responses. Without it, an unhandled error would return an HTML error page that the mobile client cannot parse, producing an unhelpful failure in the interface. The handler maps a Mongoose `CastError`, which occurs when a malformed identifier reaches the database layer, to a 400 response, maps malformed or oversized request bodies to 400, and returns a generic 500 for anything else without leaking internal detail to the client.
 
@@ -139,21 +141,27 @@ Three candidates are presented for the user to confirm rather than writing a sin
 
 Images are compressed on the device before upload, being resized to a maximum width of 1024 pixels and re-encoded as JPEG at reduced quality. Photographs taken by a modern smartphone are commonly between 3 and 8 megabytes, which would impose an unnecessary cost in upload time and media storage.
 
+The server independently constrains image uploads rather than trusting the client-side compression. Shared Multer middleware accepts only supported image MIME types, caps file count, field count, part count and per-file size, and applies a separate upload rate limit. Invalid media is rejected before it reaches Cloudinary, while the global error handler converts upload failures into predictable JSON responses.
+
 > 💡 **Ghi chú:** đoạn này liên kết **quyết định kỹ thuật của mày với bằng chứng học thuật**. Đây đúng kiểu viết mà template yêu cầu. Con số 86 phần trăm và suy luận 1 trên 7 là điểm sáng.
 
 ### 6.3.5 Client architecture
 
-Global state is held in two React context providers. The authentication context owns the session token, the user profile and the derived statistics, and persists the session to device storage so that the user is not required to sign in on every launch. The meals context owns the diary for the day being viewed together with the wider history required by the progress screens.
+Global state is held in two React context providers. The authentication context owns the session token, the user profile and the derived statistics, and persists the session so that the user is not required to sign in on every launch. The JWT is stored through Expo SecureStore, which uses the platform protected credential store, while non-sensitive profile and feature caches remain in AsyncStorage. A one-time migration moves an existing unencrypted token into SecureStore and deletes the legacy copy. The meals context owns the diary for the day being viewed together with the wider history required by the progress screens.
 
 Two behaviours of the authentication context merit description.
 
 **Session expiry handling.** The JSON Web Token issued at sign in has a fixed lifetime. Before this was addressed, an expired token produced an application that appeared functional while every request silently failed. A callback registered with the API client now detects an unauthorised response, clears the session and returns the user to the sign in screen with an explanatory message.
+
+**Finite network operations.** JSON and multipart requests pass through a shared transport that enforces a timeout, handles unauthorised responses and guards against non-JSON proxy errors. Ordinary requests use a shorter default, while AI generation and multi-image upload receive a larger explicit allowance. This prevents a failed connection or sleeping service from leaving an action permanently loading.
 
 **Sign out data hygiene.** Signing out clears not only the session but also every cached artefact belonging to that user, including cached coach insights, cached weekly plans, cached shopping lists and every scheduled meal reminder. Without this, data belonging to one account would remain visible to the next account used on the same device, and reminders configured by one user would continue to fire for another.
 
 **Scheduled reminders.** The application schedules one daily notification per meal type, so a user can be prompted separately for breakfast, lunch, dinner and snacks. Default times sit shortly after each meal rather than during it, because the purpose is to prompt recording rather than eating. A scheduled notification is handed to the operating system, which means it fires whether or not the meal has already been recorded. Suppressing a reminder for an already recorded meal would require code to execute at fire time, which is not available in the development client used for this project, and is noted as a limitation rather than presented as a design choice.
 
 The interface is bilingual. All display strings are held in a central catalogue with an English source of truth and a Vietnamese counterpart. The Vietnamese catalogue is typed against the English one, so the TypeScript compiler reports any key that is missing or has diverged in shape. Language is resolved from the user's stored preference, falling back to the device locale.
+
+Community lists use server-backed pagination. Feed, Explore, profile posts and saved posts request twenty records at a time and load the next page near the end of the list. A `hasMore` value prevents redundant calls, identifiers are de-duplicated when pages are merged, and remote community images use memory-and-disk caching to reduce repeated network work. The current interface is fixed to light appearance because its colour tokens have been verified only for that theme; advertising automatic dark mode without a dark palette would produce inconsistent contrast.
 
 > 💡 **Ghi chú:** đoạn "typed against the English one" là chi tiết kỹ thuật hay: mày dùng **trình biên dịch để ép hai bản dịch không lệch nhau**. Đây là thứ thầy sẽ ấn tượng vì nó cho thấy tư duy phòng lỗi.
 
@@ -177,9 +185,9 @@ Eleven collections are defined. Table 6.3 summarises them.
 | Post | A community post with images and an optional meal snapshot |
 | Follow | A directed follow relationship between two users |
 | Notification | An in application notification for a like or a follow |
-| OTP | A one time code issued for password recovery |
+| OTP | A short-lived, purpose-bound HMAC digest for registration or password recovery |
 
-Three modelling decisions are of particular note.
+Several modelling decisions are of particular note.
 
 **Snapshot rather than reference for shared meals.** A community post stores a frozen copy of the nutritional values of the meal it describes rather than a reference to the original meal document. Consequently, a user editing or deleting a meal in their own diary cannot alter or invalidate a post that has already been shared with others.
 
@@ -218,7 +226,7 @@ Two deployment decisions have consequences worth stating.
 
 **The free hosting tier suspends an idle service.** After a period without traffic the service is suspended and the next request incurs a delay of roughly thirty seconds while it restarts. This is acceptable for a student project, and is mitigated during demonstrations and User Acceptance Testing by issuing a request shortly before the session begins.
 
-**Transactional email uses an HTTPS API.** Password recovery was initially delivered through Gmail SMTP with Nodemailer. Render's free service blocks outbound SMTP ports, so the same credentials worked locally while the deployed request timed out. Delivery was migrated fully to the Brevo Transactional Email API over HTTPS, and the obsolete SMTP fallback was removed after successful production verification. A server-side Brevo request timeout and a client-side request timeout ensure that a provider failure produces a readable error instead of an indefinite loading state.
+**Transactional email uses an HTTPS API.** Password recovery was initially delivered through Gmail SMTP with Nodemailer. Render's free service blocks outbound SMTP ports, so the same credentials worked locally while the deployed request timed out. Delivery was migrated fully to the Brevo Transactional Email API over HTTPS, and the obsolete SMTP fallback was removed after successful production verification. Brevo now carries separate branded messages for registration verification and password recovery. A server-side Brevo request timeout and a client-side request timeout ensure that a provider failure produces a readable error instead of an indefinite loading state.
 
 > 💡 **Ghi chú:** mục này viết dựa trên deploy thật ngày 20/7/2026. Ta đã tự gọi vào địa chỉ công khai và nhận đúng phản hồi của API, nên đây là mô tả thực tế chứ không phải dự định.
 

@@ -1,17 +1,46 @@
 const BREVO_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
 
-const otpHtml = (otp) => `<!doctype html>
+const EMAIL_CONTENT = {
+  registration: {
+    documentTitle: "Verify your MealMate email",
+    preheader: "Your 6-digit MealMate email verification code expires in 10 minutes.",
+    badge: "EMAIL VERIFICATION",
+    heading: "Verify your email address",
+    introduction:
+      "Enter the code below in MealMate to confirm this email and finish creating your account.",
+    footer: "Didn't try to create a MealMate account? You can safely ignore this email.",
+    subject: "MealMate - Verify your email",
+    textHeading: "MealMate email verification",
+  },
+  password_reset: {
+    documentTitle: "Reset your MealMate password",
+    preheader: "Your 6-digit MealMate password reset code expires in 10 minutes.",
+    badge: "PASSWORD RESET",
+    heading: "Here is your verification code",
+    introduction:
+      "We received a request to reset your MealMate password. Enter the code below in the app to continue.",
+    footer: "Didn't request a password reset? You can safely ignore this email.",
+    subject: "MealMate - Reset your password",
+    textHeading: "MealMate password reset",
+  },
+};
+
+const getEmailContent = (purpose) => EMAIL_CONTENT[purpose] || EMAIL_CONTENT.password_reset;
+
+const otpHtml = (otp, purpose) => {
+  const content = getEmailContent(purpose);
+  return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light only">
     <meta name="supported-color-schemes" content="light only">
-    <title>Reset your MealMate password</title>
+    <title>${content.documentTitle}</title>
   </head>
   <body style="margin:0; padding:0; background-color:#ECFEFF; color:#164E63; font-family:Arial, Helvetica, sans-serif;">
     <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent;">
-      Your 6-digit MealMate verification code expires in 10 minutes.
+      ${content.preheader}
     </div>
 
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; border-collapse:collapse; background-color:#ECFEFF;">
@@ -34,11 +63,11 @@ const otpHtml = (otp) => `<!doctype html>
 
             <tr>
               <td style="padding:36px 32px 32px;">
-                <div style="display:inline-block; padding:6px 10px; border-radius:999px; background-color:#ECFEFF; color:#0E7490; font-size:11px; line-height:16px; font-weight:800; letter-spacing:0.8px;">PASSWORD RESET</div>
+                <div style="display:inline-block; padding:6px 10px; border-radius:999px; background-color:#ECFEFF; color:#0E7490; font-size:11px; line-height:16px; font-weight:800; letter-spacing:0.8px;">${content.badge}</div>
 
-                <h1 style="margin:18px 0 10px; color:#164E63; font-size:28px; line-height:36px; font-weight:800; letter-spacing:-0.3px;">Here is your verification code</h1>
+                <h1 style="margin:18px 0 10px; color:#164E63; font-size:28px; line-height:36px; font-weight:800; letter-spacing:-0.3px;">${content.heading}</h1>
                 <p style="margin:0; color:#3F6B7D; font-size:16px; line-height:25px; font-weight:400;">
-                  We received a request to reset your MealMate password. Enter the code below in the app to continue.
+                  ${content.introduction}
                 </p>
 
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; margin:28px 0 18px; border-collapse:separate; background-color:#F0FDFA; border:1px solid #A7F3D0; border-radius:16px;">
@@ -67,7 +96,7 @@ const otpHtml = (otp) => `<!doctype html>
 
             <tr>
               <td style="padding:22px 32px; background-color:#F8FDFF; border-top:1px solid #D7EEF4; color:#5C7F8F; font-size:12px; line-height:19px; text-align:center;">
-                Didn't request a password reset? You can safely ignore this email.<br>
+                ${content.footer}<br>
                 <span style="color:#0E7490; font-weight:700;">MealMate</span> &middot; Eat well, feel better.
               </td>
             </tr>
@@ -77,10 +106,14 @@ const otpHtml = (otp) => `<!doctype html>
     </table>
   </body>
 </html>`;
+};
 
-const otpText = (otp) => `MealMate password reset\n\nYour verification code is: ${otp}\n\nThis code expires in 10 minutes. Keep it private—MealMate will never ask you to share it.\n\nIf you did not request a password reset, you can safely ignore this email.`;
+const otpText = (otp, purpose) => {
+  const content = getEmailContent(purpose);
+  return `${content.textHeading}\n\nYour verification code is: ${otp}\n\nThis code expires in 10 minutes. Keep it private—MealMate will never ask you to share it.\n\n${content.footer}`;
+};
 
-async function sendOTP(to, otp) {
+async function sendOTP(to, otp, purpose = "password_reset") {
   const apiKey = process.env.BREVO_API_KEY?.trim();
   const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim();
   if (!apiKey || !senderEmail) {
@@ -97,9 +130,9 @@ async function sendOTP(to, otp) {
     body: JSON.stringify({
       sender: { name: "MealMate", email: senderEmail },
       to: [{ email: to }],
-      subject: "MealMate - Reset your password",
-      htmlContent: otpHtml(otp),
-      textContent: otpText(otp),
+      subject: getEmailContent(purpose).subject,
+      htmlContent: otpHtml(otp, purpose),
+      textContent: otpText(otp, purpose),
     }),
     signal: AbortSignal.timeout(15_000),
   });

@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -26,12 +27,25 @@ export function PostTile({
   const t = useT();
   return (
     <View style={styles.wrap}>
-      <Pressable onPress={onPress} style={({ pressed }) => [styles.tile, pressed && styles.pressed]}>
+      <View style={styles.tile}>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={post.caption || post.meal?.name || t.a11y.openPost}
+          style={({ pressed }) => [styles.tilePress, pressed && styles.pressed]}
+        >
         {post.image ? (
-          <Image source={{ uri: post.image }} style={styles.image} resizeMode="cover" />
+          <Image
+            source={{ uri: post.image }}
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
+            accessible={false}
+          />
         ) : (
           <View style={styles.fallback}>
-            <AppText style={styles.fallbackEmoji}>🍽️</AppText>
+            <Ionicons name="restaurant-outline" size={26} color={theme.colors.primary} />
             <AppText variant="body2" style={styles.fallbackText} numberOfLines={3}>
               {post.meal?.name || post.caption}
             </AppText>
@@ -55,7 +69,12 @@ export function PostTile({
           <View style={styles.authorChip}>
             <View style={styles.authorAvatar}>
               {post.author.avatar ? (
-                <Image source={{ uri: post.author.avatar }} style={styles.authorAvatarImg} />
+                <Image
+                  source={{ uri: post.author.avatar }}
+                  style={styles.authorAvatarImg}
+                  cachePolicy="memory-disk"
+                  accessible={false}
+                />
               ) : (
                 <AppText style={styles.authorInitials}>{initials(post.author.name)}</AppText>
               )}
@@ -64,8 +83,17 @@ export function PostTile({
           </View>
         )}
 
+        </Pressable>
+
         {onLike && (
-          <Pressable onPress={onLike} hitSlop={8} style={({ pressed }) => [styles.heartBtn, pressed && styles.pressed]}>
+          <Pressable
+            onPress={onLike}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={post.isLiked ? t.a11y.unlikePost : t.a11y.likePost}
+            accessibilityState={{ selected: post.isLiked }}
+            style={({ pressed }) => [styles.heartBtn, pressed && styles.pressed]}
+          >
             <Ionicons
               name={post.isLiked ? "heart" : "heart-outline"}
               size={17}
@@ -73,7 +101,7 @@ export function PostTile({
             />
           </Pressable>
         )}
-      </Pressable>
+      </View>
 
       {showTime && (
         <View style={styles.timeRow}>
@@ -97,13 +125,13 @@ const styles = StyleSheet.create({
     aspectRatio: 1, borderRadius: 14, overflow: "hidden",
     backgroundColor: theme.colors.tintSoft,
   },
+  tilePress: { flex: 1 },
   pressed: { opacity: 0.8 },
   image: { width: "100%", height: "100%" },
   fallback: {
     flex: 1, alignItems: "center", justifyContent: "center",
     gap: 6, padding: theme.space.md, paddingBottom: 40, // keep text clear of the overlay chips
   },
-  fallbackEmoji: { fontSize: 26 },
   fallbackText: { textAlign: "center", color: theme.colors.muted, fontWeight: "600" },
   kcalChip: {
     position: "absolute", left: 8, top: 8,

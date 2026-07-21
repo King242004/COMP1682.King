@@ -2,10 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Alert, InteractionManager } from "react-native";
 import { router } from "expo-router";
-import { apiRequest, BASE_URL, setOnUnauthorized } from "../utils/api";
+import { apiFetch, apiRequest, setOnUnauthorized } from "../utils/api";
 import { cancelAllReminders } from "../utils/reminders";
 import { getStrings } from "../i18n";
 import { resolveLanguage } from "../utils/language";
+import { clearAuthToken, loadAuthToken, saveAuthToken } from "../utils/authStorage";
 
 type User = {
   id: string;
@@ -45,7 +46,8 @@ type AuthContextType = {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  requestRegistrationOTP: (email: string) => Promise<void>;
+  register: (name: string, email: string, password: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchProfile: () => Promise<void>;
   updateProfile: (data: ProfileUpdate) => Promise<void>;
@@ -64,13 +66,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function loadAuth() {
-      const storedToken = await AsyncStorage.getItem("token");
-      const storedUser = await AsyncStorage.getItem("user");
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+      try {
+        const [storedToken, storedUser] = await Promise.all([
+          loadAuthToken(),
+          AsyncStorage.getItem("user"),
+        ]);
+        if (storedToken && storedUser) {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        } else if (storedToken) {
+          await clearAuthToken();
+        }
+      } catch {
+        // Corrupt local session data must never trap the app on its splash.
+        await Promise.allSettled([clearAuthToken(), AsyncStorage.removeItem("user")]);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadAuth();
   }, []);
@@ -104,15 +116,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await apiRequest("/auth/login", "POST", { email, password });
     setUser(data.user);
     setToken(data.token);
-    await AsyncStorage.setItem("token", data.token);
+    await saveAuthToken(data.token);
     await AsyncStorage.setItem("user", JSON.stringify(data.user));
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const data = await apiRequest("/auth/register", "POST", { name, email, password });
+  const requestRegistrationOTP = async (email: string) => {
+    await apiRequest(
+      "/auth/register/send-otp",
+      "POST",
+      { email },
+      undefined,
+      { timeoutMs: 60_000 }
+    );
+  };
+
+  const register = async (name: string, email: string, password: string, otp: string) => {
+    const data = await apiRequest("/auth/register", "POST", { name, email, password, otp });
     setUser(data.user);
     setToken(data.token);
-    await AsyncStorage.setItem("token", data.token);
+    await saveAuthToken(data.token);
     await AsyncStorage.setItem("user", JSON.stringify(data.user));
   };
 
@@ -120,8 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setToken(null);
     setStats(null);
-    await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("user");
+    await Promise.all([clearAuthToken(), AsyncStorage.removeItem("user")]);
     // Per-user data must not survive into the NEXT account on this device:
     // cached AI insight/plan/grocery + every scheduled meal reminder belong to
     // the user who just left.
@@ -188,22 +209,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       type: mimeType,
     } as any);
 
-    const res = await fetch(`${BASE_URL}/user/avatar`, {
+    const data = await apiFetch("/user/avatar", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         // Don't set Content-Type — let fetch set it with the boundary
       },
       body: formData,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Avatar upload failed");
+    }, { timeoutMs: 90_000 });
     setUser((prev) => (prev ? { ...prev, avatar: data.avatar } : prev));
     if (user) await AsyncStorage.setItem("user", JSON.stringify({ ...user, avatar: data.avatar }));
   };
 
   return (
-    <AuthContext.Provider value={{ user, stats, token, isLoading, login, register, logout, fetchProfile, updateProfile, changeName, uploadAvatar, deleteAccount }}>
+    <AuthContext.Provider value={{ user, stats, token, isLoading, login, requestRegistrationOTP, register, logout, fetchProfile, updateProfile, changeName, uploadAvatar, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

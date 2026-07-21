@@ -27,8 +27,8 @@ The technical implementation is stable and the implementation and automated test
 |---|---|
 | Frontend lint | Pass with no warnings |
 | TypeScript compilation | Pass |
-| Backend unit tests | 21 of 21 pass |
-| API integration regression | 50 of 50 pass on the final local backend |
+| Backend unit tests | 31 of 31 pass |
+| API integration regression | 56 of 56 pass on the final local backend |
 | Expo dependency compatibility | Dependencies up to date for SDK 54 |
 | Expo Doctor | 18 of 18 checks pass |
 | Backend production dependency audit | Zero known vulnerabilities |

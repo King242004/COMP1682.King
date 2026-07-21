@@ -1,6 +1,6 @@
 // Scan feature — upload/lookup helpers + shared types.
 import * as ImageManipulator from "expo-image-manipulator";
-import { BASE_URL } from "@/utils/api";
+import { apiFetch } from "@/utils/api";
 
 export type ScanMode = "photo" | "barcode";
 
@@ -57,25 +57,20 @@ export async function scanImage(uri: string, token: string, signal?: AbortSignal
   const mimeType = ext === "png" ? "image/png" : "image/jpeg";
   formData.append("image", { uri, name: filename, type: mimeType } as any);
 
-  const res = await fetch(`${BASE_URL}/scan/photo`, {
+  const data = await apiFetch("/scan/photo", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
-    signal,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Scan failed");
+  }, { timeoutMs: 90_000, signal });
   return data.candidates || [];
 }
 
 // Look up a packaged product by barcode (Open Food Facts via backend)
 export async function lookupBarcode(barcode: string, token: string): Promise<Product> {
-  const res = await fetch(`${BASE_URL}/scan/barcode`, {
+  const data = await apiFetch("/scan/barcode", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ barcode }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Product not found");
   return data.product;
 }

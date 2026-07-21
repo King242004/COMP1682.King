@@ -1,4 +1,5 @@
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -21,10 +22,15 @@ export function UserRow({
   const t = useT();
   return (
     <Card style={styles.card}>
-      <Pressable onPress={onPress} style={styles.userArea}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={t.a11y.openProfile(user.name)}
+        style={styles.userArea}
+      >
         <View style={styles.avatar}>
           {user.avatar ? (
-            <Image source={{ uri: user.avatar }} style={styles.avatarImg} />
+            <Image source={{ uri: user.avatar }} style={styles.avatarImg} cachePolicy="memory-disk" accessible={false} />
           ) : (
             <AppText style={styles.avatarInitials}>{initials(user.name)}</AppText>
           )}

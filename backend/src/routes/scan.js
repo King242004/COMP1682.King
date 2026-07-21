@@ -1,15 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const { scanPhoto, scanBarcode } = require("../controllers/scanController");
 const protect = require("../middleware/auth");
+const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
 
 // Memory storage so we get req.file.buffer directly (no disk write)
 // Limit 8MB - large enough for high-quality phone photos
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 },
-});
+const upload = createImageUpload({ maxFileBytes: 8 * 1024 * 1024 });
+const scanUploadLimiter = imageUploadLimiter(30);
 
 router.use(protect);
 
@@ -40,7 +38,7 @@ router.use(protect);
  *       500:
  *         description: AI scan failed
  */
-router.post("/photo", upload.single("image"), scanPhoto);
+router.post("/photo", scanUploadLimiter, upload.single("image"), scanPhoto);
 
 /**
  * @swagger

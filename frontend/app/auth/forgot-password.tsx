@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { ApiTimeoutError, apiRequest } from "@/utils/api";
@@ -12,6 +12,7 @@ import { TextField } from "@/ui/components/TextField";
 type Step = "email" | "otp" | "password";
 const STEPS: Step[] = ["email", "otp", "password"];
 const OTP_REQUEST_TIMEOUT_MS = 60_000;
+const RESEND_SECONDS = 60;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -24,6 +25,15 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setResendSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendSeconds]);
 
   // ─── Step 1: Send OTP ───────────────────────────────────────────────────────
   const handleSendOTP = async () => {
@@ -42,6 +52,7 @@ export default function ForgotPasswordScreen() {
         { timeoutMs: OTP_REQUEST_TIMEOUT_MS }
       );
       setStep("otp");
+      setResendSeconds(RESEND_SECONDS);
     } catch (e: any) {
       setError(e instanceof ApiTimeoutError ? t.auth.otpTimeout : e.message || t.auth.failedSendOtp);
     } finally {
@@ -49,10 +60,10 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  // ─── Resend: actually requests a NEW code (used to just jump back to the
-  // email step without sending anything). Server cooldown (60s) surfaces as an
-  // error message if tapped too soon.
+  // ─── Resend: the UI countdown mirrors the server's silent cooldown so a tap
+  // always means a fresh code was eligible to be issued.
   const handleResendOTP = async () => {
+    if (resendSeconds > 0 || isLoading) return;
     setOtp("");
     setError("");
     setIsLoading(true);
@@ -64,6 +75,7 @@ export default function ForgotPasswordScreen() {
         undefined,
         { timeoutMs: OTP_REQUEST_TIMEOUT_MS }
       );
+      setResendSeconds(RESEND_SECONDS);
       Alert.alert(t.auth.otpTitle, t.auth.otpResent);
     } catch (e: any) {
       setError(e instanceof ApiTimeoutError ? t.auth.otpTimeout : e.message || t.auth.failedSendOtp);
@@ -223,9 +235,9 @@ export default function ForgotPasswordScreen() {
           {/* Resend OTP — sends a real new code (stays on this step) */}
           {step === "otp" && (
             <Button
-              title={t.auth.resendOtp}
+              title={resendSeconds > 0 ? t.auth.resendOtpIn(resendSeconds) : t.auth.resendOtp}
               variant="ghost"
-              disabled={isLoading}
+              disabled={isLoading || resendSeconds > 0}
               onPress={handleResendOTP}
             />
           )}

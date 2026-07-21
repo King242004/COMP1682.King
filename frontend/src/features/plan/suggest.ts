@@ -6,6 +6,8 @@ import { stripMarkdown } from "@/features/coach/api";
 import { mealSlotByHour } from "@/utils/mealSlot";
 import type { Lang } from "@/utils/language";
 
+const AI_TIMEOUT_MS = 120_000;
+
 export type MealSuggestion = {
   name: string;
   calories: number;
@@ -32,7 +34,13 @@ export function nextMealSlot(hour: number, eatenTypes: Set<string>): string {
 }
 
 export async function suggestNextMeal(token: string, language: Lang): Promise<MealSuggestions> {
-  const data = await apiRequest("/coach/suggest-meal", "POST", { language }, token);
+  const data = await apiRequest(
+    "/coach/suggest-meal",
+    "POST",
+    { language },
+    token,
+    { timeoutMs: AI_TIMEOUT_MS }
+  );
   return {
     mealType: data.mealType || mealSlotByHour(new Date().getHours()),
     remaining: Math.round(Number(data.remaining) || 0),

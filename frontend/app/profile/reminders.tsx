@@ -94,7 +94,12 @@ export default function RemindersScreen() {
 
               <View style={styles.rowText}>
                 <AppText variant="body2" style={styles.rowTitle}>{mealLabel(key)}</AppText>
-                <Pressable onPress={() => { setEditing(key); setTimeInput(state[key].time); }} hitSlop={6}>
+                <Pressable
+                  onPress={() => { setEditing(key); setTimeInput(state[key].time); }}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${mealLabel(key)}, ${state[key].time}`}
+                >
                   <AppText style={styles.time}>{state[key].time}</AppText>
                 </Pressable>
               </View>
@@ -103,6 +108,8 @@ export default function RemindersScreen() {
                 value={state[key].enabled}
                 onValueChange={(v) => toggle(key, v)}
                 disabled={busy}
+                accessibilityLabel={`${t.settings.mealReminder}, ${mealLabel(key)}`}
+                accessibilityState={{ checked: state[key].enabled, disabled: busy }}
                 trackColor={{ true: theme.colors.primary }}
               />
             </View>
@@ -112,7 +119,10 @@ export default function RemindersScreen() {
         <AppText variant="subtle" style={styles.note}>{t.settings.reminderTapTime}</AppText>
 
         <Card style={styles.tipCard}>
-          <AppText variant="subtle" style={styles.tipText}>💡 {t.settings.reminderTip}</AppText>
+          <View style={styles.tipRow}>
+            <Ionicons name="bulb-outline" size={17} color={theme.colors.primary} />
+            <AppText variant="subtle" style={styles.tipText}>{t.settings.reminderTip}</AppText>
+          </View>
         </Card>
 
         <AppText variant="subtle" style={styles.note}>{t.settings.reminderBlindNote}</AppText>
@@ -161,7 +171,8 @@ const styles = StyleSheet.create({
   time: { fontSize: 13, fontWeight: "700", color: theme.colors.primary },
   note: { fontSize: 11, marginLeft: 4, lineHeight: 16 },
   tipCard: { padding: theme.space.md, backgroundColor: theme.colors.tintSoft },
-  tipText: { fontSize: 12, lineHeight: 18 },
+  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: theme.space.sm },
+  tipText: { flex: 1, fontSize: 12, lineHeight: 18 },
   backdrop: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "center", paddingHorizontal: theme.space.xl,

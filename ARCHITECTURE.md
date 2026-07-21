@@ -93,7 +93,7 @@
 **Auth**
 - Display login/register forms
 - UX validation (immediate feedback without API call)
-- Store JWT token in AsyncStorage
+- Store JWT token in the encrypted iOS Keychain / Android Keystore through Expo SecureStore
 
 **UI & Navigation**
 - Render all screens
@@ -211,7 +211,7 @@ flowchart TB
     Gemini["🧠 AI VISION<br/>Google Gemini 2.5 Flash<br/>(food recognition)"]:::ext
     Cloudinary["🖼️ IMAGE HOSTING<br/>Cloudinary CDN<br/>(avatars, food photos)"]:::ext
     OpenFood["🏷️ BARCODE DB<br/>Open Food Facts<br/>(packaged products)"]:::ext
-    Brevo["📧 EMAIL<br/>Brevo HTTPS API<br/>(OTP reset password)"]:::ext
+    Brevo["📧 EMAIL<br/>Brevo HTTPS API<br/>(registration + reset OTP)"]:::ext
 
     Client -- "HTTPS / REST API<br/>+ JWT Bearer Token" --> Backend
     Backend --> DB
@@ -262,7 +262,7 @@ flowchart TB
     subgraph OUTPUT["🟢 KHỐI ĐẦU RA (Output Block)"]
         direction TB
         O1["📱 UI Update<br/>(meal list, charts, profile)"]
-        O2["💾 Local Storage<br/>(AsyncStorage JWT, cache)"]
+        O2["💾 Local Storage<br/>(SecureStore JWT, AsyncStorage cache)"]
         O3["🗄️ Persistent DB<br/>(MongoDB write)"]
         O4["🔔 Push Notification<br/>(meal reminder)"]
         O5["📧 Email Output<br/>(OTP)"]
@@ -322,7 +322,7 @@ sequenceDiagram
 
 | Use Case | Input | Processing | Output |
 |---|---|---|---|
-| **Register** | name, email, password | Validate → bcrypt hash → check duplicate → save → sign JWT | JWT in AsyncStorage, user in DB |
+| **Register** | name, email, password, email OTP | Send hashed, purpose-bound OTP → verify ownership → bcrypt hash → save → sign JWT | Verified user in DB, JWT in SecureStore |
 | **Login** | email, password | Find user → bcrypt.compare → sign JWT 30 days | JWT token, user object |
 | **Add meal** | name, calories, macros, date, mealType | Validate → save Meal → recompute daily totals | Meal in Home, total kcal updated |
 | **AI Scan** | JPEG image (≤ 8MB) | Base64 encode → Gemini API → parse JSON → top 3 candidates | Modal with 3 cards, prefill Meal-add |
