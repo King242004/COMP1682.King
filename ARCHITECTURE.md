@@ -211,14 +211,14 @@ flowchart TB
     Gemini["🧠 AI VISION<br/>Google Gemini 2.5 Flash<br/>(food recognition)"]:::ext
     Cloudinary["🖼️ IMAGE HOSTING<br/>Cloudinary CDN<br/>(avatars, food photos)"]:::ext
     OpenFood["🏷️ BARCODE DB<br/>Open Food Facts<br/>(packaged products)"]:::ext
-    Gmail["📧 EMAIL<br/>Gmail SMTP<br/>(OTP reset password)"]:::ext
+    Brevo["📧 EMAIL<br/>Brevo HTTPS API<br/>(OTP reset password)"]:::ext
 
     Client -- "HTTPS / REST API<br/>+ JWT Bearer Token" --> Backend
     Backend --> DB
     Backend --> Gemini
     Backend --> Cloudinary
     Backend --> OpenFood
-    Backend --> Gmail
+    Backend --> Brevo
 
     classDef client fill:#DBEAFE,stroke:#1E3A8A,stroke-width:2px,color:#1E3A8A
     classDef backend fill:#FEF3C7,stroke:#B45309,stroke-width:2px,color:#92400E
@@ -251,7 +251,7 @@ flowchart TB
         P3["3. Input Validation<br/>(format, range, business rules)"]
         P4["4. Controller Logic<br/>(business logic)"]
         P5["5. Database Operations<br/>(MongoDB CRUD)"]
-        P6["6. External API Calls<br/>(Gemini, Cloudinary, Gmail)"]
+        P6["6. External API Calls<br/>(Gemini, Cloudinary, Brevo)"]
         P7["7. Response Builder<br/>(JSON 200/400/422/500)"]
         P1 --> P2 --> P3 --> P4 --> P5
         P4 --> P6

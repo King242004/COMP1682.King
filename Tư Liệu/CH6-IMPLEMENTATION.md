@@ -218,7 +218,7 @@ Two deployment decisions have consequences worth stating.
 
 **The free hosting tier suspends an idle service.** After a period without traffic the service is suspended and the next request incurs a delay of roughly thirty seconds while it restarts. This is acceptable for a student project, and is mitigated during demonstrations and User Acceptance Testing by issuing a request shortly before the session begins.
 
-**Transactional email uses an HTTPS API.** Password recovery was initially delivered through Gmail SMTP with Nodemailer. Render's free service blocks outbound SMTP ports, so the same credentials worked locally while the deployed request timed out. Delivery was migrated to the Brevo Transactional Email API over HTTPS. SMTP remains only as a local fallback when Brevo variables are absent. Both server-side transport timeouts and a client-side request timeout ensure that a provider failure produces a readable error instead of an indefinite loading state.
+**Transactional email uses an HTTPS API.** Password recovery was initially delivered through Gmail SMTP with Nodemailer. Render's free service blocks outbound SMTP ports, so the same credentials worked locally while the deployed request timed out. Delivery was migrated fully to the Brevo Transactional Email API over HTTPS, and the obsolete SMTP fallback was removed after successful production verification. A server-side Brevo request timeout and a client-side request timeout ensure that a provider failure produces a readable error instead of an indefinite loading state.
 
 > 💡 **Ghi chú:** mục này viết dựa trên deploy thật ngày 20/7/2026. Ta đã tự gọi vào địa chỉ công khai và nhận đúng phản hồi của API, nên đây là mô tả thực tế chứ không phải dự định.
 

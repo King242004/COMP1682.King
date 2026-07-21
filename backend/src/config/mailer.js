@@ -1,44 +1,105 @@
-const nodemailer = require("nodemailer");
-
 const BREVO_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  // A stalled SMTP socket must not leave the mobile screen loading forever.
-  // These limits start after Render has accepted the HTTP request, so they do
-  // not reduce the time available for a free-tier cold start.
-  connectionTimeout: 15_000,
-  greetingTimeout: 10_000,
-  socketTimeout: 20_000,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+const otpHtml = (otp) => `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light only">
+    <meta name="supported-color-schemes" content="light only">
+    <title>Reset your MealMate password</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#ECFEFF; color:#164E63; font-family:Arial, Helvetica, sans-serif;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent;">
+      Your 6-digit MealMate verification code expires in 10 minutes.
+    </div>
 
-const otpHtml = (otp) => `
-      <div style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; padding: 24px; border-radius: 12px; border: 1px solid #e5e7eb;">
-        <h2 style="color: #0891B2;">MealMate</h2>
-        <p>Your OTP code to reset password:</p>
-        <h1 style="letter-spacing: 8px; color: #0891B2; font-size: 36px;">${otp}</h1>
-        <p style="color: #6b7280;">This code expires in <strong>10 minutes</strong>.</p>
-        <p style="color: #6b7280;">If you did not request this, please ignore this email.</p>
-      </div>
-    `;
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; border-collapse:collapse; background-color:#ECFEFF;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; max-width:560px; border-collapse:separate; background-color:#FFFFFF; border:1px solid #D7EEF4; border-radius:18px; overflow:hidden; box-shadow:0 12px 32px rgba(22,78,99,0.12);">
+            <tr>
+              <td style="padding:28px 32px; background-color:#0E7490;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td align="center" valign="middle" width="44" height="44" style="width:44px; height:44px; border-radius:14px; background-color:#FFFFFF; color:#0E7490; font-size:22px; line-height:44px; font-weight:800;">M</td>
+                    <td style="padding-left:14px;">
+                      <div style="color:#FFFFFF; font-size:24px; line-height:29px; font-weight:800; letter-spacing:-0.2px;">MealMate</div>
+                      <div style="padding-top:2px; color:#CFFAFE; font-size:13px; line-height:18px; font-weight:600;">Your healthy companion</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
 
-async function sendWithBrevo(to, otp) {
+            <tr>
+              <td style="padding:36px 32px 32px;">
+                <div style="display:inline-block; padding:6px 10px; border-radius:999px; background-color:#ECFEFF; color:#0E7490; font-size:11px; line-height:16px; font-weight:800; letter-spacing:0.8px;">PASSWORD RESET</div>
+
+                <h1 style="margin:18px 0 10px; color:#164E63; font-size:28px; line-height:36px; font-weight:800; letter-spacing:-0.3px;">Here is your verification code</h1>
+                <p style="margin:0; color:#3F6B7D; font-size:16px; line-height:25px; font-weight:400;">
+                  We received a request to reset your MealMate password. Enter the code below in the app to continue.
+                </p>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; margin:28px 0 18px; border-collapse:separate; background-color:#F0FDFA; border:1px solid #A7F3D0; border-radius:16px;">
+                  <tr>
+                    <td align="center" style="padding:24px 16px 22px;">
+                      <div style="color:#3F6B7D; font-size:11px; line-height:16px; font-weight:800; letter-spacing:1.2px;">YOUR 6-DIGIT CODE</div>
+                      <div style="padding-top:10px; color:#0E7490; font-size:38px; line-height:46px; font-weight:800; letter-spacing:8px;">${otp}</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0; color:#3F6B7D; font-size:14px; line-height:22px; text-align:center;">
+                  This code expires in <strong style="color:#164E63;">10 minutes</strong>.
+                </p>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; margin-top:28px; border-collapse:separate; background-color:#F8FAFC; border-left:4px solid #0891B2; border-radius:10px;">
+                  <tr>
+                    <td style="padding:16px 18px; color:#3F6B7D; font-size:14px; line-height:22px;">
+                      <strong style="color:#164E63;">Keep your code private.</strong><br>
+                      MealMate will never ask you to share this code with anyone.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:22px 32px; background-color:#F8FDFF; border-top:1px solid #D7EEF4; color:#5C7F8F; font-size:12px; line-height:19px; text-align:center;">
+                Didn't request a password reset? You can safely ignore this email.<br>
+                <span style="color:#0E7490; font-weight:700;">MealMate</span> &middot; Eat well, feel better.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+const otpText = (otp) => `MealMate password reset\n\nYour verification code is: ${otp}\n\nThis code expires in 10 minutes. Keep it private—MealMate will never ask you to share it.\n\nIf you did not request a password reset, you can safely ignore this email.`;
+
+async function sendOTP(to, otp) {
+  const apiKey = process.env.BREVO_API_KEY?.trim();
+  const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim();
+  if (!apiKey || !senderEmail) {
+    throw new Error("Brevo email configuration is missing");
+  }
+
   const response = await fetch(BREVO_EMAIL_URL, {
     method: "POST",
     headers: {
       accept: "application/json",
-      "api-key": process.env.BREVO_API_KEY.trim(),
+      "api-key": apiKey,
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      sender: { name: "MealMate", email: process.env.BREVO_SENDER_EMAIL.trim() },
+      sender: { name: "MealMate", email: senderEmail },
       to: [{ email: to }],
-      subject: "MealMate - Password Reset OTP",
+      subject: "MealMate - Reset your password",
       htmlContent: otpHtml(otp),
+      textContent: otpText(otp),
     }),
     signal: AbortSignal.timeout(15_000),
   });
@@ -47,21 +108,5 @@ async function sendWithBrevo(to, otp) {
     throw new Error(`Brevo email request failed with status ${response.status}`);
   }
 }
-
-async function sendWithGmail(to, otp) {
-  await transporter.sendMail({
-    from: `"MealMate" <${process.env.GMAIL_USER}>`,
-    to,
-    subject: "MealMate - Password Reset OTP",
-    html: otpHtml(otp),
-  });
-}
-
-const sendOTP = async (to, otp) => {
-  if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL) {
-    return sendWithBrevo(to, otp);
-  }
-  return sendWithGmail(to, otp);
-};
 
 module.exports = { sendOTP };

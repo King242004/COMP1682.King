@@ -441,7 +441,7 @@ const sectionAuth = [
       "    // Lưu OTP mới",
       "    OTP.create({ email, otp, expiresAt })",
       "",
-      "    // Gửi email qua Gmail SMTP",
+      "    // Gửi email qua Brevo HTTPS API",
       "    sendOTP(email, otp)",
       "    RETURN 200 \"OTP sent to your email\"",
     ],

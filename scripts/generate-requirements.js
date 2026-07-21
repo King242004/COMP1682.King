@@ -109,7 +109,7 @@ const children = [
       ["AI nhận diện món ăn", "Google Gemini 2.5 Flash (Vision)", "Top-3 candidates + ước lượng dinh dưỡng, free tier"],
       ["Tra cứu mã vạch", "Open Food Facts API", "Miễn phí, không cần API key"],
       ["Lưu ảnh", "Cloudinary CDN", "Avatar, ảnh món ăn"],
-      ["Email", "Nodemailer + Gmail SMTP", "OTP đặt lại mật khẩu"],
+      ["Email", "Brevo Transactional Email API", "OTP đặt lại mật khẩu qua HTTPS"],
       ["Thông báo", "expo-notifications", "Nhắc bữa ăn hằng ngày"],
     ],
     [2400, 3400, 3560]
