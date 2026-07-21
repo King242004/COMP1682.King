@@ -44,3 +44,10 @@ Thumbs.db
 !package-lock.json
 *.map
 
+
+# Identifiable research-participant data must stay private
+Tư Liệu/Consent Forms/
+Tư Liệu/Raw Survey Data/
+Tư Liệu/Interview Transcripts/
+Tư Liệu/UAT Participant Data/
+Tư Liệu/Private Research Data/
