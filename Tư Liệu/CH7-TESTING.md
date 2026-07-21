@@ -174,6 +174,15 @@ The integration suite exercises each API area against a live server and database
 | IT39 | Account | Sign in after deletion | 400 rejected | Pass |
 | IT40 | Account | All meal data removed after deletion | No records remain | Pass |
 | IT41 | Weight | Weight entries returned for the user | List returned | Pass |
+| IT42 | Avatar | Upload an avatar image | 200 with hosted image URL | Pass |
+| IT43 | Avatar | Replace an existing avatar | 200 with new hosted image URL | Pass |
+| IT44 | Privacy | Register a second user for cross-account checks | 201 Created | Pass |
+| IT45 | Privacy | Save a post while its owner is public | Save succeeds | Pass |
+| IT46 | Privacy | Enable private account mode | Profile updated | Pass |
+| IT47 | Privacy | Directly like a private post from another account | 403 rejected | Pass |
+| IT48 | Privacy | Directly save a private post from another account | 403 rejected | Pass |
+| IT49 | Privacy | Retrieve saved posts after their owner becomes private | Private post omitted | Pass |
+| IT50 | Account | Delete the temporary privacy test account | 200 succeeded | Pass |
 
 Three groups of these cases deserve specific comment.
 
@@ -182,6 +191,8 @@ Three groups of these cases deserve specific comment.
 **Idempotency.** Case IT25 verifies that marking a planned meal as eaten twice does not create two diary entries. Without this guarantee, an accidental double tap would silently double the recorded energy intake for that meal.
 
 **Data erasure.** Cases IT37 to IT40 verify the right to erasure discussed in Section 4.7.1. Verifying that sign in fails after deletion is necessary but not sufficient, so IT40 additionally verifies that the underlying records are gone rather than merely inaccessible.
+
+**Cross-account privacy.** Cases IT44 to IT50 use a second temporary account rather than testing privacy from the post owner's own session. The sequence first proves that a public post can be saved, changes the owner to private, then verifies both list filtering and direct endpoint rejection. This matters because hiding a post in the client does not protect it if a known identifier can still be used to like or save it through the API.
 
 **A stale expectation discovered during documentation.** Case IT31 originally asserted that a post consisting of a caption without a photograph would be accepted. That assertion was written before the rule requiring every post to carry at least one photograph was introduced, and the test was not updated when the rule changed. Re-running the suite while preparing this chapter surfaced the discrepancy, which had two consequences. The check reported a failure that reflected an outdated expectation rather than a defect, and because the subsequent line read a field from a response that no longer contained it, the run terminated early and eight further checks did not execute.
 
@@ -268,7 +279,7 @@ The matrix links each functional requirement to the test cases that verify it, d
 | FR10 | User can mark a planned meal as eaten | IT24, IT25 | ✅ |
 | FR11 | Guidance is filtered by declared condition | UT12 to UT21 | ✅ |
 | FR12 | User can converse with the coach | IT35, UAT T5 | 🟡 Pending UAT |
-| FR13 | User can share and interact with community posts | IT31 to IT35 | ✅ |
+| FR13 | User can share and interact with community posts while account privacy is enforced | IT31 to IT35, IT44 to IT49 | ✅ |
 | FR14 | User can permanently delete their account and data | IT37 to IT40 | ✅ |
 | FR15 | System handles errors without exposing internal detail | IT09, IT10 | ✅ |
 
@@ -280,7 +291,7 @@ The matrix links each functional requirement to the test cases that verify it, d
 
 Khung sẵn, mày điền số vào:
 
-Automated testing comprises 21 unit tests and 41 integration checks, all of which pass. Unit testing covers the energy calculation and condition filtering logic in full. Integration testing covers every API area, verifying authentication, validation, temporal rules, idempotency and data erasure against a live database.
+Automated testing comprises 21 unit tests and 50 integration checks, all of which pass against the final local backend. Unit testing covers the energy calculation and condition filtering logic in full. Integration testing covers every API area, verifying authentication, validation, temporal rules, idempotency, cross-account privacy, media upload and data erasure against a live database.
 
 `[[Bổ sung: tỉ lệ pass của kiểm thử chức năng, so với ngưỡng 90 phần trăm ở mục 5.4.2]]`
 

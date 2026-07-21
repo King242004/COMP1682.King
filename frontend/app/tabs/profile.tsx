@@ -36,7 +36,7 @@ export default function ProfileScreen() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Refresh on focus so changes made in the Edit screen show up on return
-  useFocusEffect(useCallback(() => { fetchProfile(); }, []));
+  useFocusEffect(useCallback(() => { fetchProfile(); }, [fetchProfile]));
 
   // Tap on avatar → open image picker → upload to Cloudinary via backend
   const handlePickAvatar = async () => {

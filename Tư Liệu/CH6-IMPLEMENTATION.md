@@ -15,16 +15,16 @@ The application was developed as a client server system. The mobile client was b
 | Component | Technology | Version |
 |---|---|---|
 | Mobile framework | React Native | 0.81.5 |
-| Application platform | Expo | 54.0.31 |
+| Application platform | Expo | 54.0.36 |
 | UI library | React | 19.1.0 |
-| Routing | Expo Router | 6.0.21 |
+| Routing | Expo Router | 6.0.24 |
 | Language (client) | TypeScript | 5.9.2 |
 | Runtime (server) | Node.js with Express | Express 5.2.1 |
 | Database | MongoDB Atlas with Mongoose ODM | Mongoose 9.6.2 |
 | AI model access | Google Generative AI SDK | 0.24.1 |
 | Media storage | Cloudinary | 2.10.0 |
 | Authentication | jsonwebtoken with bcryptjs | 9.0.3 and 3.0.3 |
-| Email delivery | Nodemailer | 8.0.7 |
+| Email delivery | Nodemailer | 9.0.3 |
 | API documentation | swagger-jsdoc with swagger-ui-express | 6.2.8 and 5.0.1 |
 | Unit testing | Jest | 30.4.2 |
 | Linting | ESLint with eslint-config-expo | 9.25.0 |
@@ -77,12 +77,13 @@ Second, code used by two or more screens was promoted into `src/ui`, `src/contex
 | Controllers | 10 |
 | Domain services | 5 |
 | Configuration modules | 5 |
-| Client screens (routes) | 30 |
+| Client screens (routes) | 31 |
 | Client feature modules | 10 |
 
-The implementation comprises approximately 19,300 lines of application code, distributed as 4,213 lines in the server source, 7,978 lines in client screens and 7,101 lines in client feature and shared modules.
+The implementation comprises 19,626 lines of application code, distributed as 4,241 lines in the server source, 8,092 lines in client screens and 7,293 lines in client feature and shared modules.
 
 > 💡 **Ghi chú:** số dòng code ta đếm thật bằng `wc -l`, không tính node_modules. Con số này thể hiện quy mô công việc, thầy hay để ý.
+> ⚠️ **Đếm lại lần cuối trước khi nộp**, vì mỗi lần thêm màn hình là số này lệch. Lệnh đếm ghi ở cuối file.
 
 ## 6.3 Backend and Frontend Implementation
 
@@ -91,6 +92,8 @@ The implementation comprises approximately 19,300 lines of application code, dis
 The server follows a layered architecture in which each request passes through a route definition, an authentication guard, a controller and, where domain logic is shared, a service module. Ten route groups are mounted under the `/api` prefix, covering authentication, meals, meal planning, exercise, weight, the AI coach, profile, user account management, food scanning and the community feature.
 
 Three cross cutting concerns are handled at the application level in `server.js`.
+
+**Fail fast database startup.** The server waits for the MongoDB connection before opening the HTTP port. If configuration is missing or the database cannot be reached, startup terminates with a clear error instead of accepting requests that are guaranteed to fail. This also makes deployment health easier to interpret because a running process means its required database dependency is available.
 
 **Request size limit.** The JSON body limit was raised to 15 megabytes because the AI coach accepts food photographs encoded as base64 within the chat payload. The Express default of 100 kilobytes would reject these requests.
 
@@ -146,7 +149,9 @@ Two behaviours of the authentication context merit description.
 
 **Session expiry handling.** The JSON Web Token issued at sign in has a fixed lifetime. Before this was addressed, an expired token produced an application that appeared functional while every request silently failed. A callback registered with the API client now detects an unauthorised response, clears the session and returns the user to the sign in screen with an explanatory message.
 
-**Sign out data hygiene.** Signing out clears not only the session but also every cached artefact belonging to that user, including cached coach insights, cached weekly plans, cached shopping lists and any scheduled meal reminder. Without this, data belonging to one account would remain visible to the next account used on the same device.
+**Sign out data hygiene.** Signing out clears not only the session but also every cached artefact belonging to that user, including cached coach insights, cached weekly plans, cached shopping lists and every scheduled meal reminder. Without this, data belonging to one account would remain visible to the next account used on the same device, and reminders configured by one user would continue to fire for another.
+
+**Scheduled reminders.** The application schedules one daily notification per meal type, so a user can be prompted separately for breakfast, lunch, dinner and snacks. Default times sit shortly after each meal rather than during it, because the purpose is to prompt recording rather than eating. A scheduled notification is handed to the operating system, which means it fires whether or not the meal has already been recorded. Suppressing a reminder for an already recorded meal would require code to execute at fire time, which is not available in the development client used for this project, and is noted as a limitation rather than presented as a design choice.
 
 The interface is bilingual. All display strings are held in a central catalogue with an English source of truth and a Vietnamese counterpart. The Vietnamese catalogue is typed against the English one, so the TypeScript compiler reports any key that is missing or has diverged in shape. Language is resolved from the user's stored preference, falling back to the device locale.
 
@@ -180,6 +185,12 @@ Three modelling decisions are of particular note.
 
 **Uniqueness enforced at the database level.** A compound unique index on user and date prevents duplicate weight entries for a single day, and a compound unique index on recipient, actor, type and post prevents duplicate notifications. Enforcing these rules in the database rather than in application code guarantees they hold even if a request is duplicated.
 
+**Consistent community time presentation.** Feed cards, post details and in-application notifications use one shared formatter. Recent activity is shown as an app-localised relative time, while older activity changes to a full calendar date and includes the year when necessary. This keeps the community language consistent with the rest of MealMate and avoids mixed English and Vietnamese abbreviations.
+
+**Private account enforcement.** Community queries and interaction endpoints apply the same privacy rule. Posts owned by a private account are excluded from other users' saved-post results, and direct attempts to like or save such a post are rejected. Enforcing this in the API prevents privacy from depending only on what the client chooses to display.
+
+**Managed avatar lifecycle.** The user record stores both the delivered avatar URL and its Cloudinary public identifier. Replacing an avatar removes the previous cloud asset after the new value is saved, and account deletion removes the current asset. This avoids leaving media behind after it is no longer referenced.
+
 **Backward compatible schema evolution.** When support for multiple images per post was introduced, the original single image fields were retained and kept synchronised with the first element of the new array. Documents created before the change therefore continue to render correctly without a migration.
 
 > 💡 **Ghi chú:** ba quyết định này rất đáng để mày nói ở buổi bảo vệ. Nhất là cái snapshot, vì nó cho thấy mày nghĩ trước được hậu quả.
@@ -192,7 +203,7 @@ The system is deployed across three managed cloud services, so no component depe
 
 | Component | Platform | Notes |
 |---|---|---|
-| Application server | Render, Singapore region | Public HTTPS endpoint, free tier |
+| Application server | Render, Singapore region | Public HTTPS endpoint at `https://mealmate-eunj.onrender.com`, free tier |
 | Database | MongoDB Atlas | Managed cluster with provider backup |
 | Media storage | Cloudinary | Image hosting and delivery |
 | Mobile client | Expo Go on a physical device | Loaded from the development server |
@@ -208,8 +219,6 @@ Two deployment decisions have consequences worth stating.
 **The free hosting tier suspends an idle service.** After a period without traffic the service is suspended and the next request incurs a delay of roughly thirty seconds while it restarts. This is acceptable for a student project, and is mitigated during demonstrations and User Acceptance Testing by issuing a request shortly before the session begins.
 
 > 💡 **Ghi chú:** mục này viết dựa trên deploy thật ngày 20/7/2026. Ta đã tự gọi vào địa chỉ công khai và nhận đúng phản hồi của API, nên đây là mô tả thực tế chứ không phải dự định.
->
-> ⚠️ **Nhớ điền địa chỉ Render thật vào báo cáo** nếu thầy yêu cầu nêu cụ thể, hoặc đưa vào Appendix kèm ảnh chụp trang Swagger.
 
 ## 6.6 Project Management Evidence
 
@@ -245,3 +254,18 @@ Development proceeded in iterative cycles, each producing a working and tested i
 | 5 | Cân nhắc chèn sơ đồ kiến trúc và vài đoạn code tiêu biểu | 🟡 Nên có |
 
 **Đã trích dẫn trong chương:** Mifflin et al. (1990), Mezgec and Koroušić Seljak (2017), Neha et al. (2025), Amugongo et al. (2025). Tất cả đều nằm trong danh mục đã xác minh.
+
+---
+
+## LỆNH ĐẾM LẠI SỐ LIỆU TRƯỚC KHI NỘP
+
+Chạy trong thư mục gốc repo, dán kết quả vào bảng 6.2 và câu số dòng code:
+
+```bash
+find frontend/app -name "*.tsx" | wc -l          # số màn hình
+ls backend/src/models/*.js | wc -l               # số model
+ls backend/src/services/*.js | wc -l             # số service
+find backend/src -name "*.js" | xargs wc -l | tail -1
+find frontend/app -name "*.tsx" | xargs wc -l | tail -1
+find frontend/src -type f \( -name "*.ts" -o -name "*.tsx" \) | xargs wc -l | tail -1
+```

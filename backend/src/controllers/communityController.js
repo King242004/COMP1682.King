@@ -116,6 +116,15 @@ async function privateUserIds() {
   return User.find({ isPrivate: true }).distinct("_id");
 }
 
+// Direct post endpoints must enforce the same privacy rule as Feed, Explore
+// and profile grids. Otherwise a previously saved post or a known id could
+// bypass a user's later decision to make their profile private.
+async function postHiddenFrom(post, viewerId) {
+  if (post.user.toString() === viewerId) return false;
+  const owner = await User.findById(post.user).select("isPrivate");
+  return !!owner?.isPrivate;
+}
+
 // ─── Feed (strictly people I follow), paginated ──────────────────────────────
 // Own posts are NOT included — an account following nobody sees an empty feed
 // (own posts live in Explore and on the user's own profile).
@@ -201,6 +210,8 @@ exports.getPost = async (req, res) => {
 exports.toggleSave = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found." });
+  if (await postHiddenFrom(post, req.user.id))
+    return res.status(403).json({ message: "This post is private." });
 
   if (!post.saves) post.saves = [];
   const idx = post.saves.findIndex((id) => id.toString() === req.user.id);
@@ -213,7 +224,8 @@ exports.toggleSave = async (req, res) => {
 
 // ─── My saved posts ──────────────────────────────────────────────────────────
 exports.getSavedPosts = async (req, res) => {
-  const posts = await Post.find({ saves: req.user.id })
+  const hidden = (await privateUserIds()).filter((id) => id.toString() !== req.user.id);
+  const posts = await Post.find({ saves: req.user.id, user: { $nin: hidden } })
     .sort({ createdAt: -1 })
     .populate("user", "name avatar");
   res.json({ posts: posts.map((p) => shapePost(p, req.user.id)) });
@@ -300,6 +312,8 @@ exports.updatePost = async (req, res) => {
 exports.toggleLike = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found." });
+  if (await postHiddenFrom(post, req.user.id))
+    return res.status(403).json({ message: "This post is private." });
 
   const idx = post.likes.findIndex((id) => id.toString() === req.user.id);
   const liked = idx < 0;

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useMeals } from "@/context/MealsContext";
@@ -59,7 +59,7 @@ export default function EditMealScreen() {
       setNote(meal.note ?? "");
       setMealType((meal.mealType as MealTypeKey) ?? "breakfast");
     }
-  }, [id]);
+  }, [meal]);
 
   const validate = (): Errors => {
     const e: Errors = {};
@@ -78,7 +78,7 @@ export default function EditMealScreen() {
     return e;
   };
 
-  const canSave = useMemo(() => Object.keys(validate()).length === 0, [mealName, calories, protein, carbs, fat]);
+  const canSave = Object.keys(validate()).length === 0;
 
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));

@@ -2,6 +2,12 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
+  // A stalled SMTP socket must not leave the mobile screen loading forever.
+  // These limits start after Render has accepted the HTTP request, so they do
+  // not reduce the time available for a free-tier cold start.
+  connectionTimeout: 15_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 20_000,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,

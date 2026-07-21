@@ -26,7 +26,7 @@ export default function PostCreateScreen() {
   const [posting, setPosting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  useEffect(() => { fetchMealHistory(); }, []);
+  useEffect(() => { fetchMealHistory(); }, [fetchMealHistory]);
 
   const MAX_IMAGES = 10; // Instagram-style carousel cap
 

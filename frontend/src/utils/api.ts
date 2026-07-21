@@ -41,22 +41,48 @@ export function setOnUnauthorized(fn: (() => void) | null) {
   onUnauthorized = fn;
 }
 
+export class ApiTimeoutError extends Error {
+  constructor() {
+    super("Request timed out");
+    this.name = "ApiTimeoutError";
+  }
+}
+
+type ApiRequestOptions = {
+  timeoutMs?: number;
+};
+
 export async function apiRequest(
   endpoint: string,
   method: string = "GET",
   body?: object,
-  token?: string
+  token?: string,
+  options?: ApiRequestOptions
 ) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeoutId = options?.timeoutMs
+    ? setTimeout(() => controller.abort(), options.timeoutMs)
+    : null;
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${endpoint}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (error: any) {
+    if (error?.name === "AbortError") throw new ApiTimeoutError();
+    throw error;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 
   // Guard the parse: a proxy/crash can still return non-JSON (HTML error page) —
   // surface a readable message instead of a cryptic "JSON Parse error".
