@@ -54,8 +54,8 @@ Bỏ PORT (Render tự cấp), còn lại phải có đủ:
 | CLOUDINARY_CLOUD_NAME | ⚠️ là tên cloud ngắn, KHÔNG phải chữ ".env" |
 | CLOUDINARY_API_KEY | |
 | CLOUDINARY_API_SECRET | |
-| GMAIL_USER | |
-| GMAIL_APP_PASSWORD | |
+| BREVO_API_KEY | API key bắt đầu bằng `xkeysib-` |
+| BREVO_SENDER_EMAIL | Email người gửi đã xác minh trên Brevo |
 | GEMINI_API_KEY | |
 | **GEMINI_API_KEY_2** | 🔴 dễ quên |
 | **GEMINI_API_KEY_3** | 🔴 dễ quên |

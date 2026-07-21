@@ -38,8 +38,8 @@ app.get("/", (req, res) =>
   res.json({
     message: "MealMate API running",
     version: process.env.RENDER_GIT_COMMIT?.slice(0, 8) || "local",
-    emailProvider:
-      process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL ? "brevo" : "gmail-fallback",
+    emailProvider: "brevo",
+    emailConfigured: Boolean(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL),
   })
 );
 
