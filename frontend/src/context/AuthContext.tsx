@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Alert, InteractionManager } from "react-native";
 import { router } from "expo-router";
 import { apiRequest, BASE_URL, setOnUnauthorized } from "../utils/api";
@@ -142,12 +142,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!token) return;
     const data = await apiRequest("/profile", "GET", undefined, token);
     setUser((prev) => ({ ...prev, ...data.user, id: data.user._id ?? prev?.id }));
     setStats(data.stats);
-  };
+  }, [token]);
 
   const updateProfile = async (data: ProfileUpdate) => {
     if (!token) return;

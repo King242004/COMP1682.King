@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, View, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { apiRequest } from "@/utils/api";
+import { ApiTimeoutError, apiRequest } from "@/utils/api";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -11,6 +11,7 @@ import { TextField } from "@/ui/components/TextField";
 
 type Step = "email" | "otp" | "password";
 const STEPS: Step[] = ["email", "otp", "password"];
+const OTP_REQUEST_TIMEOUT_MS = 60_000;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -33,10 +34,16 @@ export default function ForgotPasswordScreen() {
     setError("");
     setIsLoading(true);
     try {
-      await apiRequest("/user/send-otp", "POST", { email: email.trim() });
+      await apiRequest(
+        "/user/send-otp",
+        "POST",
+        { email: email.trim() },
+        undefined,
+        { timeoutMs: OTP_REQUEST_TIMEOUT_MS }
+      );
       setStep("otp");
     } catch (e: any) {
-      setError(e.message || t.auth.failedSendOtp);
+      setError(e instanceof ApiTimeoutError ? t.auth.otpTimeout : e.message || t.auth.failedSendOtp);
     } finally {
       setIsLoading(false);
     }
@@ -50,10 +57,16 @@ export default function ForgotPasswordScreen() {
     setError("");
     setIsLoading(true);
     try {
-      await apiRequest("/user/send-otp", "POST", { email: email.trim() });
+      await apiRequest(
+        "/user/send-otp",
+        "POST",
+        { email: email.trim() },
+        undefined,
+        { timeoutMs: OTP_REQUEST_TIMEOUT_MS }
+      );
       Alert.alert(t.auth.otpTitle, t.auth.otpResent);
     } catch (e: any) {
-      setError(e.message || t.auth.failedSendOtp);
+      setError(e instanceof ApiTimeoutError ? t.auth.otpTimeout : e.message || t.auth.failedSendOtp);
     } finally {
       setIsLoading(false);
     }
@@ -192,6 +205,7 @@ export default function ForgotPasswordScreen() {
 
           <Button
             title={
+              isLoading && step === "email" ? t.auth.sendingOtp :
               isLoading ? t.common.loading :
               step === "email" ? t.auth.sendOtp :
               step === "otp" ? t.auth.verifyOtp :

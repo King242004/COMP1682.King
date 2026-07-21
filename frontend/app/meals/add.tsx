@@ -101,13 +101,20 @@ export default function AddMealScreen() {
     setErrors({});
     setTouched({});
     setMealType(defaultType ?? "breakfast");
-  }, [defaultType, prefillName]);
+  }, [
+    defaultType,
+    prefillName,
+    prefillCalories,
+    prefillProtein,
+    prefillCarbs,
+    prefillFat,
+  ]);
 
   // Recent dishes power the quick chips (people eat the same things often).
   // Only needed when the form starts empty — prefilled flows skip the fetch.
   useEffect(() => {
     if (!isPrefilled) fetchMealHistory();
-  }, [isPrefilled]);
+  }, [isPrefilled, fetchMealHistory]);
 
   // Newest first, one chip per dish name; static Vietnamese staples only for
   // brand-new accounts with an empty history
@@ -151,7 +158,7 @@ export default function AddMealScreen() {
     return e;
   };
 
-  const canSave = useMemo(() => Object.keys(validate()).length === 0, [mealName, calories, protein, carbs, fat]);
+  const canSave = Object.keys(validate()).length === 0;
 
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));

@@ -164,7 +164,15 @@ export default function HomeScreen() {
       loadPlanToday(),
     ]);
     setRefreshing(false);
-  }, [selectedDate, loadExercises, loadWeekActivity, loadInsight, loadPlanToday]);
+  }, [
+    selectedDate,
+    fetchMealsByDate,
+    fetchMealHistory,
+    loadExercises,
+    loadWeekActivity,
+    loadInsight,
+    loadPlanToday,
+  ]);
 
   // Refetch on focus (and when the selected date changes) so meals/workouts logged
   // elsewhere — e.g. "Eat" from the Meal Plan — show up on return.
@@ -184,7 +192,16 @@ export default function HomeScreen() {
       loadWeekActivity();
       loadInsight();
       loadPlanToday();
-    }, [selectedDate, todayKey, loadExercises, loadWeekActivity, loadInsight, loadPlanToday])
+    }, [
+      selectedDate,
+      todayKey,
+      fetchMealsByDate,
+      fetchMealHistory,
+      loadExercises,
+      loadWeekActivity,
+      loadInsight,
+      loadPlanToday,
+    ])
   );
 
   const onDeleteExercise = (item: Exercise) => {

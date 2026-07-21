@@ -20,7 +20,10 @@ function uploadAvatarToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder: "healthysnap/avatars", transformation: [{ width: 300, height: 300, crop: "fill" }] },
-      (err, result) => (err ? reject(err) : resolve(result.secure_url))
+      (err, result) =>
+        err
+          ? reject(err)
+          : resolve({ url: result.secure_url, publicId: result.public_id })
     );
     stream.end(buffer);
   });
@@ -30,8 +33,20 @@ exports.uploadAvatar = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No image provided." });
 
   try {
-    const url = await uploadAvatarToCloudinary(req.file.buffer);
-    await User.findByIdAndUpdate(req.user.id, { avatar: url });
+    const user = await User.findById(req.user.id).select("avatarPublicId");
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const previousPublicId = user.avatarPublicId;
+    const { url, publicId } = await uploadAvatarToCloudinary(req.file.buffer);
+    user.avatar = url;
+    user.avatarPublicId = publicId;
+    await user.save();
+
+    // The new avatar is already durable, so cleanup of the replaced file is
+    // best-effort and must not make a successful upload look like a failure.
+    if (previousPublicId) {
+      await Promise.allSettled([cloudinary.uploader.destroy(previousPublicId)]);
+    }
     res.json({ message: "Avatar uploaded successfully.", avatar: url });
   } catch (err) {
     console.error("Avatar upload failed:", err.message);
@@ -60,11 +75,17 @@ exports.sendPasswordOTP = async (req, res) => {
   // Delete old OTPs for this email
   await OTP.deleteMany({ email: email.toLowerCase() });
 
-  // Save new OTP
-  await OTP.create({ email: email.toLowerCase(), otp, expiresAt });
-
-  // Send email
-  await sendOTP(email, otp);
+  // Save first so the code in the email is already verifiable when delivered.
+  // Roll it back if SMTP fails, otherwise a failed send would still trigger
+  // the one-minute cooldown and block the user from trying again.
+  const record = await OTP.create({ email: email.toLowerCase(), otp, expiresAt });
+  try {
+    await sendOTP(email, otp);
+  } catch (err) {
+    await record.deleteOne().catch(() => {});
+    console.error("OTP email failed:", err.message);
+    return res.status(503).json({ message: "Could not send the code. Please try again shortly." });
+  }
 
   res.json({ message: "OTP sent to your email." });
 };
@@ -177,6 +198,7 @@ exports.deleteAccount = async (req, res) => {
     ChatMessage.find({ user: uid }).select("imagePublicId"),
   ]);
   const publicIds = [
+    user.avatarPublicId,
     ...posts.flatMap((p) => [p.imagePublicId, ...(p.images || []).map((i) => i.publicId)]),
     ...chats.map((d) => d.imagePublicId),
   ].filter(Boolean);

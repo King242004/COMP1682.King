@@ -130,7 +130,7 @@ export default function CoachTab() {
     loadHistory();
   }, [loadInsight, loadHistory]);
 
-  const send = async (text: string, displayText?: string) => {
+  const send = useCallback(async (text: string, displayText?: string) => {
     const msg = text.trim();
     const img = pendingImage;
     if ((!msg && !img) || sending || !token) return;
@@ -156,7 +156,7 @@ export default function CoachTab() {
       setSending(false);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     }
-  };
+  }, [lang, messages, pendingImage, sending, t, token]);
 
   // Tap an insight tip/warning → ask the coach to elaborate on it in chat
   const askAboutTip = (tip: string) =>
@@ -174,7 +174,7 @@ export default function CoachTab() {
     if (!token || sending || !historyLoaded) return;
     consumedAskRef.current = askId;
     send(String(ask));
-  }, [ask, askId, token, sending, historyLoaded]);
+  }, [ask, askId, token, sending, historyLoaded, send]);
 
   // Pick meal type on the suggested-meal card (before adding) — local only.
   const setMealType = (index: number, mealType: string) => {

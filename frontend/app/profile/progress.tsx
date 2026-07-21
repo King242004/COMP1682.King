@@ -34,7 +34,7 @@ export default function ProgressScreen() {
     { key: "weight", label: t.weight.tab },
   ];
 
-  useEffect(() => { fetchMealHistory(); }, []);
+  useEffect(() => { fetchMealHistory(); }, [fetchMealHistory]);
 
   const goal = user?.calorieGoal ?? 2000;
   const { protein: proteinGoal, carbs: carbsGoal, fat: fatGoal } = macroGoals(goal);

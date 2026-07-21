@@ -719,6 +719,7 @@ export const en = {
     confirmPassword: "Confirm Password",
     // Buttons
     sendOtp: "Send OTP",
+    sendingOtp: "Sending code...",
     verifyOtp: "Verify OTP",
     changePassword: "Change Password",
     resendOtp: "Resend OTP",
@@ -728,6 +729,7 @@ export const en = {
     otpMustBe6: "Please enter the 6-digit OTP.",
     passwordsNoMatch: "Passwords do not match.",
     failedSendOtp: "Failed to send OTP.",
+    otpTimeout: "Sending the code is taking longer than expected. Please try again in a moment.",
     invalidOtp: "Invalid OTP.",
     failedReset: "Failed to reset password.",
     resetSuccessTitle: "Success",

@@ -47,7 +47,7 @@ export default function ScanScreen() {
       askedRef.current = true;
       requestPermission();
     }
-  }, [permission]);
+  }, [permission, requestPermission]);
 
   // ── Photo flow: upload → show candidates ───────────────────────────────────
   const processImage = async (uri: string) => {

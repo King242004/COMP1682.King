@@ -37,7 +37,7 @@ export default function MealHistoryScreen() {
 
   useEffect(() => {
     fetchMealHistory();
-  }, []);
+  }, [fetchMealHistory]);
 
   const grouped: { date: string; label: string; meals: Meal[] }[] = [];
   const seen = new Set<string>();

@@ -6,6 +6,9 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     avatar: { type: String, default: null },
+    // Cloudinary identifier is kept server-side so replacing an avatar or
+    // deleting an account can remove the underlying asset as well as its URL.
+    avatarPublicId: { type: String, default: null },
     gender: { type: String, enum: ["male", "female"], default: null },
     age: { type: Number, default: null },
     weight: { type: Number, default: null }, // kg — kept in sync with the newest WeightLog

@@ -3,7 +3,7 @@
 // (npm run dev in another terminal), then:  npm run test:api
 // The script registers a throwaway account, exercises every core rule, then
 // DELETES the account (right-to-erasure endpoint) so it cleans up after itself.
-const BASE = "http://localhost:5000/api";
+const BASE = process.env.API_BASE_URL || "http://localhost:5000/api";
 let pass = 0, fail = 0;
 
 function check(name, cond, extra = "") {
@@ -161,6 +161,49 @@ const shift = (days) => {
   } else {
     check("explore contains own post", false, "skipped, no post id");
     check("like toggles", false, "skipped, no post id");
+  }
+
+  console.log("- AVATAR + PRIVATE COMMUNITY -");
+  const avatar1 = await apiUpload("/user/avatar", {}, [["image", "avatar-1.jpg"]], token);
+  check("first avatar upload 200", avatar1.status === 200 && !!avatar1.data?.avatar, `got ${avatar1.status}`);
+  const avatar2 = await apiUpload("/user/avatar", {}, [["image", "avatar-2.jpg"]], token);
+  check("replacement avatar upload 200", avatar2.status === 200 && !!avatar2.data?.avatar, `got ${avatar2.status}`);
+
+  const viewerEmail = `apitest_viewer_${Date.now()}@test.com`;
+  const viewerReg = await api("/auth/register", "POST", { name: "Privacy Viewer", email: viewerEmail, password: PW1 });
+  check("register privacy viewer 201", viewerReg.status === 201, `got ${viewerReg.status}`);
+  const viewerToken = viewerReg.data?.token;
+
+  if (postId && viewerToken) {
+    const savePublic = await api(`/community/posts/${postId}/save`, "POST", undefined, viewerToken);
+    check("viewer can save public post", savePublic.status === 200 && savePublic.data?.saved === true, `got ${savePublic.status}`);
+
+    const makePrivate = await api("/profile", "PUT", { isPrivate: true }, token);
+    check("owner can enable private account", makePrivate.status === 200, `got ${makePrivate.status}`);
+
+    const likePrivate = await api(`/community/posts/${postId}/like`, "POST", undefined, viewerToken);
+    check("private post rejects direct like", likePrivate.status === 403, `got ${likePrivate.status}`);
+    const savePrivate = await api(`/community/posts/${postId}/save`, "POST", undefined, viewerToken);
+    check("private post rejects direct save", savePrivate.status === 403, `got ${savePrivate.status}`);
+    const savedPrivate = await api("/community/posts/saved", "GET", undefined, viewerToken);
+    check(
+      "private owner's post is hidden from saved list",
+      savedPrivate.status === 200 && !savedPrivate.data.posts.some((p) => (p.id || p._id) === postId),
+      `got ${savedPrivate.status}`
+    );
+  } else {
+    check("viewer can save public post", false, "skipped, missing post or viewer");
+    check("owner can enable private account", false, "skipped, missing post or viewer");
+    check("private post rejects direct like", false, "skipped, missing post or viewer");
+    check("private post rejects direct save", false, "skipped, missing post or viewer");
+    check("private owner's post is hidden from saved list", false, "skipped, missing post or viewer");
+  }
+
+  if (viewerToken) {
+    const deleteViewer = await api("/user/account", "DELETE", { password: PW1 }, viewerToken);
+    check("privacy viewer cleanup 200", deleteViewer.status === 200, `got ${deleteViewer.status}`);
+  } else {
+    check("privacy viewer cleanup 200", false, "skipped, no viewer token");
   }
 
   console.log("- COACH history (non-AI) -");

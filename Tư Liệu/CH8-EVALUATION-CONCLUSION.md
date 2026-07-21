@@ -62,7 +62,7 @@
 
 **Session invalidation is incomplete.** Authentication uses stateless tokens, so a token issued before account deletion remains valid until expiry. This was a considered trade off rather than an oversight, since stateless tokens avoid a database lookup on every request, but the correct resolution is a revocation list checked at authentication time.
 
-**Deployment was not treated as a first class concern.** `[[⚠️ ĐIỀU CHỈNH THEO TÌNH TRẠNG THẬT của mày]]` The database and media storage run on managed cloud services, but the application server `[[đã hoặc chưa]]` deployed to a hosted environment. Treating deployment as a final step rather than as part of each cycle is a common failure, and it is one this project `[[đã tránh hoặc mắc phải]]`.
+**Deployment was introduced late in the project.** The database and media storage were already hosted on managed cloud services, but the application server was deployed to Render only during the final phase. This produced a working public HTTPS API and continuous deployment from the main branch, but it also exposed environment and platform issues later than they should have been discovered. Deployment should have formed part of an earlier development cycle so that hosted behaviour was verified continuously rather than near completion.
 
 **Testing did not cover the client.** The automated suite covers server logic and API behaviour. Client behaviour was verified manually on a physical device, which is effective for detecting visible problems but does not regress automatically. A component test suite for the client would have caught interface regressions that manual verification can miss.
 
@@ -188,7 +188,7 @@ The literature identifies disengagement rather than availability as the failure 
 |---|---|---|
 | 1 | Điền bảng 8.1 objectives 2 và 5 | Dữ liệu khảo sát và UAT |
 | 2 | Bổ sung mục 8.2.1 với điểm mạnh người dùng xác nhận | UAT |
-| 3 | Sửa đoạn deployment ở 8.2.2 theo tình trạng thật | Mày xác nhận |
+| 3 | ~~Sửa đoạn deployment ở 8.2.2 theo tình trạng thật~~ | ✅ Đã xong theo deployment Render ngày 20/7 |
 | 4 | **Viết mục 8.3 bằng lời của mày** | Không, làm được ngay |
 | 5 | Viết mục 8.5 | Sau khi xong 1 và 2 |
 
