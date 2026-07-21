@@ -34,7 +34,14 @@ app.use("/api/scan", require("./src/routes/scan"));
 app.use("/api/community", require("./src/routes/community"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.get("/", (req, res) => res.json({ message: "MealMate API running" }));
+app.get("/", (req, res) =>
+  res.json({
+    message: "MealMate API running",
+    version: process.env.RENDER_GIT_COMMIT?.slice(0, 8) || "local",
+    emailProvider:
+      process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL ? "brevo" : "gmail-fallback",
+  })
+);
 
 // Global error handler — MUST stay after all routes. Express 5 forwards
 // rejected promises from async handlers here; without this, an unexpected
