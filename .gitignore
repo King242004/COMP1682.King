@@ -45,9 +45,5 @@ Thumbs.db
 *.map
 
 
-# Identifiable research-participant data must stay private
-Tư Liệu/Consent Forms/
-Tư Liệu/Raw Survey Data/
-Tư Liệu/Interview Transcripts/
-Tư Liệu/UAT Participant Data/
-Tư Liệu/Private Research Data/
+# Coursework drafts and all research data stay local/private
+Tư Liệu/
