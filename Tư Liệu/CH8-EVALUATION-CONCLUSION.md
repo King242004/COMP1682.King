@@ -25,7 +25,7 @@
 | 1 | Literature review, minimum 10 peer reviewed sources | **Met** | 43 sources verified, 30 cited in Chapter 2 across three themes |
 | 2 | User research, 5 interviews and 20 survey responses | `[[chờ]]` | `[[số thật]]` |
 | 3 | Develop all Must Have requirements | `[[chờ MoSCoW]]` | Chapter 6, demonstrable on a physical device |
-| 4 | Verification, minimum 90 percent pass rate | **Met** | 21 unit tests and 39 integration checks, all passing. Chapter 7 |
+| 4 | Verification, minimum 90 percent pass rate | **Met** | 31 unit tests and 56 integration checks, all passing. Chapter 7 |
 | 5 | UAT with 5 participants, mean SUS at least 68 | `[[chờ]]` | `[[điểm SUS thật]]` |
 
 > ⚠️ **Trả lời trung thực.** Nếu objective nào chỉ đạt một phần thì ghi "Partially met" kèm lý do. Template nói rõ đánh giá trung thực có bằng chứng mới được điểm, còn tự khen hết thì mất điểm. Người chấm đọc hàng trăm báo cáo, họ nhận ra ngay bản nào tô hồng.

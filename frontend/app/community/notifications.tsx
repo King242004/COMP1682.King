@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -59,10 +60,12 @@ export default function NotificationsScreen() {
       >
         <Pressable
           onPress={() => router.push({ pathname: "/community/user-profile", params: { id: item.actor.id } })}
+          accessibilityRole="button"
+          accessibilityLabel={t.a11y.openProfile(item.actor.name)}
           style={styles.avatar}
         >
           {item.actor.avatar ? (
-            <Image source={{ uri: item.actor.avatar }} style={styles.avatarImg} />
+            <Image source={{ uri: item.actor.avatar }} style={styles.avatarImg} cachePolicy="memory-disk" accessible={false} />
           ) : (
             <AppText style={styles.avatarInitials}>{initials(item.actor.name)}</AppText>
           )}
@@ -79,7 +82,7 @@ export default function NotificationsScreen() {
         </View>
 
         {item.type === "like" && item.postThumb ? (
-          <Image source={{ uri: item.postThumb }} style={styles.thumb} />
+          <Image source={{ uri: item.postThumb }} style={styles.thumb} cachePolicy="memory-disk" accessible={false} />
         ) : (
           <View style={styles.typeIcon}>
             <Ionicons

@@ -2,6 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/api";
 import type { Lang } from "@/utils/language";
 
+const AI_TIMEOUT_MS = 120_000;
+
 export type CoachInsight = {
   date: string;
   score: number;
@@ -44,7 +46,13 @@ export function stripMarkdown(s: string): string {
 }
 
 export async function getInsight(token: string, date: string, language: Lang): Promise<CoachInsight> {
-  const data = await apiRequest(`/coach/insight?date=${date}&language=${language}`, "GET", undefined, token);
+  const data = await apiRequest(
+    `/coach/insight?date=${date}&language=${language}`,
+    "GET",
+    undefined,
+    token,
+    { timeoutMs: AI_TIMEOUT_MS }
+  );
   return {
     ...data,
     summary: stripMarkdown(data.summary || ""),
@@ -69,7 +77,8 @@ export async function chatWithCoach(
     "/coach/chat",
     "POST",
     { message, history: slimHistory, language, image: image?.base64, mimeType: image?.mimeType },
-    token
+    token,
+    { timeoutMs: AI_TIMEOUT_MS }
   );
   return {
     reply: stripMarkdown(data.reply || ""),

@@ -1,7 +1,43 @@
 const express = require("express");
 const router = express.Router();
-const { register, login, getMe } = require("../controllers/authController");
+const rateLimit = require("express-rate-limit");
+const { register, sendRegistrationOTP, login, getMe } = require("../controllers/authController");
 const protect = require("../middleware/auth");
+
+const registrationOtpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { message: "Too many verification requests. Please try again later." },
+});
+
+/**
+ * @swagger
+ * /auth/register/send-otp:
+ *   post:
+ *     summary: Send an email ownership code before registration
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: john@example.com
+ *     responses:
+ *       200:
+ *         description: Verification code sent
+ *       400:
+ *         description: Invalid email format
+ *       429:
+ *         description: Request limit or resend cooldown reached
+ */
+router.post("/register/send-otp", registrationOtpLimiter, sendRegistrationOTP);
 
 /**
  * @swagger
@@ -15,7 +51,7 @@ const protect = require("../middleware/auth");
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, email, password]
+ *             required: [name, email, password, otp]
  *             properties:
  *               name:
  *                 type: string
@@ -26,6 +62,9 @@ const protect = require("../middleware/auth");
  *               password:
  *                 type: string
  *                 example: Password123
+ *               otp:
+ *                 type: string
+ *                 example: "123456"
  *               goal:
  *                 type: string
  *                 enum: [lose_weight, gain_muscle, eat_healthy]

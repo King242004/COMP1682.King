@@ -125,22 +125,41 @@ Test case UT19 addresses the comorbidity finding established in Section 1.2, nam
 
 Test case UT18 verifies the negative case. A filter that blocks nothing when no condition is declared is as important as one that blocks correctly when a condition is present, because over blocking would make the application useless to users without a diagnosed condition.
 
-### 7.3.3 Integration Tests
+### 7.3.3 Unit Tests: OTP Security and Transactional Email
 
-The integration suite exercises each API area against a live server and database. Table 7.6 presents the checks grouped by concern.
+These tests cover the authentication hardening introduced after an invalid but syntactically correct email address was found in the user data. They verify both protection of the code at rest and separation of the two email purposes.
 
-**Table 7.6 Integration test cases**
+**Table 7.6 Unit test cases, OTP and email delivery**
+
+| ID | Test case | Expected result | Status |
+|---|---|---|---|
+| UT22 | Generate a registration code | Exactly six numeric digits produced by a cryptographic RNG | Pass |
+| UT23 | Normalise email before binding the code | Equivalent normalised address verifies against its HMAC | Pass |
+| UT24 | Supply a wrong code, email or OTP purpose | Verification rejected in every case | Pass |
+| UT25 | Inspect the stored code digest | 64-character HMAC contains no plaintext OTP | Pass |
+| UT26 | Build a registration email payload | Registration subject and copy present; reset copy absent | Pass |
+| UT27 | Build a password-reset email payload | Reset subject and copy present; registration copy absent | Pass |
+| UT28 | Reserve an OTP | Atomic cooldown condition and upsert are applied | Pass |
+| UT29 | Race two OTP reservations | Duplicate-key race is treated as an active cooldown | Pass |
+| UT30 | Reach the fifth wrong attempt | Only the exact matching OTP is destroyed | Pass |
+| UT31 | Replace an OTP during a wrong attempt | The newer OTP is not deleted | Pass |
+
+### 7.3.4 Integration Tests
+
+The integration suite exercises each API area against a live server and database. Table 7.7 presents the checks grouped by concern.
+
+**Table 7.7 Integration test cases**
 
 | ID | Area | Test case | Expected | Status |
 |---|---|---|---|---|
-| IT01 | Auth | Register new account | 201 Created | Pass |
+| IT01 | Auth | Register new account with a valid email OTP | 201 Created | Pass |
 | IT02 | Auth | Register with an email already in use | 400 rejected | Pass |
 | IT03 | Auth | Sign in with incorrect password | 400 rejected | Pass |
 | IT04 | Auth | Request with a malformed token | 401 rejected | Pass |
 | IT05 | Auth | Change password with wrong current password | 400 rejected | Pass |
 | IT06 | Auth | Change password with correct current password | 200 succeeded | Pass |
 | IT07 | Auth | Sign in with the new password | 200 succeeded | Pass |
-| IT08 | Auth | Request recovery code for unknown email | 404 rejected | Pass |
+| IT08 | Auth | Request recovery code for unknown email | Generic 200 without revealing account existence | Pass |
 | IT09 | Error | Malformed JSON request body | 400 with JSON error, not HTML | Pass |
 | IT10 | Error | Malformed identifier in path | 400 Invalid id | Pass |
 | IT11 | Meals | Log a meal for today | 201 Created | Pass |
@@ -176,13 +195,19 @@ The integration suite exercises each API area against a live server and database
 | IT41 | Weight | Weight entries returned for the user | List returned | Pass |
 | IT42 | Avatar | Upload an avatar image | 200 with hosted image URL | Pass |
 | IT43 | Avatar | Replace an existing avatar | 200 with new hosted image URL | Pass |
-| IT44 | Privacy | Register a second user for cross-account checks | 201 Created | Pass |
+| IT44 | Privacy | Register a verified second user for cross-account checks | 201 Created | Pass |
 | IT45 | Privacy | Save a post while its owner is public | Save succeeds | Pass |
 | IT46 | Privacy | Enable private account mode | Profile updated | Pass |
 | IT47 | Privacy | Directly like a private post from another account | 403 rejected | Pass |
 | IT48 | Privacy | Directly save a private post from another account | 403 rejected | Pass |
 | IT49 | Privacy | Retrieve saved posts after their owner becomes private | Private post omitted | Pass |
 | IT50 | Account | Delete the temporary privacy test account | 200 succeeded | Pass |
+| IT51 | Auth | Submit registration without an email OTP | 400 rejected | Pass |
+| IT52 | Auth | Submit registration with an incorrect OTP | 400 rejected and attempt counted | Pass |
+| IT53 | Auth | Request a registration OTP for an existing account | Generic 200 without revealing account existence | Pass |
+| IT54 | Upload | Submit a non-image file to the community image endpoint | 400 rejected before hosting | Pass |
+| IT55 | Community | Retrieve the first page of a profile with more than 20 posts | 20 posts and `hasMore` true | Pass |
+| IT56 | Community | Retrieve the second profile page | Remaining posts returned without duplicates | Pass |
 
 Three groups of these cases deserve specific comment.
 
@@ -210,7 +235,7 @@ Cấu trúc ta dựng sẵn, mày chạy xong điền kết quả vào:
 
 Each session lasts approximately twenty minutes and follows the same structure for every participant. Participants use a pre-created test account so that no personal health information is entered.
 
-**Table 7.7 User Acceptance Testing task list**
+**Table 7.8 User Acceptance Testing task list**
 
 | # | Task | Requirement verified | Success measure |
 |---|---|---|---|
@@ -233,7 +258,7 @@ A mean score of 68 represents the established average across evaluated systems, 
 
 `[[🔴 ĐIỀN SAU KHI CHẠY UAT]]`
 
-**Table 7.8 Task completion (template)**
+**Table 7.9 Task completion (template)**
 
 | Participant | T1 | T2 | T3 | T4 | T5 | T6 | Completed |
 |---|---|---|---|---|---|---|---|
@@ -243,7 +268,7 @@ A mean score of 68 represents the established average across evaluated systems, 
 | P4 | | | | | | | |
 | P5 | | | | | | | |
 
-**Table 7.9 SUS scores (template)**
+**Table 7.10 SUS scores (template)**
 
 | Participant | SUS score |
 |---|---|
@@ -291,7 +316,7 @@ The matrix links each functional requirement to the test cases that verify it, d
 
 Khung sẵn, mày điền số vào:
 
-Automated testing comprises 21 unit tests and 50 integration checks, all of which pass against the final local backend. Unit testing covers the energy calculation and condition filtering logic in full. Integration testing covers every API area, verifying authentication, validation, temporal rules, idempotency, cross-account privacy, media upload and data erasure against a live database.
+Automated testing comprises 31 unit tests and 56 integration checks, all of which pass against the final local backend. Unit testing covers energy calculation, condition filtering, OTP hashing, atomic OTP state changes and purpose-specific transactional email payloads. Integration testing covers every API area, including verified registration, anti-enumeration responses, validation, temporal rules, idempotency, pagination, cross-account privacy, media upload and data erasure against a live database.
 
 `[[Bổ sung: tỉ lệ pass của kiểm thử chức năng, so với ngưỡng 90 phần trăm ở mục 5.4.2]]`
 
@@ -305,7 +330,7 @@ Automated testing comprises 21 unit tests and 50 integration checks, all of whic
 
 | # | Việc | Chặn bởi |
 |---|---|---|
-| 1 | Chạy UAT với tối thiểu 5 người, điền bảng 7.8 và 7.9 | Ethical approval |
+| 1 | Chạy UAT với tối thiểu 5 người, điền bảng 7.9 và 7.10 | Ethical approval |
 | 2 | **Đo thời gian và số thao tác ghi một bữa ăn** trong UAT | Ethical approval |
 | 3 | Đánh lại mã FR cho khớp bảng MoSCoW mục 4.5 | Dữ liệu khảo sát |
 | 4 | Hoàn thiện mục 7.6 với số thật | Mục 1 và 2 |

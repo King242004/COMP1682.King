@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/api";
 
+const AI_TIMEOUT_MS = 120_000;
+
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export type PlanMeal = {
@@ -82,7 +84,13 @@ export async function generateWeekPlan(
   language: string,
   note?: string
 ): Promise<void> {
-  await apiRequest("/plan/generate", "POST", { startDate, endDate, language, note }, token);
+  await apiRequest(
+    "/plan/generate",
+    "POST",
+    { startDate, endDate, language, note },
+    token,
+    { timeoutMs: AI_TIMEOUT_MS }
+  );
 }
 
 export type GroceryGroup = { name: string; items: string[] };
@@ -94,7 +102,13 @@ export async function getGroceryList(
   endDate: string,
   language: string
 ): Promise<GroceryGroup[]> {
-  const data = await apiRequest("/plan/grocery", "POST", { startDate, endDate, language }, token);
+  const data = await apiRequest(
+    "/plan/grocery",
+    "POST",
+    { startDate, endDate, language },
+    token,
+    { timeoutMs: AI_TIMEOUT_MS }
+  );
   return data.groups || [];
 }
 

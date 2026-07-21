@@ -140,12 +140,17 @@ exports.getFeed = async (req, res) => {
   const authorIds = following.filter((id) => !hidden.some((h) => h.equals(id)));
 
   const posts = await Post.find({ user: { $in: authorIds } })
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: -1, _id: -1 })
     .skip((page - 1) * limit)
-    .limit(limit)
+    .limit(limit + 1)
     .populate("user", "name avatar");
 
-  res.json({ posts: posts.map((p) => shapePost(p, req.user.id)), page });
+  const hasMore = posts.length > limit;
+  res.json({
+    posts: posts.slice(0, limit).map((p) => shapePost(p, req.user.id)),
+    page,
+    hasMore,
+  });
 };
 
 // ─── Explore (everyone's latest) ─────────────────────────────────────────────
@@ -157,26 +162,41 @@ exports.getExplore = async (req, res) => {
   const hidden = (await privateUserIds()).filter((id) => id.toString() !== req.user.id);
 
   const posts = await Post.find({ user: { $nin: hidden } })
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: -1, _id: -1 })
     .skip((page - 1) * limit)
-    .limit(limit)
+    .limit(limit + 1)
     .populate("user", "name avatar");
 
-  res.json({ posts: posts.map((p) => shapePost(p, req.user.id)), page });
+  const hasMore = posts.length > limit;
+  res.json({
+    posts: posts.slice(0, limit).map((p) => shapePost(p, req.user.id)),
+    page,
+    hasMore,
+  });
 };
 
 // ─── A user's posts ──────────────────────────────────────────────────────────
 exports.getUserPosts = async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(50, parseInt(req.query.limit) || 20);
   // A private user's posts are only visible to themselves
   if (req.params.id !== req.user.id) {
     const owner = await User.findById(req.params.id).select("isPrivate");
-    if (owner?.isPrivate) return res.json({ posts: [], private: true });
+    if (owner?.isPrivate)
+      return res.json({ posts: [], private: true, page, hasMore: false });
   }
 
   const posts = await Post.find({ user: req.params.id })
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: -1, _id: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit + 1)
     .populate("user", "name avatar");
-  res.json({ posts: posts.map((p) => shapePost(p, req.user.id)) });
+  const hasMore = posts.length > limit;
+  res.json({
+    posts: posts.slice(0, limit).map((p) => shapePost(p, req.user.id)),
+    page,
+    hasMore,
+  });
 };
 
 // ─── Delete own post ─────────────────────────────────────────────────────────
@@ -224,11 +244,20 @@ exports.toggleSave = async (req, res) => {
 
 // ─── My saved posts ──────────────────────────────────────────────────────────
 exports.getSavedPosts = async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(50, parseInt(req.query.limit) || 20);
   const hidden = (await privateUserIds()).filter((id) => id.toString() !== req.user.id);
   const posts = await Post.find({ saves: req.user.id, user: { $nin: hidden } })
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: -1, _id: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit + 1)
     .populate("user", "name avatar");
-  res.json({ posts: posts.map((p) => shapePost(p, req.user.id)) });
+  const hasMore = posts.length > limit;
+  res.json({
+    posts: posts.slice(0, limit).map((p) => shapePost(p, req.user.id)),
+    page,
+    hasMore,
+  });
 };
 
 // ─── Edit own post (caption, meal, photos) ───────────────────────────────────

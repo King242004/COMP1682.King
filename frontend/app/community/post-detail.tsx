@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -158,7 +159,7 @@ export default function PostDetailScreen() {
           >
             <View style={styles.avatar}>
               {post.author.avatar ? (
-                <Image source={{ uri: post.author.avatar }} style={styles.avatarImg} />
+                <Image source={{ uri: post.author.avatar }} style={styles.avatarImg} cachePolicy="memory-disk" accessible={false} />
               ) : (
                 <AppText style={styles.avatarInitials}>{initials(post.author.name)}</AppText>
               )}
@@ -189,7 +190,15 @@ export default function PostDetailScreen() {
                 }
               >
                 {post.images.map((uri) => (
-                  <Image key={uri} source={{ uri }} style={[styles.postImage, { width: carouselWidth }]} resizeMode="cover" />
+                  <Image
+                    key={uri}
+                    source={{ uri }}
+                    style={[styles.postImage, { width: carouselWidth }]}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={150}
+                    accessible={false}
+                  />
                 ))}
               </ScrollView>
               )}
@@ -204,14 +213,21 @@ export default function PostDetailScreen() {
               </View>
             </View>
           ) : post.image ? (
-            <Image source={{ uri: post.image }} style={styles.postImage} resizeMode="cover" />
+            <Image
+              source={{ uri: post.image }}
+              style={styles.postImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+              accessible={false}
+            />
           ) : null}
 
           {/* Nutrition snapshot */}
           {post.meal && (
             <View style={styles.mealChip}>
               <View style={styles.mealIcon}>
-                <AppText style={styles.mealEmoji}>🍽️</AppText>
+                <Ionicons name="restaurant-outline" size={18} color={theme.colors.primary} />
               </View>
               <View style={styles.flex1}>
                 <AppText variant="body2" style={styles.bold}>{post.meal.name}</AppText>
@@ -224,7 +240,14 @@ export default function PostDetailScreen() {
 
           {/* Like + save (edit/delete moved to the ⋯ menu in the header) */}
           <View style={styles.footerRow}>
-            <Pressable onPress={onLike} hitSlop={8} style={({ pressed }) => [styles.likeBtn, pressed && styles.pressed]}>
+            <Pressable
+              onPress={onLike}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={post.isLiked ? t.a11y.unlikePost : t.a11y.likePost}
+              accessibilityState={{ selected: post.isLiked }}
+              style={({ pressed }) => [styles.likeBtn, pressed && styles.pressed]}
+            >
               <Ionicons
                 name={post.isLiked ? "heart" : "heart-outline"}
                 size={24}
@@ -235,7 +258,14 @@ export default function PostDetailScreen() {
               </AppText>
             </Pressable>
             <View style={styles.footerActions}>
-              <Pressable onPress={onSave} hitSlop={8} style={({ pressed }) => [pressed && styles.pressed]}>
+              <Pressable
+                onPress={onSave}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={post.isSaved ? t.a11y.unsavePost : t.a11y.savePost}
+                accessibilityState={{ selected: post.isSaved }}
+                style={({ pressed }) => [pressed && styles.pressed]}
+              >
                 <Ionicons
                   name={post.isSaved ? "bookmark" : "bookmark-outline"}
                   size={22}
@@ -323,7 +353,6 @@ const styles = StyleSheet.create({
     width: 38, height: 38, borderRadius: 12, backgroundColor: theme.colors.tint,
     alignItems: "center", justifyContent: "center",
   },
-  mealEmoji: { fontSize: 18 },
   footerRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: theme.space.lg, paddingVertical: theme.space.md,

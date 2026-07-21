@@ -102,14 +102,14 @@ const children = [
     ["Thành phần", "Công nghệ", "Ghi chú"],
     [
       ["Mobile app", "React Native + Expo + TypeScript", "iOS & Android, Expo Router"],
-      ["State", "React Context API + AsyncStorage", "Auth, Meals; lưu JWT offline"],
+      ["State", "React Context API + SecureStore + AsyncStorage", "Auth, Meals; JWT mã hoá, cache offline"],
       ["Backend", "Node.js + Express 5", "REST API, Swagger docs"],
       ["Database", "MongoDB Atlas", "Cloud, collections: users/meals/otps"],
       ["Xác thực", "JWT + bcryptjs", "Token 30 ngày, hash password"],
       ["AI nhận diện món ăn", "Google Gemini 2.5 Flash (Vision)", "Top-3 candidates + ước lượng dinh dưỡng, free tier"],
       ["Tra cứu mã vạch", "Open Food Facts API", "Miễn phí, không cần API key"],
       ["Lưu ảnh", "Cloudinary CDN", "Avatar, ảnh món ăn"],
-      ["Email", "Brevo Transactional Email API", "OTP đặt lại mật khẩu qua HTTPS"],
+      ["Email", "Brevo Transactional Email API", "OTP xác minh đăng ký và đặt lại mật khẩu qua HTTPS"],
       ["Thông báo", "expo-notifications", "Nhắc bữa ăn hằng ngày"],
     ],
     [2400, 3400, 3560]
@@ -119,7 +119,7 @@ const children = [
   h1("3. Danh sách yêu cầu chức năng"),
 
   h2("3.1 Xác thực người dùng — " + DONE),
-  bullet("Đăng ký / đăng nhập bằng email + mật khẩu (JWT)."),
+  bullet("Đăng ký bằng email đã xác minh OTP; đăng nhập bằng email + mật khẩu (JWT)."),
   bullet("Quên mật khẩu: gửi OTP 6 số qua email, hết hạn 10 phút."),
   bullet("Validation: tên ≥ 2 ký tự (hỗ trợ tiếng Việt), mật khẩu ≥ 6 ký tự có chữ hoa + số."),
 

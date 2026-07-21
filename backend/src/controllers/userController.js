@@ -12,6 +12,16 @@ const Post = require("../models/Post");
 const Follow = require("../models/Follow");
 const ChatMessage = require("../models/ChatMessage");
 const Notification = require("../models/Notification");
+const { recordFailedOTPAttempt, reserveOTP } = require("../services/otpService");
+const {
+  OTP_PURPOSE,
+  OTP_TTL_MS,
+  generateOTP,
+  hashOTP,
+  isOTPMatch,
+  normalizeEmail,
+  waitForResponseFloor,
+} = require("../utils/otpSecurity");
 
 // ─── Upload Avatar ────────────────────────────────────────────────────────────
 // upload_stream is callback-based (it returns a stream, NOT a promise) — wrap it
@@ -56,38 +66,45 @@ exports.uploadAvatar = async (req, res) => {
 
 // ─── Send OTP ─────────────────────────────────────────────────────────────────
 exports.sendPasswordOTP = async (req, res) => {
-  const { email } = req.body;
+  const startedAt = Date.now();
+  const email = normalizeEmail(req.body.email);
 
   if (!email) return res.status(400).json({ message: "Email is required." });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ message: "Please provide a valid email address." });
 
-  const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user) return res.status(404).json({ message: "No account found with this email." });
+  const user = await User.exists({ email });
+  // Do not reveal whether an account exists. The same response is returned so
+  // password recovery cannot be used as an email-enumeration endpoint.
+  if (!user) {
+    await waitForResponseFloor(startedAt);
+    return res.json({ message: "If an account matches this email, a code will be sent." });
+  }
 
   // Cooldown: one code per minute per email — stops OTP email spam
-  const recent = await OTP.findOne({ email: email.toLowerCase() }).sort({ createdAt: -1 });
-  if (recent?.createdAt && Date.now() - recent.createdAt.getTime() < 60 * 1000)
-    return res.status(429).json({ message: "Please wait a minute before requesting another code." });
-
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-  // Delete old OTPs for this email
-  await OTP.deleteMany({ email: email.toLowerCase() });
+  const purpose = OTP_PURPOSE.PASSWORD_RESET;
+  const code = generateOTP();
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
   // Save first so the code in the email is already verifiable when delivered.
-  // Roll it back if SMTP fails, otherwise a failed send would still trigger
+  // Roll it back if delivery fails, otherwise a failed send would still trigger
   // the one-minute cooldown and block the user from trying again.
-  const record = await OTP.create({ email: email.toLowerCase(), otp, expiresAt });
+  const codeHash = hashOTP(email, purpose, code);
+  const record = await reserveOTP({ email, purpose, codeHash, expiresAt });
+  if (!record) {
+    await waitForResponseFloor(startedAt);
+    return res.json({ message: "If an account matches this email, a code will be sent." });
+  }
   try {
-    await sendOTP(email, otp);
+    await sendOTP(email, code, purpose);
   } catch (err) {
-    await record.deleteOne().catch(() => {});
+    await OTP.deleteOne({ _id: record._id, codeHash }).catch(() => {});
     console.error("OTP email failed:", err.message);
     return res.status(503).json({ message: "Could not send the code. Please try again shortly." });
   }
 
-  res.json({ message: "OTP sent to your email." });
+  await waitForResponseFloor(startedAt);
+  res.json({ message: "If an account matches this email, a code will be sent." });
 };
 
 // ─── Verify OTP only (step-2 pre-check, does NOT consume the code) ────────────
@@ -95,23 +112,25 @@ exports.sendPasswordOTP = async (req, res) => {
 // server — a wrong code sailed through to the password step. Misses here count
 // against the same 5-attempt budget as the final reset.
 exports.verifyOTP = async (req, res) => {
-  const { email, otp } = req.body;
+  const { otp } = req.body;
+  const email = normalizeEmail(req.body.email);
   if (!email || !otp)
     return res.status(400).json({ message: "Email and OTP are required." });
 
-  const record = await OTP.findOne({ email: email.toLowerCase() });
+  const purpose = OTP_PURPOSE.PASSWORD_RESET;
+  const record = await OTP.findOne({ email, purpose }).select("+codeHash");
   if (!record) return res.status(400).json({ message: "Invalid OTP." });
 
-  if (record.expiresAt < new Date())
+  if (record.expiresAt < new Date()) {
+    await record.deleteOne();
     return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+  }
 
-  if (record.otp !== String(otp).trim()) {
-    record.attempts += 1;
-    if (record.attempts >= 5) {
-      await record.deleteOne();
+  if (!isOTPMatch(record.codeHash, email, purpose, otp)) {
+    const { burned } = await recordFailedOTPAttempt(record._id, record.codeHash);
+    if (burned) {
       return res.status(400).json({ message: "Too many wrong attempts. Please request a new code." });
     }
-    await record.save();
     return res.status(400).json({ message: "Invalid OTP." });
   }
 
@@ -120,7 +139,8 @@ exports.verifyOTP = async (req, res) => {
 
 // ─── Verify OTP & Change Password ─────────────────────────────────────────────
 exports.resetPassword = async (req, res) => {
-  const { email, otp, newPassword } = req.body;
+  const { otp, newPassword } = req.body;
+  const email = normalizeEmail(req.body.email);
 
   if (!email || !otp || !newPassword)
     return res.status(400).json({ message: "Email, OTP and new password are required." });
@@ -130,25 +150,35 @@ exports.resetPassword = async (req, res) => {
 
   // Look up by email only, so wrong guesses can be COUNTED against the record —
   // matching on the OTP itself would make unlimited brute-force attempts free.
-  const record = await OTP.findOne({ email: email.toLowerCase() });
+  const purpose = OTP_PURPOSE.PASSWORD_RESET;
+  const record = await OTP.findOne({ email, purpose }).select("+codeHash");
   if (!record) return res.status(400).json({ message: "Invalid OTP." });
 
-  if (record.expiresAt < new Date())
+  if (record.expiresAt < new Date()) {
+    await record.deleteOne();
     return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+  }
 
-  if (record.otp !== String(otp).trim()) {
-    record.attempts += 1;
-    if (record.attempts >= 5) {
-      await record.deleteOne(); // burned — must request a fresh code
+  if (!isOTPMatch(record.codeHash, email, purpose, otp)) {
+    const { burned } = await recordFailedOTPAttempt(record._id, record.codeHash);
+    if (burned) {
       return res.status(400).json({ message: "Too many wrong attempts. Please request a new code." });
     }
-    await record.save();
     return res.status(400).json({ message: "Invalid OTP." });
   }
 
+  // The pre-check intentionally keeps the code alive; the password-changing
+  // endpoint consumes it atomically so concurrent resets cannot reuse it.
+  const consumed = await OTP.findOneAndDelete({
+    _id: record._id,
+    codeHash: record.codeHash,
+    expiresAt: { $gt: new Date() },
+  });
+  if (!consumed) return res.status(400).json({ message: "Invalid OTP." });
+
   const hashed = await bcrypt.hash(newPassword, 10);
-  await User.findOneAndUpdate({ email: email.toLowerCase() }, { password: hashed });
-  await OTP.deleteMany({ email: email.toLowerCase() });
+  const updated = await User.findOneAndUpdate({ email }, { password: hashed });
+  if (!updated) return res.status(400).json({ message: "Unable to reset this account." });
 
   res.json({ message: "Password changed successfully." });
 };

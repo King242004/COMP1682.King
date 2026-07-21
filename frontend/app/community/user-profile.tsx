@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from "react-native";
+import { useState, useCallback, useRef } from "react";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -35,19 +36,33 @@ export default function UserProfileScreen() {
   const [tab, setTab] = useState<ProfileTab>("posts");
   const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const postsPageRef = useRef(1);
+  const savedPageRef = useRef(1);
+  const postsHasMoreRef = useRef(false);
+  const savedHasMoreRef = useRef(false);
+  const loadingMoreRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!token || !id) return;
+    postsHasMoreRef.current = false;
+    savedHasMoreRef.current = false;
     try {
       // Saved is private → only fetched (and shown) on my own profile
       const [p, ps, sv] = await Promise.all([
         getPublicProfile(token, id),
         getUserPosts(token, id),
-        viewingSelf ? getSavedPosts(token) : Promise.resolve([] as FeedPost[]),
+        viewingSelf
+          ? getSavedPosts(token)
+          : Promise.resolve({ posts: [] as FeedPost[], page: 1, hasMore: false }),
       ]);
       setProfile(p);
-      setPosts(ps);
-      setSaved(sv);
+      setPosts(ps.posts);
+      setSaved(sv.posts);
+      postsPageRef.current = ps.page;
+      savedPageRef.current = sv.page;
+      postsHasMoreRef.current = ps.hasMore;
+      savedHasMoreRef.current = sv.hasMore;
       setLoadError(false);
     } catch {
       setLoadError(true);
@@ -56,6 +71,40 @@ export default function UserProfileScreen() {
 
   // Refetch on focus so counts, follow state and the saved list stay fresh
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const loadMore = useCallback(async () => {
+    if (!token || !id || loadingMoreRef.current) return;
+    const savedTab = viewingSelf && tab === "saved";
+    const hasMore = savedTab ? savedHasMoreRef.current : postsHasMoreRef.current;
+    if (!hasMore) return;
+
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const nextPage = (savedTab ? savedPageRef.current : postsPageRef.current) + 1;
+      const result = savedTab
+        ? await getSavedPosts(token, nextPage)
+        : await getUserPosts(token, id, nextPage);
+      const setItems = savedTab ? setSaved : setPosts;
+      setItems((previous) => {
+        const merged = new Map(previous.map((post) => [post.id, post]));
+        result.posts.forEach((post) => merged.set(post.id, post));
+        return [...merged.values()];
+      });
+      if (savedTab) {
+        savedPageRef.current = result.page;
+        savedHasMoreRef.current = result.hasMore;
+      } else {
+        postsPageRef.current = result.page;
+        postsHasMoreRef.current = result.hasMore;
+      }
+    } catch {
+      // Keep the loaded page visible. Reaching the end again retries safely.
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [token, id, tab, viewingSelf]);
 
   const onToggleFollow = async () => {
     if (!token || !id || !profile) return;
@@ -88,7 +137,9 @@ export default function UserProfileScreen() {
           <ScreenHeader title={t.community.profile} />
           {loadError ? (
             <Card style={styles.errorCard}>
-              <AppText style={styles.emptyEmoji}>📡</AppText>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="cloud-offline-outline" size={28} color={theme.colors.primary} />
+              </View>
               <AppText variant="h2" style={styles.centerText}>{t.community.loadProfileError}</AppText>
               <AppText variant="muted" style={styles.centerText}>{t.common.checkConnection}</AppText>
               <Pressable onPress={load} style={({ pressed }) => [styles.retryBtn, pressed && styles.pressed]}>
@@ -140,7 +191,7 @@ export default function UserProfileScreen() {
             <Card style={styles.profileCard}>
               <View style={styles.avatar}>
                 {profile.user.avatar ? (
-                  <Image source={{ uri: profile.user.avatar }} style={styles.avatarImg} />
+                  <Image source={{ uri: profile.user.avatar }} style={styles.avatarImg} cachePolicy="memory-disk" accessible={false} />
                 ) : (
                   <AppText variant="h1" style={styles.avatarInitials}>{initials(profile.user.name)}</AppText>
                 )}
@@ -148,7 +199,10 @@ export default function UserProfileScreen() {
               <View style={styles.nameBox}>
                 <AppText variant="h1" style={styles.name}>{profile.user.name}</AppText>
                 {profile.user.goal ? (
-                  <AppText variant="muted" style={styles.goal}>🎯 {t.labels.goal[profile.user.goal] ?? profile.user.goal}</AppText>
+                  <View style={styles.goalRow}>
+                    <Ionicons name="flag-outline" size={14} color={theme.colors.muted} />
+                    <AppText variant="muted" style={styles.goal}>{t.labels.goal[profile.user.goal] ?? profile.user.goal}</AppText>
+                  </View>
                 ) : null}
               </View>
 
@@ -181,6 +235,8 @@ export default function UserProfileScreen() {
                       <Pressable
                         key={key}
                         onPress={() => setTab(key)}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: active }}
                         style={({ pressed }) => [styles.tabBtn, active && styles.tabBtnActive, pressed && styles.pressed]}
                       >
                         <AppText style={[styles.tabText, active && styles.tabTextActive]}>{label}</AppText>
@@ -206,7 +262,13 @@ export default function UserProfileScreen() {
         ListEmptyComponent={
           postsHidden ? null : ( // lock card already shown in the header
             <Card style={styles.emptyCard}>
-              <AppText style={styles.emptyEmoji}>{showSaved ? "🔖" : "📷"}</AppText>
+              <View style={styles.emptyIcon}>
+                <Ionicons
+                  name={showSaved ? "bookmark-outline" : "camera-outline"}
+                  size={28}
+                  color={theme.colors.primary}
+                />
+              </View>
               <AppText variant="muted" style={styles.centerText}>
                 {showSaved
                   ? t.community.savedEmpty
@@ -224,6 +286,13 @@ export default function UserProfileScreen() {
             onPress={() => router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } })}
           />
         )}
+        ListFooterComponent={loadingMore ? (
+          <View style={styles.loadMoreBox}>
+            <ActivityIndicator color={theme.colors.primary} />
+          </View>
+        ) : null}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
       />
     </Screen>
@@ -236,8 +305,12 @@ const styles = StyleSheet.create({
   header: { gap: theme.space.lg, marginBottom: theme.space.sm },
   stateBox: { paddingHorizontal: theme.space.lg, paddingTop: 60, gap: theme.space.lg },
   loadingBox: { paddingVertical: theme.space.xl, alignItems: "center" },
+  loadMoreBox: { paddingVertical: theme.space.lg, alignItems: "center" },
   errorCard: { padding: theme.space.xl, alignItems: "center", gap: 10 },
-  emptyEmoji: { fontSize: 40 },
+  emptyIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center",
+  },
   centerText: { textAlign: "center" },
   retryBtn: {
     marginTop: 4, paddingHorizontal: 20, paddingVertical: 9,
@@ -249,6 +322,7 @@ const styles = StyleSheet.create({
     width: 84, height: 84, borderRadius: 30, overflow: "hidden",
     backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center",
   },
+  goalRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   avatarImg: { width: "100%", height: "100%" },
   avatarInitials: { color: theme.colors.primary },
   nameBox: { alignItems: "center", gap: 2 },

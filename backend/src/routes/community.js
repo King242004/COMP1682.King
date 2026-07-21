@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const protect = require("../middleware/auth");
+const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
 const {
   createPost, getFeed, getExplore, getUserPosts, deletePost, updatePost,
   getPost, toggleLike, toggleSave, getSavedPosts,
@@ -10,7 +10,12 @@ const {
   getNotifications, getUnreadCount, markNotificationsRead,
 } = require("../controllers/communityController");
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
+const upload = createImageUpload({
+  maxFileBytes: 5 * 1024 * 1024,
+  maxFiles: 10,
+  maxFields: 10,
+});
+const postUploadLimiter = imageUploadLimiter(20);
 
 router.use(protect);
 
@@ -43,7 +48,7 @@ router.use(protect);
  *       201: { description: Post created }
  */
 // Instagram-style: up to 10 images per post
-router.post("/posts", upload.array("images", 10), createPost);
+router.post("/posts", postUploadLimiter, upload.array("images", 10), createPost);
 
 /**
  * @swagger
@@ -124,7 +129,7 @@ router.delete("/posts/:id", deletePost);
  */
 // Caption/meal-only edits arrive as plain JSON (multer skips non-multipart);
 // photo edits arrive as multipart with keepUrls + new files
-router.patch("/posts/:id", upload.array("images", 10), updatePost);
+router.patch("/posts/:id", postUploadLimiter, upload.array("images", 10), updatePost);
 
 /**
  * @swagger

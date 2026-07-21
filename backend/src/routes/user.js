@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const rateLimit = require("express-rate-limit");
+const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
 
 // Password-reset endpoints are unauthenticated → strict per-IP cap
 const otpLimiter = rateLimit({
@@ -14,7 +14,8 @@ const otpLimiter = rateLimit({
 const { uploadAvatar, sendPasswordOTP, verifyOTP, resetPassword, changeName, changePassword, deleteAccount } = require("../controllers/userController");
 const protect = require("../middleware/auth");
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
+const upload = createImageUpload({ maxFileBytes: 5 * 1024 * 1024 });
+const avatarUploadLimiter = imageUploadLimiter(20);
 
 /**
  * @swagger
@@ -37,7 +38,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
  *       200:
  *         description: Avatar uploaded successfully
  */
-router.post("/avatar", protect, upload.single("image"), uploadAvatar);
+router.post("/avatar", protect, avatarUploadLimiter, upload.single("image"), uploadAvatar);
 
 /**
  * @swagger
@@ -111,8 +112,8 @@ router.delete("/account", protect, deleteAccount);
  *     responses:
  *       200:
  *         description: OTP sent to email
- *       404:
- *         description: Email not found
+ *       400:
+ *         description: Invalid email format
  */
 router.post("/send-otp", otpLimiter, sendPasswordOTP);
 

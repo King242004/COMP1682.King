@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
-import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { useState, useCallback, useRef } from "react";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -13,6 +14,7 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 
 type Tab = "feed" | "explore";
+type LoadMode = "load" | "refresh" | "more";
 
 export default function CommunityScreen() {
   const router = useRouter();
@@ -23,25 +25,52 @@ export default function CommunityScreen() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(false);   // focus/initial load → centered spinner
   const [refreshing, setRefreshing] = useState(false); // pull-to-refresh only
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [unread, setUnread] = useState(0); // notification bell badge
+  const pageRef = useRef(1);
+  const hasMoreRef = useRef(true);
+  const loadingMoreRef = useRef(false);
+  const requestIdRef = useRef(0);
 
   // Shared fetch. `mode` decides which spinner reflects this load:
   // "refresh" drives RefreshControl (user gesture), otherwise the centered loader.
   // Driving RefreshControl programmatically during a screen transition leaves its
   // spinner stuck, so focus/initial loads must NOT touch `refreshing`.
   // On failure we KEEP the previous posts (an error shouldn't wipe the feed).
-  const load = useCallback(async (which: Tab, mode: "load" | "refresh" = "load") => {
+  const load = useCallback(async (which: Tab, mode: LoadMode = "load") => {
     if (!token) return;
-    const setBusy = mode === "refresh" ? setRefreshing : setLoading;
+    if (mode === "more" && (!hasMoreRef.current || loadingMoreRef.current)) return;
+
+    const requestId = ++requestIdRef.current;
+    const targetPage = mode === "more" ? pageRef.current + 1 : 1;
+    const setBusy = mode === "refresh"
+      ? setRefreshing
+      : mode === "more"
+      ? setLoadingMore
+      : setLoading;
+    if (mode === "more") loadingMoreRef.current = true;
+    else hasMoreRef.current = false;
     setBusy(true);
     try {
-      const data = which === "feed" ? await getFeed(token) : await getExplore(token);
-      setPosts(data);
+      const data = which === "feed"
+        ? await getFeed(token, targetPage)
+        : await getExplore(token, targetPage);
+      if (requestId !== requestIdRef.current) return;
+
+      setPosts((previous) => {
+        if (mode !== "more") return data.posts;
+        const merged = new Map(previous.map((post) => [post.id, post]));
+        data.posts.forEach((post) => merged.set(post.id, post));
+        return [...merged.values()];
+      });
+      pageRef.current = data.page;
+      hasMoreRef.current = data.hasMore;
       setLoadError(false);
     } catch {
-      setLoadError(true);
+      if (requestId === requestIdRef.current && mode !== "more") setLoadError(true);
     } finally {
+      if (mode === "more") loadingMoreRef.current = false;
       setBusy(false);
     }
   }, [token]);
@@ -96,7 +125,9 @@ export default function CommunityScreen() {
     </View>
   ) : loadError ? (
     <Card style={styles.emptyCard}>
-      <AppText style={styles.emptyEmoji}>📡</AppText>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="cloud-offline-outline" size={28} color={theme.colors.primary} />
+      </View>
       <AppText variant="h2" style={styles.centerText}>{t.community.loadPostsError}</AppText>
       <AppText variant="muted" style={styles.centerText}>{t.common.checkConnection}</AppText>
       <Pressable onPress={() => load(tab)} style={({ pressed }) => [styles.retryBtn, pressed && styles.pressed]}>
@@ -105,7 +136,9 @@ export default function CommunityScreen() {
     </Card>
   ) : (
     <Card style={styles.emptyCard}>
-      <AppText style={styles.emptyEmoji}>🥗</AppText>
+      <View style={styles.emptyIcon}>
+        <Ionicons name="restaurant-outline" size={28} color={theme.colors.primary} />
+      </View>
       <AppText variant="h2" style={styles.centerText}>
         {tab === "feed" ? t.community.feedEmptyTitle : t.community.exploreEmptyTitle}
       </AppText>
@@ -169,7 +202,12 @@ export default function CommunityScreen() {
                     style={({ pressed }) => [styles.myAvatar, pressed && styles.pressed]}
                   >
                     {user.avatar ? (
-                      <Image source={{ uri: user.avatar }} style={styles.myAvatarImg} />
+                      <Image
+                        source={{ uri: user.avatar }}
+                        style={styles.myAvatarImg}
+                        cachePolicy="memory-disk"
+                        accessible={false}
+                      />
                     ) : (
                       <AppText style={styles.myAvatarInitials}>{initials(user.name)}</AppText>
                     )}
@@ -185,6 +223,8 @@ export default function CommunityScreen() {
                   <Pressable
                     key={key}
                     onPress={() => setTab(key)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
                     style={({ pressed }) => [styles.tabBtn, active && styles.tabBtnActive, pressed && styles.pressed]}
                   >
                     <AppText style={[styles.tabText, active && styles.tabTextActive]}>{label}</AppText>
@@ -195,7 +235,14 @@ export default function CommunityScreen() {
           </View>
         }
         ListEmptyComponent={emptyState}
+        ListFooterComponent={loadingMore ? (
+          <View style={styles.loadMoreBox}>
+            <ActivityIndicator color={theme.colors.primary} />
+          </View>
+        ) : null}
         renderItem={renderPost}
+        onEndReached={() => load(tab, "more")}
+        onEndReachedThreshold={0.5}
         showsVerticalScrollIndicator={false}
       />
     </Screen>
@@ -245,8 +292,12 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: "700", color: theme.colors.subtle },
   tabTextActive: { color: "#fff" },
   loadingBox: { paddingVertical: theme.space.xl, alignItems: "center" },
+  loadMoreBox: { paddingVertical: theme.space.lg, alignItems: "center" },
   emptyCard: { padding: theme.space.xl, alignItems: "center", gap: 10 },
-  emptyEmoji: { fontSize: 40 },
+  emptyIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center",
+  },
   centerText: { textAlign: "center" },
   retryBtn: {
     marginTop: 4, paddingHorizontal: 20, paddingVertical: 9,

@@ -25,14 +25,26 @@ export function ScreenHeader({
       {title ? (
         // Titled header: chevron + big title
         <>
-          <Pressable onPress={goBack} hitSlop={12} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, marginLeft: -4 })}>
+          <Pressable
+            onPress={goBack}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={t.common.back}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, marginLeft: -4 })}
+          >
             <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           </Pressable>
           <AppText variant="h1" style={{ flex: 1 }}>{title}</AppText>
         </>
       ) : (
         // No title: chevron + "Back" at the same h1 size as other headers
-        <Pressable onPress={goBack} hitSlop={12} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.5 : 1, marginLeft: -4, flex: 1 })}>
+        <Pressable
+          onPress={goBack}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t.common.back}
+          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.5 : 1, marginLeft: -4, flex: 1 })}
+        >
           <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           <AppText variant="h1">{t.common.back}</AppText>
         </Pressable>

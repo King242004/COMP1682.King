@@ -3,6 +3,12 @@
 // (npm run dev in another terminal), then:  npm run test:api
 // The script registers a throwaway account, exercises every core rule, then
 // DELETES the account (right-to-erasure endpoint) so it cleans up after itself.
+require("dotenv").config();
+const mongoose = require("mongoose");
+const OTP = require("../../src/models/OTP");
+const Post = require("../../src/models/Post");
+const { OTP_PURPOSE, OTP_TTL_MS, hashOTP, normalizeEmail } = require("../../src/utils/otpSecurity");
+
 const BASE = process.env.API_BASE_URL || "http://localhost:5000/api";
 let pass = 0, fail = 0;
 
@@ -12,13 +18,35 @@ function check(name, cond, extra = "") {
 }
 
 async function api(path, method = "GET", body, token, rawBody) {
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: rawBody !== undefined ? rawBody : body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: rawBody !== undefined ? rawBody : body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (error) {
+    throw new Error(`${method} ${path} failed: ${error.message}`);
+  }
   const data = await res.json().catch(() => null);
   return { status: res.status, data };
+}
+
+async function seedRegistrationOTP(email, code = "123456") {
+  if (mongoose.connection.readyState === 0) {
+    await mongoose.connect(process.env.MONGODB_URI);
+  }
+  const normalized = normalizeEmail(email);
+  const purpose = OTP_PURPOSE.REGISTRATION;
+  await OTP.deleteMany({ email: normalized, purpose });
+  await OTP.create({
+    email: normalized,
+    purpose,
+    codeHash: hashOTP(normalized, purpose, code),
+    expiresAt: new Date(Date.now() + OTP_TTL_MS),
+  });
+  return code;
 }
 
 // Smallest valid JPEG, used where an endpoint requires a real image upload
@@ -43,6 +71,19 @@ async function apiUpload(path, fields, files, token) {
   return { status: res.status, data };
 }
 
+async function apiInvalidImageUpload(path, token) {
+  const form = new FormData();
+  form.append("images", new Blob(["not an image"], { type: "text/plain" }), "fake.txt");
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+    signal: AbortSignal.timeout(30_000),
+  });
+  const data = await res.json().catch(() => null);
+  return { status: res.status, data };
+}
+
 const pad = (n) => String(n).padStart(2, "0");
 const todayKey = () => {
   const d = new Date();
@@ -59,10 +100,17 @@ const shift = (days) => {
   const PW1 = "Test123", PW2 = "Test456";
 
   console.log("- AUTH -");
-  const reg = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1 });
+  const unverified = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1 });
+  check("register without OTP 400", unverified.status === 400, `got ${unverified.status}`);
+  const registrationCode = await seedRegistrationOTP(email);
+  const wrongCode = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1, otp: "000000" });
+  check("register with wrong OTP 400", wrongCode.status === 400, `got ${wrongCode.status}`);
+  const reg = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1, otp: registrationCode });
   check("register 201", reg.status === 201, `got ${reg.status}`);
   let token = reg.data.token;
-  const dup = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1 });
+  const existingRequest = await api("/auth/register/send-otp", "POST", { email });
+  check("registration OTP request hides existing account with generic 200", existingRequest.status === 200);
+  const dup = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1, otp: registrationCode });
   check("duplicate email 400", dup.status === 400);
   const badLogin = await api("/auth/login", "POST", { email, password: "Wrong123" });
   check("wrong password 400", badLogin.status === 400);
@@ -140,12 +188,15 @@ const shift = (days) => {
 
   console.log("- OTP (no real email sent) -");
   const otpUnknown = await api("/user/send-otp", "POST", { email: "khongtontai_" + Date.now() + "@test.com" });
-  check("send-otp unknown email 404", otpUnknown.status === 404);
+  check("send-otp hides unknown email with generic 200", otpUnknown.status === 200);
 
   console.log("- COMMUNITY (Instagram rule: a post always carries a photo) -");
   // Caption without a photo must be refused — a post is a visual artefact
   const textOnly = await api("/community/posts", "POST", { caption: "Bài test tự động" }, token);
   check("text-only post rejected 400", textOnly.status === 400, `got ${textOnly.status}`);
+
+  const invalidImage = await apiInvalidImageUpload("/community/posts", token);
+  check("non-image upload rejected 400", invalidImage.status === 400, `got ${invalidImage.status}`);
 
   const post = await apiUpload("/community/posts", { caption: "Bài test tự động" }, [["images", "test.jpg"]], token);
   check("create post with photo 201", post.status === 201, `got ${post.status}`);
@@ -155,12 +206,43 @@ const shift = (days) => {
 
   if (postId) {
     const explore = await api("/community/posts/explore", "GET", undefined, token);
-    check("explore contains own post", explore.status === 200 && explore.data.posts.some((p) => (p.id || p._id) === postId));
+    check(
+      "explore contains own post",
+      explore.status === 200 &&
+        typeof explore.data.hasMore === "boolean" &&
+        explore.data.posts.some((p) => (p.id || p._id) === postId)
+    );
     const like = await api(`/community/posts/${postId}/like`, "POST", undefined, token);
     check("like toggles", like.status === 200 && like.data.liked === true);
+
+    // Seed lightweight hosted-image documents directly so pagination can be
+    // exercised without uploading 20 files to Cloudinary.
+    const ownerId = reLogin.data?.user?.id;
+    await Post.insertMany(Array.from({ length: 20 }, (_, index) => ({
+      user: ownerId,
+      caption: `Pagination test ${index + 1}`,
+      image: `https://example.com/mealmate-pagination-${index + 1}.jpg`,
+      images: [{ url: `https://example.com/mealmate-pagination-${index + 1}.jpg` }],
+    })));
+    const profilePage1 = await api(`/community/posts/user/${ownerId}?page=1`, "GET", undefined, token);
+    const profilePage2 = await api(`/community/posts/user/${ownerId}?page=2`, "GET", undefined, token);
+    const page1Ids = new Set((profilePage1.data?.posts || []).map((p) => p.id));
+    check(
+      "profile page 1 reports more posts",
+      profilePage1.status === 200 && profilePage1.data.posts.length === 20 && profilePage1.data.hasMore === true
+    );
+    check(
+      "profile page 2 has no duplicates",
+      profilePage2.status === 200 &&
+        profilePage2.data.posts.length >= 1 &&
+        profilePage2.data.hasMore === false &&
+        profilePage2.data.posts.every((p) => !page1Ids.has(p.id))
+    );
   } else {
     check("explore contains own post", false, "skipped, no post id");
     check("like toggles", false, "skipped, no post id");
+    check("profile page 1 reports more posts", false, "skipped, no post id");
+    check("profile page 2 has no duplicates", false, "skipped, no post id");
   }
 
   console.log("- AVATAR + PRIVATE COMMUNITY -");
@@ -170,7 +252,8 @@ const shift = (days) => {
   check("replacement avatar upload 200", avatar2.status === 200 && !!avatar2.data?.avatar, `got ${avatar2.status}`);
 
   const viewerEmail = `apitest_viewer_${Date.now()}@test.com`;
-  const viewerReg = await api("/auth/register", "POST", { name: "Privacy Viewer", email: viewerEmail, password: PW1 });
+  const viewerCode = await seedRegistrationOTP(viewerEmail);
+  const viewerReg = await api("/auth/register", "POST", { name: "Privacy Viewer", email: viewerEmail, password: PW1, otp: viewerCode });
   check("register privacy viewer 201", viewerReg.status === 201, `got ${viewerReg.status}`);
   const viewerToken = viewerReg.data?.token;
 
@@ -223,5 +306,10 @@ const shift = (days) => {
   check("all meal data erased after delete", ghostData.status === 200 && ghostData.data.meals.length === 0, `got ${ghostData.status}/${ghostData.data?.meals?.length}`);
 
   console.log(`\n${pass}/${pass + fail} PASS${fail ? ` - ${fail} FAIL` : ""}`);
+  await mongoose.disconnect();
   process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error("Test crashed:", e.message); process.exit(1); });
+})().catch(async (e) => {
+  console.error("Test crashed:", e.message);
+  await mongoose.disconnect().catch(() => {});
+  process.exit(1);
+});
