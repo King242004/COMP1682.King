@@ -24,7 +24,7 @@ The application was developed as a client server system. The mobile client was b
 | AI model access | Google Generative AI SDK | 0.24.1 |
 | Media storage | Cloudinary | 2.10.0 |
 | Authentication | jsonwebtoken with bcryptjs | 9.0.3 and 3.0.3 |
-| Email delivery | Nodemailer | 9.0.3 |
+| Email delivery | Brevo Transactional Email API over HTTPS | API v3 |
 | API documentation | swagger-jsdoc with swagger-ui-express | 6.2.8 and 5.0.1 |
 | Unit testing | Jest | 30.4.2 |
 | Linting | ESLint with eslint-config-expo | 9.25.0 |
@@ -217,6 +217,8 @@ Two deployment decisions have consequences worth stating.
 **Database network access is open to all addresses.** The hosting platform assigns dynamic outbound addresses, so restricting the database to a fixed address list is not possible. Access is instead controlled by mandatory credential authentication at the database layer. This is an accepted trade-off for a project of this scale and is revisited in Section 4.7.1.
 
 **The free hosting tier suspends an idle service.** After a period without traffic the service is suspended and the next request incurs a delay of roughly thirty seconds while it restarts. This is acceptable for a student project, and is mitigated during demonstrations and User Acceptance Testing by issuing a request shortly before the session begins.
+
+**Transactional email uses an HTTPS API.** Password recovery was initially delivered through Gmail SMTP with Nodemailer. Render's free service blocks outbound SMTP ports, so the same credentials worked locally while the deployed request timed out. Delivery was migrated to the Brevo Transactional Email API over HTTPS. SMTP remains only as a local fallback when Brevo variables are absent. Both server-side transport timeouts and a client-side request timeout ensure that a provider failure produces a readable error instead of an indefinite loading state.
 
 > 💡 **Ghi chú:** mục này viết dựa trên deploy thật ngày 20/7/2026. Ta đã tự gọi vào địa chỉ công khai và nhận đúng phản hồi của API, nên đây là mô tả thực tế chứ không phải dự định.
 
