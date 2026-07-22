@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { getPost, updatePost, type FeedPost } from "@/features/community/api";
 import { PhotoPickerModal } from "@/features/community/PhotoPickerModal";

@@ -8,6 +8,7 @@ export type Exercise = {
   caloriesBurned: number;
   date: string;
 };
+type RawExercise = Omit<Exercise, "id"> & { _id: string };
 
 // MET values from the Compendium of Physical Activities (common subset).
 // `key` looks up the localized label in t.exercise.groups / t.exercise.activities.
@@ -94,7 +95,7 @@ export function estimateBurned(met: number, durationMin: number, weight: number 
   return Math.round(met * w * (durationMin / 60));
 }
 
-function mapExercise(e: any): Exercise {
+function mapExercise(e: RawExercise): Exercise {
   return {
     id: e._id,
     name: e.name,
@@ -109,7 +110,7 @@ export async function getExercisesByDate(
   token: string,
   date: string
 ): Promise<{ exercises: Exercise[]; totalBurned: number }> {
-  const data = await apiRequest(`/exercise?date=${date}`, "GET", undefined, token);
+  const data = await apiRequest<{ exercises: RawExercise[]; totalBurned: number }>(`/exercise?date=${date}`, "GET", undefined, token);
   return { exercises: (data.exercises || []).map(mapExercise), totalBurned: data.totalBurned || 0 };
 }
 
@@ -117,7 +118,7 @@ export async function addExercise(
   token: string,
   input: { name: string; met: number; durationMin: number; date: string }
 ): Promise<Exercise> {
-  const data = await apiRequest("/exercise", "POST", input, token);
+  const data = await apiRequest<{ exercise: RawExercise }>("/exercise", "POST", input, token);
   return mapExercise(data.exercise);
 }
 
@@ -133,6 +134,6 @@ export async function getExerciseHistory(
   endDate?: string
 ): Promise<Exercise[]> {
   const range = startDate && endDate ? `?startDate=${startDate}&endDate=${endDate}` : "";
-  const data = await apiRequest(`/exercise/history${range}`, "GET", undefined, token);
+  const data = await apiRequest<{ exercises: RawExercise[] }>(`/exercise/history${range}`, "GET", undefined, token);
   return (data.exercises || []).map(mapExercise);
 }

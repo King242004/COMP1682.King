@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { useAuth } from "./AuthContext";
 import { apiRequest } from "../utils/api";
 
@@ -37,6 +37,7 @@ type NewMeal = {
 
 // Partial type for updates — every field optional since user may only change a few
 type UpdateMeal = Partial<NewMeal>;
+type RawMeal = Omit<Meal, "id"> & { _id: string };
 
 type MealsContextType = {
   meals: Meal[];
@@ -54,7 +55,7 @@ const MealsContext = createContext<MealsContextType | null>(null);
 
 // Map backend response (Mongo _id) to frontend shape (id). Single source used by
 // every fetch/update handler.
-function mapMeal(m: any): Meal {
+function mapMeal(m: RawMeal): Meal {
   return {
     id: m._id,
     name: m.name,
@@ -81,7 +82,7 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
     setIsLoading(true);
     try {
-      const data = await apiRequest(`/meals?date=${date}`, "GET", undefined, token);
+      const data = await apiRequest<{ meals: RawMeal[]; totals: DailyTotals }>(`/meals?date=${date}`, "GET", undefined, token);
       const mapped: Meal[] = data.meals.map(mapMeal);
       setMeals(mapped);
       setDailyTotals(data.totals);
@@ -94,7 +95,7 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
     setIsLoading(true);
     try {
-      const data = await apiRequest("/meals/history", "GET", undefined, token);
+      const data = await apiRequest<{ meals: RawMeal[] }>("/meals/history", "GET", undefined, token);
       const mapped: Meal[] = data.meals.map(mapMeal);
       setHistoryMeals(mapped);
     } finally {
@@ -102,15 +103,15 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token]);
 
-  const addMeal = async (meal: NewMeal) => {
+  const addMeal = useCallback(async (meal: NewMeal) => {
     if (!token) return;
     await apiRequest("/meals", "POST", meal, token);
     await fetchMealsByDate(meal.date);
-  };
+  }, [fetchMealsByDate, token]);
 
-  const updateMeal = async (id: string, updates: UpdateMeal) => {
+  const updateMeal = useCallback(async (id: string, updates: UpdateMeal) => {
     if (!token) return;
-    const data = await apiRequest(`/meals/${id}`, "PUT", updates, token);
+    const data = await apiRequest<{ meal: RawMeal }>(`/meals/${id}`, "PUT", updates, token);
     const updated = mapMeal(data.meal);
     // Update in both today's list and history list (meal might exist in either)
     setMeals((prev) => prev.map((m) => (m.id === id ? updated : m)));
@@ -126,9 +127,9 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
         fat: prev.fat - old.fat + updated.fat,
       };
     });
-  };
+  }, [meals, token]);
 
-  const deleteMeal = async (id: string) => {
+  const deleteMeal = useCallback(async (id: string) => {
     if (!token) return;
     await apiRequest(`/meals/${id}`, "DELETE", undefined, token);
     // Remove from BOTH lists so meal-history refreshes immediately (bug B fix)
@@ -144,10 +145,32 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
         fat: prev.fat - deleted.fat,
       };
     });
-  };
+  }, [meals, token]);
+
+  const value = useMemo(() => ({
+    meals,
+    historyMeals,
+    dailyTotals,
+    isLoading,
+    fetchMealsByDate,
+    fetchMealHistory,
+    addMeal,
+    updateMeal,
+    deleteMeal,
+  }), [
+    addMeal,
+    dailyTotals,
+    deleteMeal,
+    fetchMealHistory,
+    fetchMealsByDate,
+    historyMeals,
+    isLoading,
+    meals,
+    updateMeal,
+  ]);
 
   return (
-    <MealsContext.Provider value={{ meals, historyMeals, dailyTotals, isLoading, fetchMealsByDate, fetchMealHistory, addMeal, updateMeal, deleteMeal }}>
+    <MealsContext.Provider value={value}>
       {children}
     </MealsContext.Provider>
   );

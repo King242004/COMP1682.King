@@ -30,6 +30,7 @@ export type ChatMessage = {
   loggedId?: string | null;
   createdAt?: string;     // ISO timestamp — drives the day separators in chat
 };
+type RawChatMessage = ChatMessage;
 
 // Strip leftover markdown so chat/insight read as natural text (no **, *, #, `).
 export function stripMarkdown(s: string): string {
@@ -102,9 +103,9 @@ export async function unlogMealFromMessage(token: string, messageId: string): Pr
 }
 
 export async function getChatHistory(token: string): Promise<ChatMessage[]> {
-  const data = await apiRequest("/coach/history", "GET", undefined, token);
+  const data = await apiRequest<{ messages: RawChatMessage[] }>("/coach/history", "GET", undefined, token);
   // Clean markdown; carry id/meal/loggedId/image so action buttons persist on reload.
-  return (data.messages || []).map((m: any) => ({
+  return (data.messages || []).map((m) => ({
     id: m.id,
     role: m.role,
     text: stripMarkdown(m.text),

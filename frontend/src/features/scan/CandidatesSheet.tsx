@@ -1,6 +1,6 @@
 // Bottom sheet with the AI's top-3 dish guesses after a photo scan.
 import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";

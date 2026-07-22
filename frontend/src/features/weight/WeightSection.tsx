@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

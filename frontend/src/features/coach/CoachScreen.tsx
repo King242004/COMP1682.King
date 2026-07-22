@@ -1,11 +1,23 @@
 // AI HEALTH COACH (tab) — daily insight + context-aware chat with saved history.
 // Flow/state lives here; InsightCard, ChatBubble, TypingDots are in src/features/coach.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Image, Keyboard, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Image,
+  Keyboard,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import {
   getInsight,
@@ -27,6 +39,7 @@ import { ChatBubble } from "@/features/coach/ChatBubble";
 import { todayKey, dateKey } from "@/utils/date";
 import { aiResetWhen } from "@/utils/aiQuota";
 import { resolveLanguage } from "@/utils/language";
+import { getErrorMessage } from "@/utils/errors";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -43,7 +56,7 @@ export default function CoachTab() {
   const mealOpts: [string, string][] = MEAL_KEYS.map((k) => [k, t.coach.mealShort[k]]);
 
   const headerHeight = useHeaderHeight(); // bù chiều cao AppHeader của tab cho keyboard
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<FlatList<ChatMessage>>(null);
   const scrollToLatest = useCallback((animated = true) => {
     scrollRef.current?.scrollToEnd({ animated });
   }, []);
@@ -156,8 +169,8 @@ export default function CoachTab() {
       const { reply, meal, eating, messageId, aiQuotaLow } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
       if (aiQuotaLow) setQuotaLow(true);
       setMessages((prev) => [...prev, { id: messageId ?? undefined, role: "coach", text: reply, meal, eating, createdAt: new Date().toISOString() }]);
-    } catch (e: any) {
-      const quota = /quota/i.test(String(e?.message || ""));
+    } catch (error: unknown) {
+      const quota = /quota/i.test(getErrorMessage(error));
       const errText = quota
         ? t.coach.quotaMsg(aiResetWhen(t))
         : t.coach.replyFail;
@@ -236,7 +249,7 @@ export default function CoachTab() {
 
   // "Jump to latest" appears once the user scrolls up away from the newest message
   const [showJump, setShowJump] = useState(false);
-  const onChatScroll = (e: any) => {
+  const onChatScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
     const nearBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 150;
     setShowJump(!nearBottom && messages.length > 0);
@@ -296,36 +309,40 @@ export default function CoachTab() {
         )}
 
         <View style={styles.chatArea}>
-        <ScrollView
-          ref={scrollRef}
-          style={styles.flex1}
-          contentContainerStyle={styles.chatContent}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-          showsVerticalScrollIndicator={false}
-          onScroll={onChatScroll}
-          scrollEventThrottle={100}
-        >
-          {/* Disclaimer */}
-          <View style={styles.disclaimer}>
-            <Ionicons name="information-circle-outline" size={15} color={theme.colors.subtle} />
-            <AppText variant="subtle" style={styles.disclaimerText}>{L.disclaimer}</AppText>
-          </View>
+          <FlatList
+            ref={scrollRef}
+            data={messages}
+            style={styles.flex1}
+            contentContainerStyle={styles.chatContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+            showsVerticalScrollIndicator={false}
+            onScroll={onChatScroll}
+            scrollEventThrottle={100}
+            keyExtractor={(item, index) => `${item.id ?? item.createdAt ?? item.role}-${index}`}
+            ListHeaderComponent={(
+              <View style={styles.listSection}>
+                {/* Disclaimer */}
+                <View style={styles.disclaimer}>
+                  <Ionicons name="information-circle-outline" size={15} color={theme.colors.subtle} />
+                  <AppText variant="subtle" style={styles.disclaimerText}>{L.disclaimer}</AppText>
+                </View>
 
-          {/* Daily insight */}
-          <InsightCard
-            insight={insight}
-            loading={loadingInsight}
-            sending={sending}
-            failText={L.insightFail}
-            onAskTip={askAboutTip}
-          />
+                {/* Daily insight */}
+                <InsightCard
+                  insight={insight}
+                  loading={loadingInsight}
+                  sending={sending}
+                  failText={L.insightFail}
+                  onAskTip={askAboutTip}
+                />
+              </View>
+            )}
 
-          {/* Chat messages — with a day separator whenever the calendar day changes */}
-          {messages.map((m, i) => {
+          renderItem={({ item: m, index: i }) => {
             const showSeparator = i === 0 || msgDay(m) !== msgDay(messages[i - 1]);
             return (
-              <View key={i} style={styles.msgBlock}>
+              <View style={styles.msgBlock}>
                 {showSeparator && (
                   <View style={styles.daySep}>
                     <View style={styles.daySepLine} />
@@ -343,17 +360,15 @@ export default function CoachTab() {
                 />
               </View>
             );
-          })}
+          }}
 
-          {/* Coach "typing" bubble while composing */}
-          {sending && (
+          ListFooterComponent={sending ? (
             <View style={styles.typingBubble}>
               <TypingDots />
             </View>
-          )}
+          ) : null}
 
-          {/* Empty state: intro + example chips so users discover what Coach can do */}
-          {messages.length === 0 && (
+          ListEmptyComponent={(
             <View style={styles.emptyBlock}>
               <AppText variant="muted" style={styles.introText}>{L.intro}</AppText>
               <View style={styles.chipWrap}>
@@ -376,17 +391,17 @@ export default function CoachTab() {
               </View>
             </View>
           )}
-        </ScrollView>
+          />
 
         {/* Jump to latest — shown when the user scrolled up into older messages */}
-        {showJump && (
-          <Pressable
-            onPress={() => scrollToLatest(true)}
-            style={({ pressed }) => [styles.jumpBtn, pressed && styles.pressedFaint]}
-          >
-            <Ionicons name="chevron-down" size={20} color="#fff" />
-          </Pressable>
-        )}
+          {showJump && (
+            <Pressable
+              onPress={() => scrollToLatest(true)}
+              style={({ pressed }) => [styles.jumpBtn, pressed && styles.pressedFaint]}
+            >
+              <Ionicons name="chevron-down" size={20} color="#fff" />
+            </Pressable>
+          )}
         </View>
 
         {/* Pending image preview */}
@@ -458,6 +473,7 @@ const styles = StyleSheet.create({
 
   chatArea: { flex: 1 },
   chatContent: { paddingBottom: 20, gap: theme.space.md },
+  listSection: { gap: theme.space.md },
   msgBlock: { gap: theme.space.md },
   daySep: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 2 },
   daySepLine: { flex: 1, height: 1, backgroundColor: "rgba(22,78,99,0.15)" },

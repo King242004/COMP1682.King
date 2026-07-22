@@ -1,7 +1,7 @@
 // One meal-type selector for Add + Edit (they used to ship two different
 // designs for the same action). Style follows the Soft UI tint pattern.
 import { Pressable, StyleSheet, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";

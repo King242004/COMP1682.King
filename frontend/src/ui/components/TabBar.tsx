@@ -1,9 +1,10 @@
 // Custom bottom tab bar (Home · Community · [+] · Coach · Profile) with the
 // center FAB opening the add-meal sheet (Scan / Add manually).
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "./AppText";
@@ -49,22 +50,30 @@ function FABModal({ visible, onClose, onScan, onAdd }: {
 }
 
 // Tab metadata; labels resolve from the i18n catalog by key
-const LEFT_TABS = [
+type IconName = ComponentProps<typeof Ionicons>["name"];
+type TabItem = {
+  name: string;
+  icon: IconName;
+  activeIcon: IconName;
+  labelKey: "home" | "community" | "coach" | "profile";
+};
+
+const LEFT_TABS: TabItem[] = [
   { name: "index", icon: "home-outline", activeIcon: "home", labelKey: "home" as const },
   { name: "community", icon: "people-outline", activeIcon: "people", labelKey: "community" as const },
 ];
-const RIGHT_TABS = [
+const RIGHT_TABS: TabItem[] = [
   { name: "coach", icon: "sparkles-outline", activeIcon: "sparkles", labelKey: "coach" as const },
   { name: "profile", icon: "person-outline", activeIcon: "person", labelKey: "profile" as const },
 ];
 
-export function TabBar({ state, navigation }: any) {
+export function TabBar({ state, navigation }: BottomTabBarProps) {
   const router = useRouter();
   const t = useT();
   const current = state.routes[state.index]?.name;
   const [modalVisible, setModalVisible] = useState(false);
 
-  const renderTab = (tab: { name: string; icon: string; activeIcon: string; labelKey: "home" | "community" | "coach" | "profile" }) => {
+  const renderTab = (tab: TabItem) => {
     const active = current === tab.name;
     return (
       <Pressable
@@ -73,7 +82,7 @@ export function TabBar({ state, navigation }: any) {
         style={({ pressed }) => [styles.tab, pressed && styles.dim]}
       >
         <Ionicons
-          name={(active ? tab.activeIcon : tab.icon) as any}
+          name={active ? tab.activeIcon : tab.icon}
           size={22}
           color={active ? theme.colors.primary : theme.colors.subtle}
         />

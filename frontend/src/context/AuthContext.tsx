@@ -63,6 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const userRef = useRef<User | null>(null);
+  userRef.current = user;
 
   useEffect(() => {
     async function loadAuth() {
@@ -139,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    userRef.current = null;
     setUser(null);
     setToken(null);
     setStats(null);
@@ -163,26 +166,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const mergeAndStoreUser = useCallback(async (patch: Partial<User> & { _id?: string }) => {
+    const current = userRef.current;
+    if (!current) return;
+    const next = { ...current, ...patch, id: patch._id ?? current.id };
+    userRef.current = next;
+    setUser(next);
+    await AsyncStorage.setItem("user", JSON.stringify(next));
+  }, []);
+
   const fetchProfile = useCallback(async () => {
     if (!token) return;
     const data = await apiRequest("/profile", "GET", undefined, token);
-    setUser((prev) => ({ ...prev, ...data.user, id: data.user._id ?? prev?.id }));
+    await mergeAndStoreUser(data.user);
     setStats(data.stats);
-  }, [token]);
+  }, [mergeAndStoreUser, token]);
 
   const updateProfile = async (data: ProfileUpdate) => {
     if (!token) return;
     const res = await apiRequest("/profile", "PUT", data, token);
-    setUser((prev) => ({ ...prev, ...res.user, id: res.user._id ?? prev?.id }));
+    await mergeAndStoreUser(res.user);
     setStats(res.stats);
-    await AsyncStorage.setItem("user", JSON.stringify({ ...user, ...res.user }));
   };
 
   const changeName = async (name: string) => {
     if (!token) return;
     const res = await apiRequest("/user/name", "PUT", { name }, token);
-    setUser((prev) => ({ ...prev, ...res.user, id: res.user._id ?? prev?.id }));
-    await AsyncStorage.setItem("user", JSON.stringify({ ...user, ...res.user }));
+    await mergeAndStoreUser(res.user);
   };
 
   // Permanently deletes the account + ALL server-side data (password-confirmed),
@@ -207,9 +217,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       uri: localUri,
       name: filename,
       type: mimeType,
-    } as any);
+    } as unknown as Blob);
 
-    const data = await apiFetch("/user/avatar", {
+    const data = await apiFetch<{ avatar: string }>("/user/avatar", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -217,8 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       body: formData,
     }, { timeoutMs: 90_000 });
-    setUser((prev) => (prev ? { ...prev, avatar: data.avatar } : prev));
-    if (user) await AsyncStorage.setItem("user", JSON.stringify({ ...user, avatar: data.avatar }));
+    await mergeAndStoreUser({ avatar: data.avatar });
   };
 
   return (

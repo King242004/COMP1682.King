@@ -5,11 +5,16 @@ function getDevHost(): string | null {
   if (Platform.OS === "web" && typeof window !== "undefined") {
     return window.location.hostname;
   }
+  const legacyConstants = Constants as typeof Constants & {
+    expoGoConfig?: { hostUri?: string };
+    manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } };
+    manifest?: { debuggerHost?: string };
+  };
   const hostUri =
     Constants.expoConfig?.hostUri ||
-    (Constants as any).expoGoConfig?.hostUri ||
-    (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
-    (Constants as any).manifest?.debuggerHost;
+    legacyConstants.expoGoConfig?.hostUri ||
+    legacyConstants.manifest2?.extra?.expoGo?.debuggerHost ||
+    legacyConstants.manifest?.debuggerHost;
   if (!hostUri) return null;
   return hostUri.split(":")[0];
 }
@@ -67,15 +72,15 @@ export async function apiFetch<T = any>(
       ...init,
       signal: controller.signal,
     });
-  } catch (error: any) {
-    if (error?.name === "AbortError" && timedOut) throw new ApiTimeoutError();
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError" && timedOut) throw new ApiTimeoutError();
     throw error;
   } finally {
     clearTimeout(timeoutId);
     options.signal?.removeEventListener("abort", relayAbort);
   }
 
-  let data: any = null;
+  let data: unknown = null;
   try {
     data = await res.json();
   } catch {
@@ -84,25 +89,28 @@ export async function apiFetch<T = any>(
 
   if (!res.ok) {
     if (res.status === 401) onUnauthorized?.();
-    throw new Error(data?.message || `Request failed (${res.status})`);
+    const message = data && typeof data === "object" && "message" in data
+      ? String(data.message)
+      : `Request failed (${res.status})`;
+    throw new Error(message);
   }
   if (data === null) throw new Error("Server returned an invalid response");
   return data as T;
 }
 
-export async function apiRequest(
+export async function apiRequest<T = any>(
   endpoint: string,
   method: string = "GET",
   body?: object,
   token?: string,
   options?: ApiRequestOptions
-) {
+): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  return apiFetch(
+  return apiFetch<T>(
     endpoint,
     {
       method,

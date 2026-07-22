@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "../theme";
 import { AppText } from "./AppText";

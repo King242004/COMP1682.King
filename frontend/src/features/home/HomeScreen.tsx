@@ -2,7 +2,7 @@
 import { useCallback, useState, useRef } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { getExercisesByDate, deleteExercise, getExerciseHistory, type Exercise } from "@/features/exercise/api";

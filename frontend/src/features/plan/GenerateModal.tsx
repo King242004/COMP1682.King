@@ -2,7 +2,7 @@
 // The "remember" checkbox writes the note back to the profile so EVERY AI
 // feature (suggest, coach, later generations) shares one taste memory.
 import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";

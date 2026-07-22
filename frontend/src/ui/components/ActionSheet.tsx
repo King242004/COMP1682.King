@@ -1,5 +1,5 @@
 import { Modal, Pressable, StyleSheet, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme, shadow } from "../theme";
 import { AppText } from "./AppText";
 

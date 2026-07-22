@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { useT } from "@/i18n";
 import { theme, macroGoals } from "@/ui/theme";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
 import { dateKey } from "@/utils/date";
 import { mealSlotByHour } from "@/utils/mealSlot";

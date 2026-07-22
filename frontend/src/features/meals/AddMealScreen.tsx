@@ -14,7 +14,7 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 // Fallback chips for brand-new users with an empty history — familiar
 // Vietnamese staples (the app's whole angle), not Western sample dishes.

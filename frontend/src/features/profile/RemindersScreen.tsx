@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import {
   MEAL_KEYS, applyReminder, emptyReminders, formatTime, loadReminders, parseTime,

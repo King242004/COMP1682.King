@@ -1,7 +1,7 @@
 // AI grocery list bottom sheet — tickable rows (state persisted per week
 // together with the list, see plan api cacheGrocery).
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
