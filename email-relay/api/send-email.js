@@ -1,10 +1,8 @@
 const nodemailer = require("nodemailer");
 const { verifySignature } = require("../src/signature");
+const { buildOtpEmail } = require("../src/template");
 
-const ALLOWED_SUBJECTS = new Set([
-  "MealMate - Verify your email",
-  "MealMate - Reset your password",
-]);
+const ALLOWED_PURPOSES = new Set(["registration", "password_reset"]);
 
 const parseBody = (body) => {
   if (typeof body !== "string") return body;
@@ -22,13 +20,9 @@ const isValidEmail = (value) =>
 
 const isValidPayload = (payload) =>
   isValidEmail(payload.to) &&
-  ALLOWED_SUBJECTS.has(payload.subject) &&
-  typeof payload.html === "string" &&
-  payload.html.length > 0 &&
-  payload.html.length <= 100_000 &&
-  typeof payload.text === "string" &&
-  payload.text.length > 0 &&
-  payload.text.length <= 10_000;
+  typeof payload.otp === "string" &&
+  /^\d{6}$/.test(payload.otp) &&
+  ALLOWED_PURPOSES.has(payload.purpose);
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -61,9 +55,8 @@ module.exports = async (req, res) => {
 
   const payload = {
     to: body.to,
-    subject: body.subject,
-    html: body.html,
-    text: body.text,
+    otp: body.otp,
+    purpose: body.purpose,
   };
   const timestamp = req.headers["x-mealmate-timestamp"];
   const signature = req.headers["x-mealmate-signature"];
@@ -93,15 +86,16 @@ module.exports = async (req, res) => {
   });
 
   try {
+    const email = buildOtpEmail(payload.otp, payload.purpose);
     await transporter.sendMail({
       from: {
         name: process.env.SMTP_FROM_NAME?.trim() || "MealMate",
         address: process.env.SMTP_FROM_EMAIL?.trim() || smtpUser,
       },
       to: payload.to,
-      subject: payload.subject,
-      html: payload.html,
-      text: payload.text,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
     });
     return res.status(200).json({ delivered: true });
   } catch (error) {

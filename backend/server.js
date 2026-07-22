@@ -42,7 +42,6 @@ app.get("/", (req, res) => {
     version: process.env.RENDER_GIT_COMMIT?.slice(0, 8) || "local",
     emailProvider: emailStatus.provider,
     emailConfigured: emailStatus.configured,
-    emailFallbackConfigured: emailStatus.fallbackConfigured,
   });
 });
 

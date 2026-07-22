@@ -8,9 +8,8 @@ const originalCreateTransport = nodemailer.createTransport;
 const secret = "a-secure-relay-secret-with-at-least-32-characters";
 const payload = {
   to: "person@example.com",
-  subject: "MealMate - Verify your email",
-  html: "<p>123456</p>",
-  text: "Code: 123456",
+  otp: "123456",
+  purpose: "registration",
 };
 
 const createResponse = () => ({
@@ -73,6 +72,8 @@ test("delivers an authenticated request", async () => {
   assert.deepEqual(res.body, { delivered: true });
   assert.equal(deliveredMessage.to, "person@example.com");
   assert.equal(deliveredMessage.subject, "MealMate - Verify your email");
+  assert.match(deliveredMessage.html, /EMAIL VERIFICATION/);
+  assert.match(deliveredMessage.html, /123456/);
 });
 
 test("rejects a request with an invalid signature before sending", async () => {

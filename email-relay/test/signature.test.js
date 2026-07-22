@@ -4,9 +4,8 @@ const { createSignature, verifySignature } = require("../src/signature");
 
 const payload = {
   to: "person@example.com",
-  subject: "MealMate - Reset your password",
-  html: "<p>123456</p>",
-  text: "Code: 123456",
+  otp: "123456",
+  purpose: "password_reset",
 };
 const secret = "a-secure-relay-secret-with-at-least-32-characters";
 

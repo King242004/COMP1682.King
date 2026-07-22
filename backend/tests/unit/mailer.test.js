@@ -1,147 +1,93 @@
-jest.mock("nodemailer", () => ({
-  createTransport: jest.fn(),
-}));
-
-const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 const { getEmailStatus, sendOTP } = require("../../src/config/mailer");
 
-const EMAIL_ENV_KEYS = [
-  "SMTP_HOST",
-  "SMTP_PORT",
-  "SMTP_USER",
-  "SMTP_PASSWORD",
-  "SMTP_FROM_EMAIL",
-  "SMTP_FROM_NAME",
-  "EMAIL_RELAY_URL",
-  "EMAIL_RELAY_SECRET",
-];
-
-const configureSmtp = () => {
-  process.env.SMTP_HOST = "smtp.gmail.com";
-  process.env.SMTP_PORT = "587";
-  process.env.SMTP_USER = "mealmatecare@gmail.com";
-  process.env.SMTP_PASSWORD = "app-password";
-  process.env.SMTP_FROM_NAME = "MealMate";
-};
+const relayUrl = "https://mealmate-email.vercel.app/api/send-email";
+const relaySecret = "a-secure-relay-secret-with-at-least-32-characters";
 
 const configureRelay = () => {
-  process.env.EMAIL_RELAY_URL = "https://mealmate-email.vercel.app/api/send-email";
-  process.env.EMAIL_RELAY_SECRET = "a-secure-shared-secret";
+  process.env.EMAIL_RELAY_URL = relayUrl;
+  process.env.EMAIL_RELAY_SECRET = relaySecret;
 };
 
-describe("OTP email delivery", () => {
-  let sendMail;
-
+describe("OTP email relay", () => {
   beforeEach(() => {
-    EMAIL_ENV_KEYS.forEach((key) => delete process.env[key]);
-    sendMail = jest.fn().mockResolvedValue({ messageId: "test-message" });
-    nodemailer.createTransport.mockReturnValue({ sendMail });
+    delete process.env.EMAIL_RELAY_URL;
+    delete process.env.EMAIL_RELAY_SECRET;
     global.fetch = jest.fn().mockResolvedValue({ ok: true });
   });
 
   afterEach(() => {
-    EMAIL_ENV_KEYS.forEach((key) => delete process.env[key]);
-    jest.restoreAllMocks();
+    delete process.env.EMAIL_RELAY_URL;
+    delete process.env.EMAIL_RELAY_SECRET;
     jest.clearAllMocks();
     delete global.fetch;
   });
 
-  test("prefers SMTP and uses email-verification content", async () => {
-    configureSmtp();
-
-    await sendOTP("person@example.com", "123456", "registration");
-
-    expect(nodemailer.createTransport).toHaveBeenCalledWith(
-      expect.objectContaining({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        requireTLS: true,
-      })
-    );
-    expect(sendMail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: { name: "MealMate", address: "mealmatecare@gmail.com" },
-        to: "person@example.com",
-        subject: "MealMate - Verify your email",
-        html: expect.stringContaining("EMAIL VERIFICATION"),
-        text: expect.stringContaining("MealMate email verification"),
-      })
-    );
-    expect(sendMail.mock.calls[0][0].html).toContain("123456");
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(getEmailStatus()).toEqual({
-      provider: "smtp",
-      configured: true,
-      fallbackConfigured: false,
-    });
-  });
-
-  test("sends a signed HTTPS relay request", async () => {
+  test("sends a compact signed registration request", async () => {
     configureRelay();
 
     await sendOTP("person@example.com", "123456", "registration");
     const [url, request] = global.fetch.mock.calls[0];
     const payload = JSON.parse(request.body);
+    const timestamp = request.headers["x-mealmate-timestamp"];
+    const expectedSignature = crypto
+      .createHmac("sha256", relaySecret)
+      .update(`${timestamp}.${JSON.stringify(payload)}`)
+      .digest("hex");
 
-    expect(url).toBe("https://mealmate-email.vercel.app/api/send-email");
-    expect(request.headers["x-mealmate-timestamp"]).toMatch(/^\d+$/);
-    expect(request.headers["x-mealmate-signature"]).toMatch(/^[a-f0-9]{64}$/);
-    expect(payload).toEqual(
-      expect.objectContaining({
-        to: "person@example.com",
-        subject: "MealMate - Verify your email",
-        html: expect.stringContaining("123456"),
-      })
-    );
-    expect(getEmailStatus()).toEqual({
-      provider: "relay",
-      configured: true,
-      fallbackConfigured: false,
+    expect(url).toBe(relayUrl);
+    expect(payload).toEqual({
+      to: "person@example.com",
+      otp: "123456",
+      purpose: "registration",
     });
+    expect(request.headers["x-mealmate-signature"]).toBe(expectedSignature);
+    expect(getEmailStatus()).toEqual({ provider: "relay", configured: true });
   });
 
-  test("uses the relay when direct SMTP fails", async () => {
-    configureSmtp();
+  test("supports password-reset requests", async () => {
     configureRelay();
-    sendMail.mockRejectedValue(new Error("SMTP unavailable"));
-    jest.spyOn(console, "warn").mockImplementation(() => {});
 
-    await sendOTP("person@example.com", "123456", "registration");
+    await sendOTP("person@example.com", 654321, "password_reset");
 
-    expect(sendMail).toHaveBeenCalledTimes(1);
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(console.warn).toHaveBeenCalledWith(
-      "SMTP delivery failed; trying HTTPS relay:",
-      "SMTP unavailable"
-    );
-    expect(getEmailStatus()).toEqual({
-      provider: "smtp",
-      configured: true,
-      fallbackConfigured: true,
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toEqual({
+      to: "person@example.com",
+      otp: "654321",
+      purpose: "password_reset",
     });
   });
 
-  test("surfaces relay failures instead of hiding them", async () => {
+  test("surfaces relay failures", async () => {
     configureRelay();
     global.fetch.mockResolvedValue({ ok: false, status: 502 });
 
     await expect(
       sendOTP("person@example.com", "123456", "registration")
     ).rejects.toThrow("Email relay request failed with status 502");
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test("rejects delivery when no provider is configured", async () => {
+  test("rejects invalid payloads before making a request", async () => {
+    configureRelay();
+
+    await expect(sendOTP("person@example.com", "12345", "registration")).rejects.toThrow(
+      "Invalid OTP email payload"
+    );
+    await expect(sendOTP("person@example.com", "123456", "unknown")).rejects.toThrow(
+      "Invalid OTP email payload"
+    );
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test("rejects missing or insecure relay configuration", async () => {
     await expect(
       sendOTP("person@example.com", "123456", "registration")
-    ).rejects.toThrow("Email configuration is missing");
+    ).rejects.toThrow("Email relay configuration is missing or invalid");
+    expect(getEmailStatus()).toEqual({ provider: "none", configured: false });
 
-    expect(getEmailStatus()).toEqual({
-      provider: "none",
-      configured: false,
-      fallbackConfigured: false,
-    });
+    process.env.EMAIL_RELAY_URL = "http://insecure.example.com/api/send-email";
+    process.env.EMAIL_RELAY_SECRET = relaySecret;
+    await expect(
+      sendOTP("person@example.com", "123456", "registration")
+    ).rejects.toThrow("Email relay configuration is missing or invalid");
   });
 });
