@@ -23,4 +23,6 @@ const planMealSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+planMealSchema.index({ user: 1, date: 1, createdAt: 1 });
+
 module.exports = mongoose.model("PlanMeal", planMealSchema);

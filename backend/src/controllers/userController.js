@@ -195,7 +195,7 @@ exports.changePassword = async (req, res) => {
   if (newPassword.length < 6 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword))
     return res.status(400).json({ message: "Password must be at least 6 characters, include one uppercase letter and one number." });
 
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user.id).select("+password");
   if (!user) return res.status(404).json({ message: "User not found." });
 
   const match = await bcrypt.compare(currentPassword, user.password);
@@ -214,7 +214,7 @@ exports.deleteAccount = async (req, res) => {
   const { password } = req.body;
   if (!password) return res.status(400).json({ message: "Password is required." });
 
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user.id).select("+password");
   if (!user) return res.status(404).json({ message: "User not found." });
 
   const match = await bcrypt.compare(password, user.password);

@@ -1,16 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const rateLimit = require("express-rate-limit");
 const { register, sendRegistrationOTP, login, getMe } = require("../controllers/authController");
 const protect = require("../middleware/auth");
-
-const registrationOtpLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 5,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { message: "Too many verification requests. Please try again later." },
-});
+const { registrationOtpLimiter } = require("../middleware/rateLimiters");
 
 /**
  * @swagger

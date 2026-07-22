@@ -3,6 +3,7 @@ const router = express.Router();
 const { scanPhoto, scanBarcode } = require("../controllers/scanController");
 const protect = require("../middleware/auth");
 const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
+const { aiLimiter } = require("../middleware/rateLimiters");
 
 // Memory storage so we get req.file.buffer directly (no disk write)
 // Limit 8MB - large enough for high-quality phone photos
@@ -38,7 +39,7 @@ router.use(protect);
  *       500:
  *         description: AI scan failed
  */
-router.post("/photo", scanUploadLimiter, upload.single("image"), scanPhoto);
+router.post("/photo", aiLimiter, scanUploadLimiter, upload.single("image"), scanPhoto);
 
 /**
  * @swagger
