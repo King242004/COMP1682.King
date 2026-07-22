@@ -1,8 +1,6 @@
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
-const BREVO_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
-
 const EMAIL_CONTENT = {
   registration: {
     documentTitle: "Verify your MealMate email",
@@ -136,14 +134,6 @@ const getSmtpConfig = () => {
   };
 };
 
-const getBrevoConfig = () => {
-  const apiKey = process.env.BREVO_API_KEY?.trim();
-  const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim();
-  if (!apiKey || !senderEmail) return null;
-
-  return { apiKey, senderEmail };
-};
-
 const getRelayConfig = () => {
   const url = process.env.EMAIL_RELAY_URL?.trim();
   const secret = process.env.EMAIL_RELAY_SECRET?.trim();
@@ -176,11 +166,10 @@ const createRelaySignature = (payload, timestamp, secret) => {
 const getEmailStatus = () => {
   const smtpConfigured = Boolean(getSmtpConfig());
   const relayConfigured = Boolean(getRelayConfig());
-  const brevoConfigured = Boolean(getBrevoConfig());
-  const providerCount = [smtpConfigured, relayConfigured, brevoConfigured].filter(Boolean).length;
+  const providerCount = [smtpConfigured, relayConfigured].filter(Boolean).length;
 
   return {
-    provider: smtpConfigured ? "smtp" : relayConfigured ? "relay" : brevoConfigured ? "brevo" : "none",
+    provider: smtpConfigured ? "smtp" : relayConfigured ? "relay" : "none",
     configured: providerCount > 0,
     fallbackConfigured: providerCount > 1,
   };
@@ -208,30 +197,6 @@ const sendWithSmtp = async (to, otp, purpose, config) => {
     html: otpHtml(otp, purpose),
     text: otpText(otp, purpose),
   });
-};
-
-const sendWithBrevo = async (to, otp, purpose, config) => {
-
-  const response = await fetch(BREVO_EMAIL_URL, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "api-key": config.apiKey,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: { name: "MealMate", email: config.senderEmail },
-      to: [{ email: to }],
-      subject: getEmailContent(purpose).subject,
-      htmlContent: otpHtml(otp, purpose),
-      textContent: otpText(otp, purpose),
-    }),
-    signal: AbortSignal.timeout(15_000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Brevo email request failed with status ${response.status}`);
-  }
 };
 
 const sendWithRelay = async (to, otp, purpose, config) => {
@@ -263,9 +228,8 @@ const sendWithRelay = async (to, otp, purpose, config) => {
 async function sendOTP(to, otp, purpose = "password_reset") {
   const smtpConfig = getSmtpConfig();
   const relayConfig = getRelayConfig();
-  const brevoConfig = getBrevoConfig();
 
-  if (!smtpConfig && !relayConfig && !brevoConfig) {
+  if (!smtpConfig && !relayConfig) {
     throw new Error("Email configuration is missing");
   }
 
@@ -274,22 +238,12 @@ async function sendOTP(to, otp, purpose = "password_reset") {
       await sendWithSmtp(to, otp, purpose, smtpConfig);
       return;
     } catch (error) {
-      if (!relayConfig && !brevoConfig) throw error;
-      console.warn("SMTP delivery failed; trying another provider:", error.message);
+      if (!relayConfig) throw error;
+      console.warn("SMTP delivery failed; trying HTTPS relay:", error.message);
     }
   }
 
-  if (relayConfig) {
-    try {
-      await sendWithRelay(to, otp, purpose, relayConfig);
-      return;
-    } catch (error) {
-      if (!brevoConfig) throw error;
-      console.warn("Email relay failed; trying Brevo fallback:", error.message);
-    }
-  }
-
-  await sendWithBrevo(to, otp, purpose, brevoConfig);
+  await sendWithRelay(to, otp, purpose, relayConfig);
 }
 
 module.exports = { getEmailStatus, sendOTP };
