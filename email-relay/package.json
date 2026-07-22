@@ -1,0 +1,14 @@
+{
+  "name": "mealmate-email-relay",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "nodemailer": "^9.0.3"
+  }
+}

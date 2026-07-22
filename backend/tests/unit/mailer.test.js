@@ -12,6 +12,8 @@ const EMAIL_ENV_KEYS = [
   "SMTP_PASSWORD",
   "SMTP_FROM_EMAIL",
   "SMTP_FROM_NAME",
+  "EMAIL_RELAY_URL",
+  "EMAIL_RELAY_SECRET",
   "BREVO_API_KEY",
   "BREVO_SENDER_EMAIL",
 ];
@@ -82,6 +84,34 @@ describe("OTP email delivery", () => {
     expect(sendMail).not.toHaveBeenCalled();
   });
 
+  test("uses the signed HTTPS relay before Brevo", async () => {
+    process.env.EMAIL_RELAY_URL = "https://mealmate-email-relay.vercel.app/api/send-email";
+    process.env.EMAIL_RELAY_SECRET = "a-secure-shared-secret";
+    process.env.BREVO_API_KEY = "test-key";
+    process.env.BREVO_SENDER_EMAIL = "sender@example.com";
+
+    await sendOTP("person@example.com", "123456", "registration");
+    const [url, request] = global.fetch.mock.calls[0];
+    const payload = JSON.parse(request.body);
+
+    expect(url).toBe("https://mealmate-email-relay.vercel.app/api/send-email");
+    expect(request.headers["x-mealmate-timestamp"]).toMatch(/^\d+$/);
+    expect(request.headers["x-mealmate-signature"]).toMatch(/^[a-f0-9]{64}$/);
+    expect(payload).toEqual(
+      expect.objectContaining({
+        to: "person@example.com",
+        subject: "MealMate - Verify your email",
+        html: expect.stringContaining("123456"),
+      })
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(getEmailStatus()).toEqual({
+      provider: "relay",
+      configured: true,
+      fallbackConfigured: true,
+    });
+  });
+
   test("falls back to Brevo when SMTP delivery fails", async () => {
     process.env.SMTP_HOST = "smtp.gmail.com";
     process.env.SMTP_USER = "mealmatecare@gmail.com";
@@ -96,8 +126,28 @@ describe("OTP email delivery", () => {
     expect(sendMail).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(console.warn).toHaveBeenCalledWith(
-      "SMTP delivery failed; trying Brevo fallback:",
+      "SMTP delivery failed; trying another provider:",
       "SMTP unavailable"
+    );
+  });
+
+  test("falls back to Brevo when the relay fails", async () => {
+    process.env.EMAIL_RELAY_URL = "https://mealmate-email-relay.vercel.app/api/send-email";
+    process.env.EMAIL_RELAY_SECRET = "a-secure-shared-secret";
+    process.env.BREVO_API_KEY = "test-key";
+    process.env.BREVO_SENDER_EMAIL = "sender@example.com";
+    global.fetch
+      .mockResolvedValueOnce({ ok: false, status: 502 })
+      .mockResolvedValueOnce({ ok: true });
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    await sendOTP("person@example.com", "123456", "registration");
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch.mock.calls[1][0]).toBe("https://api.brevo.com/v3/smtp/email");
+    expect(console.warn).toHaveBeenCalledWith(
+      "Email relay failed; trying Brevo fallback:",
+      "Email relay request failed with status 502"
     );
   });
 
