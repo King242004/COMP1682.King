@@ -5,9 +5,8 @@ const MAX_REQUEST_AGE_MS = 5 * 60 * 1000;
 const canonicalizePayload = (payload) =>
   JSON.stringify({
     to: payload.to,
-    subject: payload.subject,
-    html: payload.html,
-    text: payload.text,
+    otp: payload.otp,
+    purpose: payload.purpose,
   });
 
 const createSignature = (payload, timestamp, secret) =>
