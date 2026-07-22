@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals, type Meal } from "@/context/MealsContext";
 import { createPost } from "@/features/community/api";

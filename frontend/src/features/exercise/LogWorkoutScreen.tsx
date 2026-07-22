@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
 import { addExercise, estimateBurned, getExerciseHistory, ACTIVITY_GROUPS, SIMPLE_ACTIVITIES, DURATION_PRESETS, type Activity } from "@/features/exercise/api";

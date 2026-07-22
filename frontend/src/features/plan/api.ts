@@ -17,9 +17,10 @@ export type PlanMeal = {
   date: string;
   done: boolean;
 };
+type RawPlanMeal = Omit<PlanMeal, "id"> & { _id: string };
 
 // Map backend (_id) → frontend (id) shape
-function mapPlan(p: any): PlanMeal {
+function mapPlan(p: RawPlanMeal): PlanMeal {
   return {
     id: p._id,
     name: p.name,
@@ -45,8 +46,9 @@ export type PlanDayWorkout = {
   durationMin: number | null;
   done: boolean;
 };
+type RawPlanWorkout = Omit<PlanDayWorkout, "id"> & { _id?: string };
 
-function mapWorkout(w: any): PlanDayWorkout {
+function mapWorkout(w: RawPlanWorkout): PlanDayWorkout {
   return {
     id: w._id || "",
     date: w.date,
@@ -63,7 +65,12 @@ export async function getPlanMeals(
   startDate: string,
   endDate: string
 ): Promise<{ meals: PlanMeal[]; workouts: Record<string, PlanDayWorkout> }> {
-  const data = await apiRequest(`/plan?startDate=${startDate}&endDate=${endDate}`, "GET", undefined, token);
+  const data = await apiRequest<{ planMeals: RawPlanMeal[]; planWorkouts: RawPlanWorkout[] }>(
+    `/plan?startDate=${startDate}&endDate=${endDate}`,
+    "GET",
+    undefined,
+    token
+  );
   // Index workouts by date for easy per-day lookup
   const workouts: Record<string, PlanDayWorkout> = {};
   for (const w of data.planWorkouts || []) workouts[w.date] = mapWorkout(w);

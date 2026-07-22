@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
 import { ApiTimeoutError } from "@/utils/api";

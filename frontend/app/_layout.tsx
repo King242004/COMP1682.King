@@ -1,18 +1,14 @@
 import { Stack } from "expo-router";
-import {
-  useFonts,
-  Lora_400Regular,
-  Lora_500Medium,
-  Lora_600SemiBold,
-  Lora_700Bold,
-} from "@expo-google-fonts/lora";
-import {
-  Raleway_400Regular,
-  Raleway_500Medium,
-  Raleway_600SemiBold,
-  Raleway_700Bold,
-  Raleway_800ExtraBold,
-} from "@expo-google-fonts/raleway";
+import { useFonts } from "expo-font";
+import { Lora_400Regular } from "@expo-google-fonts/lora/400Regular";
+import { Lora_500Medium } from "@expo-google-fonts/lora/500Medium";
+import { Lora_600SemiBold } from "@expo-google-fonts/lora/600SemiBold";
+import { Lora_700Bold } from "@expo-google-fonts/lora/700Bold";
+import { Raleway_400Regular } from "@expo-google-fonts/raleway/400Regular";
+import { Raleway_500Medium } from "@expo-google-fonts/raleway/500Medium";
+import { Raleway_600SemiBold } from "@expo-google-fonts/raleway/600SemiBold";
+import { Raleway_700Bold } from "@expo-google-fonts/raleway/700Bold";
+import { Raleway_800ExtraBold } from "@expo-google-fonts/raleway/800ExtraBold";
 import { AuthProvider } from "@/context/AuthContext";
 import { MealsProvider } from "@/context/MealsContext";
 

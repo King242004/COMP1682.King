@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMeals, Meal } from "@/context/MealsContext";

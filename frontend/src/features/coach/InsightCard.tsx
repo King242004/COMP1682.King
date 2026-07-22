@@ -1,7 +1,7 @@
 // Daily Health Score card: ring-style score + tappable warnings/tips
 // (tapping one sends it into the chat for elaboration).
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";

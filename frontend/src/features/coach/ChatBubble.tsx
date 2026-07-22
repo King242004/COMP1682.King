@@ -1,7 +1,7 @@
 // One chat bubble (user or coach), including the suggested-meal card:
 // meal-type chips + Add button while eating, Logged chip + Undo afterwards.
 import { Image, Pressable, StyleSheet, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import type { ChatMessage } from "@/features/coach/api";

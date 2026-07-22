@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { addExercise } from "@/features/exercise/api";
 import { GUIDED_ROUTINES } from "@/features/exercise/guided";
