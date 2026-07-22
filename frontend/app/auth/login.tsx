@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
@@ -32,6 +32,7 @@ export default function LoginScreen() {
   }, [email, password, isLoading]);
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
     const validationError = validate();
     if (validationError) { setError(validationError); return; }
     setError("");
@@ -67,7 +68,6 @@ export default function LoginScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             textContentType="emailAddress"
-            inputProps={{ autoFocus: true }}
           />
           <TextField
             label={t.auth.password}
@@ -77,6 +77,7 @@ export default function LoginScreen() {
             secureTextEntry
             textContentType="password"
             returnKeyType="done"
+            inputProps={{ onSubmitEditing: handleLogin }}
           />
 
           {error ? <AppText variant="subtle" style={styles.error}>{error}</AppText> : null}
