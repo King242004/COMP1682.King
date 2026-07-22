@@ -1,16 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const rateLimit = require("express-rate-limit");
 const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
+const { passwordOtpLimiter } = require("../middleware/rateLimiters");
 
 // Password-reset endpoints are unauthenticated → strict per-IP cap
-const otpLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { message: "Too many attempts. Please try again later." },
-});
 const { uploadAvatar, sendPasswordOTP, verifyOTP, resetPassword, changeName, changePassword, deleteAccount } = require("../controllers/userController");
 const protect = require("../middleware/auth");
 
@@ -115,7 +108,7 @@ router.delete("/account", protect, deleteAccount);
  *       400:
  *         description: Invalid email format
  */
-router.post("/send-otp", otpLimiter, sendPasswordOTP);
+router.post("/send-otp", passwordOtpLimiter, sendPasswordOTP);
 
 /**
  * @swagger
@@ -159,8 +152,8 @@ router.post("/send-otp", otpLimiter, sendPasswordOTP);
  *       200: { description: OTP is valid }
  *       400: { description: Invalid, expired or burned OTP }
  */
-router.post("/verify-otp", otpLimiter, verifyOTP);
+router.post("/verify-otp", passwordOtpLimiter, verifyOTP);
 
-router.post("/reset-password", otpLimiter, resetPassword);
+router.post("/reset-password", passwordOtpLimiter, resetPassword);
 
 module.exports = router;

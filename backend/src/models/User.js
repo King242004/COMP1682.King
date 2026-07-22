@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     emailVerifiedAt: { type: Date, default: null },
-    password: { type: String, required: true },
+    password: { type: String, required: true, select: false },
     avatar: { type: String, default: null },
     // Cloudinary identifier is kept server-side so replacing an avatar or
     // deleting an account can remove the underlying asset as well as its URL.

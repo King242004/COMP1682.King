@@ -11,6 +11,7 @@ const {
   groceryList,
 } = require("../controllers/planController");
 const protect = require("../middleware/auth");
+const { aiLimiter } = require("../middleware/rateLimiters");
 
 router.use(protect);
 
@@ -155,7 +156,7 @@ router.post("/:id/eaten", markEaten);
  */
 router.post("/workout/:id/done", markWorkoutDone);
 
-router.post("/generate", generatePlan);
+router.post("/generate", aiLimiter, generatePlan);
 
 /**
  * @swagger
@@ -180,6 +181,6 @@ router.post("/generate", generatePlan);
  *       200: { description: Returns grouped grocery items }
  *       400: { description: No planned meals in range }
  */
-router.post("/grocery", groceryList);
+router.post("/grocery", aiLimiter, groceryList);
 
 module.exports = router;

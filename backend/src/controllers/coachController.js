@@ -7,6 +7,7 @@ const ChatMessage = require("../models/ChatMessage");
 const Meal = require("../models/Meal");
 const PlanMeal = require("../models/PlanMeal");
 const cloudinary = require("../config/cloudinary");
+const { validateCoachChat } = require("../validators/coachChat");
 
 // Shared safety + style instruction injected into every coach prompt.
 const SAFETY = `You are "Coach", a warm, easy-going health buddy inside an app — like a supportive friend who keeps the user on track, not a textbook or a customer-service bot.
@@ -121,10 +122,9 @@ ${langDirective(req.query.language)} Every string value in the JSON must be in t
 // If an image is attached, the coach analyzes the food photo together with the
 // user's personal context (conditions, goal, what they ate today).
 exports.chat = async (req, res) => {
-  const { message, history, image, mimeType } = req.body;
-  const text = (message || "").trim();
-  if (!text && !image)
-    return res.status(400).json({ message: "Message or image is required." });
+  const validated = validateCoachChat(req.body);
+  if (validated.error) return res.status(400).json({ message: validated.error });
+  const { message: text, history, image, mimeType } = validated.value;
 
   // Default question when the user sends only a photo
   const userText = text || "Is this dish suitable for me?";
@@ -133,12 +133,9 @@ exports.chat = async (req, res) => {
     const ctx = await buildContext(req.user.id, todayKey());
 
     // Flatten recent history (cap at last 10 turns) into the prompt
-    const historyText = Array.isArray(history)
-      ? history
-          .slice(-10)
-          .map((h) => `${h.role === "user" ? "User" : "Coach"}: ${h.text}`)
-          .join("\n")
-      : "";
+    const historyText = history
+      .map((h) => `${h.role === "user" ? "User" : "Coach"}: ${h.text}`)
+      .join("\n");
 
     const imageNote = image
       ? "\nThe user sent a food PHOTO. Briefly name the dish and a short verdict on whether it suits them today. 2-3 sentences."

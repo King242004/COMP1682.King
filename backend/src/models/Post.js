@@ -34,5 +34,6 @@ const postSchema = new mongoose.Schema(
 
 // Feed queries filter by author and sort by recency
 postSchema.index({ user: 1, createdAt: -1 });
+postSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Post", postSchema);

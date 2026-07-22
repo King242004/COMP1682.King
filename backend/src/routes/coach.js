@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getInsight, chat, getHistory, clearHistory, logFromMessage, unlogFromMessage, suggestMeal } = require("../controllers/coachController");
 const protect = require("../middleware/auth");
+const { aiLimiter } = require("../middleware/rateLimiters");
 
 router.use(protect);
 
@@ -20,7 +21,7 @@ router.use(protect);
  *     responses:
  *       200: { description: Returns score, summary, tips, warnings }
  */
-router.get("/insight", getInsight);
+router.get("/insight", aiLimiter, getInsight);
 
 /**
  * @swagger
@@ -50,7 +51,7 @@ router.get("/insight", getInsight);
  *       200: { description: Returns the coach reply }
  *       400: { description: Message required }
  */
-router.post("/chat", chat);
+router.post("/chat", aiLimiter, chat);
 
 /**
  * @swagger
@@ -89,7 +90,7 @@ router.post("/chat", chat);
  *       200: { description: Returns mealType, remaining kcal and 3 suggestions }
  *       429: { description: AI quota exhausted }
  */
-router.post("/suggest-meal", suggestMeal);
+router.post("/suggest-meal", aiLimiter, suggestMeal);
 
 router.get("/history", getHistory);
 router.delete("/history", clearHistory);

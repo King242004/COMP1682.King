@@ -169,7 +169,7 @@ exports.login = async (req, res) => {
   if (!isValidEmail(email))
     return res.status(400).json({ message: "Please provide a valid email address." });
 
-  const user = await User.findOne({ email: normalizeEmail(email) });
+  const user = await User.findOne({ email: normalizeEmail(email) }).select("+password");
   if (!user) return res.status(400).json({ message: "Invalid email or password." });
 
   const match = await bcrypt.compare(password, user.password);
