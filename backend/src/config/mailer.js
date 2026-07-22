@@ -1,3 +1,5 @@
+const nodemailer = require("nodemailer");
+
 const BREVO_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
 
 const EMAIL_CONTENT = {
@@ -113,22 +115,80 @@ const otpText = (otp, purpose) => {
   return `${content.textHeading}\n\nYour verification code is: ${otp}\n\nThis code expires in 10 minutes. Keep it private—MealMate will never ask you to share it.\n\n${content.footer}`;
 };
 
-async function sendOTP(to, otp, purpose = "password_reset") {
+const getSmtpConfig = () => {
+  const host = process.env.SMTP_HOST?.trim();
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASSWORD?.trim();
+
+  if (!host || !Number.isInteger(port) || port <= 0 || !user || !pass) {
+    return null;
+  }
+
+  return {
+    host,
+    port,
+    user,
+    pass,
+    fromEmail: process.env.SMTP_FROM_EMAIL?.trim() || user,
+    fromName: process.env.SMTP_FROM_NAME?.trim() || "MealMate",
+  };
+};
+
+const getBrevoConfig = () => {
   const apiKey = process.env.BREVO_API_KEY?.trim();
   const senderEmail = process.env.BREVO_SENDER_EMAIL?.trim();
-  if (!apiKey || !senderEmail) {
-    throw new Error("Brevo email configuration is missing");
-  }
+  if (!apiKey || !senderEmail) return null;
+
+  return { apiKey, senderEmail };
+};
+
+const getEmailStatus = () => {
+  const smtpConfigured = Boolean(getSmtpConfig());
+  const brevoConfigured = Boolean(getBrevoConfig());
+
+  return {
+    provider: smtpConfigured ? "smtp" : brevoConfigured ? "brevo" : "none",
+    configured: smtpConfigured || brevoConfigured,
+    fallbackConfigured: smtpConfigured && brevoConfigured,
+  };
+};
+
+const sendWithSmtp = async (to, otp, purpose, config) => {
+  const transporter = nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.port === 465,
+    requireTLS: config.port === 587,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
+    auth: {
+      user: config.user,
+      pass: config.pass,
+    },
+  });
+
+  await transporter.sendMail({
+    from: { name: config.fromName, address: config.fromEmail },
+    to,
+    subject: getEmailContent(purpose).subject,
+    html: otpHtml(otp, purpose),
+    text: otpText(otp, purpose),
+  });
+};
+
+const sendWithBrevo = async (to, otp, purpose, config) => {
 
   const response = await fetch(BREVO_EMAIL_URL, {
     method: "POST",
     headers: {
       accept: "application/json",
-      "api-key": apiKey,
+      "api-key": config.apiKey,
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      sender: { name: "MealMate", email: senderEmail },
+      sender: { name: "MealMate", email: config.senderEmail },
       to: [{ email: to }],
       subject: getEmailContent(purpose).subject,
       htmlContent: otpHtml(otp, purpose),
@@ -140,6 +200,27 @@ async function sendOTP(to, otp, purpose = "password_reset") {
   if (!response.ok) {
     throw new Error(`Brevo email request failed with status ${response.status}`);
   }
+};
+
+async function sendOTP(to, otp, purpose = "password_reset") {
+  const smtpConfig = getSmtpConfig();
+  const brevoConfig = getBrevoConfig();
+
+  if (!smtpConfig && !brevoConfig) {
+    throw new Error("Email configuration is missing");
+  }
+
+  if (smtpConfig) {
+    try {
+      await sendWithSmtp(to, otp, purpose, smtpConfig);
+      return;
+    } catch (error) {
+      if (!brevoConfig) throw error;
+      console.warn("SMTP delivery failed; trying Brevo fallback:", error.message);
+    }
+  }
+
+  await sendWithBrevo(to, otp, purpose, brevoConfig);
 }
 
-module.exports = { sendOTP };
+module.exports = { getEmailStatus, sendOTP };

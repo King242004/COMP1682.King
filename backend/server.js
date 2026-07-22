@@ -5,6 +5,7 @@ const rateLimit = require("express-rate-limit");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./src/config/swagger");
 const connectDB = require("./src/config/db");
+const { getEmailStatus } = require("./src/config/mailer");
 
 const app = express();
 
@@ -34,14 +35,16 @@ app.use("/api/scan", require("./src/routes/scan"));
 app.use("/api/community", require("./src/routes/community"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.get("/", (req, res) =>
+app.get("/", (req, res) => {
+  const emailStatus = getEmailStatus();
   res.json({
     message: "MealMate API running",
     version: process.env.RENDER_GIT_COMMIT?.slice(0, 8) || "local",
-    emailProvider: "brevo",
-    emailConfigured: Boolean(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL),
-  })
-);
+    emailProvider: emailStatus.provider,
+    emailConfigured: emailStatus.configured,
+    emailFallbackConfigured: emailStatus.fallbackConfigured,
+  });
+});
 
 // Global error handler — MUST stay after all routes. Express 5 forwards
 // rejected promises from async handlers here; without this, an unexpected
