@@ -1,8 +1,11 @@
 import { ReactNode } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
   StatusBar,
+  TouchableWithoutFeedback,
   View,
   type ViewStyle,
 } from "react-native";
@@ -13,6 +16,7 @@ export function Screen({
   padded = true,
   keyboard = false,
   keyboardOffset = 0,
+  dismissKeyboardOnTap = true,
   backgroundColor,
   statusBarStyle = "dark-content",
   style,
@@ -20,34 +24,45 @@ export function Screen({
   children: ReactNode;
   padded?: boolean;
   keyboard?: boolean;
+  dismissKeyboardOnTap?: boolean;
   keyboardOffset?: number; // chiều cao header phía trên (vd tab có AppHeader) để KAV bù đúng
   backgroundColor?: string;
   statusBarStyle?: "dark-content" | "light-content";
   style?: ViewStyle;
 }) {
-  const content = (
-    <View style={{ flex: 1, backgroundColor: backgroundColor ?? theme.colors.bg }}>
+  const body = (
+    <View style={[styles.root, { backgroundColor: backgroundColor ?? theme.colors.bg }]}>
       <StatusBar barStyle={statusBarStyle} />
-      <View style={[{
-        flex: 1,
-        paddingHorizontal: padded ? theme.space.lg : 0,
-        paddingTop: 0,
-        paddingBottom: padded ? theme.space.lg : 0,
-      }, style]}>
+      <View style={[styles.content, padded && styles.padded, style]}>
         {children}
       </View>
     </View>
   );
 
-  if (!keyboard) return content;
+  if (!keyboard) return body;
+
+  const keyboardContent = dismissKeyboardOnTap ? (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      {body}
+    </TouchableWithoutFeedback>
+  ) : body;
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={styles.root}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={keyboardOffset}
     >
-      {content}
+      {keyboardContent}
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  content: { flex: 1 },
+  padded: {
+    paddingHorizontal: theme.space.lg,
+    paddingBottom: theme.space.lg,
+  },
+});

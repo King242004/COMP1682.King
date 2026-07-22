@@ -1,7 +1,7 @@
 // AI HEALTH COACH (tab) — daily insight + context-aware chat with saved history.
 // Flow/state lives here; InsightCard, ChatBubble, TypingDots are in src/features/coach.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Image, Keyboard, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -44,6 +44,9 @@ export default function CoachTab() {
 
   const headerHeight = useHeaderHeight(); // bù chiều cao AppHeader của tab cho keyboard
   const scrollRef = useRef<ScrollView>(null);
+  const scrollToLatest = useCallback((animated = true) => {
+    scrollRef.current?.scrollToEnd({ animated });
+  }, []);
 
   const [insight, setInsight] = useState<CoachInsight | null>(null);
   const [loadingInsight, setLoadingInsight] = useState(true);
@@ -54,6 +57,13 @@ export default function CoachTab() {
   // True once a reply had to come from a backup API key → show the slim
   // "free AI turns running low" strip (real signal, not a guess)
   const [quotaLow, setQuotaLow] = useState(false);
+
+  useEffect(() => {
+    const subscription = Keyboard.addListener("keyboardDidShow", () => {
+      requestAnimationFrame(() => scrollToLatest(true));
+    });
+    return () => subscription.remove();
+  }, [scrollToLatest]);
 
   // Pick a food photo from camera or library, then compress to base64
   const pickImage = async (source: "camera" | "library") => {
@@ -114,13 +124,13 @@ export default function CoachTab() {
       const hist = await getChatHistory(token);
       setMessages(hist);
       // Jump to the latest message after history renders
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 150);
+      setTimeout(() => scrollToLatest(false), 150);
     } catch {
       // keep whatever is in state
     } finally {
       setHistoryLoaded(true);
     }
-  }, [token]);
+  }, [scrollToLatest, token]);
 
   // Load insight + history ONCE when the tab first mounts (token ready).
   // We intentionally don't reload on every focus — that re-spammed Gemini and
@@ -141,7 +151,7 @@ export default function CoachTab() {
     setInput("");
     setPendingImage(null);
     setSending(true);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    setTimeout(() => scrollToLatest(true), 50);
     try {
       const { reply, meal, eating, messageId, aiQuotaLow } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
       if (aiQuotaLow) setQuotaLow(true);
@@ -154,9 +164,9 @@ export default function CoachTab() {
       setMessages((prev) => [...prev, { role: "coach", text: errText, createdAt: new Date().toISOString() }]);
     } finally {
       setSending(false);
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+      setTimeout(() => scrollToLatest(true), 50);
     }
-  }, [lang, messages, pendingImage, sending, t, token]);
+  }, [lang, messages, pendingImage, scrollToLatest, sending, t, token]);
 
   // Tap an insight tip/warning → ask the coach to elaborate on it in chat
   const askAboutTip = (tip: string) =>
@@ -252,7 +262,12 @@ export default function CoachTab() {
   };
 
   return (
-    <Screen padded={false} keyboard keyboardOffset={headerHeight}>
+    <Screen
+      padded={false}
+      keyboard
+      keyboardOffset={headerHeight}
+      dismissKeyboardOnTap={false}
+    >
       <View style={styles.container}>
         {/* Title row */}
         <View style={styles.titleRow}>
@@ -286,6 +301,7 @@ export default function CoachTab() {
           style={styles.flex1}
           contentContainerStyle={styles.chatContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
           showsVerticalScrollIndicator={false}
           onScroll={onChatScroll}
           scrollEventThrottle={100}
@@ -365,7 +381,7 @@ export default function CoachTab() {
         {/* Jump to latest — shown when the user scrolled up into older messages */}
         {showJump && (
           <Pressable
-            onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
+            onPress={() => scrollToLatest(true)}
             style={({ pressed }) => [styles.jumpBtn, pressed && styles.pressedFaint]}
           >
             <Ionicons name="chevron-down" size={20} color="#fff" />
@@ -404,6 +420,7 @@ export default function CoachTab() {
             placeholder={L.placeholder}
             placeholderTextColor={theme.colors.subtle}
             style={styles.input}
+            onFocus={() => scrollToLatest(true)}
             onSubmitEditing={() => send(input)}
             returnKeyType="send"
           />
