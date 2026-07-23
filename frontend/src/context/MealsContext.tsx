@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { useAuth } from "./AuthContext";
+import { useHealthData } from "./HealthDataContext";
 import { apiRequest } from "../utils/api";
 
 export type Meal = {
@@ -73,6 +74,7 @@ function mapMeal(m: RawMeal): Meal {
 
 export function MealsProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
+  const { markHealthDataChanged } = useHealthData();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [historyMeals, setHistoryMeals] = useState<Meal[]>([]);
   const [dailyTotals, setDailyTotals] = useState<DailyTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0 });
@@ -107,7 +109,8 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
     await apiRequest("/meals", "POST", meal, token);
     await fetchMealsByDate(meal.date);
-  }, [fetchMealsByDate, token]);
+    markHealthDataChanged();
+  }, [fetchMealsByDate, markHealthDataChanged, token]);
 
   const updateMeal = useCallback(async (id: string, updates: UpdateMeal) => {
     if (!token) return;
@@ -127,7 +130,8 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
         fat: prev.fat - old.fat + updated.fat,
       };
     });
-  }, [meals, token]);
+    markHealthDataChanged();
+  }, [markHealthDataChanged, meals, token]);
 
   const deleteMeal = useCallback(async (id: string) => {
     if (!token) return;
@@ -145,7 +149,8 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
         fat: prev.fat - deleted.fat,
       };
     });
-  }, [meals, token]);
+    markHealthDataChanged();
+  }, [markHealthDataChanged, meals, token]);
 
   const value = useMemo(() => ({
     meals,

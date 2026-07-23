@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } fro
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { useHealthData } from "@/context/HealthDataContext";
 import {
   getPlanMeals,
   deletePlanMeal,
@@ -46,6 +47,7 @@ function mondayOf(base: Date, weekOffset: number) {
 export default function MealPlanScreen() {
   const router = useRouter();
   const { token, user, updateProfile } = useAuth();
+  const { markHealthDataChanged } = useHealthData();
   const lang = resolveLanguage(user?.language);
   const t = useT();
   const L = t.plan;
@@ -271,6 +273,7 @@ export default function MealPlanScreen() {
     setPlan((prev) => prev.map((p) => (p.id === item.id ? { ...p, done: true } : p)));
     try {
       await markPlanEaten(token, item.id);
+      markHealthDataChanged();
     } catch (e: any) {
       // revert on failure
       setPlan((prev) => prev.map((p) => (p.id === item.id ? { ...p, done: false } : p)));
@@ -287,6 +290,7 @@ export default function MealPlanScreen() {
     setWorkouts((prev) => ({ ...prev, [w.date]: { ...w, done: true } }));
     try {
       await markPlanWorkoutDone(token, w.id);
+      markHealthDataChanged();
     } catch (e: any) {
       setWorkouts((prev) => ({ ...prev, [w.date]: { ...w, done: false } }));
       Alert.alert(L.couldntLog, e.message || t.common.tryAgain);
@@ -377,6 +381,7 @@ export default function MealPlanScreen() {
             const key = dateKey(d);
             const isSelected = key === selectedDate;
             const isToday = key === todayKey;
+            const isPastDay = key < todayKey;
             const hasPlan = plannedDays.has(key);
             return (
               <Pressable
@@ -385,14 +390,15 @@ export default function MealPlanScreen() {
                 style={({ pressed }) => [
                   styles.dayChip,
                   hasPlan && styles.dayChipPlanned,
+                  isPastDay && !isSelected && styles.dayChipPast,
                   isSelected && styles.dayChipSelected,
                   pressed && styles.dayChipPressed,
                 ]}
               >
-                <AppText style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
+                <AppText style={[styles.dayLabel, isPastDay && styles.dayTextPast, isSelected && styles.dayLabelSelected]}>
                   {t.labels.daysShort[i]}
                 </AppText>
-                <AppText style={[styles.dayNum, isToday && styles.dayNumToday, isSelected && styles.dayNumSelected]}>
+                <AppText style={[styles.dayNum, isPastDay && styles.dayTextPast, isToday && styles.dayNumToday, isSelected && styles.dayNumSelected]}>
                   {d.getDate()}
                 </AppText>
                 <View style={[styles.dayDot, hasPlan && styles.dayDotPlanned, isSelected && styles.dayDotSelected]} />
@@ -403,6 +409,12 @@ export default function MealPlanScreen() {
 
         {/* Day total card */}
         <Card style={styles.totalCard}>
+          {isPast && (
+            <View style={styles.pastBanner}>
+              <Ionicons name="time-outline" size={15} color={theme.colors.subtle} />
+              <AppText variant="subtle" style={styles.pastBannerText}>{L.pastDay}</AppText>
+            </View>
+          )}
           {/* flex-start: the redo button sits level with the date line, clear of the big number */}
           <View style={styles.totalHead}>
             <View style={styles.totalBlock}>
@@ -448,7 +460,7 @@ export default function MealPlanScreen() {
                   <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
                   <AppText style={styles.eatenText}>{L.workoutDone}</AppText>
                 </View>
-              ) : workouts[selectedDate].name && selectedDate <= todayKey ? (
+              ) : workouts[selectedDate].name && selectedDate === todayKey ? (
                 <Pressable
                   onPress={() => onWorkoutDone(workouts[selectedDate])}
                   hitSlop={6}
@@ -549,15 +561,17 @@ export default function MealPlanScreen() {
                           <Ionicons name="chatbubble-ellipses-outline" size={17} color={theme.colors.primary} />
                         </Pressable>
 
-                        <Pressable
-                          onPress={() => onDelete(item)}
-                          hitSlop={10}
-                          accessibilityRole="button"
-                          accessibilityLabel={t.a11y.deletePlanned}
-                          style={({ pressed }) => pressed && styles.dim}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={theme.colors.subtle} />
-                        </Pressable>
+                        {!isPast && (
+                          <Pressable
+                            onPress={() => onDelete(item)}
+                            hitSlop={10}
+                            accessibilityRole="button"
+                            accessibilityLabel={t.a11y.deletePlanned}
+                            style={({ pressed }) => pressed && styles.dim}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={theme.colors.subtle} />
+                          </Pressable>
+                        )}
                       </View>
                     </Card>
                   ))
@@ -646,9 +660,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   dayChipPlanned: { backgroundColor: "rgba(8,145,178,0.10)" },
+  dayChipPast: { opacity: 0.52 },
   dayChipSelected: { backgroundColor: theme.colors.primary },
   dayChipPressed: { transform: [{ scale: 0.94 }] },
   dayLabel: { fontSize: 10, fontWeight: "700", color: theme.colors.subtle },
+  dayTextPast: { color: theme.colors.subtle },
   dayLabelSelected: { color: "rgba(255,255,255,0.8)" },
   dayNum: { fontSize: 14, fontWeight: "800", color: theme.colors.muted },
   dayNumToday: { color: theme.colors.primary },
@@ -658,7 +674,13 @@ const styles = StyleSheet.create({
   dayDotSelected: { backgroundColor: "rgba(255,255,255,0.9)" },
 
   // Day total card
-  totalCard: { padding: theme.space.lg },
+  totalCard: { padding: theme.space.lg, gap: 10 },
+  pastBanner: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: theme.colors.bg, borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 8,
+  },
+  pastBannerText: { flex: 1, fontSize: 12, fontWeight: "600" },
   totalHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   totalBlock: { gap: 2 },
   totalKcal: { fontSize: 28, color: theme.colors.text },

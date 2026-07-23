@@ -68,7 +68,7 @@ export async function chatWithCoach(
   history: ChatMessage[],
   language: Lang,
   image?: { base64: string; mimeType: string }
-): Promise<{ reply: string; meal: SuggestedMeal | null; eating: boolean; messageId: string | null; aiQuotaLow: boolean }> {
+): Promise<{ reply: string; meal: SuggestedMeal | null; eating: boolean; messageId: string | null }> {
   // Sliding window: the AI only needs recent conversational flow — durable
   // facts (profile, conditions, meals...) are re-grounded from the DB every
   // request anyway. Sending ALL 100 loaded messages just bloats tokens/latency.
@@ -86,8 +86,6 @@ export async function chatWithCoach(
     meal: data.meal || null,
     eating: !!data.eating,
     messageId: data.messageId || null,
-    // Reply came from a BACKUP key → today's free quota is running low
-    aiQuotaLow: !!data.aiQuotaLow,
   };
 }
 

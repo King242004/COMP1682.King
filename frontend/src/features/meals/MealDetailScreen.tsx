@@ -163,9 +163,7 @@ export default function MealDetailScreen() {
         <View style={styles.actions}>
           {/* Repeat a favourite dish: prefill the Add form for TODAY (slot by
               current hour) so the user can tweak before saving — 2 taps total */}
-          <Button
-            title={t.meals.logAgain}
-            size="lg"
+          <Pressable
             onPress={() =>
               router.push({
                 pathname: "/meals/add",
@@ -180,13 +178,30 @@ export default function MealDetailScreen() {
                 },
               })
             }
-          />
-          <Button
-            title={t.meals.editMeal}
-            size="lg"
-            variant="secondary"
+            style={({ pressed }) => [styles.actionRow, styles.repeatAction, pressed && styles.actionPressed]}
+          >
+            <View style={[styles.actionIcon, styles.repeatIcon]}>
+              <Ionicons name="add-circle-outline" size={21} color={theme.colors.primary} />
+            </View>
+            <View style={styles.actionCopy}>
+              <AppText style={styles.actionTitle}>{t.meals.logAgain}</AppText>
+              <AppText variant="subtle" style={styles.actionHint}>{t.meals.logAgainHint}</AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={17} color={theme.colors.subtle} />
+          </Pressable>
+          <Pressable
             onPress={() => router.push({ pathname: "/meals/edit", params: { id: meal.id } })}
-          />
+            style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
+          >
+            <View style={styles.actionIcon}>
+              <Ionicons name="create-outline" size={20} color={theme.colors.muted} />
+            </View>
+            <View style={styles.actionCopy}>
+              <AppText style={styles.actionTitle}>{t.meals.editMeal}</AppText>
+              <AppText variant="subtle" style={styles.actionHint}>{t.meals.editMealHint}</AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={17} color={theme.colors.subtle} />
+          </Pressable>
           <Pressable
             onPress={handleDelete}
             style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
@@ -227,7 +242,26 @@ const styles = StyleSheet.create({
   noteCard: { padding: theme.space.lg, gap: 6 },
   noteTitle: { fontSize: 15 },
   noteText: { fontSize: 13 },
-  actions: { gap: theme.space.md },
+  actions: { gap: 10 },
+  actionRow: {
+    minHeight: 64,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    borderWidth: 1, borderColor: theme.colors.border,
+    borderRadius: theme.radius.button,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.space.md, paddingVertical: 10,
+  },
+  repeatAction: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tintSoft },
+  actionPressed: { opacity: 0.72 },
+  actionIcon: {
+    width: 38, height: 38, borderRadius: 12,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: theme.colors.bg,
+  },
+  repeatIcon: { backgroundColor: theme.colors.tint },
+  actionCopy: { flex: 1, gap: 2 },
+  actionTitle: { fontSize: 14, fontWeight: "800", color: theme.colors.text },
+  actionHint: { fontSize: 11, lineHeight: 16 },
   deleteBtn: {
     height: 56,
     borderRadius: theme.radius.button,

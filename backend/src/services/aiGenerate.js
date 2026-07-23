@@ -13,8 +13,15 @@ function withTimeout(promise, timeoutMs) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+function isQuotaError(error) {
+  return /429|quota|resource[_\s-]?exhausted|rate limit|too many requests/i.test(
+    String(error?.message || "")
+  );
+}
+
 async function generateWithFallback(models, payload) {
   let lastErr;
+  const errors = [];
   const deadline = Date.now() + TOTAL_TIMEOUT_MS;
   for (const model of models) {
     const remainingMs = deadline - Date.now();
@@ -24,16 +31,17 @@ async function generateWithFallback(models, payload) {
         model.generateContent(payload),
         Math.min(ATTEMPT_TIMEOUT_MS, remainingMs)
       );
-      // Succeeded on a BACKUP key → the primary key's quota is exhausted.
-      // Callers may surface this as a "free AI turns running low" hint.
-      result.aiQuotaLow = (model.__keyIndex ?? 0) > 0;
       return result;
     } catch (e) {
       lastErr = e;
+      errors.push(e);
       console.warn("AI model failed, trying next:", String(e?.message || "").slice(0, 140));
     }
+  }
+  if (errors.length > 0 && errors.every(isQuotaError)) {
+    throw new Error("AI_QUOTA_EXHAUSTED");
   }
   throw lastErr || new Error("AI request timed out");
 }
 
-module.exports = { generateWithFallback, withTimeout };
+module.exports = { generateWithFallback, withTimeout, isQuotaError };

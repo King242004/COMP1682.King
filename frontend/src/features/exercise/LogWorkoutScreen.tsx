@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { useHealthData } from "@/context/HealthDataContext";
 import { useT } from "@/i18n";
 import { addExercise, estimateBurned, getExerciseHistory, ACTIVITY_GROUPS, SIMPLE_ACTIVITIES, DURATION_PRESETS, type Activity } from "@/features/exercise/api";
 import { GUIDED_ROUTINES } from "@/features/exercise/guided";
@@ -19,6 +20,7 @@ import { TextField } from "@/ui/components/TextField";
 export default function AddExerciseScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
+  const { markHealthDataChanged } = useHealthData();
   const t = useT();
   const { date } = useLocalSearchParams<{ date?: string }>();
 
@@ -111,6 +113,7 @@ export default function AddExerciseScreen() {
     setError(null);
     try {
       await addExercise(token, { name, met, durationMin: durationNum, date: logDate });
+      markHealthDataChanged();
       router.back();
     } catch (err: any) {
       setError(err.message || t.exercise.failed);

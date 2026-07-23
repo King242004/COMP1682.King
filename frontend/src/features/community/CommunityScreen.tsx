@@ -14,7 +14,11 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 
 type Tab = "feed" | "explore";
-type LoadMode = "load" | "refresh" | "more";
+type LoadMode = "load" | "refresh" | "more" | "prefetch";
+type TabCache = {
+  posts: FeedPost[];
+  loadError: boolean;
+};
 
 export default function CommunityScreen() {
   const router = useRouter();
@@ -22,16 +26,23 @@ export default function CommunityScreen() {
   const t = useT();
   // Explore first (WEAR-style): new users land on content, not an empty feed
   const [tab, setTab] = useState<Tab>("explore");
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [loading, setLoading] = useState(false);   // focus/initial load → centered spinner
-  const [refreshing, setRefreshing] = useState(false); // pull-to-refresh only
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [tabCache, setTabCache] = useState<Record<Tab, TabCache>>({
+    feed: { posts: [], loadError: false },
+    explore: { posts: [], loadError: false },
+  });
+  const [loadingByTab, setLoadingByTab] = useState<Record<Tab, boolean>>({ feed: false, explore: false });
+  const [refreshingByTab, setRefreshingByTab] = useState<Record<Tab, boolean>>({ feed: false, explore: false });
+  const [loadingMoreByTab, setLoadingMoreByTab] = useState<Record<Tab, boolean>>({ feed: false, explore: false });
   const [unread, setUnread] = useState(0); // notification bell badge
-  const pageRef = useRef(1);
-  const hasMoreRef = useRef(true);
-  const loadingMoreRef = useRef(false);
-  const requestIdRef = useRef(0);
+  const pageRef = useRef<Record<Tab, number>>({ feed: 1, explore: 1 });
+  const hasMoreRef = useRef<Record<Tab, boolean>>({ feed: true, explore: true });
+  const loadedRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
+  const inFlightRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
+  const loadingMoreRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
+  const requestIdRef = useRef<Record<Tab, number>>({ feed: 0, explore: 0 });
+  const posts = tabCache[tab].posts;
+  const loading = loadingByTab[tab] && posts.length === 0;
+  const loadError = tabCache[tab].loadError;
 
   // Shared fetch. `mode` decides which spinner reflects this load:
   // "refresh" drives RefreshControl (user gesture), otherwise the centered loader.
@@ -40,43 +51,73 @@ export default function CommunityScreen() {
   // On failure we KEEP the previous posts (an error shouldn't wipe the feed).
   const load = useCallback(async (which: Tab, mode: LoadMode = "load") => {
     if (!token) return;
-    if (mode === "more" && (!hasMoreRef.current || loadingMoreRef.current)) return;
+    if (mode === "more" && (!hasMoreRef.current[which] || loadingMoreRef.current[which])) return;
+    if (mode !== "more" && inFlightRef.current[which]) return;
 
-    const requestId = ++requestIdRef.current;
-    const targetPage = mode === "more" ? pageRef.current + 1 : 1;
-    const setBusy = mode === "refresh"
-      ? setRefreshing
-      : mode === "more"
-      ? setLoadingMore
-      : setLoading;
-    if (mode === "more") loadingMoreRef.current = true;
-    else hasMoreRef.current = false;
-    setBusy(true);
+    const requestId = ++requestIdRef.current[which];
+    const targetPage = mode === "more" ? pageRef.current[which] + 1 : 1;
+    if (mode === "refresh") {
+      inFlightRef.current[which] = true;
+      setRefreshingByTab((current) => ({ ...current, [which]: true }));
+    } else if (mode === "more") {
+      loadingMoreRef.current[which] = true;
+      setLoadingMoreByTab((current) => ({ ...current, [which]: true }));
+    } else {
+      inFlightRef.current[which] = true;
+      setLoadingByTab((current) => ({ ...current, [which]: true }));
+    }
     try {
       const data = which === "feed"
         ? await getFeed(token, targetPage)
         : await getExplore(token, targetPage);
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current[which]) return;
 
-      setPosts((previous) => {
-        if (mode !== "more") return data.posts;
-        const merged = new Map(previous.map((post) => [post.id, post]));
-        data.posts.forEach((post) => merged.set(post.id, post));
-        return [...merged.values()];
+      setTabCache((current) => {
+        const previous = current[which].posts;
+        const nextPosts = mode !== "more"
+          ? data.posts
+          : (() => {
+              const merged = new Map(previous.map((post) => [post.id, post]));
+              data.posts.forEach((post) => merged.set(post.id, post));
+              return [...merged.values()];
+            })();
+        return {
+          ...current,
+          [which]: { posts: nextPosts, loadError: false },
+        };
       });
-      pageRef.current = data.page;
-      hasMoreRef.current = data.hasMore;
-      setLoadError(false);
+      loadedRef.current[which] = true;
+      pageRef.current[which] = data.page;
+      hasMoreRef.current[which] = data.hasMore;
     } catch {
-      if (requestId === requestIdRef.current && mode !== "more") setLoadError(true);
+      if (requestId === requestIdRef.current[which] && mode !== "more") {
+        setTabCache((current) => ({
+          ...current,
+          [which]: { ...current[which], loadError: true },
+        }));
+      }
     } finally {
-      if (mode === "more") loadingMoreRef.current = false;
-      setBusy(false);
+      if (requestId !== requestIdRef.current[which]) return;
+      if (mode === "refresh") {
+        inFlightRef.current[which] = false;
+        setRefreshingByTab((current) => ({ ...current, [which]: false }));
+      } else if (mode === "more") {
+        loadingMoreRef.current[which] = false;
+        setLoadingMoreByTab((current) => ({ ...current, [which]: false }));
+      } else {
+        inFlightRef.current[which] = false;
+        setLoadingByTab((current) => ({ ...current, [which]: false }));
+      }
     }
   }, [token]);
 
-  // Single fetch trigger: fires on focus AND whenever `tab` changes while focused
-  useFocusEffect(useCallback(() => { load(tab); }, [tab, load]));
+  // Keep each tab's last result and prefetch the other tab. Switching tabs then
+  // changes the content immediately instead of waiting on Render/network latency.
+  useFocusEffect(useCallback(() => {
+    load(tab, loadedRef.current[tab] ? "prefetch" : "load");
+    const other: Tab = tab === "explore" ? "feed" : "explore";
+    if (!loadedRef.current[other]) load(other, "prefetch");
+  }, [tab, load]));
 
   // Refresh the bell badge whenever the tab regains focus (e.g. back from the
   // notifications screen, which marks everything read)
@@ -84,24 +125,41 @@ export default function CommunityScreen() {
     if (token) getUnreadCount(token).then(setUnread).catch(() => {});
   }, [token]));
 
+  const updatePostAcrossTabs = (postId: string, update: (post: FeedPost) => FeedPost) => {
+    setTabCache((current) => ({
+      feed: {
+        ...current.feed,
+        posts: current.feed.posts.map((post) => post.id === postId ? update(post) : post),
+      },
+      explore: {
+        ...current.explore,
+        posts: current.explore.posts.map((post) => post.id === postId ? update(post) : post),
+      },
+    }));
+  };
+
   // Optimistic like toggle, then sync count/state from the server response
   const onLike = async (post: FeedPost) => {
     if (!token) return;
-    setPosts((prev) => prev.map((p) =>
-      p.id === post.id
-        ? { ...p, isLiked: !p.isLiked, likeCount: p.likeCount + (p.isLiked ? -1 : 1) }
-        : p
-    ));
+    updatePostAcrossTabs(post.id, (current) => ({
+      ...current,
+      isLiked: !current.isLiked,
+      likeCount: current.likeCount + (current.isLiked ? -1 : 1),
+    }));
     try {
       const res = await toggleLike(token, post.id);
-      setPosts((prev) => prev.map((p) =>
-        p.id === post.id ? { ...p, isLiked: res.liked, likeCount: res.likeCount } : p
-      ));
+      updatePostAcrossTabs(post.id, (current) => ({
+        ...current,
+        isLiked: res.liked,
+        likeCount: res.likeCount,
+      }));
     } catch {
       // revert on failure
-      setPosts((prev) => prev.map((p) =>
-        p.id === post.id ? { ...p, isLiked: post.isLiked, likeCount: post.likeCount } : p
-      ));
+      updatePostAcrossTabs(post.id, (current) => ({
+        ...current,
+        isLiked: post.isLiked,
+        likeCount: post.likeCount,
+      }));
     }
   };
 
@@ -156,7 +214,7 @@ export default function CommunityScreen() {
         numColumns={2}
         columnWrapperStyle={styles.gridColumn}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(tab, "refresh")} tintColor={theme.colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshingByTab[tab]} onRefresh={() => load(tab, "refresh")} tintColor={theme.colors.primary} />}
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.titleRow}>
@@ -235,7 +293,7 @@ export default function CommunityScreen() {
           </View>
         }
         ListEmptyComponent={emptyState}
-        ListFooterComponent={loadingMore ? (
+        ListFooterComponent={loadingMoreByTab[tab] ? (
           <View style={styles.loadMoreBox}>
             <ActivityIndicator color={theme.colors.primary} />
           </View>
