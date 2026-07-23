@@ -4,6 +4,7 @@ import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { useHealthData } from "@/context/HealthDataContext";
 import { useMeals } from "@/context/MealsContext";
 import { getExercisesByDate, deleteExercise, getExerciseHistory, type Exercise } from "@/features/exercise/api";
 import { getPlanMeals, markPlanEaten, deletePlanMeal, markPlanWorkoutDone, type PlanMeal, type PlanDayWorkout } from "@/features/plan/api";
@@ -25,6 +26,7 @@ import { useAnimatedNumber } from "@/ui/useAnimatedNumber";
 export default function HomeScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
+  const { revision, markHealthDataChanged } = useHealthData();
   const { meals, dailyTotals, historyMeals, isLoading, fetchMealsByDate, fetchMealHistory } = useMeals();
 
   const today = new Date();
@@ -84,6 +86,7 @@ export default function HomeScreen() {
     try {
       await markPlanEaten(token, p.id);
       await Promise.all([fetchMealsByDate(todayKey), loadPlanToday()]);
+      markHealthDataChanged();
     } catch {
       Alert.alert(t.common.errorTitle, t.home.logMealErr);
     } finally {
@@ -102,6 +105,7 @@ export default function HomeScreen() {
       await markPlanWorkoutDone(token, w.id);
       loadExercises();
       loadWeekActivity();
+      markHealthDataChanged();
     } catch {
       setPlanWorkout({ ...w, done: false });
       Alert.alert(t.common.errorTitle, t.common.tryAgain);
@@ -135,23 +139,27 @@ export default function HomeScreen() {
   // visit to Home would burn a free-tier AI request.
   const lang = resolveLanguage(user?.language);
   const t = useT();
-  const loadInsight = useCallback(async () => {
+  const insightRequestIdRef = useRef(0);
+  const loadInsight = useCallback(async (force = false) => {
     if (!token || selectedDate !== todayKey) { setCoachInsight(null); return; }
+    const requestId = ++insightRequestIdRef.current;
     const cached = await getCachedInsight(todayKey, lang);
+    if (requestId !== insightRequestIdRef.current) return;
     if (cached) {
       setCoachInsight(cached.insight);
-      if (Date.now() - cached.at < INSIGHT_TTL_MS) return; // fresh enough → no AI call
+      if (!force && Date.now() - cached.at < INSIGHT_TTL_MS) return; // fresh enough → no AI call
     }
     try {
       const fresh = await getInsight(token, todayKey, lang);
+      if (requestId !== insightRequestIdRef.current) return;
       setCoachInsight(fresh);
       cacheInsight(todayKey, lang, fresh);
     } catch {
-      if (!cached) setCoachInsight(null);
+      if (requestId === insightRequestIdRef.current && !cached) setCoachInsight(null);
     }
   }, [token, selectedDate, todayKey, lang]);
 
-  // Pull-to-refresh re-runs every loader (insight still respects its TTL cache)
+  // Pull-to-refresh re-runs every loader and explicitly requests a fresh insight.
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -160,7 +168,7 @@ export default function HomeScreen() {
       fetchMealHistory(),
       loadExercises(),
       loadWeekActivity(),
-      loadInsight(),
+      loadInsight(true),
       loadPlanToday(),
     ]);
     setRefreshing(false);
@@ -176,6 +184,7 @@ export default function HomeScreen() {
 
   // Refetch on focus (and when the selected date changes) so meals/workouts logged
   // elsewhere — e.g. "Eat" from the Meal Plan — show up on return.
+  const handledRevisionRef = useRef(0);
   useFocusEffect(
     useCallback(() => {
       // Day rollover: if the app stayed open past midnight, "today" moved on.
@@ -190,7 +199,9 @@ export default function HomeScreen() {
       fetchMealHistory();
       loadExercises();
       loadWeekActivity();
-      loadInsight();
+      const healthChanged = revision !== handledRevisionRef.current;
+      handledRevisionRef.current = revision;
+      loadInsight(healthChanged);
       loadPlanToday();
     }, [
       selectedDate,
@@ -201,6 +212,7 @@ export default function HomeScreen() {
       loadWeekActivity,
       loadInsight,
       loadPlanToday,
+      revision,
     ])
   );
 
@@ -217,6 +229,7 @@ export default function HomeScreen() {
           try {
             await deleteExercise(token, item.id);
             loadWeekActivity();
+            markHealthDataChanged();
           } catch {
             loadExercises(); // resync on failure
           }
@@ -228,7 +241,8 @@ export default function HomeScreen() {
   const goal = user?.calorieGoal ?? 2000;
   // Animated: the big number + ring + status chip roll to new values together
   const eaten = useAnimatedNumber(dailyTotals.calories);
-  const remaining = Math.max(0, goal - eaten);
+  const netCalories = eaten - totalBurned;
+  const remaining = Math.max(0, goal - netCalories);
 
   const totalCarbs = dailyTotals.carbs;
   const totalFat = dailyTotals.fat;
@@ -338,22 +352,31 @@ export default function HomeScreen() {
           <View style={styles.summaryRow}>
             <View style={styles.eatenBlock}>
               <View style={styles.eatenNumBlock}>
-                <AppText variant="subtle" style={styles.smallLabel}>{t.home.eaten}</AppText>
+                <AppText variant="subtle" style={styles.smallLabel}>{t.home.netCalories}</AppText>
                 <View style={styles.baselineRow}>
-                  <AppText variant="h0" style={styles.kcalBig}>{eaten.toLocaleString()}</AppText>
+                  <AppText variant="h0" style={styles.kcalBig}>{netCalories.toLocaleString()}</AppText>
                   <AppText variant="muted" style={styles.kcalGoal}>/ {goal.toLocaleString()} {t.common.kcal}</AppText>
                 </View>
               </View>
-              <View style={[styles.statusChip, eaten > goal && styles.statusChipOver]}>
-                <AppText style={[styles.statusChipText, eaten > goal && styles.statusChipTextOver]}>
-                  {eaten > goal
-                    ? t.home.overGoal((eaten - goal).toLocaleString())
+              <View style={[styles.statusChip, netCalories > goal && styles.statusChipOver]}>
+                <AppText style={[styles.statusChipText, netCalories > goal && styles.statusChipTextOver]}>
+                  {netCalories > goal
+                    ? t.home.overGoal((netCalories - goal).toLocaleString())
                     : t.home.kcalLeft(remaining.toLocaleString())}
                 </AppText>
               </View>
             </View>
-            <ProgressRing eaten={eaten} goal={goal} caption={t.home.ofGoal} />
+            <ProgressRing eaten={Math.max(0, netCalories)} goal={goal} caption={t.home.ofGoal} />
           </View>
+
+          {totalBurned > 0 && (
+            <View style={styles.energyBalanceRow}>
+              <Ionicons name="flame-outline" size={14} color={theme.colors.accent2} />
+              <AppText variant="subtle" style={styles.energyBalanceText}>
+                {t.home.energyBalance(eaten.toLocaleString(), totalBurned.toLocaleString())}
+              </AppText>
+            </View>
+          )}
 
           <View style={styles.divider} />
 
@@ -534,8 +557,8 @@ export default function HomeScreen() {
             {/* Net calories: eaten − burned */}
             {totalBurned > 0 && (
               <View style={styles.netRow}>
-                <AppText variant="subtle" style={styles.smallLabel}>{t.home.netCalories}</AppText>
-                <AppText style={styles.netVal}>{(eaten - totalBurned).toLocaleString()} {t.common.kcal}</AppText>
+                <Ionicons name="checkmark-circle-outline" size={15} color={theme.colors.accent} />
+                <AppText variant="subtle" style={styles.smallLabel}>{t.home.burnIncluded}</AppText>
               </View>
             )}
 
@@ -738,6 +761,12 @@ const styles = StyleSheet.create({
   statusChipOver: { backgroundColor: "rgba(255,138,61,0.12)" },
   statusChipText: { fontSize: 13, fontWeight: "700", color: theme.colors.accent },
   statusChipTextOver: { color: theme.colors.accent2 },
+  energyBalanceRow: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(255,138,61,0.07)",
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+  },
+  energyBalanceText: { flex: 1, fontSize: 11 },
   macroRow: { flexDirection: "row", gap: 12 },
   macroCol: { flex: 1, alignItems: "center", gap: 6, paddingHorizontal: 4 },
   macroLabel: { fontSize: 11 },
@@ -799,10 +828,9 @@ const styles = StyleSheet.create({
   flameBox: { backgroundColor: "rgba(255,138,61,0.12)" },
   burnedText: { fontWeight: "700" },
   netRow: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: "rgba(8,145,178,0.05)", borderRadius: 12, padding: theme.space.md,
   },
-  netVal: { fontSize: 15, fontWeight: "800", color: theme.colors.text },
   workoutRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,

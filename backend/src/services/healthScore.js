@@ -3,7 +3,7 @@
 // narrative around it.
 //
 // Breakdown (100 total):
-//   - Calorie adherence  : 40  (how close eaten is to the goal)
+//   - Calorie adherence  : 40  (how close net intake is to the goal)
 //   - Protein adequacy   : 20  (protein vs ~1.6 g/kg, or 25% of calories fallback)
 //   - Activity           : 20  (any workout logged today)
 //   - Logging consistency: 20  (days logged in last 7)
@@ -11,9 +11,11 @@ function computeHealthScore(ctx) {
   const { profile, today, week } = ctx;
   const goal = profile.calorieGoal || 2000;
   const eaten = today.totals.calories;
+  const netCalories = eaten - (today.totalBurned || 0);
 
-  // 1) Calorie adherence — full points within 10% of goal, fades to 0 at ±50%
-  const deviation = goal > 0 ? Math.abs(eaten - goal) / goal : 1;
+  // 1) Calorie adherence — exercise burn follows the same net-calorie balance
+  // shown on Home and used by the Coach.
+  const deviation = goal > 0 ? Math.abs(netCalories - goal) / goal : 1;
   let calorieScore;
   if (eaten === 0) calorieScore = 0; // nothing logged
   else if (deviation <= 0.1) calorieScore = 40;

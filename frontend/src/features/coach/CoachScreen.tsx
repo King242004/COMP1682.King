@@ -14,11 +14,13 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useHeaderHeight } from "@react-navigation/elements";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { useHealthData } from "@/context/HealthDataContext";
+import { useMeals } from "@/context/MealsContext";
 import {
   getInsight,
   chatWithCoach,
@@ -49,6 +51,8 @@ const MEAL_KEYS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
 export default function CoachTab() {
   const { token, user } = useAuth();
+  const { revision, markHealthDataChanged } = useHealthData();
+  const { fetchMealsByDate } = useMeals();
   const lang = resolveLanguage(user?.language);
   const t = useT();
   const suggestions = t.coach.suggestions;
@@ -67,9 +71,6 @@ export default function CoachTab() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingImage, setPendingImage] = useState<{ uri: string; base64: string } | null>(null);
-  // True once a reply had to come from a backup API key → show the slim
-  // "free AI turns running low" strip (real signal, not a guess)
-  const [quotaLow, setQuotaLow] = useState(false);
 
   useEffect(() => {
     const subscription = Keyboard.addListener("keyboardDidShow", () => {
@@ -106,10 +107,13 @@ export default function CoachTab() {
 
   // Show cached insight instantly; only hit Gemini when the cache is stale (TTL)
   // or when forced (e.g. right after logging a meal) — saves free-tier quota.
+  const insightRequestIdRef = useRef(0);
   const loadInsight = useCallback(async (force = false) => {
     if (!token) return;
+    const requestId = ++insightRequestIdRef.current;
     const date = todayKey();
     const cached = await getCachedInsight(date, lang);
+    if (requestId !== insightRequestIdRef.current) return;
     if (cached) {
       setInsight(cached.insight);
       setLoadingInsight(false);
@@ -119,12 +123,13 @@ export default function CoachTab() {
     }
     try {
       const fresh = await getInsight(token, date, lang);
+      if (requestId !== insightRequestIdRef.current) return;
       setInsight(fresh);
       cacheInsight(date, lang, fresh);
     } catch {
-      if (!cached) setInsight(null);
+      if (requestId === insightRequestIdRef.current && !cached) setInsight(null);
     } finally {
-      setLoadingInsight(false);
+      if (requestId === insightRequestIdRef.current) setLoadingInsight(false);
     }
   }, [token, lang]);
 
@@ -145,13 +150,21 @@ export default function CoachTab() {
     }
   }, [scrollToLatest, token]);
 
-  // Load insight + history ONCE when the tab first mounts (token ready).
-  // We intentionally don't reload on every focus — that re-spammed Gemini and
-  // overwrote the in-progress conversation when switching tabs.
+  // Chat history loads once so switching tabs never overwrites an in-progress
+  // conversation. Health insight refreshes separately when health data changes.
   useEffect(() => {
-    loadInsight();
     loadHistory();
-  }, [loadInsight, loadHistory]);
+  }, [loadHistory]);
+
+  const handledRevisionRef = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      const changed = revision !== handledRevisionRef.current;
+      handledRevisionRef.current = revision;
+      const timer = setTimeout(() => loadInsight(changed), changed ? 350 : 0);
+      return () => clearTimeout(timer);
+    }, [loadInsight, revision])
+  );
 
   const send = useCallback(async (text: string, displayText?: string) => {
     const msg = text.trim();
@@ -166,8 +179,7 @@ export default function CoachTab() {
     setSending(true);
     setTimeout(() => scrollToLatest(true), 50);
     try {
-      const { reply, meal, eating, messageId, aiQuotaLow } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
-      if (aiQuotaLow) setQuotaLow(true);
+      const { reply, meal, eating, messageId } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
       setMessages((prev) => [...prev, { id: messageId ?? undefined, role: "coach", text: reply, meal, eating, createdAt: new Date().toISOString() }]);
     } catch (error: unknown) {
       const quota = /quota/i.test(getErrorMessage(error));
@@ -215,7 +227,8 @@ export default function CoachTab() {
     try {
       const mealId = await logMealFromMessage(token, m.id, m.meal.mealType);
       setMessages((prev) => prev.map((x, i) => (i === index ? { ...x, loggedId: mealId } : x)));
-      loadInsight(true); // force-refresh Health Score to reflect the newly logged meal
+      await fetchMealsByDate(todayKey());
+      markHealthDataChanged();
     } catch {
       Alert.alert(L.error, L.addErr);
     } finally {
@@ -230,6 +243,8 @@ export default function CoachTab() {
     try {
       await unlogMealFromMessage(token, m.id);
       setMessages((prev) => prev.map((x, i) => (i === index ? { ...x, loggedId: null } : x)));
+      await fetchMealsByDate(todayKey());
+      markHealthDataChanged();
     } catch {
       Alert.alert(L.undoErrTitle, L.undoErrMsg);
     }
@@ -300,13 +315,6 @@ export default function CoachTab() {
             </Pressable>
           )}
         </View>
-
-        {/* Slim heads-up when today's free AI quota is running low (backup key in use) */}
-        {quotaLow && (
-          <View style={styles.quotaLowStrip}>
-            <AppText style={styles.quotaLowText}>{t.coach.quotaLowBanner}</AppText>
-          </View>
-        )}
 
         <View style={styles.chatArea}>
           <FlatList
@@ -490,12 +498,6 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10, padding: 10,
   },
-  quotaLowStrip: {
-    backgroundColor: "rgba(255,138,61,0.10)",
-    borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10,
-    marginBottom: theme.space.sm,
-  },
-  quotaLowText: { fontSize: 11, fontWeight: "600", color: theme.colors.accent2, textAlign: "center" },
   disclaimerText: { fontSize: 11, flex: 1 },
 
   typingBubble: {

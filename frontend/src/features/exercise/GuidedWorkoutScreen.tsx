@@ -6,6 +6,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { useHealthData } from "@/context/HealthDataContext";
 import { addExercise } from "@/features/exercise/api";
 import { GUIDED_ROUTINES } from "@/features/exercise/guided";
 import { todayKey } from "@/utils/date";
@@ -20,6 +21,7 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 export default function GuidedWorkoutScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
+  const { markHealthDataChanged } = useHealthData();
   const t = useT();
   const lang = resolveLanguage(user?.language);
   const { routine: routineKey } = useLocalSearchParams<{ routine: string }>();
@@ -73,6 +75,7 @@ export default function GuidedWorkoutScreen() {
           durationMin: routine.durationMin,
           date: todayKey(),
         });
+        markHealthDataChanged();
       }
       Alert.alert(t.exercise.finishedTitle, t.exercise.finishedMsg(kcal), [
         { text: "OK", onPress: () => router.back() },

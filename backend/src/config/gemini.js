@@ -4,8 +4,9 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 //   GEMINI_API_KEY=key1
 //   GEMINI_API_KEY_2=key2
 //   GEMINI_API_KEY_3=key3
-// (or a comma-separated list in any of them). Each key has its OWN daily free
-// quota, so more keys = more total requests/day.
+// (or a comma-separated list in any of them). Gemini quotas are project-scoped,
+// not key-scoped; extra keys are credential fallbacks unless they belong to
+// separate projects.
 const KEYS = [
   process.env.GEMINI_API_KEY,
   process.env.GEMINI_API_KEY_2,
@@ -35,15 +36,9 @@ const VISION_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flas
 const CHAT_MODELS = ["gemini-2.5-flash", "gemini-flash-latest"];
 
 // Build one model instance for every (key × model name) combo, in order.
-// __keyIndex marks WHICH key the instance belongs to: when a request only
-// succeeds on key 2+, the primary quota is exhausted → "running low" signal.
 function buildModels(names, generationConfig) {
-  return clients.flatMap((client, keyIndex) =>
-    names.map((model) => {
-      const m = client.getGenerativeModel({ model, generationConfig });
-      m.__keyIndex = keyIndex;
-      return m;
-    })
+  return clients.flatMap((client) =>
+    names.map((model) => client.getGenerativeModel({ model, generationConfig }))
   );
 }
 
