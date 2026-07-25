@@ -7,7 +7,7 @@ import { useHealthData } from "@/context/HealthDataContext";
 import { useT } from "@/i18n";
 import { addExercise, estimateBurned, getExerciseHistory, ACTIVITY_GROUPS, SIMPLE_ACTIVITIES, DURATION_PRESETS, type Activity } from "@/features/exercise/api";
 import { GUIDED_ROUTINES } from "@/features/exercise/guided";
-import { resolveLanguage } from "@/utils/language";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { todayKey } from "@/utils/date";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -121,7 +121,7 @@ export default function AddExerciseScreen() {
     }
   };
 
-  const backdatedLabel = new Date(logDate + "T00:00:00").toLocaleDateString(undefined, {
+  const backdatedLabel = new Date(logDate + "T00:00:00").toLocaleDateString(localeTag(lang), {
     weekday: "long", month: "short", day: "numeric",
   });
 
@@ -292,11 +292,22 @@ export default function AddExerciseScreen() {
 
         {error && <AppText style={styles.error}>{error}</AppText>}
 
-        <Button title={saving ? t.common.saving : t.exercise.title} size="lg" disabled={!canSave || saving} onPress={handleSave} />
-
-        <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}>
-          <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
-        </Pressable>
+        <View style={styles.actions}>
+          <Button
+            title={saving ? t.common.saving : t.exercise.title}
+            size="lg"
+            left={<Ionicons name="checkmark" size={19} color="#fff" />}
+            disabled={!canSave || saving}
+            onPress={handleSave}
+          />
+          <Button
+            title={t.common.cancel}
+            variant="secondary"
+            size="lg"
+            left={<Ionicons name="close" size={19} color={theme.colors.primary} />}
+            onPress={() => router.back()}
+          />
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -368,6 +379,5 @@ const styles = StyleSheet.create({
   estimateUnit: { fontSize: 14 },
 
   error: { fontSize: 13, color: theme.colors.danger, textAlign: "center" },
-  cancel: { alignItems: "center", paddingVertical: 8 },
-  cancelText: { fontSize: 15, fontWeight: "600", color: theme.colors.primary },
+  actions: { gap: 10 },
 });

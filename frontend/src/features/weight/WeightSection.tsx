@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from "re
 import { useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -61,7 +62,8 @@ function KgModal({ visible, title, sub, initial, onCancel, onSave }: {
 }
 
 export function WeightSection() {
-  const { token, updateProfile, fetchProfile } = useAuth();
+  const { token, user, updateProfile, fetchProfile } = useAuth();
+  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
   const t = useT();
 
   const [history, setHistory] = useState<WeightHistory | null>(null);
@@ -138,7 +140,7 @@ export function WeightSection() {
   };
 
   const dLabel = (d: string) =>
-    new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    new Date(d + "T00:00:00").toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric" });
 
   if (loading && !history) {
     return (
@@ -205,11 +207,13 @@ export function WeightSection() {
               )}
             </AppText>
           </View>
-          <WeightChart logs={logs} targetWeight={target} />
+          <WeightChart logs={logs} targetWeight={target} locale={locale} />
         </Card>
       ) : logs.length === 0 ? (
         <Card style={styles.emptyCard}>
-          <AppText style={styles.emptyEmoji}>⚖️</AppText>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="scale-outline" size={28} color={theme.colors.primary} />
+          </View>
           <AppText variant="h2" style={styles.centerText}>{t.weight.emptyTitle}</AppText>
           <AppText variant="muted" style={styles.centerText}>{t.weight.emptySub}</AppText>
         </Card>
@@ -281,7 +285,10 @@ const styles = StyleSheet.create({
   changeText: { fontSize: 11 },
 
   emptyCard: { padding: theme.space.xl, alignItems: "center", gap: 10 },
-  emptyEmoji: { fontSize: 40 },
+  emptyIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center",
+  },
   centerText: { textAlign: "center" },
 
   listCard: { padding: theme.space.lg, gap: theme.space.md },

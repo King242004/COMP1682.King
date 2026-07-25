@@ -40,7 +40,7 @@ import { InsightCard } from "@/features/coach/InsightCard";
 import { ChatBubble } from "@/features/coach/ChatBubble";
 import { todayKey, dateKey } from "@/utils/date";
 import { aiResetWhen } from "@/utils/aiQuota";
-import { resolveLanguage } from "@/utils/language";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { getErrorMessage } from "@/utils/errors";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -258,7 +258,7 @@ export default function CoachTab() {
     yesterday.setDate(now.getDate() - 1);
     if (d === dateKey(now)) return t.meals.today;
     if (d === dateKey(yesterday)) return t.meals.yesterday;
-    return new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return new Date(d + "T00:00:00").toLocaleDateString(localeTag(lang), { month: "short", day: "numeric" });
   };
   const msgDay = (m: ChatMessage) => (m.createdAt ? dateKey(new Date(m.createdAt)) : todayKey());
 
@@ -297,11 +297,12 @@ export default function CoachTab() {
       dismissKeyboardOnTap={false}
     >
       <View style={styles.container}>
-        {/* Title row */}
-        <View style={styles.titleRow}>
+        {/* Header banner — dark primary bar with light text, same visual
+            language as the Home AppHeader */}
+        <View style={styles.header}>
           <View style={styles.titleLeft}>
-            <Ionicons name="sparkles" size={20} color={theme.colors.primary} />
-            <AppText variant="h1">AI Coach</AppText>
+            <Ionicons name="sparkles" size={20} color="#fff" />
+            <AppText variant="h1" style={styles.title}>AI Coach</AppText>
           </View>
           {messages.length > 0 && (
             <Pressable
@@ -311,17 +312,21 @@ export default function CoachTab() {
               accessibilityLabel={t.a11y.clearChat}
               style={({ pressed }) => pressed && styles.dim}
             >
-              <Ionicons name="trash-outline" size={20} color={theme.colors.subtle} />
+              <Ionicons name="trash-outline" size={20} color="rgba(255,255,255,0.85)" />
             </Pressable>
           )}
         </View>
 
         <View style={styles.chatArea}>
+          {/* alwaysBounceVertical: let the area drag/bounce even when empty (the
+              intro + chips are short), so the welcome screen never feels
+              frozen/unloaded */}
           <FlatList
             ref={scrollRef}
             data={messages}
             style={styles.flex1}
             contentContainerStyle={styles.chatContent}
+            alwaysBounceVertical
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
             showsVerticalScrollIndicator={false}
@@ -470,17 +475,23 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   dim: { opacity: 0.5 },
   pressedFaint: { opacity: 0.8 },
-  // paddingTop 60 = safe-area top (Coach got its ~90px back — no AppHeader above)
-  container: { flex: 1, paddingHorizontal: theme.space.lg, paddingTop: 60 },
+  container: { flex: 1, paddingHorizontal: theme.space.lg },
 
-  titleRow: {
+  // Dark primary header banner with light text — breaks out of the container's
+  // horizontal padding to sit edge-to-edge, mirroring the Home AppHeader.
+  header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    marginBottom: theme.space.md,
+    marginHorizontal: -theme.space.lg,
+    paddingHorizontal: theme.space.lg,
+    paddingTop: Platform.OS === "ios" ? 52 : 16,
+    paddingBottom: 16,
+    backgroundColor: theme.colors.primary,
   },
   titleLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  title: { color: "#fff" },
 
   chatArea: { flex: 1 },
-  chatContent: { paddingBottom: 20, gap: theme.space.md },
+  chatContent: { paddingTop: theme.space.sm, paddingBottom: 20, gap: theme.space.md },
   listSection: { gap: theme.space.md },
   msgBlock: { gap: theme.space.md },
   daySep: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 2 },
@@ -509,14 +520,17 @@ const styles = StyleSheet.create({
 
   emptyBlock: { gap: 10, marginTop: 4 },
   introText: { fontSize: 13 },
-  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
   suggestChip: {
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99,
     borderWidth: 1, borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
+    alignItems: "center", justifyContent: "center",
   },
   suggestChipPressed: { backgroundColor: theme.colors.tint },
-  suggestChipText: { fontSize: 12, color: theme.colors.primary },
+  // lineHeight + includeFontPadding keep the label vertically centred so
+  // diacritic-heavy labels (ố, ữ) don't ride higher than plain ones
+  suggestChipText: { fontSize: 12, lineHeight: 16, includeFontPadding: false, color: theme.colors.primary },
 
   pendingRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 8 },
   pendingThumb: { width: 56, height: 56, borderRadius: 10 },

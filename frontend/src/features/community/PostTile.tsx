@@ -1,6 +1,8 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useAuth } from "@/context/AuthContext";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -25,6 +27,8 @@ export function PostTile({
   showTime?: boolean;
 }) {
   const t = useT();
+  const { user } = useAuth();
+  const locale = localeTag(resolveLanguage(user?.language));
   return (
     <View style={styles.wrap}>
       <View style={styles.tile}>
@@ -107,7 +111,7 @@ export function PostTile({
         <View style={styles.timeRow}>
           <Ionicons name="time-outline" size={11} color={theme.colors.subtle} />
           <AppText variant="subtle" style={styles.timeText}>
-            {communityTime(post.createdAt, t)}
+            {communityTime(post.createdAt, t, locale)}
           </AppText>
         </View>
       )}

@@ -11,3 +11,25 @@ export function mealSlotByHour(h: number): MealSlot {
   if (h < 21) return "dinner";
   return "snack";
 }
+
+// Collapse a meal history into one entry per dish name, newest first. People
+// eat the same dishes repeatedly, so raw history is full of duplicates; both
+// the Add-meal quick chips and the attach-a-meal picker want a clean, unique
+// shortlist. Matching is case-insensitive and trims surrounding spaces, and the
+// newest occurrence of each name wins (its calories/macros are the latest).
+export function recentUniqueMeals<T extends { name: string; date: string }>(
+  history: T[],
+  limit = 8,
+): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  const sorted = [...history].sort((a, b) => (a.date < b.date ? 1 : -1));
+  for (const m of sorted) {
+    const key = m.name.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(m);
+    if (out.length >= limit) break;
+  }
+  return out;
+}

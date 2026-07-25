@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { getNotifications, markNotificationsRead, type Notification } from "@/features/community/api";
 import { initials, communityTime } from "@/features/community/helpers";
 import { useT } from "@/i18n";
@@ -17,8 +18,9 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 // read (clears the Community bell badge). Rows deep-link to the post or actor.
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const t = useT();
+  const locale = localeTag(resolveLanguage(user?.language));
 
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,7 @@ export default function NotificationsScreen() {
             {item.type === "like" ? t.community.notifLiked : t.community.notifFollowed}
           </AppText>
           <AppText variant="subtle" style={styles.time}>
-            {communityTime(item.createdAt, t)}
+            {communityTime(item.createdAt, t, locale)}
           </AppText>
         </View>
 
@@ -123,6 +125,7 @@ export default function NotificationsScreen() {
         data={items}
         keyExtractor={(n) => n.id}
         contentContainerStyle={styles.listContent}
+        alwaysBounceVertical
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load("refresh")} tintColor={theme.colors.primary} />}
         ListHeaderComponent={<ScreenHeader title={t.community.notifTitle} />}
         ListEmptyComponent={empty}

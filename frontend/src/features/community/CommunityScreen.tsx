@@ -51,7 +51,16 @@ export default function CommunityScreen() {
   // On failure we KEEP the previous posts (an error shouldn't wipe the feed).
   const load = useCallback(async (which: Tab, mode: LoadMode = "load") => {
     if (!token) return;
-    if (mode === "more" && (!hasMoreRef.current[which] || loadingMoreRef.current[which])) return;
+    // Never paginate before the first page has landed: on web an empty FlatList
+    // fires onEndReached immediately, and that premature "more" would bump the
+    // requestId and orphan the in-flight first load — leaving the tab spinning
+    // forever. Require a completed first load (and no initial load in flight).
+    if (mode === "more" && (
+      !hasMoreRef.current[which] ||
+      loadingMoreRef.current[which] ||
+      inFlightRef.current[which] ||
+      !loadedRef.current[which]
+    )) return;
     if (mode !== "more" && inFlightRef.current[which]) return;
 
     const requestId = ++requestIdRef.current[which];
@@ -214,6 +223,7 @@ export default function CommunityScreen() {
         numColumns={2}
         columnWrapperStyle={styles.gridColumn}
         contentContainerStyle={styles.listContent}
+        alwaysBounceVertical
         refreshControl={<RefreshControl refreshing={refreshingByTab[tab]} onRefresh={() => load(tab, "refresh")} tintColor={theme.colors.primary} />}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -227,7 +237,7 @@ export default function CommunityScreen() {
                   accessibilityLabel={t.a11y.search}
                   style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
                 >
-                  <Ionicons name="search" size={19} color={theme.colors.primary} />
+                  <Ionicons name="search-outline" size={19} color={theme.colors.primary} />
                 </Pressable>
                 {/* Notifications bell with unread badge */}
                 <Pressable

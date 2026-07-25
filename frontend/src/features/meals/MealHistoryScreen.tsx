@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 import { useMeals, Meal } from "@/context/MealsContext";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
@@ -20,20 +22,22 @@ function hhmm(iso: string) {
   return `${h}:${m}`;
 }
 
-function dateLabel(dateStr: string, t: Strings) {
+function dateLabel(dateStr: string, t: Strings, locale?: string) {
   const d = new Date(dateStr + "T00:00:00");
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
   if (d.toDateString() === today.toDateString()) return t.meals.today;
   if (d.toDateString() === yesterday.toDateString()) return t.meals.yesterday;
-  return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  return d.toLocaleDateString(locale, { weekday: "long", month: "short", day: "numeric" });
 }
 
 export default function MealHistoryScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const { historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
+  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
 
   useEffect(() => {
     fetchMealHistory();
@@ -46,7 +50,7 @@ export default function MealHistoryScreen() {
     const date = meal.date;
     if (!seen.has(date)) {
       seen.add(date);
-      grouped.push({ date, label: dateLabel(date, t), meals: [] });
+      grouped.push({ date, label: dateLabel(date, t, locale), meals: [] });
     }
     grouped.find((g) => g.date === date)?.meals.push(meal);
   }
@@ -57,6 +61,7 @@ export default function MealHistoryScreen() {
         data={grouped}
         keyExtractor={(g) => g.date}
         contentContainerStyle={styles.content}
+        alwaysBounceVertical
         ListHeaderComponent={
           <View>
             <ScreenHeader title={t.meals.historyTitle} />

@@ -20,7 +20,7 @@ export function timeAgoParts(iso: string): { n: number; unit: TimeAgoUnit } {
 // notifications). Matches the app's own date style used by Coach and meal
 // history: granular for recent, then "Yesterday", then a real date. A date in
 // a different year carries the year so it can't be misread (Facebook / X style).
-export function communityTime(iso: string, t: Strings): string {
+export function communityTime(iso: string, t: Strings, locale?: string): string {
   const parts = timeAgoParts(iso);
   if (parts.unit !== "d") return t.community.timeAgoText(parts.n, parts.unit);
 
@@ -31,7 +31,7 @@ export function communityTime(iso: string, t: Strings): string {
   if (dateKey(d) === dateKey(yesterday)) return t.meals.yesterday;
 
   const sameYear = d.getFullYear() === now.getFullYear();
-  return d.toLocaleDateString(undefined, sameYear
+  return d.toLocaleDateString(locale, sameYear
     ? { month: "short", day: "numeric" }
     : { year: "numeric", month: "short", day: "numeric" });
 }

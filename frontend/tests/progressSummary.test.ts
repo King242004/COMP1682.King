@@ -1,5 +1,5 @@
 import type { Meal } from "@/context/MealsContext";
-import { buildDaySummaries } from "@/features/progress/summary";
+import { buildDaySummaries, getLastNDays } from "@/features/progress/summary";
 import { dateKey } from "@/utils/date";
 
 const meal = (date: string, calories: number): Meal => ({
@@ -27,7 +27,7 @@ describe("buildDaySummaries", () => {
     const summaries = buildDaySummaries(
       [meal(today, 800), meal(today, 900)],
       2000,
-      2
+      getLastNDays(2)
     );
     const summary = summaries.at(-1)!;
 

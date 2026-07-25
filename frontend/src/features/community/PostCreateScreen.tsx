@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useMeals, type Meal } from "@/context/MealsContext";
 import { createPost } from "@/features/community/api";
 import { PhotoPickerModal } from "@/features/community/PhotoPickerModal";
+import { recentUniqueMeals } from "@/utils/mealSlot";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -64,8 +65,10 @@ export default function PostCreateScreen() {
     }
   };
 
-  // Show a handful of recent meals to optionally attach
-  const recentMeals = historyMeals.slice(0, 8);
+  // Show a handful of recent meals to optionally attach — one card per dish
+  // name (the newest of each) so eating the same thing daily doesn't fill the
+  // list with duplicates.
+  const recentMeals = recentUniqueMeals(historyMeals, 8);
 
   return (
     <Screen padded={false} keyboard>

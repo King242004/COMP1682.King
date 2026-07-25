@@ -17,7 +17,7 @@ export function ConsistencyRow({ summaries, goal, daysLogged }: {
         <AppText variant="subtle" style={styles.headerMeta}>{t.progress.daysLoggedOf7(daysLogged)}</AppText>
       </View>
       <View style={styles.row}>
-        {summaries.map((day) => {
+        {summaries.map((day, i) => {
           // Over-goal = warning orange, not danger red (red = errors/destructive)
           const bg = day.onTrack
             ? theme.colors.accent
@@ -30,14 +30,14 @@ export function ConsistencyRow({ summaries, goal, daysLogged }: {
           return (
             <View key={day.key} style={styles.col}>
               <View style={[styles.circle, { backgroundColor: bg }, showRing && styles.circleRing]}>
-                {day.calories > 0 && (
+                {(day.onTrack || day.calories > goal) && (
                   <AppText style={styles.mark}>
-                    {day.onTrack ? "✓" : day.calories > goal ? "!" : "·"}
+                    {day.onTrack ? "✓" : "!"}
                   </AppText>
                 )}
               </View>
               <AppText style={[styles.dayLabel, day.isToday ? styles.dayLabelToday : null]}>
-                {day.label[0]}
+                {t.labels.daysShort[i]}
               </AppText>
             </View>
           );
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   col: { flex: 1, alignItems: "center", gap: 4 },
   circle: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   circleRing: { borderWidth: 1.5, borderColor: theme.colors.primary },
-  mark: { fontSize: 13, color: "#fff" },
+  mark: { fontSize: 16, fontWeight: "800", color: "#fff" },
   dayLabel: { fontSize: 10, fontWeight: "500", color: theme.colors.subtle },
   dayLabelToday: { fontWeight: "700", color: theme.colors.primary },
   legend: { flexDirection: "row", gap: 12, flexWrap: "wrap" },

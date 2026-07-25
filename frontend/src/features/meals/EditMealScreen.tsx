@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMeals } from "@/context/MealsContext";
 import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -158,7 +159,7 @@ export default function EditMealScreen() {
               onPress={handleDelete}
               style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
             >
-              <AppText style={styles.deleteEmoji}>🗑️</AppText>
+              <Ionicons name="trash-outline" size={15} color={theme.colors.danger} />
               <AppText style={styles.deleteText}>{t.common.delete}</AppText>
             </Pressable>
           }
@@ -255,34 +256,41 @@ export default function EditMealScreen() {
           </View>
         </Card>
 
-        <Button title={isSaving ? t.common.saving : t.meals.saveChanges} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
-
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.cancel, pressed && styles.dim]}
-        >
-          <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
-        </Pressable>
+        <View style={styles.actions}>
+          <Button
+            title={isSaving ? t.common.saving : t.meals.saveChanges}
+            size="lg"
+            left={<Ionicons name="checkmark" size={19} color="#fff" />}
+            disabled={!canSave || isSaving}
+            onPress={handleSave}
+          />
+          <Button
+            title={t.common.cancel}
+            variant="secondary"
+            size="lg"
+            left={<Ionicons name="close" size={19} color={theme.colors.primary} />}
+            onPress={() => router.back()}
+          />
+        </View>
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  dim: { opacity: 0.6 },
   content: {
     paddingHorizontal: theme.space.lg,
     paddingTop: 60,
     paddingBottom: 40,
     gap: theme.space.lg,
   },
+  actions: { gap: 10 },
   deleteBtn: {
     paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: "rgba(229,72,77,0.1)",
   },
   deleteBtnPressed: { backgroundColor: "rgba(229,72,77,0.2)" },
-  deleteEmoji: { fontSize: 13 },
   deleteText: { fontSize: 13, fontWeight: "700", color: theme.colors.danger },
   formCard: { padding: theme.space.xl },
   formFields: { gap: theme.space.md },
@@ -291,6 +299,4 @@ const styles = StyleSheet.create({
   macroField: { flex: 1, gap: 4 },
   error: { fontSize: 12, color: theme.colors.danger },
   errorSmall: { fontSize: 11, color: theme.colors.danger },
-  cancel: { alignItems: "center", paddingVertical: 8 },
-  cancelText: { fontSize: 15, fontWeight: "600", color: theme.colors.primary },
 });

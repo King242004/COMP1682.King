@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { getPost, toggleLike, toggleSave, deletePost, type FeedPost } from "@/features/community/api";
 import { initials, communityTime } from "@/features/community/helpers";
 import { useT } from "@/i18n";
@@ -19,6 +20,7 @@ export default function PostDetailScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
   const t = useT();
+  const locale = localeTag(resolveLanguage(user?.language));
 
   const [post, setPost] = useState<FeedPost | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -167,7 +169,7 @@ export default function PostDetailScreen() {
             <View style={styles.flex1}>
               <AppText variant="body2" style={styles.bold}>{post.author.name}</AppText>
               <AppText variant="subtle" style={styles.timeText}>
-                {communityTime(post.createdAt, t)}
+                {communityTime(post.createdAt, t, locale)}
               </AppText>
             </View>
           </Pressable>

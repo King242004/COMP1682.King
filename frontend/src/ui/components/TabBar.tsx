@@ -100,23 +100,28 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         onAdd={() => { setModalVisible(false); router.push("/meals/add"); }}
       />
 
-      <View style={styles.bar}>
-        {LEFT_TABS.map(renderTab)}
+      {/* App-bg layer behind the bar so the rounded top corners reveal the
+          screen's cyan bg, not the navigator's default grey (which made the two
+          corners look like a mismatched colour). */}
+      <View style={styles.barWrap}>
+        <View style={styles.bar}>
+          {LEFT_TABS.map(renderTab)}
 
-        <View style={styles.fabSlot}>
-          <Pressable
-            onPress={() => setModalVisible(true)}
-            style={({ pressed }) => pressed && styles.fabPressed}
-          >
-            {/* Scan glyph, not a plain +, so the flagship food-scan entry is
-                not visually identical to the community new-post + button */}
-            <View style={styles.fab}>
-              <Ionicons name="scan" size={26} color="#FFFFFF" />
-            </View>
-          </Pressable>
+          <View style={styles.fabSlot}>
+            <Pressable
+              onPress={() => setModalVisible(true)}
+              style={({ pressed }) => pressed && styles.fabPressed}
+            >
+              {/* Scan glyph, not a plain +, so the flagship food-scan entry is
+                  not visually identical to the community new-post + button */}
+              <View style={styles.fab}>
+                <Ionicons name="scan" size={26} color="#FFFFFF" />
+              </View>
+            </Pressable>
+          </View>
+
+          {RIGHT_TABS.map(renderTab)}
         </View>
-
-        {RIGHT_TABS.map(renderTab)}
       </View>
     </>
   );
@@ -153,6 +158,7 @@ const styles = StyleSheet.create({
   optionSub: { fontSize: 13, color: theme.colors.muted, marginTop: 2 },
 
   // Bar
+  barWrap: { backgroundColor: theme.colors.bg },
   bar: {
     flexDirection: "row",
     height: Platform.OS === "ios" ? 86 : 72,

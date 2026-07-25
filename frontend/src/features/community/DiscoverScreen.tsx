@@ -101,6 +101,7 @@ export default function DiscoverScreen() {
         data={data}
         keyExtractor={(u) => u.id}
         contentContainerStyle={styles.listContent}
+        alwaysBounceVertical
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={styles.header}>

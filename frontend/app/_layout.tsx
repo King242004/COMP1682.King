@@ -34,7 +34,10 @@ export default function RootLayout() {
             <Stack.Screen name="auth/register" />
             <Stack.Screen name="auth/forgot-password" />
             <Stack.Screen name="onboarding" />
-            <Stack.Screen name="tabs" />
+            {/* Disable the swipe-back gesture on the tab navigator: swiping right
+                would otherwise pop the whole tabs stack back to the login/index
+                screen, which reads as a bug from inside a tab like Coach. */}
+            <Stack.Screen name="tabs" options={{ gestureEnabled: false }} />
             {/* Sub-flows pushed OVER the tabs — back() pops here naturally */}
             <Stack.Screen name="scan" />
             <Stack.Screen name="profile/edit" />

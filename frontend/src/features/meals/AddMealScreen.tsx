@@ -1,12 +1,15 @@
 import { useMemo, useState, useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { MealTypeSelector } from "@/features/meals/MealTypeSelector";
 import { type MealTypeKey } from "@/ui/mealTypes";
 import { dateKey } from "@/utils/date";
+import { recentUniqueMeals } from "@/utils/mealSlot";
 import { parseDecimal } from "@/utils/number";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -45,8 +48,10 @@ function validateNumber(val: string, field: string, t: Strings): string | undefi
 
 export default function AddMealScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const { addMeal, historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
+  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
   const {
     mealType: defaultType,
     date: dateParam,
@@ -118,26 +123,18 @@ export default function AddMealScreen() {
 
   // Newest first, one chip per dish name; static Vietnamese staples only for
   // brand-new accounts with an empty history
-  const recentDishes = useMemo(() => {
-    const seen = new Set<string>();
-    const out: typeof QUICK_SUGGESTIONS = [];
-    const sorted = [...historyMeals].sort((a, b) => (a.date < b.date ? 1 : -1));
-    for (const m of sorted) {
-      const k = m.name.trim().toLowerCase();
-      if (seen.has(k)) continue;
-      seen.add(k);
-      out.push({
+  const recentDishes = useMemo(
+    () =>
+      recentUniqueMeals(historyMeals, 8).map((m) => ({
         name: m.name,
         calories: m.calories,
         protein: m.protein ?? 0,
         carbs: m.carbs ?? 0,
         fat: m.fat ?? 0,
         mealType: m.mealType as MealTypeKey,
-      });
-      if (out.length >= 8) break;
-    }
-    return out;
-  }, [historyMeals]);
+      })),
+    [historyMeals],
+  );
 
   const quickList = recentDishes.length > 0 ? recentDishes : QUICK_SUGGESTIONS;
 
@@ -201,7 +198,7 @@ export default function AddMealScreen() {
     setTouched({});
   };
 
-  const backdatedLabel = new Date(logDate + "T00:00:00").toLocaleDateString(undefined, {
+  const backdatedLabel = new Date(logDate + "T00:00:00").toLocaleDateString(locale, {
     weekday: "long", month: "short", day: "numeric",
   });
 
@@ -350,14 +347,22 @@ export default function AddMealScreen() {
           </View>
         </Card>
 
-        <Button title={isSaving ? t.common.saving : t.meals.saveMeal} size="lg" disabled={!canSave || isSaving} onPress={handleSave} />
-
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.cancel, pressed && styles.dim]}
-        >
-          <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
-        </Pressable>
+        <View style={styles.actions}>
+          <Button
+            title={isSaving ? t.common.saving : t.meals.saveMeal}
+            size="lg"
+            left={<Ionicons name="checkmark" size={19} color="#fff" />}
+            disabled={!canSave || isSaving}
+            onPress={handleSave}
+          />
+          <Button
+            title={t.common.cancel}
+            variant="secondary"
+            size="lg"
+            left={<Ionicons name="close" size={19} color={theme.colors.primary} />}
+            onPress={() => router.back()}
+          />
+        </View>
 
         {/* Quick chips — the user's own recent dishes (fallback: starter list).
             Only when the form starts empty (no scan/AI/community prefill). */}
@@ -387,7 +392,6 @@ export default function AddMealScreen() {
 
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
-  dim: { opacity: 0.6 },
   content: {
     paddingHorizontal: theme.space.lg,
     paddingTop: 60,
@@ -395,6 +399,7 @@ const styles = StyleSheet.create({
     gap: theme.space.lg,
   },
   subtitle: { marginTop: -8 },
+  actions: { gap: 10 },
   backdateBanner: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "rgba(8,145,178,0.08)",
@@ -421,8 +426,6 @@ const styles = StyleSheet.create({
   macroField: { flex: 1, gap: 4 },
   error: { fontSize: 12, color: theme.colors.danger },
   errorSmall: { fontSize: 11, color: theme.colors.danger },
-  cancel: { alignItems: "center", paddingVertical: 8 },
-  cancelText: { fontSize: 15, fontWeight: "600", color: theme.colors.primary },
   suggestBlock: { gap: theme.space.sm },
   suggestTitle: { fontSize: 15 },
   suggestWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

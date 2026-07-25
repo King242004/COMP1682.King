@@ -1,4 +1,4 @@
-import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
@@ -8,6 +8,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
 import { dateKey } from "@/utils/date";
 import { mealSlotByHour } from "@/utils/mealSlot";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
@@ -47,6 +48,7 @@ export default function MealDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
   const { meals, historyMeals, deleteMeal } = useMeals();
   const t = useT();
   // Look in both lists — meal may be opened from today's view OR from history
@@ -65,10 +67,14 @@ export default function MealDetailScreen() {
   // Time rule: `meal.date` is the day the meal was EATEN (source of truth) —
   // createdAt is just when the record was saved. They differ for back-logged
   // meals, so the clock time only makes sense when both fall on the same day.
-  const eatenDateLabel = new Date(meal.date + "T00:00:00").toLocaleDateString(undefined, {
+  const eatenDateLabel = new Date(meal.date + "T00:00:00").toLocaleDateString(locale, {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
   const loggedSameDay = dateKey(new Date(meal.createdAt)) === meal.date;
+  // "Log again for today" only makes sense for a PAST meal. When the meal is
+  // already today's, re-logging it just duplicates today's entry, so the button
+  // is hidden and only Edit remains.
+  const eatenToday = meal.date === dateKey(new Date());
 
   const handleDelete = () => {
     Alert.alert(
@@ -159,55 +165,45 @@ export default function MealDetailScreen() {
           </Card>
         )}
 
-        {/* Actions */}
+        {/* Actions — one consistent button style (same size as Delete). Log
+            again (primary) shows only for a past meal, then Edit, then Delete. */}
         <View style={styles.actions}>
-          {/* Repeat a favourite dish: prefill the Add form for TODAY (slot by
-              current hour) so the user can tweak before saving — 2 taps total */}
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: "/meals/add",
-                params: {
-                  prefillName: meal.name,
-                  prefillCalories: String(meal.calories),
-                  prefillProtein: String(meal.protein ?? 0),
-                  prefillCarbs: String(meal.carbs ?? 0),
-                  prefillFat: String(meal.fat ?? 0),
-                  mealType: mealSlotByHour(new Date().getHours()),
-                  source: "repeat",
-                },
-              })
-            }
-            style={({ pressed }) => [styles.actionRow, styles.repeatAction, pressed && styles.actionPressed]}
-          >
-            <View style={[styles.actionIcon, styles.repeatIcon]}>
-              <Ionicons name="add-circle-outline" size={21} color={theme.colors.primary} />
-            </View>
-            <View style={styles.actionCopy}>
-              <AppText style={styles.actionTitle}>{t.meals.logAgain}</AppText>
-              <AppText variant="subtle" style={styles.actionHint}>{t.meals.logAgainHint}</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={17} color={theme.colors.subtle} />
-          </Pressable>
-          <Pressable
+          {!eatenToday && (
+            <Button
+              title={t.meals.logAgain}
+              variant="primary"
+              size="lg"
+              left={<Ionicons name="add-circle-outline" size={19} color="#fff" />}
+              onPress={() =>
+                router.push({
+                  pathname: "/meals/add",
+                  params: {
+                    prefillName: meal.name,
+                    prefillCalories: String(meal.calories),
+                    prefillProtein: String(meal.protein ?? 0),
+                    prefillCarbs: String(meal.carbs ?? 0),
+                    prefillFat: String(meal.fat ?? 0),
+                    mealType: mealSlotByHour(new Date().getHours()),
+                    source: "repeat",
+                  },
+                })
+              }
+            />
+          )}
+          <Button
+            title={t.meals.editMeal}
+            variant="secondary"
+            size="lg"
+            left={<Ionicons name="create-outline" size={19} color={theme.colors.primary} />}
             onPress={() => router.push({ pathname: "/meals/edit", params: { id: meal.id } })}
-            style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
-          >
-            <View style={styles.actionIcon}>
-              <Ionicons name="create-outline" size={20} color={theme.colors.muted} />
-            </View>
-            <View style={styles.actionCopy}>
-              <AppText style={styles.actionTitle}>{t.meals.editMeal}</AppText>
-              <AppText variant="subtle" style={styles.actionHint}>{t.meals.editMealHint}</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={17} color={theme.colors.subtle} />
-          </Pressable>
-          <Pressable
+          />
+          <Button
+            title={t.meals.deleteMeal}
+            variant="danger"
+            size="lg"
+            left={<Ionicons name="trash-outline" size={19} color={theme.colors.danger} />}
             onPress={handleDelete}
-            style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
-          >
-            <AppText style={styles.deleteText}>{t.meals.deleteMeal}</AppText>
-          </Pressable>
+          />
         </View>
       </ScrollView>
     </Screen>
@@ -243,32 +239,4 @@ const styles = StyleSheet.create({
   noteTitle: { fontSize: 15 },
   noteText: { fontSize: 13 },
   actions: { gap: 10 },
-  actionRow: {
-    minHeight: 64,
-    flexDirection: "row", alignItems: "center", gap: 12,
-    borderWidth: 1, borderColor: theme.colors.border,
-    borderRadius: theme.radius.button,
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.space.md, paddingVertical: 10,
-  },
-  repeatAction: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tintSoft },
-  actionPressed: { opacity: 0.72 },
-  actionIcon: {
-    width: 38, height: 38, borderRadius: 12,
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: theme.colors.bg,
-  },
-  repeatIcon: { backgroundColor: theme.colors.tint },
-  actionCopy: { flex: 1, gap: 2 },
-  actionTitle: { fontSize: 14, fontWeight: "800", color: theme.colors.text },
-  actionHint: { fontSize: 11, lineHeight: 16 },
-  deleteBtn: {
-    height: 56,
-    borderRadius: theme.radius.button,
-    backgroundColor: "rgba(229,72,77,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteBtnPressed: { backgroundColor: "rgba(229,72,77,0.15)" },
-  deleteText: { fontSize: 15, fontWeight: "800", color: theme.colors.danger },
 });

@@ -183,6 +183,7 @@ export default function UserProfileScreen() {
         numColumns={2}
         columnWrapperStyle={styles.gridColumn}
         contentContainerStyle={styles.listContent}
+        alwaysBounceVertical
         ListHeaderComponent={
           <View style={styles.header}>
             <ScreenHeader title={t.community.profile} />

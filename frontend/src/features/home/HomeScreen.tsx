@@ -13,7 +13,7 @@ import { SuggestMealCard } from "@/features/plan/SuggestMealCard";
 import { ProgressRing } from "@/ui/components/ProgressRing";
 import { getCurrentWeekDays } from "@/features/home/week";
 import { dateKey } from "@/utils/date";
-import { resolveLanguage } from "@/utils/language";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { useT } from "@/i18n";
 import { theme, macroGoals, shadow } from "@/ui/theme";
 import { MEAL_TYPE_META, type MealTypeKey } from "@/ui/mealTypes";
@@ -138,6 +138,7 @@ export default function HomeScreen() {
   // the cache is stale (TTL) — this runs on EVERY focus, so without the TTL each
   // visit to Home would burn a free-tier AI request.
   const lang = resolveLanguage(user?.language);
+  const locale = localeTag(lang); // date labels follow the app language, not the phone
   const t = useT();
   const insightRequestIdRef = useRef(0);
   const loadInsight = useCallback(async (force = false) => {
@@ -279,7 +280,7 @@ export default function HomeScreen() {
             Forward is disabled at the current week: the diary has no future weeks. */}
         <View style={styles.headerRow}>
           <AppText variant="h1">
-            {isToday ? t.meals.today : new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+            {isToday ? t.meals.today : new Date(selectedDate + "T00:00:00").toLocaleDateString(locale, { weekday: "long", month: "short", day: "numeric" })}
           </AppText>
           <View style={styles.weekNav}>
             <Pressable
@@ -295,9 +296,9 @@ export default function HomeScreen() {
             <AppText variant="body2" style={[styles.weekLabel, weekOffset === 0 && styles.weekLabelCurrent]}>
               {weekOffset === 0
                 ? t.plan.thisWeek
-                : weekDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+                : weekDays[0].toLocaleDateString(locale, { month: "short", day: "numeric" }) +
                   " – " +
-                  weekDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  weekDays[6].toLocaleDateString(locale, { month: "short", day: "numeric" })}
             </AppText>
             <Pressable
               onPress={() => changeWeek(1)}
@@ -366,7 +367,7 @@ export default function HomeScreen() {
                 </AppText>
               </View>
             </View>
-            <ProgressRing eaten={Math.max(0, netCalories)} goal={goal} caption={t.home.ofGoal} />
+            <ProgressRing eaten={Math.max(0, netCalories)} goal={goal} />
           </View>
 
           {totalBurned > 0 && (
@@ -382,9 +383,9 @@ export default function HomeScreen() {
 
           <View style={styles.macroRow}>
             {[
+              { label: t.labels.protein, value: totalProtein, goal: macroGoals(goal).protein, color: theme.colors.accent2 },
               { label: t.labels.carbs, value: totalCarbs, goal: macroGoals(goal).carbs, color: theme.colors.accent },
               { label: t.labels.fat, value: totalFat, goal: macroGoals(goal).fat, color: theme.colors.indigo },
-              { label: t.labels.protein, value: totalProtein, goal: macroGoals(goal).protein, color: theme.colors.accent2 },
             ].map((m) => (
               <View key={m.label} style={styles.macroCol}>
                 <AppText variant="subtle" style={styles.macroLabel}>{m.label}</AppText>
@@ -483,8 +484,8 @@ export default function HomeScreen() {
                       hitSlop={6}
                       style={({ pressed }) => [styles.eatBtn, pressed && styles.rowPressed]}
                     >
-                      <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
                       <AppText style={styles.eatBtnText}>{t.home.eat}</AppText>
+                      <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
                     </Pressable>
                     <Pressable
                       onPress={() => removePlanned(p)}
@@ -534,6 +535,17 @@ export default function HomeScreen() {
             )}
           </View>
 
+          {/* Whole card taps through to logging (today/past only) — not just the
+              small header link */}
+          <Pressable
+            onPress={() => {
+              if (selectedDate <= todayKey) {
+                router.push({ pathname: "/exercise/log-workout" as any, params: { date: selectedDate } });
+              }
+            }}
+            disabled={selectedDate > todayKey}
+            style={({ pressed }) => selectedDate <= todayKey && pressed ? styles.pressedFaint : undefined}
+          >
           <Card style={styles.mealCard}>
             <View style={styles.activityHeader}>
               <View style={[styles.iconBox, styles.flameBox]}>
@@ -582,6 +594,7 @@ export default function HomeScreen() {
               </View>
             ))}
           </Card>
+          </Pressable>
         </View>
 
         {/* For you — weekly plan status card + "Ăn gì bây giờ?" card in one section */}
@@ -632,8 +645,8 @@ export default function HomeScreen() {
                         hitSlop={6}
                         style={({ pressed }) => [styles.eatBtn, pressed && styles.rowPressed]}
                       >
-                        <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
                         <AppText style={styles.eatBtnText}>{t.plan.markWorkoutDone}</AppText>
+                        <Ionicons name="checkmark" size={14} color={theme.colors.accent} />
                       </Pressable>
                     ) : null}
                   </View>
@@ -843,7 +856,7 @@ const styles = StyleSheet.create({
   planIconBox: { backgroundColor: "rgba(99,102,241,0.12)" },
   planTitleBlock: { flex: 1, gap: 2 },
   workoutTip: {
-    flexDirection: "row", alignItems: "flex-start", gap: 8,
+    flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 8,
   },
   tipEmoji: { fontSize: 13 },

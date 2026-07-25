@@ -23,11 +23,12 @@ import {
 } from "@/features/plan/api";
 import { GenerateModal } from "@/features/plan/GenerateModal";
 import { GroceryModal } from "@/features/plan/GroceryModal";
-import { resolveLanguage } from "@/utils/language";
+import { resolveLanguage, localeTag } from "@/utils/language";
 import { useT } from "@/i18n";
-import { theme } from "@/ui/theme";
+import { theme, shadow } from "@/ui/theme";
 import { MEAL_TYPE_META } from "@/ui/mealTypes";
 import { AppText } from "@/ui/components/AppText";
+import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
@@ -49,6 +50,7 @@ export default function MealPlanScreen() {
   const { token, user, updateProfile } = useAuth();
   const { markHealthDataChanged } = useHealthData();
   const lang = resolveLanguage(user?.language);
+  const locale = localeTag(lang); // date labels follow the app language, not the phone
   const t = useT();
   const L = t.plan;
 
@@ -332,7 +334,7 @@ export default function MealPlanScreen() {
   // (Eat would even log the meal into TODAY's diary). Delete stays available.
   const isPast = selectedDate < todayKey;
 
-  const selectedLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(undefined, {
+  const selectedLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(locale, {
     weekday: "long",
     month: "short",
     day: "numeric",
@@ -360,9 +362,9 @@ export default function MealPlanScreen() {
           <AppText variant="body2" style={styles.weekLabel}>
             {weekOffset === 0
               ? L.thisWeek
-              : weekDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+              : weekDays[0].toLocaleDateString(locale, { month: "short", day: "numeric" }) +
                 " – " +
-                weekDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                weekDays[6].toLocaleDateString(locale, { month: "short", day: "numeric" })}
           </AppText>
           <Pressable
             onPress={() => changeWeek(1)}
@@ -421,7 +423,7 @@ export default function MealPlanScreen() {
               <AppText variant="subtle" style={styles.smallLabel}>{selectedLabel}</AppText>
               <View style={styles.baselineRow}>
                 <AppText variant="h0" style={styles.totalKcal}>{dayTotals.calories.toLocaleString()}</AppText>
-                <AppText variant="muted" style={styles.totalGoal}>/ {goal.toLocaleString()} {L.kcalPlanned}</AppText>
+                <AppText variant="muted" style={styles.totalGoal}>/ {goal.toLocaleString()} {t.common.kcal}</AppText>
               </View>
             </View>
             {/* Regenerate just this day (today or future only) */}
@@ -445,9 +447,11 @@ export default function MealPlanScreen() {
             )}
           </View>
           <View style={styles.macroStrip}>
-            <AppText variant="subtle" style={styles.smallLabel}>P {Math.round(dayTotals.protein)}g</AppText>
-            <AppText variant="subtle" style={styles.smallLabel}>C {Math.round(dayTotals.carbs)}g</AppText>
-            <AppText variant="subtle" style={styles.smallLabel}>F {Math.round(dayTotals.fat)}g</AppText>
+            <AppText variant="subtle" style={[styles.smallLabel, styles.macroP]}>P {Math.round(dayTotals.protein)}g</AppText>
+            <View style={styles.macroDivider} />
+            <AppText variant="subtle" style={[styles.smallLabel, styles.macroC]}>C {Math.round(dayTotals.carbs)}g</AppText>
+            <View style={styles.macroDivider} />
+            <AppText variant="subtle" style={[styles.smallLabel, styles.macroF]}>F {Math.round(dayTotals.fat)}g</AppText>
           </View>
           {/* AI workout suggestion for the selected day — structured suggestions
               get a one-tap "✓ Done" (today/past only, mirrors the meal Eat rule) */}
@@ -457,8 +461,8 @@ export default function MealPlanScreen() {
               <AppText variant="body2" style={styles.tipText}>{workouts[selectedDate].text}</AppText>
               {workouts[selectedDate].done ? (
                 <View style={styles.workoutDoneChip}>
-                  <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
                   <AppText style={styles.eatenText}>{L.workoutDone}</AppText>
+                  <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
                 </View>
               ) : workouts[selectedDate].name && selectedDate === todayKey ? (
                 <Pressable
@@ -466,8 +470,8 @@ export default function MealPlanScreen() {
                   hitSlop={6}
                   style={({ pressed }) => [styles.eatBtn, pressed && styles.eatBtnPressed]}
                 >
-                  <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
                   <AppText style={styles.eatenText}>{L.markWorkoutDone}</AppText>
+                  <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
                 </Pressable>
               ) : null}
             </View>
@@ -533,8 +537,8 @@ export default function MealPlanScreen() {
 
                         {item.done ? (
                           <View style={styles.eatenChip}>
-                            <Ionicons name="checkmark-circle" size={20} color={theme.colors.accent} />
                             <AppText style={styles.eatenText}>{L.eaten}</AppText>
+                            <Ionicons name="checkmark-circle" size={20} color={theme.colors.accent} />
                           </View>
                         ) : selectedDate === todayKey ? (
                           /* Eat = log into the diary NOW → only meaningful on today.
@@ -545,8 +549,8 @@ export default function MealPlanScreen() {
                             hitSlop={6}
                             style={({ pressed }) => [styles.eatBtn, pressed && styles.eatBtnPressed]}
                           >
-                            <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
                             <AppText style={styles.eatenText}>{t.home.eat}</AppText>
+                            <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
                           </Pressable>
                         ) : null}
 
@@ -582,34 +586,36 @@ export default function MealPlanScreen() {
           </>
         )}
 
-        {/* AI actions — kept at the bottom so the calendar stays front and center */}
+        {/* AI actions — kept at the bottom so the calendar stays front and center.
+            When the day is empty the empty-state already shows a Generate CTA, so
+            the bottom button would be a duplicate; only show it once the day has
+            planned items (as a "regenerate the week" entry). */}
         <View style={styles.aiActions}>
-          <Pressable
-            onPress={() => openGenerate("week")}
-            disabled={generating}
-            style={({ pressed }) => [
-              styles.generateBtn,
-              generating ? styles.generateBtnDisabled : pressed && styles.generateBtnPressed,
-            ]}
-          >
-            {/* Loading here only when the WEEK is being generated (day regen has its own spinner) */}
-            {generating && genScope === "week" && <ActivityIndicator color="#fff" size="small" />}
-            <AppText style={styles.generateText}>
-              {generating && genScope === "week" ? L.generating : L.generate}
-            </AppText>
-          </Pressable>
+          {dayPlan.length > 0 && (
+            <Button
+              title={generating && genScope === "week" ? L.generating : L.generate}
+              variant="primary"
+              size="lg"
+              // Loading spinner only when the WEEK is generating (day regen has its own)
+              left={generating && genScope === "week"
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Ionicons name="sparkles" size={19} color="#fff" />}
+              disabled={generating}
+              onPress={() => openGenerate("week")}
+            />
+          )}
 
           {plan.length > 0 && (
-            <Pressable
-              onPress={openGrocery}
+            <Button
+              title={groceryLoading ? L.groceryLoading : L.grocery}
+              variant="secondary"
+              size="lg"
+              left={groceryLoading
+                ? <ActivityIndicator color={theme.colors.primary} size="small" />
+                : <Ionicons name="cart-outline" size={19} color={theme.colors.primary} />}
               disabled={groceryLoading}
-              style={({ pressed }) => [styles.groceryBtn, pressed && styles.groceryBtnPressed]}
-            >
-              {groceryLoading && <ActivityIndicator color={theme.colors.primary} size="small" />}
-              <AppText style={styles.groceryText}>
-                {groceryLoading ? L.groceryLoading : L.grocery}
-              </AppText>
-            </Pressable>
+              onPress={openGrocery}
+            />
           )}
         </View>
       </ScrollView>
@@ -650,7 +656,13 @@ const styles = StyleSheet.create({
   },
 
   // Week navigator + day strip
-  weekNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  weekNav: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.card,
+    paddingVertical: 6, paddingHorizontal: 8,
+    ...shadow(1),
+  },
   navBtn: { padding: 4 },
   weekLabel: { fontWeight: "700" },
   weekRow: { flexDirection: "row", justifyContent: "space-between" },
@@ -694,7 +706,12 @@ const styles = StyleSheet.create({
   redoIconBox: { width: 14, height: 14, alignItems: "center", justifyContent: "center" },
   redoSpinner: { transform: [{ scale: 0.7 }] },
   redoText: { fontSize: 11, fontWeight: "700", color: theme.colors.primary },
-  macroStrip: { flexDirection: "row", gap: 14, marginTop: 10 },
+  macroStrip: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 },
+  macroDivider: { width: 1, height: 11, backgroundColor: theme.colors.border },
+  // Macro colours match Progress: protein orange, carbs green, fat indigo
+  macroP: { color: theme.colors.accent2, fontWeight: "700" },
+  macroC: { color: theme.colors.accent, fontWeight: "700" },
+  macroF: { color: theme.colors.indigo, fontWeight: "700" },
   workoutTip: {
     flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10,
     backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 10,
@@ -741,20 +758,4 @@ const styles = StyleSheet.create({
 
   // AI actions
   aiActions: { gap: 10, marginTop: 6 },
-  generateBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 14, paddingVertical: 13,
-  },
-  generateBtnPressed: { backgroundColor: theme.colors.primary2 },
-  generateBtnDisabled: { backgroundColor: theme.colors.border },
-  generateText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  groceryBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    borderWidth: 1.5, borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 14, paddingVertical: 11,
-  },
-  groceryBtnPressed: { backgroundColor: theme.colors.tint },
-  groceryText: { color: theme.colors.primary, fontWeight: "700", fontSize: 13 },
 });

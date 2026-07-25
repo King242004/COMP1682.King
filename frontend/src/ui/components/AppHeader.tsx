@@ -49,7 +49,7 @@ export function AppHeader() {
         {/* Frosted pill — same visual language as the avatar circle on this header */}
         {streak > 0 && (
           <View style={styles.streakPill}>
-            <AppText style={styles.streakEmoji}>🔥</AppText>
+            <Ionicons name="flame" size={14} color="#fff" />
             <AppText style={styles.streakNum}>{streak}</AppText>
           </View>
         )}
@@ -82,8 +82,6 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 52 : 16,
     paddingBottom: 16,
     backgroundColor: theme.colors.primary,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
   left: { flexDirection: "row", alignItems: "center", gap: 10 },
   avatar: {
@@ -102,7 +100,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "rgba(255,255,255,0.25)",
     paddingHorizontal: 11, paddingVertical: 6, borderRadius: 99,
   },
-  streakEmoji: { fontSize: 14 },
   streakNum: { fontSize: 13, fontWeight: "800", color: "#FFFFFF" },
   bell: {
     width: 40, height: 40, borderRadius: 20,

@@ -10,9 +10,10 @@ const H = 160;             // svg height
 const PAD_X = 34;          // left gutter for the kg axis labels
 const PAD_Y = 18;          // breathing room above/below the line
 
-export function WeightChart({ logs, targetWeight }: {
+export function WeightChart({ logs, targetWeight, locale }: {
   logs: WeightEntry[];       // oldest → newest, length ≥ 2 (parent guards)
   targetWeight: number | null;
+  locale?: string;           // date labels follow the app language
 }) {
   // Chart must fill the card → measure the available width at runtime
   const [width, setWidth] = useState(0);
@@ -35,7 +36,7 @@ export function WeightChart({ logs, targetWeight }: {
 
   // Short date labels for first + last entry
   const dLabel = (d: string) =>
-    new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    new Date(d + "T00:00:00").toLocaleDateString(locale, { month: "short", day: "numeric" });
 
   return (
     <View onLayout={onLayout} style={styles.wrap}>

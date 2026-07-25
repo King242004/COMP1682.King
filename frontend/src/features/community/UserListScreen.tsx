@@ -58,6 +58,7 @@ export default function UserListScreen() {
         data={users}
         keyExtractor={(u) => u.id}
         contentContainerStyle={styles.listContent}
+        alwaysBounceVertical
         ListHeaderComponent={
           <View style={styles.header}>
             <ScreenHeader title={title} />
