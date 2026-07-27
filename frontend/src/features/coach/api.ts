@@ -67,7 +67,8 @@ export async function chatWithCoach(
   message: string,
   history: ChatMessage[],
   language: Lang,
-  image?: { base64: string; mimeType: string }
+  image?: { base64: string; mimeType: string },
+  source?: "community"
 ): Promise<{ reply: string; meal: SuggestedMeal | null; eating: boolean; messageId: string | null }> {
   // Sliding window: the AI only needs recent conversational flow — durable
   // facts (profile, conditions, meals...) are re-grounded from the DB every
@@ -77,7 +78,7 @@ export async function chatWithCoach(
   const data = await apiRequest(
     "/coach/chat",
     "POST",
-    { message, history: slimHistory, language, image: image?.base64, mimeType: image?.mimeType },
+    { message, history: slimHistory, language, image: image?.base64, mimeType: image?.mimeType, source },
     token,
     { timeoutMs: AI_TIMEOUT_MS }
   );

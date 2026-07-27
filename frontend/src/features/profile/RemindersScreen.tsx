@@ -80,7 +80,11 @@ export default function RemindersScreen() {
 
   return (
     <Screen padded={false} keyboard>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <ScreenHeader title={t.settings.mealReminder} />
 
         <AppText variant="muted" style={styles.intro}>{t.settings.reminderScreenIntro}</AppText>

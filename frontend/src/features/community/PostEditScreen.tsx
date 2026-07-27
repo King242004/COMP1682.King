@@ -3,8 +3,16 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Tex
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
+import { useMeals } from "@/context/MealsContext";
 import { getPost, updatePost, type FeedPost } from "@/features/community/api";
 import { PhotoPickerModal } from "@/features/community/PhotoPickerModal";
+import {
+  PostMealSelector,
+  type MealSource,
+  type PostKind,
+  type PostMealChoice,
+} from "@/features/community/PostMealSelector";
+import { recentUniqueMeals } from "@/utils/mealSlot";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -13,23 +21,31 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
-// Edit = caption + attached meal + photos. Existing photos can be removed
-// (keepUrls) and new ones added (picker), min 1 / max 10 like post-create.
+// Edit caption, post kind, dish details and photos. Existing photos can be
+// removed and new ones added, with the same 1 to 10 rule as post-create.
 export default function PostEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { token } = useAuth();
+  const { historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
 
   const [post, setPost] = useState<FeedPost | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   const [caption, setCaption] = useState("");
-  const [keepMeal, setKeepMeal] = useState(true);
+  const [postKind, setPostKind] = useState<PostKind>("share");
+  const [mealSource, setMealSource] = useState<MealSource>("manual");
+  const [dishName, setDishName] = useState("");
+  const [selectedMeal, setSelectedMeal] = useState<PostMealChoice | null>(null);
   const [keepUrls, setKeepUrls] = useState<string[]>([]); // existing images kept
   const [newUris, setNewUris] = useState<string[]>([]);   // freshly picked, local
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchMealHistory();
+  }, [fetchMealHistory]);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -38,6 +54,16 @@ export default function PostEditScreen() {
         setPost(p);
         setCaption(p.caption);
         setKeepUrls(p.images || []);
+        const initialDishName = p.dishName || p.meal?.name || "";
+        setPostKind(initialDishName ? "meal" : "share");
+        setDishName(initialDishName);
+        if (p.meal) {
+          setMealSource("diary");
+          setSelectedMeal({ id: `attached-${p.id}`, ...p.meal });
+        } else {
+          setMealSource("manual");
+          setSelectedMeal(null);
+        }
         setLoadError(false);
       })
       .catch(() => setLoadError(true));
@@ -45,9 +71,26 @@ export default function PostEditScreen() {
 
   const MAX_IMAGES = 10;
   const totalImages = keepUrls.length + newUris.length;
+  const recentMeals = recentUniqueMeals(historyMeals, 8);
 
   // Photo-required rule: the post must keep at least one image after the edit
-  const canSave = totalImages > 0 && !saving;
+  const hasValidDish = dishName.trim().length >= 2;
+  const canSave = totalImages > 0 && (postKind === "share" || hasValidDish) && !saving;
+
+  const changeMealSource = (source: MealSource) => {
+    setMealSource(source);
+    if (source === "manual") {
+      if (selectedMeal) setDishName(selectedMeal.name);
+      setSelectedMeal(null);
+    } else {
+      setDishName(selectedMeal?.name || "");
+    }
+  };
+
+  const selectMeal = (meal: PostMealChoice) => {
+    setSelectedMeal(meal);
+    setDishName(meal.name);
+  };
 
   const handleSave = async () => {
     if (!token || !id || !canSave) return;
@@ -55,7 +98,10 @@ export default function PostEditScreen() {
     try {
       await updatePost(token, id, {
         caption: caption.trim(),
-        removeMeal: !!post?.meal && !keepMeal,
+        dishName: postKind === "meal" ? dishName.trim() : null,
+        meal: postKind === "meal" && mealSource === "diary" ? selectedMeal : null,
+        removeDish: postKind === "share",
+        removeMeal: postKind === "share" || mealSource === "manual" || !selectedMeal,
         keepUrls,
         newImageUris: newUris,
       });
@@ -149,28 +195,18 @@ export default function PostEditScreen() {
           )}
         </View>
 
-        {/* Attached meal — can be kept or removed (not re-picked here) */}
-        {post.meal && (
-          <View style={styles.mealSection}>
-            <AppText variant="subtle" style={styles.sectionLabel}>{t.community.attachedMeal}</AppText>
-            <Card style={[styles.mealCard, !keepMeal && styles.mealCardOff]}>
-              <View style={styles.mealIcon}>
-                <AppText style={styles.mealEmoji}>🍽️</AppText>
-              </View>
-              <View style={styles.mealInfo}>
-                <AppText variant="body2" style={[styles.mealName, !keepMeal && styles.strike]}>{post.meal.name}</AppText>
-                <AppText variant="subtle" style={styles.mealMeta}>{post.meal.calories} kcal</AppText>
-              </View>
-              <Pressable onPress={() => setKeepMeal((v) => !v)} hitSlop={8}>
-                <Ionicons
-                  name={keepMeal ? "close-circle" : "add-circle"}
-                  size={22}
-                  color={keepMeal ? theme.colors.subtle : theme.colors.accent}
-                />
-              </Pressable>
-            </Card>
-          </View>
-        )}
+        {/* Post kind and optional dish details */}
+        <PostMealSelector
+          kind={postKind}
+          onKindChange={setPostKind}
+          source={mealSource}
+          onSourceChange={changeMealSource}
+          dishName={dishName}
+          onDishNameChange={setDishName}
+          recentMeals={recentMeals}
+          selectedMeal={selectedMeal}
+          onSelectMeal={selectMeal}
+        />
 
         <Button title={saving ? t.common.saving : t.community.saveChanges} size="lg" disabled={!canSave} onPress={handleSave} />
       </ScrollView>
@@ -209,17 +245,5 @@ const styles = StyleSheet.create({
   },
   addThumbCount: { fontSize: 11 },
   photoRequiredHint: { fontSize: 11, marginLeft: 4 },
-  mealSection: { gap: theme.space.sm },
   sectionLabel: { fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginLeft: 4 },
-  mealCard: { padding: theme.space.md, flexDirection: "row", alignItems: "center", gap: 10 },
-  mealCardOff: { opacity: 0.6 },
-  mealIcon: {
-    width: 36, height: 36, borderRadius: 12, backgroundColor: theme.colors.tint,
-    alignItems: "center", justifyContent: "center",
-  },
-  mealEmoji: { fontSize: 18 },
-  mealInfo: { flex: 1 },
-  mealName: { fontWeight: "700" },
-  strike: { textDecorationLine: "line-through" },
-  mealMeta: { fontSize: 11 },
 });

@@ -305,7 +305,7 @@ export default function MealPlanScreen() {
     Alert.alert(t.home.removePlanTitle, L.removePlanMsg(item.name), [
       { text: t.common.cancel, style: "cancel" },
       {
-        text: t.common.delete,
+        text: t.home.remove,
         style: "destructive",
         onPress: async () => {
           if (!token) return;

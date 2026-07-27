@@ -124,7 +124,7 @@ ${langDirective(req.query.language)} Every string value in the JSON must be in t
 exports.chat = async (req, res) => {
   const validated = validateCoachChat(req.body);
   if (validated.error) return res.status(400).json({ message: validated.error });
-  const { message: text, history, image, mimeType } = validated.value;
+  const { message: text, history, image, mimeType, source } = validated.value;
 
   // Default question when the user sends only a photo
   const userText = text || "Is this dish suitable for me?";
@@ -141,10 +141,14 @@ exports.chat = async (req, res) => {
       ? "\nThe user sent a food PHOTO. Briefly name the dish and a short verdict on whether it suits them today. 2-3 sentences."
       : "";
 
+    const communityRecipeNote = source === "community"
+      ? `\nCOMMUNITY RECIPE CONTEXT: The dish name came from another user's community post. You do not know the poster's exact recipe. When giving cooking steps, clearly say once that this is a common reference method which may differ from the post, invite the user to adjust ingredients and taste, and mention that calories and nutrition vary with ingredients and portion size. Never claim the poster used specific ingredients or steps.`
+      : "";
+
     const hour = new Date().getHours();
 
     const prompt = `${SAFETY}
-${langDirective(req.body.language)}${imageNote}
+${langDirective(req.body.language)}${imageNote}${communityRecipeNote}
 
 ${contextToText(ctx)}
 

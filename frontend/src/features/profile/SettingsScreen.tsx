@@ -124,7 +124,11 @@ export default function SettingsScreen() {
 
   return (
     <Screen padded={false}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <ScreenHeader title={t.settings.title} />
         <AppText variant="muted" style={styles.subtitle}>{t.settings.subtitle}</AppText>
 

@@ -16,6 +16,8 @@ const postSchema = new mongoose.Schema(
         publicId: { type: String, default: null },
       },
     ],
+    // A post can be about a dish without carrying a nutrition snapshot.
+    dishName: { type: String, trim: true, maxlength: 100, default: null },
     // Frozen snapshot of the meal at post time — so editing/deleting the original
     // meal never breaks an existing post. Null if the post isn't about a meal.
     meal: {

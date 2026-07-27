@@ -5,12 +5,21 @@ export type FeedPost = {
   caption: string;
   image: string | null;   // first image (legacy readers / grid tile)
   images: string[];       // all images, Instagram-style (max 10)
-  meal: { name: string; calories: number; protein: number; carbs: number; fat: number } | null;
+  dishName: string | null;
+  meal: MealSnapshot | null;
   likeCount: number;
   isLiked: boolean;
   isSaved: boolean;
   createdAt: string;
   author: { id: string; name: string; avatar: string | null };
+};
+
+export type MealSnapshot = {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
 };
 
 export type PublicProfile = {
@@ -127,17 +136,19 @@ export async function unfollowUser(token: string, userId: string): Promise<void>
   await apiRequest(`/community/follow/${userId}`, "DELETE", undefined, token);
 }
 
-// Create a post — multipart because it may include images (max 5, Instagram-style)
+// Create a post with up to 10 images. A dish name can exist without nutrition.
 export async function createPost(
   token: string,
   input: {
     caption?: string;
     imageUris?: string[];
-    meal?: { name: string; calories: number; protein: number; carbs: number; fat: number } | null;
+    dishName?: string | null;
+    meal?: MealSnapshot | null;
   }
 ): Promise<FeedPost> {
   const form = new FormData();
   if (input.caption) form.append("caption", input.caption);
+  if (input.dishName) form.append("dishName", input.dishName);
   if (input.meal) {
     form.append("mealName", input.meal.name);
     form.append("calories", String(input.meal.calories));
@@ -167,7 +178,10 @@ export async function updatePost(
   postId: string,
   input: {
     caption: string;
-    removeMeal?: boolean;     // drop the attached meal snapshot
+    dishName?: string | null;
+    meal?: MealSnapshot | null;
+    removeDish?: boolean;
+    removeMeal?: boolean;
     keepUrls?: string[];      // existing image URLs to keep (omit = keep all)
     newImageUris?: string[];  // local URIs to upload and append
   }
@@ -180,6 +194,17 @@ export async function updatePost(
       "PATCH",
       {
         caption: input.caption,
+        ...(input.dishName != null ? { dishName: input.dishName } : {}),
+        ...(input.meal
+          ? {
+              mealName: input.meal.name,
+              calories: input.meal.calories,
+              protein: input.meal.protein,
+              carbs: input.meal.carbs,
+              fat: input.meal.fat,
+            }
+          : {}),
+        ...(input.removeDish ? { removeDish: true } : {}),
         ...(input.removeMeal ? { removeMeal: true } : {}),
         ...(input.keepUrls ? { keepUrls: input.keepUrls } : {}),
       },
@@ -190,6 +215,15 @@ export async function updatePost(
 
   const form = new FormData();
   form.append("caption", input.caption);
+  if (input.dishName != null) form.append("dishName", input.dishName);
+  if (input.meal) {
+    form.append("mealName", input.meal.name);
+    form.append("calories", String(input.meal.calories));
+    form.append("protein", String(input.meal.protein));
+    form.append("carbs", String(input.meal.carbs));
+    form.append("fat", String(input.meal.fat));
+  }
+  if (input.removeDish) form.append("removeDish", "true");
   if (input.removeMeal) form.append("removeMeal", "true");
   form.append("keepUrls", JSON.stringify(input.keepUrls || []));
   for (const uri of newUris) {

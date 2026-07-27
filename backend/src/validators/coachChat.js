@@ -29,7 +29,9 @@ function validateCoachChat(body = {}) {
       }))
     : [];
 
-  return { value: { message, image, mimeType, history } };
+  const source = body.source === "community" ? "community" : null;
+
+  return { value: { message, image, mimeType, history, source } };
 }
 
 module.exports = { validateCoachChat };

@@ -124,7 +124,11 @@ export default function ProgressScreen() {
 
   return (
     <Screen padded={false}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header + Week/Month/Year toggle */}
         <ScreenHeader
           title={t.progress.title}

@@ -39,6 +39,7 @@ router.use(protect);
  *             properties:
  *               image: { type: string, format: binary }
  *               caption: { type: string }
+ *               dishName: { type: string, description: Dish name without requiring nutrition data }
  *               mealName: { type: string }
  *               calories: { type: number }
  *               protein: { type: number }
@@ -124,6 +125,8 @@ router.delete("/posts/:id", deletePost);
  *               images: { type: array, items: { type: string, format: binary } }
  *               keepUrls: { type: string, description: JSON array of existing image URLs to keep }
  *               caption: { type: string }
+ *               dishName: { type: string }
+ *               removeDish: { type: boolean }
  *               removeMeal: { type: boolean }
  *     responses: { 200: { description: Post updated } }
  */

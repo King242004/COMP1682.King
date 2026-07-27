@@ -71,6 +71,7 @@ export default function CoachTab() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingImage, setPendingImage] = useState<{ uri: string; base64: string } | null>(null);
+  const [communityRecipeNotice, setCommunityRecipeNotice] = useState(false);
 
   useEffect(() => {
     const subscription = Keyboard.addListener("keyboardDidShow", () => {
@@ -166,7 +167,7 @@ export default function CoachTab() {
     }, [loadInsight, revision])
   );
 
-  const send = useCallback(async (text: string, displayText?: string) => {
+  const send = useCallback(async (text: string, displayText?: string, source?: "community") => {
     const msg = text.trim();
     const img = pendingImage;
     if ((!msg && !img) || sending || !token) return;
@@ -179,7 +180,14 @@ export default function CoachTab() {
     setSending(true);
     setTimeout(() => scrollToLatest(true), 50);
     try {
-      const { reply, meal, eating, messageId } = await chatWithCoach(token, msg, prior, lang, img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined);
+      const { reply, meal, eating, messageId } = await chatWithCoach(
+        token,
+        msg,
+        prior,
+        lang,
+        img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined,
+        source
+      );
       setMessages((prev) => [...prev, { id: messageId ?? undefined, role: "coach", text: reply, meal, eating, createdAt: new Date().toISOString() }]);
     } catch (error: unknown) {
       const quota = /quota/i.test(getErrorMessage(error));
@@ -200,7 +208,11 @@ export default function CoachTab() {
   // Deep-link question (e.g. tapping a plan dish → "how do I cook X?").
   // `askId` makes each tap unique; the ref consumes it once so switching back to
   // the tab later doesn't re-send the same question (tab params persist).
-  const { ask, askId } = useLocalSearchParams<{ ask?: string; askId?: string }>();
+  const { ask, askId, recipeNotice } = useLocalSearchParams<{
+    ask?: string;
+    askId?: string;
+    recipeNotice?: string;
+  }>();
   const consumedAskRef = useRef<string | null>(null);
   useEffect(() => {
     if (!ask || !askId || consumedAskRef.current === askId) return;
@@ -208,8 +220,10 @@ export default function CoachTab() {
     // question bubble) and for any in-flight send. Effect re-runs as these settle.
     if (!token || sending || !historyLoaded) return;
     consumedAskRef.current = askId;
-    send(String(ask));
-  }, [ask, askId, token, sending, historyLoaded, send]);
+    const isCommunityRecipe = recipeNotice === "community";
+    setCommunityRecipeNotice(isCommunityRecipe);
+    send(String(ask), undefined, isCommunityRecipe ? "community" : undefined);
+  }, [ask, askId, recipeNotice, token, sending, historyLoaded, send]);
 
   // Pick meal type on the suggested-meal card (before adding) — local only.
   const setMealType = (index: number, mealType: string) => {
@@ -417,6 +431,28 @@ export default function CoachTab() {
           )}
         </View>
 
+        {communityRecipeNotice && (
+          <View style={styles.communityRecipeNotice}>
+            <Ionicons name="information-circle-outline" size={18} color={theme.colors.primary} />
+            <View style={styles.communityRecipeTextWrap}>
+              <AppText variant="body2" style={styles.communityRecipeText}>
+                {t.community.recipeReferenceNotice}
+              </AppText>
+              <AppText variant="subtle" style={styles.communityNutritionText}>
+                {t.community.nutritionMayVary}
+              </AppText>
+            </View>
+            <Pressable
+              onPress={() => setCommunityRecipeNotice(false)}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={({ pressed }) => pressed && styles.dim}
+            >
+              <Ionicons name="close" size={18} color={theme.colors.subtle} />
+            </Pressable>
+          </View>
+        )}
+
         {/* Pending image preview */}
         {pendingImage && (
           <View style={styles.pendingRow}>
@@ -541,6 +577,21 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   pendingText: { fontSize: 12 },
+
+  communityRecipeNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 8,
+    padding: theme.space.md,
+    borderRadius: theme.radius.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.tintSoft,
+  },
+  communityRecipeTextWrap: { flex: 1, gap: 4 },
+  communityRecipeText: { fontSize: 12, lineHeight: 18 },
+  communityNutritionText: { fontSize: 11, lineHeight: 16 },
 
   inputBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, paddingBottom: 14 },
   cameraBtn: {

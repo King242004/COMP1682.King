@@ -7,10 +7,11 @@ describe("validateCoachChat", () => {
 
   test("normalizes text and keeps only the latest ten history turns", () => {
     const history = Array.from({ length: 12 }, (_, index) => ({ role: "user", text: `turn-${index}` }));
-    const result = validateCoachChat({ message: "  hello  ", history });
+    const result = validateCoachChat({ message: "  hello  ", history, source: "community" });
     expect(result.value.message).toBe("hello");
     expect(result.value.history).toHaveLength(10);
     expect(result.value.history[0].text).toBe("turn-2");
+    expect(result.value.source).toBe("community");
   });
 
   test("rejects oversized text, images and unsupported MIME types", () => {

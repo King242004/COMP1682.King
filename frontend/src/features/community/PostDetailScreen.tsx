@@ -88,26 +88,33 @@ export default function PostDetailScreen() {
 
   // "Try this meal" actions — the WEAR save-and-act loop
   const askCoachHow = () => {
-    if (!post?.meal) return;
+    const dishName = post?.dishName || post?.meal?.name;
+    if (!dishName) return;
     router.push({
       pathname: "/tabs/coach" as any,
       params: {
-        ask: t.community.cookQuestion(post.meal.name),
+        ask: t.community.cookQuestion(dishName),
+        recipeNotice: "community",
         askId: String(Date.now()), // unique per tap — consumed once on the Coach tab
       },
     });
   };
 
   const addToDiary = () => {
-    if (!post?.meal) return;
+    const dishName = post?.dishName || post?.meal?.name;
+    if (!dishName) return;
     router.push({
       pathname: "/meals/add" as any,
       params: {
-        prefillName: post.meal.name,
-        prefillCalories: String(post.meal.calories),
-        prefillProtein: String(post.meal.protein),
-        prefillCarbs: String(post.meal.carbs),
-        prefillFat: String(post.meal.fat),
+        prefillName: dishName,
+        ...(post.meal
+          ? {
+              prefillCalories: String(post.meal.calories),
+              prefillProtein: String(post.meal.protein),
+              prefillCarbs: String(post.meal.carbs),
+              prefillFat: String(post.meal.fat),
+            }
+          : {}),
         source: "community",
       },
     });
@@ -138,6 +145,7 @@ export default function PostDetailScreen() {
   }
 
   const isMine = post.author.id === user?.id;
+  const dishName = post.dishName || post.meal?.name || null;
 
   return (
     <Screen padded={false}>
@@ -173,6 +181,17 @@ export default function PostDetailScreen() {
               </AppText>
             </View>
           </Pressable>
+
+          <View style={[styles.typePill, dishName ? styles.mealTypePill : styles.shareTypePill]}>
+            <Ionicons
+              name={dishName ? "restaurant-outline" : "images-outline"}
+              size={14}
+              color={dishName ? theme.colors.primary : theme.colors.muted}
+            />
+            <AppText style={[styles.typePillText, !dishName && styles.shareTypeText]}>
+              {dishName ? t.community.mealBadge : t.community.shareBadge}
+            </AppText>
+          </View>
 
           {!!post.caption && (
             <AppText variant="body2" style={styles.caption}>{post.caption}</AppText>
@@ -226,15 +245,17 @@ export default function PostDetailScreen() {
           ) : null}
 
           {/* Nutrition snapshot */}
-          {post.meal && (
+          {dishName && (
             <View style={styles.mealChip}>
               <View style={styles.mealIcon}>
                 <Ionicons name="restaurant-outline" size={18} color={theme.colors.primary} />
               </View>
               <View style={styles.flex1}>
-                <AppText variant="body2" style={styles.bold}>{post.meal.name}</AppText>
+                <AppText variant="body2" style={styles.bold}>{dishName}</AppText>
                 <AppText variant="subtle" style={styles.timeText}>
-                  {post.meal.calories} {t.common.kcal} · P {post.meal.protein} · C {post.meal.carbs} · F {post.meal.fat}
+                  {post.meal
+                    ? `${post.meal.calories} ${t.common.kcal} · P ${post.meal.protein} · C ${post.meal.carbs} · F ${post.meal.fat}`
+                    : t.community.nutritionMissing}
                 </AppText>
               </View>
             </View>
@@ -279,19 +300,36 @@ export default function PostDetailScreen() {
         </Card>
 
         {/* Try this meal — save-and-act loop unique to MealMate */}
-        {post.meal && (
+        {dishName ? (
           <View style={styles.trySection}>
             <AppText variant="subtle" style={styles.sectionLabel}>{t.community.tryThisMeal}</AppText>
+            <View style={styles.referenceNote}>
+              <Ionicons name="information-circle-outline" size={16} color={theme.colors.subtle} />
+              <AppText variant="subtle" style={styles.referenceNoteText}>{t.community.nutritionMayVary}</AppText>
+            </View>
             <View style={styles.tryRow}>
-              <Pressable onPress={askCoachHow} style={({ pressed }) => [styles.tryBtn, pressed && styles.pressed]}>
+              <Pressable
+                onPress={askCoachHow}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.tryBtn, pressed && styles.pressed]}
+              >
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.colors.primary} />
                 <AppText style={styles.tryBtnText}>{t.community.howToCook}</AppText>
               </Pressable>
-              <Pressable onPress={addToDiary} style={({ pressed }) => [styles.tryBtn, styles.tryBtnAccent, pressed && styles.pressed]}>
+              <Pressable
+                onPress={addToDiary}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.tryBtn, styles.tryBtnAccent, pressed && styles.pressed]}
+              >
                 <Ionicons name="add-circle-outline" size={18} color={theme.colors.accent} />
                 <AppText style={[styles.tryBtnText, styles.tryBtnTextAccent]}>{t.community.addToDiary}</AppText>
               </Pressable>
             </View>
+          </View>
+        ) : (
+          <View style={styles.generalInfo}>
+            <Ionicons name="information-circle-outline" size={18} color={theme.colors.subtle} />
+            <AppText variant="subtle" style={styles.generalInfoText}>{t.community.generalPostInfo}</AppText>
           </View>
         )}
       </ScrollView>
@@ -336,6 +374,21 @@ const styles = StyleSheet.create({
   bold: { fontWeight: "700" },
   timeText: { fontSize: 11 },
   caption: { paddingHorizontal: theme.space.lg, paddingBottom: theme.space.md },
+  typePill: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginHorizontal: theme.space.lg,
+    marginBottom: theme.space.md,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.radius.pill,
+  },
+  mealTypePill: { backgroundColor: theme.colors.tint },
+  shareTypePill: { backgroundColor: "rgba(0,0,0,0.04)" },
+  typePillText: { color: theme.colors.primary, fontSize: 11, fontWeight: "700" },
+  shareTypeText: { color: theme.colors.muted },
   postImage: { width: "100%", aspectRatio: 1 },
   countPill: {
     position: "absolute", right: 10, top: 10,
@@ -364,6 +417,8 @@ const styles = StyleSheet.create({
   likeCountLiked: { color: theme.colors.danger },
   footerActions: { flexDirection: "row", alignItems: "center", gap: 18 },
   trySection: { gap: theme.space.sm },
+  referenceNote: { flexDirection: "row", alignItems: "flex-start", gap: 7, paddingHorizontal: 4 },
+  referenceNoteText: { flex: 1, fontSize: 11, lineHeight: 16 },
   sectionLabel: { fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginLeft: 4 },
   tryRow: { flexDirection: "row", gap: theme.space.sm },
   tryBtn: {
@@ -374,5 +429,14 @@ const styles = StyleSheet.create({
   tryBtnAccent: { backgroundColor: "rgba(5,150,105,0.10)" },
   tryBtnText: { fontSize: 13, fontWeight: "700", color: theme.colors.primary },
   tryBtnTextAccent: { color: theme.colors.accent },
+  generalInfo: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: theme.space.md,
+    borderRadius: theme.radius.card,
+    backgroundColor: "rgba(0,0,0,0.03)",
+  },
+  generalInfoText: { flex: 1, fontSize: 12, lineHeight: 18 },
   pressed: { opacity: 0.7 },
 });

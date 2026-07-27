@@ -44,6 +44,7 @@ function shapePost(post, currentUserId) {
     caption: post.caption,
     image: images[0] || null,
     images,
+    dishName: post.dishName || post.meal?.name || null,
     meal: post.meal && post.meal.name ? post.meal : null,
     likeCount: post.likes.length,
     isLiked: post.likes.some((id) => id.toString() === currentUserId),
@@ -61,7 +62,7 @@ function shapePost(post, currentUserId) {
 // ─── Create Post ────────────────────────────────────────────────────────────
 // Instagram-style: up to 10 images per post (upload.array in the route).
 exports.createPost = async (req, res) => {
-  const { caption, mealName, calories, protein, carbs, fat } = req.body;
+  const { caption, dishName, mealName, calories, protein, carbs, fat } = req.body;
   const files = req.files || [];
 
   // Instagram rule: a post ALWAYS carries at least one photo — caption and
@@ -71,6 +72,10 @@ exports.createPost = async (req, res) => {
 
   if (caption && caption.length > 500)
     return res.status(400).json({ message: "Caption must be 500 characters or fewer." });
+
+  const normalizedDishName = String(dishName || mealName || "").trim();
+  if (normalizedDishName.length > 100)
+    return res.status(400).json({ message: "Dish name must be 100 characters or fewer." });
 
   let images = [];
   try {
@@ -102,6 +107,7 @@ exports.createPost = async (req, res) => {
     image: images[0]?.url || null,
     imagePublicId: images[0]?.publicId || null,
     images,
+    dishName: normalizedDishName || undefined,
     meal,
     likes: [],
   });
@@ -276,7 +282,35 @@ exports.updatePost = async (req, res) => {
     post.caption = req.body.caption.trim();
   }
 
-  if (req.body.removeMeal === true || req.body.removeMeal === "true") post.meal = undefined;
+  const removeDish = req.body.removeDish === true || req.body.removeDish === "true";
+  const removeMeal = req.body.removeMeal === true || req.body.removeMeal === "true";
+  if (removeDish) {
+    post.dishName = undefined;
+    post.meal = undefined;
+  } else {
+    if (typeof req.body.dishName === "string") {
+      const normalizedDishName = req.body.dishName.trim();
+      if (normalizedDishName.length > 100)
+        return res.status(400).json({ message: "Dish name must be 100 characters or fewer." });
+      post.dishName = normalizedDishName || undefined;
+    }
+
+    if (typeof req.body.mealName === "string" && req.body.mealName.trim()) {
+      const mealName = req.body.mealName.trim();
+      if (mealName.length > 100)
+        return res.status(400).json({ message: "Dish name must be 100 characters or fewer." });
+      post.meal = {
+        name: mealName,
+        calories: Number(req.body.calories) || 0,
+        protein: Number(req.body.protein) || 0,
+        carbs: Number(req.body.carbs) || 0,
+        fat: Number(req.body.fat) || 0,
+      };
+      post.dishName = post.dishName || mealName;
+    } else if (removeMeal) {
+      post.meal = undefined;
+    }
+  }
 
   const files = req.files || [];
   if (req.body.keepUrls !== undefined || files.length > 0) {
@@ -329,7 +363,7 @@ exports.updatePost = async (req, res) => {
 
   // A post must still carry something after the edit
   const hasImage = !!post.image || (post.images || []).length > 0;
-  if (!post.caption && !hasImage && !(post.meal && post.meal.name))
+  if (!post.caption && !hasImage && !post.dishName && !(post.meal && post.meal.name))
     return res.status(400).json({ message: "A post needs a caption, photo, or meal." });
 
   await post.save();

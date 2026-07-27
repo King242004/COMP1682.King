@@ -198,8 +198,17 @@ const shift = (days) => {
   const invalidImage = await apiInvalidImageUpload("/community/posts", token);
   check("non-image upload rejected 400", invalidImage.status === 400, `got ${invalidImage.status}`);
 
-  const post = await apiUpload("/community/posts", { caption: "Bài test tự động" }, [["images", "test.jpg"]], token);
-  check("create post with photo 201", post.status === 201, `got ${post.status}`);
+  const post = await apiUpload(
+    "/community/posts",
+    { caption: "Bài test tự động", dishName: "Cơm gà" },
+    [["images", "test.jpg"]],
+    token
+  );
+  check(
+    "create post with photo 201",
+    post.status === 201 && post.data?.post?.dishName === "Cơm gà" && post.data?.post?.meal === null,
+    `got ${post.status}`
+  );
   // Guard: without this a failure above would crash the run and skip the rest
   const postId = post.data?.post?.id || post.data?.post?._id || null;
   check("created post has id", !!postId);

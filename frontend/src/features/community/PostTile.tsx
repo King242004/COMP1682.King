@@ -35,7 +35,7 @@ export function PostTile({
         <Pressable
           onPress={onPress}
           accessibilityRole="button"
-          accessibilityLabel={post.caption || post.meal?.name || t.a11y.openPost}
+          accessibilityLabel={post.caption || post.dishName || post.meal?.name || t.a11y.openPost}
           style={({ pressed }) => [styles.tilePress, pressed && styles.pressed]}
         >
         {post.image ? (
@@ -51,14 +51,22 @@ export function PostTile({
           <View style={styles.fallback}>
             <Ionicons name="restaurant-outline" size={26} color={theme.colors.primary} />
             <AppText variant="body2" style={styles.fallbackText} numberOfLines={3}>
-              {post.meal?.name || post.caption}
+              {post.dishName || post.meal?.name || post.caption}
             </AppText>
           </View>
         )}
 
         {post.meal && (
           <View style={styles.kcalChip}>
+            <Ionicons name="restaurant-outline" size={11} color="#fff" />
             <AppText style={styles.kcalText}>{post.meal.calories} {t.common.kcal}</AppText>
+          </View>
+        )}
+
+        {!post.meal && post.dishName && (
+          <View style={styles.kcalChip}>
+            <Ionicons name="restaurant-outline" size={11} color="#fff" />
+            <AppText style={styles.kcalText}>{t.community.mealBadge}</AppText>
           </View>
         )}
 
@@ -139,6 +147,7 @@ const styles = StyleSheet.create({
   fallbackText: { textAlign: "center", color: theme.colors.muted, fontWeight: "600" },
   kcalChip: {
     position: "absolute", left: 8, top: 8,
+    flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: theme.radius.pill,
     backgroundColor: "rgba(22,78,99,0.72)",
   },

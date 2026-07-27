@@ -3,9 +3,15 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
-import { useMeals, type Meal } from "@/context/MealsContext";
+import { useMeals } from "@/context/MealsContext";
 import { createPost } from "@/features/community/api";
 import { PhotoPickerModal } from "@/features/community/PhotoPickerModal";
+import {
+  PostMealSelector,
+  type MealSource,
+  type PostKind,
+  type PostMealChoice,
+} from "@/features/community/PostMealSelector";
 import { recentUniqueMeals } from "@/utils/mealSlot";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -23,7 +29,10 @@ export default function PostCreateScreen() {
 
   const [caption, setCaption] = useState("");
   const [imageUris, setImageUris] = useState<string[]>([]); // Instagram-style, max 10
-  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+  const [postKind, setPostKind] = useState<PostKind>("share");
+  const [mealSource, setMealSource] = useState<MealSource>("manual");
+  const [dishName, setDishName] = useState("");
+  const [selectedMeal, setSelectedMeal] = useState<PostMealChoice | null>(null);
   const [posting, setPosting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -37,7 +46,23 @@ export default function PostCreateScreen() {
   const removeImage = (uri: string) => setImageUris((prev) => prev.filter((u) => u !== uri));
 
   // Instagram rule: at least ONE photo is required — caption/meal are extras
-  const canPost = imageUris.length > 0 && !posting;
+  const hasValidDish = dishName.trim().length >= 2;
+  const canPost = imageUris.length > 0 && (postKind === "share" || hasValidDish) && !posting;
+
+  const changeMealSource = (source: MealSource) => {
+    setMealSource(source);
+    if (source === "manual") {
+      if (selectedMeal) setDishName(selectedMeal.name);
+      setSelectedMeal(null);
+    } else {
+      setDishName(selectedMeal?.name || "");
+    }
+  };
+
+  const selectMeal = (meal: PostMealChoice) => {
+    setSelectedMeal(meal);
+    setDishName(meal.name);
+  };
 
   const handlePost = async () => {
     if (!token || !canPost) return;
@@ -46,7 +71,8 @@ export default function PostCreateScreen() {
       await createPost(token, {
         caption: caption.trim(),
         imageUris,
-        meal: selectedMeal
+        dishName: postKind === "meal" ? dishName.trim() : null,
+        meal: postKind === "meal" && mealSource === "diary" && selectedMeal
           ? {
               name: selectedMeal.name,
               calories: selectedMeal.calories,
@@ -122,30 +148,17 @@ export default function PostCreateScreen() {
           </Pressable>
         )}
 
-        {/* Attach a meal */}
-        <View style={styles.mealSection}>
-          <AppText variant="subtle" style={styles.sectionLabel}>{t.community.attachMeal}</AppText>
-          {recentMeals.length === 0 ? (
-            <AppText variant="subtle" style={styles.noMeals}>{t.community.noLoggedMeals}</AppText>
-          ) : (
-            recentMeals.map((m) => {
-              const active = selectedMeal?.id === m.id;
-              return (
-                <Pressable key={m.id} onPress={() => setSelectedMeal(active ? null : m)}>
-                  <Card style={[styles.mealCard, active && styles.mealCardActive]}>
-                    <View style={styles.mealIcon}>
-                      <Ionicons name={active ? "checkmark" : "restaurant-outline"} size={18} color={theme.colors.primary} />
-                    </View>
-                    <View style={styles.mealInfo}>
-                      <AppText variant="body2" style={styles.mealName}>{m.name}</AppText>
-                      <AppText variant="subtle" style={styles.mealMeta}>{t.community.mealMeta(m.calories, m.date)}</AppText>
-                    </View>
-                  </Card>
-                </Pressable>
-              );
-            })
-          )}
-        </View>
+        <PostMealSelector
+          kind={postKind}
+          onKindChange={setPostKind}
+          source={mealSource}
+          onSourceChange={changeMealSource}
+          dishName={dishName}
+          onDishNameChange={setDishName}
+          recentMeals={recentMeals}
+          selectedMeal={selectedMeal}
+          onSelectMeal={selectMeal}
+        />
 
         <Button title={posting ? t.community.posting : t.community.post} size="lg" disabled={!canPost} onPress={handlePost} />
       </ScrollView>
@@ -183,19 +196,4 @@ const styles = StyleSheet.create({
     padding: theme.space.xl, alignItems: "center", gap: 8,
     borderWidth: 1, borderStyle: "dashed", borderColor: theme.colors.border,
   },
-  mealSection: { gap: theme.space.sm },
-  sectionLabel: { fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginLeft: 4 },
-  noMeals: { marginLeft: 4 },
-  mealCard: {
-    padding: theme.space.md, flexDirection: "row", alignItems: "center", gap: 10,
-    borderWidth: 1.5, borderColor: "transparent",
-  },
-  mealCardActive: { borderColor: theme.colors.primary },
-  mealIcon: {
-    width: 36, height: 36, borderRadius: 12, backgroundColor: theme.colors.tint,
-    alignItems: "center", justifyContent: "center",
-  },
-  mealInfo: { flex: 1 },
-  mealName: { fontWeight: "700" },
-  mealMeta: { fontSize: 11 },
 });
