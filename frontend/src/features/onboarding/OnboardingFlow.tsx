@@ -2,7 +2,7 @@
 // Every answer feeds the AI features (coach, suggestions, weekly plan) from
 // minute one. Every step can be skipped — the user lands on Home regardless.
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
@@ -133,6 +133,12 @@ export function OnboardingFlow() {
         {/* ── Intro ── */}
         {step === "intro" && (
           <View style={styles.introWrap}>
+            <Image
+              source={require("../../../assets/images/mealmate-logo-transparent.png")}
+              style={styles.introLogo}
+              resizeMode="contain"
+              accessibilityLabel="MealMate"
+            />
             <View style={styles.headerBlock}>
               <AppText variant="h1">{L.introTitle}</AppText>
               <AppText variant="muted">{L.introSub}</AppText>
@@ -296,6 +302,7 @@ const styles = StyleSheet.create({
   skipText: { fontSize: 13, color: theme.colors.primary },
 
   introWrap: { gap: theme.space.lg, flex: 1, justifyContent: "center" },
+  introLogo: { width: 88, height: 88, alignSelf: "center" },
   stepWrap: { gap: theme.space.lg },
   headerBlock: { gap: 8 },
   headerBlockTight: { gap: 6 },

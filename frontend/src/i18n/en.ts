@@ -495,7 +495,7 @@ export const en = {
     missingInfoMsg: "Add your weight, height, age and gender in Profile first, so we can calculate your goal automatically.",
     insights: "Insights",
     progressStats: "Progress & statistics",
-    progressSub: "Calories, nutrition and weekly trends",
+    progressSub: "Calories, activity and weekly trends",
     reminders: "Reminders",
     mealReminder: "Meal reminders",
     mealReminderNone: "None active, tap to set up",

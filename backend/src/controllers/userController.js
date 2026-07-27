@@ -269,7 +269,7 @@ exports.changeName = async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user.id,
     { name: name.trim() },
-    { new: true }
+    { returnDocument: "after" }
   ).select("-password");
 
   res.json({ message: "Name updated successfully.", user });

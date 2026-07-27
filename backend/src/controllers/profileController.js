@@ -116,7 +116,7 @@ exports.updateProfile = async (req, res) => {
       ...(isPrivate !== undefined && { isPrivate: !!isPrivate }),
       ...(targetWeight !== undefined && { targetWeight }),
     },
-    { new: true }
+    { returnDocument: "after" }
   ).select("-password");
 
   const bmi = calculateBMI(updated.weight, updated.height);

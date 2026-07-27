@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Keyboard, Pressable, StyleSheet, View } from "react-native";
+import { Image, Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
@@ -51,9 +51,12 @@ export default function LoginScreen() {
     <Screen keyboard style={styles.screen}>
       <View style={styles.wrap}>
         <View style={styles.hero}>
-          <View style={styles.logo}>
-            <AppText style={styles.logoEmoji}>🥗</AppText>
-          </View>
+          <Image
+            source={require("../../../assets/images/mealmate-logo-transparent.png")}
+            style={styles.logoImage}
+            resizeMode="contain"
+            accessibilityLabel="MealMate"
+          />
           <AppText variant="h0">MealMate</AppText>
           <AppText variant="muted" style={styles.tagline}>{t.auth.tagline}</AppText>
         </View>
@@ -115,20 +118,7 @@ const styles = StyleSheet.create({
   screen: { justifyContent: "center" },
   wrap: { gap: theme.space.xl },
   hero: { gap: 12, alignItems: "center" },
-  logo: {
-    width: 88,
-    height: 88,
-    borderRadius: 30,
-    backgroundColor: theme.colors.tint,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.18,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  logoEmoji: { fontSize: 44 },
+  logoImage: { width: 104, height: 104 },
   tagline: { textAlign: "center", paddingHorizontal: theme.space.lg },
   form: { gap: theme.space.md },
   error: { color: theme.colors.danger, textAlign: "center" },

@@ -1,8 +1,10 @@
 import { ReactNode } from "react";
 import {
   Pressable,
+  StyleSheet,
   View,
   type PressableProps,
+  type TextStyle,
   type ViewStyle,
 } from "react-native";
 import { theme } from "../theme";
@@ -29,44 +31,6 @@ export function Button({
   size?: Size;
   style?: ViewStyle;
 }) {
-  const height = size === "lg" ? 56 : 48;
-  const paddingX = size === "lg" ? theme.space.xl : theme.space.lg;
-
-  const base: ViewStyle = {
-    height,
-    borderRadius: theme.radius.button,
-    paddingHorizontal: paddingX,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 10,
-    backgroundColor:
-      variant === "primary"
-        ? theme.colors.primary
-        : variant === "danger"
-          ? "rgba(229,72,77,0.10)"
-          : variant === "secondary"
-            ? theme.colors.tint
-            : "transparent",
-    // Soft glow under primary button so it feels "tappable"
-    ...(variant === "primary" && {
-      shadowColor: theme.colors.primary,
-      shadowOpacity: 0.35,
-      shadowOffset: { width: 0, height: 6 },
-      shadowRadius: 12,
-      elevation: 5,
-    }),
-  };
-
-  const textColor =
-    variant === "primary"
-      ? "#FFFFFF"
-      : variant === "danger"
-        ? theme.colors.danger
-        : variant === "secondary"
-          ? theme.colors.primary
-          : theme.colors.text;
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -75,28 +39,82 @@ export function Button({
       onPress={onPress}
       {...props}
       style={({ pressed: isPressed }) => [
-        base,
-        isPressed && !disabled && {
-          backgroundColor:
-            variant === "primary"
-              ? theme.colors.primary2
-              : variant === "danger"
-                ? "rgba(229,72,77,0.18)"
-                : variant === "secondary"
-                  ? "rgba(8,145,178,0.18)"
-                  : "transparent",
-          transform: [{ scale: 0.98 }],
-          opacity: variant === "ghost" ? 0.7 : 1,
-        },
-        disabled && { opacity: 0.45 },
+        styles.base,
+        sizeStyles[size],
+        variantStyles[variant],
+        isPressed && !disabled && styles.pressed,
+        isPressed && !disabled && pressedVariantStyles[variant],
+        disabled && styles.disabled,
         style,
       ]}
     >
-      {left ? <View style={{ marginLeft: -4 }}>{left}</View> : null}
-      <AppText variant="body" style={{ color: textColor, fontWeight: "800" }}>
+      {left ? <View style={styles.left}>{left}</View> : null}
+      <AppText variant="body" style={[styles.text, textVariantStyles[variant]]}>
         {title}
       </AppText>
-      {right ? <View style={{ marginRight: -4 }}>{right}</View> : null}
+      {right ? <View style={styles.right}>{right}</View> : null}
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  base: {
+    borderRadius: theme.radius.button,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 10,
+  },
+  large: { height: 56, paddingHorizontal: theme.space.xl },
+  medium: { height: 48, paddingHorizontal: theme.space.lg },
+  primary: {
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  secondary: { backgroundColor: theme.colors.tint },
+  ghost: { backgroundColor: "transparent" },
+  danger: { backgroundColor: "rgba(229,72,77,0.10)" },
+  pressed: { transform: [{ scale: 0.98 }] },
+  primaryPressed: { backgroundColor: theme.colors.primary2 },
+  secondaryPressed: { backgroundColor: "rgba(8,145,178,0.18)" },
+  ghostPressed: { opacity: 0.7 },
+  dangerPressed: { backgroundColor: "rgba(229,72,77,0.18)" },
+  disabled: { opacity: 0.45 },
+  left: { marginLeft: -4 },
+  right: { marginRight: -4 },
+  text: { fontWeight: "800" },
+  primaryText: { color: "#FFFFFF" },
+  secondaryText: { color: theme.colors.primary },
+  ghostText: { color: theme.colors.text },
+  dangerText: { color: theme.colors.danger },
+});
+
+const sizeStyles: Record<Size, ViewStyle> = {
+  lg: styles.large,
+  md: styles.medium,
+};
+
+const variantStyles: Record<Variant, ViewStyle> = {
+  primary: styles.primary,
+  secondary: styles.secondary,
+  ghost: styles.ghost,
+  danger: styles.danger,
+};
+
+const pressedVariantStyles: Record<Variant, ViewStyle> = {
+  primary: styles.primaryPressed,
+  secondary: styles.secondaryPressed,
+  ghost: styles.ghostPressed,
+  danger: styles.dangerPressed,
+};
+
+const textVariantStyles: Record<Variant, TextStyle> = {
+  primary: styles.primaryText,
+  secondary: styles.secondaryText,
+  ghost: styles.ghostText,
+  danger: styles.dangerText,
+};

@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
@@ -21,7 +21,7 @@ export function ScreenHeader({
   const t = useT();
   const goBack = onBack ?? (() => router.back());
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: theme.space.md }}>
+    <View style={styles.header}>
       {title ? (
         // Titled header: chevron + big title
         <>
@@ -30,11 +30,11 @@ export function ScreenHeader({
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel={t.common.back}
-            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, marginLeft: -4 })}
+            style={({ pressed }) => [styles.backIcon, pressed && styles.pressed]}
           >
             <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           </Pressable>
-          <AppText variant="h1" style={{ flex: 1 }}>{title}</AppText>
+          <AppText variant="h1" style={styles.title}>{title}</AppText>
         </>
       ) : (
         // No title: chevron + "Back" at the same h1 size as other headers
@@ -43,7 +43,7 @@ export function ScreenHeader({
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={t.common.back}
-          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.5 : 1, marginLeft: -4, flex: 1 })}
+          style={({ pressed }) => [styles.backWithLabel, pressed && styles.pressed]}
         >
           <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
           <AppText variant="h1">{t.common.back}</AppText>
@@ -53,3 +53,22 @@ export function ScreenHeader({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: theme.space.md,
+  },
+  backIcon: { marginLeft: -4 },
+  backWithLabel: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginLeft: -4,
+  },
+  title: { flex: 1 },
+  pressed: { opacity: 0.5 },
+});

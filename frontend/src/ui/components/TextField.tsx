@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Pressable,
+  StyleSheet,
   TextInput,
   View,
   type KeyboardTypeOptions,
@@ -43,28 +44,12 @@ export function TextField({
   // inherits it without changes at the call site.
   const [hidden, setHidden] = useState(true);
 
-  // Filled style: soft tinted background, border only lights up on focus
-  const inputStyle = useMemo(
-    () => ({
-      height: 54,
-      borderRadius: theme.radius.input,
-      borderWidth: 1.5,
-      borderColor: focused ? theme.colors.primary : "transparent",
-      paddingHorizontal: theme.space.lg,
-      backgroundColor: focused ? theme.colors.surface : "rgba(8,145,178,0.06)",
-      color: theme.colors.text,
-      fontSize: 15,
-      fontWeight: "600" as const,
-    }),
-    [focused],
-  );
-
   return (
-    <View style={[{ gap: 8 }, style]}>
-      <AppText variant="caption" style={{ color: theme.colors.muted }}>
+    <View style={[styles.field, style]}>
+      <AppText variant="caption" style={styles.label}>
         {label}
       </AppText>
-      <View style={{ justifyContent: "center" }}>
+      <View style={styles.inputWrap}>
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -76,16 +61,26 @@ export function TextField({
           autoCorrect={autoCorrect}
           textContentType={textContentType}
           returnKeyType={returnKeyType}
-          style={[inputStyle, secureTextEntry ? { paddingRight: 48 } : null]}
+          style={[
+            styles.input,
+            focused ? styles.inputFocused : styles.inputIdle,
+            secureTextEntry && styles.inputSecure,
+          ]}
           {...inputProps}
-          onFocus={(e) => { setFocused(true); inputProps?.onFocus?.(e); }}
-          onBlur={(e) => { setFocused(false); inputProps?.onBlur?.(e); }}
+          onFocus={(event) => {
+            setFocused(true);
+            inputProps?.onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            inputProps?.onBlur?.(event);
+          }}
         />
         {secureTextEntry && (
           <Pressable
             onPress={() => setHidden((v) => !v)}
             hitSlop={10}
-            style={({ pressed }) => ({ position: "absolute", right: 16, opacity: pressed ? 0.5 : 1 })}
+            style={({ pressed }) => [styles.eyeButton, pressed && styles.pressed]}
           >
             <Ionicons name={hidden ? "eye-outline" : "eye-off-outline"} size={20} color={theme.colors.subtle} />
           </Pressable>
@@ -94,3 +89,29 @@ export function TextField({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  field: { gap: 8 },
+  label: { color: theme.colors.muted },
+  inputWrap: { justifyContent: "center" },
+  input: {
+    height: 54,
+    borderRadius: theme.radius.input,
+    borderWidth: 1.5,
+    paddingHorizontal: theme.space.lg,
+    color: theme.colors.text,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  inputIdle: {
+    borderColor: "transparent",
+    backgroundColor: "rgba(8,145,178,0.06)",
+  },
+  inputFocused: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+  },
+  inputSecure: { paddingRight: 48 },
+  eyeButton: { position: "absolute", right: 16 },
+  pressed: { opacity: 0.5 },
+});

@@ -46,7 +46,7 @@ exports.logWeight = async (req, res) => {
   const log = await WeightLog.findOneAndUpdate(
     { user: req.user.id, date: day },
     { $set: { weightKg: rounded } },
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   // Sync profile weight only if no NEWER log exists (back-filling an old day

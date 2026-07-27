@@ -210,7 +210,7 @@ export const vi: Strings = {
     missingInfoMsg: "Nhập cân nặng, chiều cao, tuổi và giới tính trong Hồ sơ trước để tính mục tiêu tự động.",
     insights: "Thống kê",
     progressStats: "Tiến độ & thống kê",
-    progressSub: "Calo, dinh dưỡng và xu hướng theo tuần",
+    progressSub: "Calo, vận động và xu hướng theo tuần",
     reminders: "Nhắc nhở",
     mealReminder: "Nhắc ghi bữa ăn",
     mealReminderNone: "Chưa bật cái nào, chạm để cài",
