@@ -8,6 +8,7 @@ const Meal = require("../models/Meal");
 const PlanMeal = require("../models/PlanMeal");
 const cloudinary = require("../config/cloudinary");
 const { validateCoachChat } = require("../validators/coachChat");
+const { normalizeCoachText } = require("../services/coachLanguage");
 
 // Shared safety + style instruction injected into every coach prompt.
 const SAFETY = `You are "Coach", a warm, easy-going health buddy inside an app — like a supportive friend who keeps the user on track, not a textbook or a customer-service bot.
@@ -58,13 +59,28 @@ function nextSlotToSuggest(hour, eatenTypes) {
 function langDirective(raw) {
   const lang = raw === "vi" ? "vi" : "en";
   const name = lang === "vi" ? "Vietnamese (tiếng Việt)" : "English";
-  return `IMPORTANT: Write your ENTIRE response in ${name}.`;
+  const strictRule = lang === "vi"
+    ? "Translate any English context into Vietnamese and do not answer in English."
+    : "Translate any Vietnamese context, dish names and examples into English. Do not use Vietnamese words or diacritics.";
+  return `IMPORTANT: Write your ENTIRE response in ${name}. ${strictRule}`;
+}
+
+function chatExamples(language) {
+  if (language === "vi") {
+    return `EXAMPLES (chỉ làm theo cách tương tác, không sao chép nguyên văn):
+User: "Tôi ăn phở được không?" => {"reply":"Phở ổn đó! Bạn ăn phở bò hay gà, tự nấu hay ra quán?","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
+User: "Tôi đang ăn phở" => {"reply":"Ngon miệng nha! Thêm rau giá và dùng ít nước béo sẽ cân bằng hơn.","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":true}`;
+  }
+  return `EXAMPLES (match the interactive behavior, not the exact wording):
+User: "Can I eat pho?" => {"reply":"Pho can work well. Are you having beef or chicken pho, and is it homemade or from a restaurant?","meal":{"name":"pho","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
+User: "I am eating pho" => {"reply":"Enjoy your meal! Adding herbs and bean sprouts while going light on fatty broth will make it more balanced.","meal":{"name":"pho","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":true}`;
 }
 
 // ─── Daily Insight (GET /api/coach/insight?date=) ─────────────────────────────
 // Health Score is computed in code; the AI only writes summary/tips/warnings.
 exports.getInsight = async (req, res) => {
   const date = req.query.date || todayKey();
+  const language = req.query.language === "vi" ? "vi" : "en";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
 
@@ -73,7 +89,7 @@ exports.getInsight = async (req, res) => {
     const { score, breakdown } = computeHealthScore(ctx);
 
     const prompt = `${SAFETY}
-${langDirective(req.query.language)}
+${langDirective(language)}
 
 ${contextToText(ctx)}
 
@@ -86,17 +102,22 @@ Write a short daily analysis for this user. Return ONLY valid JSON:
   "tips": ["2-3 short, actionable tips tailored to their goal and remaining calories"],
   "warnings": ["0-2 warnings ONLY if relevant to their health conditions or a clear imbalance; empty array if none"]
 }
-${langDirective(req.query.language)} Every string value in the JSON must be in that language — no other language.`;
+${langDirective(language)} Every string value in the JSON must be in that language, with no mixed-language text.`;
 
     let ai = { summary: "", tips: [], warnings: [] };
     try {
       const result = await generateWithFallback(insightModels, prompt);
       ai = JSON.parse(result.response.text());
+      ai = await normalizeCoachText(ai, language, (correctionPrompt) =>
+        generateWithFallback(insightModels, correctionPrompt)
+      );
     } catch (e) {
       console.error("Coach insight AI error:", e.message);
       // Graceful fallback so the score still shows even if AI/quota fails
       ai = {
-        summary: score >= 70 ? "You're doing well today, keep it up!" : "Let's get today on track.",
+        summary: language === "vi"
+          ? (score >= 70 ? "Hôm nay bạn đang làm tốt, tiếp tục nhé!" : "Mình cùng đưa hôm nay trở lại đúng hướng nhé.")
+          : (score >= 70 ? "You're doing well today, keep it up!" : "Let's get today on track."),
         tips: [],
         warnings: [],
       };
@@ -109,7 +130,9 @@ ${langDirective(req.query.language)} Every string value in the JSON must be in t
       summary: ai.summary || "",
       tips: Array.isArray(ai.tips) ? ai.tips : [],
       warnings: Array.isArray(ai.warnings) ? ai.warnings : [],
-      disclaimer: "AI guidance, not medical advice. Consult a professional for health concerns.",
+      disclaimer: language === "vi"
+        ? "Hướng dẫn từ AI, không phải tư vấn y khoa. Hãy gặp chuyên gia nếu bạn lo ngại về sức khỏe."
+        : "AI guidance, not medical advice. Consult a professional for health concerns.",
     });
   } catch (err) {
     console.error("Coach insight error:", err.message);
@@ -124,7 +147,7 @@ ${langDirective(req.query.language)} Every string value in the JSON must be in t
 exports.chat = async (req, res) => {
   const validated = validateCoachChat(req.body);
   if (validated.error) return res.status(400).json({ message: validated.error });
-  const { message: text, history, image, mimeType, source } = validated.value;
+  const { message: text, history, image, mimeType, source, language } = validated.value;
 
   // Default question when the user sends only a photo
   const userText = text || "Is this dish suitable for me?";
@@ -148,7 +171,7 @@ exports.chat = async (req, res) => {
     const hour = new Date().getHours();
 
     const prompt = `${SAFETY}
-${langDirective(req.body.language)}${imageNote}${communityRecipeNote}
+${langDirective(language)}${imageNote}${communityRecipeNote}
 
 ${contextToText(ctx)}
 
@@ -172,12 +195,7 @@ Respond with ONLY valid JSON:
 - CRITICAL: if eating is true, you MUST also fill "meal" with that dish (re-state it even if it was mentioned in an earlier turn). NEVER return eating=true with meal=null.
   Pick mealType by current hour: under 11 breakfast, 11-14 lunch, 14-17 snack, 17-21 dinner, otherwise snack.
 
-EXAMPLES (match this interactive behavior, not the exact words):
-User: "Tôi ăn bánh mì được không?" => {"reply":"Được nha! Mà bánh mì gì vậy: thịt, trứng hay chay? Bạn tự làm hay mua ngoài, ăn kèm gì không? Cho mình biết để tư vấn sát hơn.","meal":{"name":"bánh mì","calories":350,"protein":12,"carbs":45,"fat":12,"mealType":"breakfast"},"eating":false}
-User: "Tôi ăn phở được không?" => {"reply":"Phở ổn đó! Bạn ăn phở bò hay gà, tự nấu hay ra quán? Mình mách cho hợp.","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
-User: "Tôi đang ăn phở" => {"reply":"Ngon miệng nha! Bạn ăn kèm rau không? Thêm rau giá với ít nước béo là cân bằng hơn đó.","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":true}
-User asks the SAME thing a 3rd time => {"reply":"Bạn hỏi lại nè 😄 Vẫn ổn như mình nói. Hay bạn đang phân vân điều gì khác về nó?","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
-User: "Hôm nay tôi thế nào?" => {"reply":"Bạn đang ổn, mới nạp ít calo thôi.","meal":null,"eating":false}
+${chatExamples(language)}
 
 Always read the history first so repeated or follow-up questions feel natural, not robotic.`;
 
@@ -195,10 +213,20 @@ Always read the history first so repeated or follow-up questions feel natural, n
     } catch {
       parsed = { reply: result.response.text().trim(), meal: null };
     }
+    const localizedText = await normalizeCoachText(
+      {
+        reply: String(parsed.reply || ""),
+        mealName: parsed.meal?.name ? String(parsed.meal.name) : "",
+      },
+      language,
+      (correctionPrompt) => generateWithFallback(insightModels, correctionPrompt)
+    );
+    parsed.reply = localizedText.reply;
+    if (parsed.meal?.name && localizedText.mealName) parsed.meal.name = localizedText.mealName;
     // Guard: ChatMessage.text is required — an empty AI reply must not crash the save.
     const reply =
       (parsed.reply || "").trim() ||
-      (req.body.language === "vi"
+      (language === "vi"
         ? "Mình chưa nghĩ ra câu trả lời, bạn thử hỏi lại nhé."
         : "I couldn't come up with a reply. Try asking again.");
 
@@ -235,8 +263,8 @@ Always read the history first so repeated or follow-up questions feel natural, n
     }
 
     const docs = await ChatMessage.create([
-      { user: req.user.id, role: "user", text: image ? `📷 ${userText}` : userText, image: imageUrl, imagePublicId },
-      { user: req.user.id, role: "coach", text: reply, meal: meal || null, mealEating: eating },
+      { user: req.user.id, role: "user", language, text: image ? `📷 ${userText}` : userText, image: imageUrl, imagePublicId },
+      { user: req.user.id, role: "coach", language, text: reply, meal: meal || null, mealEating: eating },
     ]);
 
     // messageId of the coach turn lets the app log/undo the suggested meal later.
@@ -255,6 +283,7 @@ Always read the history first so repeated or follow-up questions feel natural, n
 // One AI request per tap (the app caches per date+slot so re-taps are free).
 exports.suggestMeal = async (req, res) => {
   try {
+    const language = req.body.language === "vi" ? "vi" : "en";
     // Context + today's pending plan fetched in parallel (independent queries)
     const [ctx, planPending] = await Promise.all([
       buildContext(req.user.id, todayKey()),
@@ -281,7 +310,7 @@ exports.suggestMeal = async (req, res) => {
       : "";
 
     const prompt = `${SAFETY}
-${langDirective(req.body.language)}
+${langDirective(language)}
 
 ${contextToText(ctx)}
 ${planText}
@@ -303,15 +332,25 @@ Return ONLY valid JSON:
 
     const result = await generateWithFallback(insightModels, prompt);
     const parsed = JSON.parse(result.response.text());
+    const localized = await normalizeCoachText(
+      {
+        suggestions: (Array.isArray(parsed.suggestions) ? parsed.suggestions : []).map((item) => ({
+          name: String(item?.name || ""),
+          reason: String(item?.reason || ""),
+        })),
+      },
+      language,
+      (correctionPrompt) => generateWithFallback(insightModels, correctionPrompt)
+    );
     const mapped = (Array.isArray(parsed.suggestions) ? parsed.suggestions : [])
       .filter((s) => s && s.name && s.calories != null)
-      .map((s) => ({
-        name: String(s.name).trim(),
+      .map((s, index) => ({
+        name: String(localized.suggestions?.[index]?.name || s.name).trim(),
         calories: Math.max(0, Math.round(Number(s.calories) || 0)),
         protein: Math.max(0, Math.round(Number(s.protein) || 0)),
         carbs: Math.max(0, Math.round(Number(s.carbs) || 0)),
         fat: Math.max(0, Math.round(Number(s.fat) || 0)),
-        reason: String(s.reason || "").trim(),
+        reason: String(localized.suggestions?.[index]?.reason || s.reason || "").trim(),
       }));
     // Layer-2 safety: drop any dish that violates the user's health conditions
     // (the prompt is layer 1 — this makes it deterministic)
@@ -331,9 +370,12 @@ Return ONLY valid JSON:
 
 // ─── Chat History (GET /api/coach/history) ────────────────────────────────────
 exports.getHistory = async (req, res) => {
+  const language = req.query.language === "vi" ? "vi" : "en";
   // Take the LATEST 100 then restore chronological order — sorting ascending with
   // limit would return the oldest 100 and hide new messages once history grows.
-  const msgs = (await ChatMessage.find({ user: req.user.id }).sort({ createdAt: -1 }).limit(100)).reverse();
+  const msgs = (
+    await ChatMessage.find({ user: req.user.id, language }).sort({ createdAt: -1 }).limit(100)
+  ).reverse();
   res.json({
     messages: msgs.map((m) => ({
       id: m._id,

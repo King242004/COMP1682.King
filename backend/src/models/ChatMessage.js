@@ -5,6 +5,7 @@ const chatMessageSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     role: { type: String, enum: ["user", "coach"], required: true },
+    language: { type: String, enum: ["vi", "en"], default: null },
     text: { type: String, required: true },
     image: { type: String, default: null }, // Cloudinary URL for photos sent in chat
     imagePublicId: { type: String, default: null }, // Cloudinary id so clearHistory can delete the file too
@@ -21,6 +22,6 @@ const chatMessageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-chatMessageSchema.index({ user: 1, createdAt: -1 });
+chatMessageSchema.index({ user: 1, language: 1, createdAt: -1 });
 
 module.exports = mongoose.model("ChatMessage", chatMessageSchema);

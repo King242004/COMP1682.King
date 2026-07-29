@@ -101,8 +101,13 @@ export async function unlogMealFromMessage(token: string, messageId: string): Pr
   await apiRequest("/coach/unlog", "POST", { messageId }, token);
 }
 
-export async function getChatHistory(token: string): Promise<ChatMessage[]> {
-  const data = await apiRequest<{ messages: RawChatMessage[] }>("/coach/history", "GET", undefined, token);
+export async function getChatHistory(token: string, language: Lang): Promise<ChatMessage[]> {
+  const data = await apiRequest<{ messages: RawChatMessage[] }>(
+    `/coach/history?language=${language}`,
+    "GET",
+    undefined,
+    token
+  );
   // Clean markdown; carry id/meal/loggedId/image so action buttons persist on reload.
   return (data.messages || []).map((m) => ({
     id: m.id,
@@ -127,7 +132,7 @@ export async function clearChatHistory(token: string): Promise<void> {
 // Cache today's insight so reopening the Coach tab is instant, WITH a timestamp so
 // callers can skip the Gemini refresh while the cache is still fresh (saves quota:
 // Home refetches on every focus otherwise). Keyed by date + language.
-const insightKey = (date: string, language: Lang) => `coach_insight_${date}_${language}`;
+const insightKey = (date: string, language: Lang) => `coach_insight_v2_${date}_${language}`;
 
 export const INSIGHT_TTL_MS = 10 * 60 * 1000; // consider the cached insight fresh for 10 minutes
 

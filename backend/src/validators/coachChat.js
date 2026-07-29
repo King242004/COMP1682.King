@@ -30,8 +30,9 @@ function validateCoachChat(body = {}) {
     : [];
 
   const source = body.source === "community" ? "community" : null;
+  const language = body.language === "vi" ? "vi" : "en";
 
-  return { value: { message, image, mimeType, history, source } };
+  return { value: { message, image, mimeType, history, source, language } };
 }
 
 module.exports = { validateCoachChat };

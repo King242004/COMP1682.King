@@ -139,8 +139,9 @@ export default function CoachTab() {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const loadHistory = useCallback(async () => {
     if (!token) return;
+    setHistoryLoaded(false);
     try {
-      const hist = await getChatHistory(token);
+      const hist = await getChatHistory(token, lang);
       setMessages(hist);
       // Jump to the latest message after history renders
       setTimeout(() => scrollToLatest(false), 150);
@@ -149,7 +150,7 @@ export default function CoachTab() {
     } finally {
       setHistoryLoaded(true);
     }
-  }, [scrollToLatest, token]);
+  }, [lang, scrollToLatest, token]);
 
   // Chat history loads once so switching tabs never overwrites an in-progress
   // conversation. Health insight refreshes separately when health data changes.

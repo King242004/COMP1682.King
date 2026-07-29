@@ -18,6 +18,9 @@ router.use(protect);
  *       - in: query
  *         name: date
  *         schema: { type: string, example: "2026-06-18" }
+ *       - in: query
+ *         name: language
+ *         schema: { type: string, enum: [vi, en] }
  *     responses:
  *       200: { description: Returns score, summary, tips, warnings }
  */
@@ -40,6 +43,7 @@ router.get("/insight", aiLimiter, getInsight);
  *             required: [message]
  *             properties:
  *               message: { type: string, example: "Can I eat pho for dinner?" }
+ *               language: { type: string, enum: [vi, en] }
  *               history:
  *                 type: array
  *                 items:
@@ -61,6 +65,11 @@ router.post("/chat", aiLimiter, chat);
  *     tags: [Coach]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: language
+ *         schema: { type: string, enum: [vi, en] }
+ *         description: Return only messages created in this app language
  *     responses:
  *       200: { description: Returns chat messages }
  *   delete:
