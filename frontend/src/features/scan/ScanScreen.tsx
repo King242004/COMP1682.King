@@ -17,14 +17,16 @@ import { CandidatesSheet } from "@/features/scan/CandidatesSheet";
 import { ProductSheet } from "@/features/scan/ProductSheet";
 import { ManualBarcodeModal } from "@/features/scan/ManualBarcodeModal";
 import { mealSlotByHour } from "@/utils/meals/mealSlot";
+import { resolveLanguage } from "@/utils/language";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 
 export default function ScanScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const t = useT();
+  const language = resolveLanguage(user?.language);
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>("back");
   const [mode, setMode] = useState<ScanMode>("photo");
@@ -61,7 +63,7 @@ export default function ScanScreen() {
     setIsScanning(true);
     try {
       const compressed = await compressImage(uri);
-      const cs = await scanImage(compressed, token, controller.signal);
+      const cs = await scanImage(compressed, token, language, controller.signal);
       if (cs.length === 0) {
         Alert.alert(t.scan.noFood, t.scan.noFoodMsg);
         setPreviewUri(null);

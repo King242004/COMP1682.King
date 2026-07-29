@@ -29,6 +29,10 @@ router.use(protect);
  *               image:
  *                 type: string
  *                 format: binary
+ *               language:
+ *                 type: string
+ *                 enum: [vi, en]
+ *                 description: Language for dish names and portion descriptions
  *     responses:
  *       200:
  *         description: Returns top 3 food candidates with nutrition estimates

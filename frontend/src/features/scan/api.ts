@@ -1,6 +1,7 @@
 // Scan feature — upload/lookup helpers + shared types.
 import * as ImageManipulator from "expo-image-manipulator";
 import { apiFetch } from "@/utils/api";
+import type { Lang } from "@/utils/language";
 
 export type ScanMode = "photo" | "barcode";
 
@@ -50,12 +51,18 @@ export async function compressImage(uri: string): Promise<string> {
 
 // Upload helper - returns parsed candidates or throws.
 // Accepts an AbortSignal so the user can cancel an in-flight scan.
-export async function scanImage(uri: string, token: string, signal?: AbortSignal): Promise<Candidate[]> {
+export async function scanImage(
+  uri: string,
+  token: string,
+  language: Lang,
+  signal?: AbortSignal
+): Promise<Candidate[]> {
   const formData = new FormData();
   const filename = uri.split("/").pop() || "meal.jpg";
   const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
   const mimeType = ext === "png" ? "image/png" : "image/jpeg";
   formData.append("image", { uri, name: filename, type: mimeType } as any);
+  formData.append("language", language);
 
   const data = await apiFetch("/scan/photo", {
     method: "POST",

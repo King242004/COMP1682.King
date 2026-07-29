@@ -12,22 +12,27 @@ exports.scanPhoto = async (req, res) => {
     // Convert image buffer to base64 for Gemini API
     const imageBase64 = req.file.buffer.toString("base64");
     const mimeType = req.file.mimetype || "image/jpeg";
+    const language = req.body.language === "vi" ? "vi" : "en";
+    const languageName = language === "vi" ? "Vietnamese (tiếng Việt)" : "English";
 
     // Prompt engineered to ALWAYS return top 3 candidates as strict JSON.
-    // Asking for Vietnamese names + portion-aware calorie estimates.
+    // Dish names and portion descriptions follow the app language.
     const prompt = `You are a nutrition expert specializing in Vietnamese and international cuisine.
 Analyze this food photo and return the top 3 most likely food matches.
 
+Required output language: ${languageName}.
+
 For each candidate, provide:
-- name: dish name (use Vietnamese name if it's a Vietnamese dish, else English)
+- name: dish name in ${languageName}
 - confidence: 0.0 to 1.0 (higher = more sure)
 - calories: estimated kcal for the visible portion
 - protein: grams
 - carbs: grams
 - fat: grams
-- portionDescription: short description of portion size (e.g. "1 medium bowl", "1 plate")
+- portionDescription: short description of portion size in ${languageName}
 
 Rules:
+- Every human-readable text value must use ${languageName}
 - Be realistic with portion sizes based on what you SEE in the photo
 - Sum of confidences should sum to ~1.0
 - If you can only identify 1 food clearly, still try to provide 2-3 alternatives
