@@ -1,6 +1,11 @@
 const axios = require("axios");
 const { visionModels } = require("../config/gemini");
 const { generateWithFallback } = require("../services/aiGenerate");
+const {
+  hasLanguageMismatch,
+  buildLanguageCorrectionPrompt,
+  mergeLocalizedText,
+} = require("../services/scanLanguage");
 
 // ─── Scan Photo (AI Food Recognition)
 // Receives an uploaded image (multer memory storage), sends to Gemini Vision,
@@ -33,6 +38,9 @@ For each candidate, provide:
 
 Rules:
 - Every human-readable text value must use ${languageName}
+- ${language === "vi"
+  ? "Translate all English dish names and portion units into natural Vietnamese"
+  : "Translate Vietnamese dish names into natural English; never keep Vietnamese words or diacritics"}
 - Be realistic with portion sizes based on what you SEE in the photo
 - Sum of confidences should sum to ~1.0
 - If you can only identify 1 food clearly, still try to provide 2-3 alternatives
@@ -65,9 +73,26 @@ Return ONLY valid JSON in this exact format:
       return res.status(422).json({ message: parsed.error, candidates: [] });
     }
 
+    let candidates = Array.isArray(parsed.candidates) ? parsed.candidates : [];
+
+    // Gemini can occasionally mix languages even with a strict prompt. Only when
+    // that happens, run one small text-only correction and preserve all numbers.
+    if (hasLanguageMismatch(candidates, language)) {
+      try {
+        const correction = await generateWithFallback(
+          visionModels,
+          buildLanguageCorrectionPrompt(candidates, language)
+        );
+        const corrected = JSON.parse(correction.response.text());
+        candidates = mergeLocalizedText(candidates, corrected.candidates);
+      } catch (languageErr) {
+        console.warn("Could not normalize scan result language:", languageErr.message);
+      }
+    }
+
     res.json({
       message: "Food recognized successfully.",
-      candidates: parsed.candidates || [],
+      candidates,
     });
   } catch (err) {
     console.error("Gemini scan error:", err.message);

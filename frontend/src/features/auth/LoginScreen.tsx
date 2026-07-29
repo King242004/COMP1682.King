@@ -118,7 +118,12 @@ const styles = StyleSheet.create({
   screen: { justifyContent: "center" },
   wrap: { gap: theme.space.xl },
   hero: { gap: 12, alignItems: "center" },
-  logoImage: { width: 104, height: 104 },
+  logoImage: {
+    width: 104,
+    height: 104,
+    borderRadius: theme.radius.card,
+    overflow: "hidden",
+  },
   tagline: { textAlign: "center", paddingHorizontal: theme.space.lg },
   form: { gap: theme.space.md },
   error: { color: theme.colors.danger, textAlign: "center" },
