@@ -601,7 +601,7 @@ export const en = {
     avgKcalDay: "Avg/day",
     avgKcalMonth: "Avg/month",
     daysOnTrack: "Days on track",
-    dayStreak: "Day streak",
+    longestStreak: "Longest streak",
     todaysNutrition: "Today's nutrition",
     basedOn: (n: string) => `Based on ${n} kcal`,
     noMacroToday: "No macro data logged today.",

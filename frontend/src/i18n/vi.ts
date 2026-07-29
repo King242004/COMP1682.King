@@ -316,7 +316,7 @@ export const vi: Strings = {
     avgKcalDay: "Trung bình/ngày",
     avgKcalMonth: "Trung bình/tháng",
     daysOnTrack: "Ngày đúng hướng",
-    dayStreak: "Ngày liên tục",
+    longestStreak: "Chuỗi dài nhất",
     todaysNutrition: "Dinh dưỡng hôm nay",
     basedOn: (n: string) => `Dựa trên ${n} kcal`,
     noMacroToday: "Chưa ghi macro hôm nay.",

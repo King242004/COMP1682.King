@@ -12,7 +12,7 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { buildDaySummaries, getWeekDays, getMonthDays, getYearMonthTotals } from "@/features/progress/summary";
 import { WeightSection } from "@/features/weight/WeightSection";
 import { ActivitySection } from "@/features/progress/ActivitySection";
-import { mealStreak } from "@/utils/streak";
+import { longestMealStreak } from "@/utils/streak";
 import { resolveLanguage, localeTag } from "@/utils/language";
 import { useAnimatedNumber } from "@/ui/useAnimatedNumber";
 import { WeeklyBarChart, type Bar } from "@/features/progress/WeeklyBarChart";
@@ -56,7 +56,13 @@ export default function ProgressScreen() {
 
   const summaries = buildDaySummaries(historyMeals, goal, windowDays, locale);
   const daysWithMeals = summaries.filter((s) => s.calories > 0);
-  const streak = mealStreak(historyMeals.map((m) => m.date));
+  const periodMealDates =
+    mode === "year"
+      ? historyMeals
+          .filter((meal) => meal.date.startsWith(`${anchor.getFullYear()}-`))
+          .map((meal) => meal.date)
+      : summaries.filter((summary) => summary.calories > 0).map((summary) => summary.key);
+  const longestStreak = longestMealStreak(periodMealDates);
 
   // Chart bars: daily bars (week/month) or 12 monthly bars (year).
   const yearMonths = mode === "year" ? getYearMonthTotals(historyMeals, anchor.getFullYear(), locale) : [];
@@ -246,10 +252,10 @@ export default function ProgressScreen() {
               </Card>
               <Card style={styles.statCard}>
                 <View style={styles.statStreak}>
-                  <AppText variant="h2" style={styles.statOrange}>{streak}</AppText>
+                  <AppText variant="h2" style={styles.statOrange}>{longestStreak}</AppText>
                   <Ionicons name="flame" size={16} color={theme.colors.accent2} />
                 </View>
-                <AppText variant="subtle" style={styles.statLabel}>{t.progress.dayStreak}</AppText>
+                <AppText variant="subtle" style={styles.statLabel}>{t.progress.longestStreak}</AppText>
               </Card>
             </View>
 
