@@ -1,60 +1,34 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Alert, InteractionManager } from "react-native";
 import { router } from "expo-router";
-import { apiFetch, apiRequest, setOnUnauthorized } from "../utils/api";
-import { cancelAllReminders } from "../utils/reminders";
+import { setOnUnauthorized } from "../utils/api";
 import { getStrings } from "../i18n";
 import { resolveLanguage } from "../utils/language";
-import { clearAuthToken, loadAuthToken, saveAuthToken } from "../utils/authStorage";
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  calorieGoal: number;
-  customGoal?: boolean; // true = user typed the goal; false = follows TDEE
-  goal: string;
-  gender?: string | null;
-  age?: number | null;
-  weight?: number | null;
-  targetWeight?: number | null;
-  height?: number | null;
-  activityLevel?: string | null;
-  conditions?: string[];
-  avatar?: string | null;
-  language?: "vi" | "en" | null;
-  tastePreferences?: string;
-  isPrivate?: boolean;
-};
-
-type Stats = {
-  bmi: number | null;
-  bmiCategory: string | null;
-  tdee: number | null;
-};
-
-// Profile update payload: calorieGoal accepts `null` = "Use auto" — the
-// backend switches back to TDEE mode and recomputes (number = custom goal).
-type ProfileUpdate = Partial<Omit<User, "calorieGoal">> & {
-  calorieGoal?: number | null;
-};
-
-type AuthContextType = {
-  user: User | null;
-  stats: Stats | null;
-  token: string | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  requestRegistrationOTP: (email: string) => Promise<void>;
-  register: (name: string, email: string, password: string, otp: string) => Promise<void>;
-  logout: () => Promise<void>;
-  fetchProfile: () => Promise<void>;
-  updateProfile: (data: ProfileUpdate) => Promise<void>;
-  changeName: (name: string) => Promise<void>;
-  uploadAvatar: (localUri: string) => Promise<void>;
-  deleteAccount: (password: string) => Promise<void>;
-};
+import type {
+  AuthContextType,
+  AuthSession,
+  ProfileUpdate,
+  Stats,
+  User,
+  UserPatch,
+} from "./authTypes";
+import {
+  changeNameRequest,
+  deleteAccountRequest,
+  fetchProfileRequest,
+  loginRequest,
+  registerRequest,
+  sendRegistrationOTP,
+  updateProfileRequest,
+  uploadAvatarRequest,
+} from "../utils/auth/accountApi";
+import {
+  clearStoredAccountData,
+  clearStoredAuthSession,
+  loadStoredAuthSession,
+  saveStoredAuthSession,
+  saveStoredUser,
+} from "../utils/auth/authSession";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -63,25 +37,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const userRef = useRef<User | null>(null);
-  userRef.current = user;
 
+  // Refs let callbacks registered once read the latest session values.
+  const userRef = useRef<User | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const langRef = useRef<string | null>(null);
+  userRef.current = user;
+  tokenRef.current = token;
+  langRef.current = user?.language ?? null;
+
+  // Login and registration both finish by saving the same session data.
+  const saveSession = useCallback(async (session: AuthSession) => {
+    setUser(session.user);
+    setToken(session.token);
+    await saveStoredAuthSession(session);
+  }, []);
+
+  // Restore the saved session once when the app starts.
   useEffect(() => {
     async function loadAuth() {
       try {
-        const [storedToken, storedUser] = await Promise.all([
-          loadAuthToken(),
-          AsyncStorage.getItem("user"),
-        ]);
-        if (storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
-        } else if (storedToken) {
-          await clearAuthToken();
+        const session = await loadStoredAuthSession();
+        if (session) {
+          setToken(session.token);
+          setUser(session.user);
         }
       } catch {
         // Corrupt local session data must never trap the app on its splash.
-        await Promise.allSettled([clearAuthToken(), AsyncStorage.removeItem("user")]);
+        await Promise.allSettled([clearStoredAuthSession()]);
       } finally {
         setIsLoading(false);
       }
@@ -89,109 +72,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadAuth();
   }, []);
 
-  // Session-expiry watchdog: the JWT lives 30 days — when it dies the app used
-  // to become a "zombie" (token still stored, every request silently 401s).
-  // apiRequest calls this on any 401 → force logout + back to login.
-  const tokenRef = useRef<string | null>(null);
-  tokenRef.current = token;
-  // Language ref: the 401 callback is registered once, so it reads the CURRENT
-  // language through a ref (AuthProvider sits above useT's own provider chain).
-  const langRef = useRef<string | null>(null);
-  langRef.current = user?.language ?? null;
+  // Public authentication actions used by the Login and Register screens.
+  const login = async (email: string, password: string) => {
+    const data = await loginRequest(email, password);
+    await saveSession(data);
+  };
+
+  const requestRegistrationOTP = async (email: string) => {
+    await sendRegistrationOTP(email);
+  };
+
+  const register = async (name: string, email: string, password: string, otp: string) => {
+    const data = await registerRequest(name, email, password, otp);
+    await saveSession(data);
+  };
+
+  // Remove both the active session and data cached for the previous account.
+  const logout = useCallback(async () => {
+    userRef.current = null;
+    tokenRef.current = null;
+    setUser(null);
+    setToken(null);
+    setStats(null);
+    await clearStoredAccountData();
+  }, []);
+
+  // Any authenticated request can report an expired or invalid token.
   useEffect(() => {
     setOnUnauthorized(() => {
-      // Only react while we believed we were logged in; Home fires several
-      // parallel requests, so the ref-clear makes repeat 401s no-ops.
+      // Home can fire parallel requests, so only the first 401 logs out.
       if (!tokenRef.current) return;
       tokenRef.current = null;
-      // Same order as the manual logout: navigate first, tear down after the
-      // transition so the replace animation doesn't stutter
       router.replace("/auth/login");
       const t = getStrings(resolveLanguage(langRef.current));
       Alert.alert(t.auth.sessionExpiredTitle, t.auth.sessionExpiredMsg);
       InteractionManager.runAfterInteractions(() => { logout(); });
     });
     return () => setOnUnauthorized(null);
-  }, []);
+  }, [logout]);
 
-  const login = async (email: string, password: string) => {
-    const data = await apiRequest("/auth/login", "POST", { email, password });
-    setUser(data.user);
-    setToken(data.token);
-    await saveAuthToken(data.token);
-    await AsyncStorage.setItem("user", JSON.stringify(data.user));
-  };
-
-  const requestRegistrationOTP = async (email: string) => {
-    await apiRequest(
-      "/auth/register/send-otp",
-      "POST",
-      { email },
-      undefined,
-      { timeoutMs: 60_000 }
-    );
-  };
-
-  const register = async (name: string, email: string, password: string, otp: string) => {
-    const data = await apiRequest("/auth/register", "POST", { name, email, password, otp });
-    setUser(data.user);
-    setToken(data.token);
-    await saveAuthToken(data.token);
-    await AsyncStorage.setItem("user", JSON.stringify(data.user));
-  };
-
-  const logout = async () => {
-    userRef.current = null;
-    setUser(null);
-    setToken(null);
-    setStats(null);
-    await Promise.all([clearAuthToken(), AsyncStorage.removeItem("user")]);
-    // Per-user data must not survive into the NEXT account on this device:
-    // cached AI insight/plan/grocery + every scheduled meal reminder belong to
-    // the user who just left.
-    try {
-      // Cancels each per-meal notification and clears both the current and the
-      // legacy storage keys
-      await cancelAllReminders();
-      const keys = await AsyncStorage.getAllKeys();
-      const stale = keys.filter(
-        (k) =>
-          k.startsWith("coach_insight_") ||
-          k.startsWith("plan_week_") ||
-          k.startsWith("grocery_")
-      );
-      if (stale.length) await AsyncStorage.multiRemove(stale);
-    } catch {
-      // cache cleanup is best-effort — never block the logout itself
-    }
-  };
-
-  const mergeAndStoreUser = useCallback(async (patch: Partial<User> & { _id?: string }) => {
+  // Keep profile updates consistent in state and on-device storage.
+  const mergeAndStoreUser = useCallback(async (patch: UserPatch) => {
     const current = userRef.current;
     if (!current) return;
     const next = { ...current, ...patch, id: patch._id ?? current.id };
     userRef.current = next;
     setUser(next);
-    await AsyncStorage.setItem("user", JSON.stringify(next));
+    await saveStoredUser(next);
   }, []);
 
   const fetchProfile = useCallback(async () => {
     if (!token) return;
-    const data = await apiRequest("/profile", "GET", undefined, token);
+    const data = await fetchProfileRequest(token);
     await mergeAndStoreUser(data.user);
     setStats(data.stats);
   }, [mergeAndStoreUser, token]);
 
   const updateProfile = async (data: ProfileUpdate) => {
     if (!token) return;
-    const res = await apiRequest("/profile", "PUT", data, token);
+    const res = await updateProfileRequest(data, token);
     await mergeAndStoreUser(res.user);
     setStats(res.stats);
   };
 
   const changeName = async (name: string) => {
     if (!token) return;
-    const res = await apiRequest("/user/name", "PUT", { name }, token);
+    const res = await changeNameRequest(name, token);
     await mergeAndStoreUser(res.user);
   };
 
@@ -199,39 +145,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // then clears local state exactly like a logout.
   const deleteAccount = async (password: string) => {
     if (!token) return;
-    await apiRequest("/user/account", "DELETE", { password }, token);
+    await deleteAccountRequest(password, token);
     await logout();
   };
 
-  // Avatar upload uses multipart/form-data (image file), NOT JSON like other endpoints
-  // So we bypass apiRequest helper and call fetch directly
   const uploadAvatar = async (localUri: string) => {
     if (!token) return;
-    const formData = new FormData();
-    // Extract filename + mime from local URI (e.g. file:///.../IMG_1234.jpg)
-    const filename = localUri.split("/").pop() || "avatar.jpg";
-    const ext = filename.split(".").pop()?.toLowerCase() || "jpg";
-    const mimeType = ext === "png" ? "image/png" : "image/jpeg";
-    // React Native FormData accepts {uri, name, type} objects for file uploads
-    formData.append("image", {
-      uri: localUri,
-      name: filename,
-      type: mimeType,
-    } as unknown as Blob);
-
-    const data = await apiFetch<{ avatar: string }>("/user/avatar", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        // Don't set Content-Type — let fetch set it with the boundary
-      },
-      body: formData,
-    }, { timeoutMs: 90_000 });
-    await mergeAndStoreUser({ avatar: data.avatar });
+    const avatar = await uploadAvatarRequest(localUri, token);
+    await mergeAndStoreUser({ avatar });
   };
 
   return (
-    <AuthContext.Provider value={{ user, stats, token, isLoading, login, requestRegistrationOTP, register, logout, fetchProfile, updateProfile, changeName, uploadAvatar, deleteAccount }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        stats,
+        token,
+        isLoading,
+        login,
+        requestRegistrationOTP,
+        register,
+        logout,
+        fetchProfile,
+        updateProfile,
+        changeName,
+        uploadAvatar,
+        deleteAccount,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

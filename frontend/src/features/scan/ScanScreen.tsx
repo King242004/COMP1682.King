@@ -16,7 +16,7 @@ import { ScanOverlay } from "@/features/scan/ScanOverlay";
 import { CandidatesSheet } from "@/features/scan/CandidatesSheet";
 import { ProductSheet } from "@/features/scan/ProductSheet";
 import { ManualBarcodeModal } from "@/features/scan/ManualBarcodeModal";
-import { mealSlotByHour } from "@/utils/mealSlot";
+import { mealSlotByHour } from "@/utils/meals/mealSlot";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";

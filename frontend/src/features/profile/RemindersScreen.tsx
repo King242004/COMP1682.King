@@ -6,7 +6,7 @@ import { useT } from "@/i18n";
 import {
   MEAL_KEYS, applyReminder, emptyReminders, formatTime, loadReminders, parseTime,
   type MealKey, type ReminderMap,
-} from "@/utils/reminders";
+} from "@/utils/notifications/reminders";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";

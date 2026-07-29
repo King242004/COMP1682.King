@@ -9,7 +9,7 @@ import { theme } from "@/ui/theme";
 import { MealTypeSelector } from "@/features/meals/MealTypeSelector";
 import { type MealTypeKey } from "@/ui/mealTypes";
 import { dateKey } from "@/utils/date";
-import { recentUniqueMeals } from "@/utils/mealSlot";
+import { recentUniqueMeals } from "@/utils/meals/mealSlot";
 import { parseDecimal } from "@/utils/number";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";

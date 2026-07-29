@@ -7,7 +7,7 @@ import { theme, macroGoals } from "@/ui/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
 import { dateKey } from "@/utils/date";
-import { mealSlotByHour } from "@/utils/mealSlot";
+import { mealSlotByHour } from "@/utils/meals/mealSlot";
 import { resolveLanguage, localeTag } from "@/utils/language";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";

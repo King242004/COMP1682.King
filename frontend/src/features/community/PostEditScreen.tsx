@@ -12,7 +12,7 @@ import {
   type PostKind,
   type PostMealChoice,
 } from "@/features/community/PostMealSelector";
-import { recentUniqueMeals } from "@/utils/mealSlot";
+import { recentUniqueMeals } from "@/utils/meals/mealSlot";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";

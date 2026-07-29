@@ -4,7 +4,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
-import { enabledCount, loadReminders } from "@/utils/reminders";
+import { enabledCount, loadReminders } from "@/utils/notifications/reminders";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";

@@ -1,4 +1,4 @@
-import { mealSlotByHour } from "@/utils/mealSlot";
+import { mealSlotByHour } from "@/utils/meals/mealSlot";
 
 describe("mealSlotByHour", () => {
   test.each([

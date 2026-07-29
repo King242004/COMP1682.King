@@ -3,12 +3,33 @@ const router = express.Router();
 const protect = require("../middleware/auth");
 const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
 const {
-  createPost, getFeed, getExplore, getUserPosts, deletePost, updatePost,
-  getPost, toggleLike, toggleSave, getSavedPosts,
-  followUser, unfollowUser, getPublicProfile, getFollowers, getFollowing,
-  searchUsers, getSuggestions,
-  getNotifications, getUnreadCount, markNotificationsRead,
-} = require("../controllers/communityController");
+  createPost,
+  deletePost,
+  getPost,
+  toggleLike,
+  toggleSave,
+  updatePost,
+} = require("../controllers/community/postController");
+const {
+  getExplore,
+  getFeed,
+  getSavedPosts,
+  getUserPosts,
+} = require("../controllers/community/feedController");
+const {
+  followUser,
+  getFollowers,
+  getFollowing,
+  getPublicProfile,
+  getSuggestions,
+  searchUsers,
+  unfollowUser,
+} = require("../controllers/community/socialController");
+const {
+  getNotifications,
+  getUnreadCount,
+  markNotificationsRead,
+} = require("../controllers/community/notificationController");
 
 const upload = createImageUpload({
   maxFileBytes: 5 * 1024 * 1024,

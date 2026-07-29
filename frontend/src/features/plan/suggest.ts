@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/api";
 import { stripMarkdown } from "@/features/coach/api";
-import { mealSlotByHour } from "@/utils/mealSlot";
+import { mealSlotByHour } from "@/utils/meals/mealSlot";
 import type { Lang } from "@/utils/language";
 
 const AI_TIMEOUT_MS = 120_000;
