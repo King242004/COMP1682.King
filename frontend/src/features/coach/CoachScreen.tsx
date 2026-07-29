@@ -350,12 +350,6 @@ export default function CoachTab() {
             keyExtractor={(item, index) => `${item.id ?? item.createdAt ?? item.role}-${index}`}
             ListHeaderComponent={(
               <View style={styles.listSection}>
-                {/* Disclaimer */}
-                <View style={styles.disclaimer}>
-                  <Ionicons name="information-circle-outline" size={15} color={theme.colors.subtle} />
-                  <AppText variant="subtle" style={styles.disclaimerText}>{L.disclaimer}</AppText>
-                </View>
-
                 {/* Daily insight */}
                 <InsightCard
                   insight={insight}
@@ -467,6 +461,12 @@ export default function CoachTab() {
           </View>
         )}
 
+        {/* Keep the medical disclaimer beside the composer so it stays visible above the keyboard. */}
+        <View style={styles.disclaimer}>
+          <Ionicons name="information-circle-outline" size={15} color={theme.colors.subtle} />
+          <AppText variant="subtle" style={styles.disclaimerText}>{L.disclaimer}</AppText>
+        </View>
+
         {/* Input bar */}
         <View style={styles.inputBar}>
           {/* Attach food photo */}
@@ -544,7 +544,9 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10, padding: 10,
+    flexShrink: 0,
+    backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 8, marginTop: 6,
   },
   disclaimerText: { fontSize: 11, flex: 1 },
 
