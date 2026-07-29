@@ -1,6 +1,3 @@
-// GUIDED WORKOUT SESSION — step-by-step timer for a static routine
-// (features/exercise/guided.ts). Finishing auto-logs a real Exercise for
-// today, so the burn flows into net calories / Health Score / Coach.
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -27,8 +24,6 @@ export default function GuidedWorkoutScreen() {
   const { routine: routineKey } = useLocalSearchParams<{ routine: string }>();
   const routine = GUIDED_ROUTINES.find((r) => r.key === routineKey);
 
-  // Preview first ("what am I about to do?") — the timer only starts after
-  // the user explicitly taps Start.
   const [started, setStarted] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(routine?.steps[0]?.seconds ?? 0);
@@ -41,14 +36,12 @@ export default function GuidedWorkoutScreen() {
     setRunning(true);
   };
 
-  // 1-second tick while running; advancing/finishing handled in the effect below
   useEffect(() => {
     if (!started || !running || !routine) return;
     const id = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearInterval(id);
   }, [started, running, routine]);
 
-  // Step finished → next step, or the whole routine is done
   useEffect(() => {
     if (!started || !routine || secondsLeft > 0) return;
     if (stepIndex < routine.steps.length - 1) {
@@ -87,7 +80,8 @@ export default function GuidedWorkoutScreen() {
 
   const skipStep = () => {
     if (!routine) return;
-    setSecondsLeft(0); // the effect advances (or finishes on the last step)
+      // Effect sẽ chuyển sang bước tiếp theo hoặc kết thúc ở bước cuối.
+      setSecondsLeft(0);
   };
 
   const quit = () => {
@@ -114,7 +108,6 @@ export default function GuidedWorkoutScreen() {
   const weightForEst = user?.weight && user.weight > 0 ? user.weight : 60;
   const estKcal = Math.round(routine.met * weightForEst * (routine.durationMin / 60));
 
-  // Preview screen — shown until the user taps Start (no auto-run)
   if (!started) {
     return (
       <Screen padded={false}>
@@ -134,7 +127,6 @@ export default function GuidedWorkoutScreen() {
             </View>
           </View>
 
-          {/* Every step with its time, so the user knows what's coming */}
           <Card style={styles.stepsCard}>
             {routine.steps.map((s, i) => (
               <View key={i} style={[styles.stepRow, i > 0 && styles.stepRowDivider]}>
@@ -171,12 +163,10 @@ export default function GuidedWorkoutScreen() {
             {t.exercise.guidedStep(stepIndex + 1, routine.steps.length)}
           </AppText>
           <View style={styles.progressTrack}>
-            {/* width known only at runtime */}
             <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
           </View>
         </View>
 
-        {/* Current step + big countdown */}
         <Card style={styles.stepCard}>
           <AppText style={styles.routineIcon}>{routine.icon}</AppText>
           <AppText variant="h1" style={styles.stepName}>{step[lang]}</AppText>

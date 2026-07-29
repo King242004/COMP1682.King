@@ -1,12 +1,6 @@
 const Meal = require("../models/Meal");
+const { todayKey } = require("../utils/date");
 
-// Local YYYY-MM-DD for "today" — string compare works for date keys
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// ─── Add Meal ─────────────────────────────────────────────────────────────────
 exports.addMeal = async (req, res) => {
   const { name, mealType, calories, protein, carbs, fat, image, note, date } = req.body;
 
@@ -23,8 +17,6 @@ exports.addMeal = async (req, res) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
 
-  // Time rule: the diary records the past — back-logging a forgotten day is
-  // fine, a FUTURE meal is not (planning lives in /plan).
   if (date > todayKey())
     return res.status(400).json({ message: "Cannot log a meal for a future date." });
 
@@ -44,7 +36,6 @@ exports.addMeal = async (req, res) => {
   res.status(201).json({ message: "Meal added successfully.", meal });
 };
 
-// ─── Get Meals by Date ────────────────────────────────────────────────────────
 exports.getMealsByDate = async (req, res) => {
   const { date } = req.query;
 
@@ -53,7 +44,6 @@ exports.getMealsByDate = async (req, res) => {
 
   const meals = await Meal.find({ user: req.user.id, date }).sort({ createdAt: 1 });
 
-  // Calculate daily totals
   const totals = meals.reduce(
     (acc, m) => {
       acc.calories += m.calories;
@@ -68,7 +58,6 @@ exports.getMealsByDate = async (req, res) => {
   res.json({ date, meals, totals });
 };
 
-// ─── Get Meal History ─────────────────────────────────────────────────────────
 exports.getMealHistory = async (req, res) => {
   const { startDate, endDate } = req.query;
 
@@ -81,7 +70,6 @@ exports.getMealHistory = async (req, res) => {
   res.json({ meals });
 };
 
-// ─── Update Meal ──────────────────────────────────────────────────────────────
 exports.updateMeal = async (req, res) => {
   const meal = await Meal.findById(req.params.id);
 
@@ -92,7 +80,6 @@ exports.updateMeal = async (req, res) => {
 
   const { name, mealType, calories, protein, carbs, fat, image, note, date } = req.body;
 
-  // Validation - only validate fields that are being updated
   if (mealType !== undefined && !["breakfast", "lunch", "dinner", "snack"].includes(mealType))
     return res.status(400).json({ message: "mealType must be breakfast, lunch, dinner or snack." });
 
@@ -105,7 +92,6 @@ exports.updateMeal = async (req, res) => {
   if (date !== undefined && date > todayKey())
     return res.status(400).json({ message: "Cannot move a meal to a future date." });
 
-  // Apply updates - only fields explicitly provided
   if (name !== undefined) meal.name = name.trim();
   if (mealType !== undefined) meal.mealType = mealType;
   if (calories !== undefined) meal.calories = calories;
@@ -120,7 +106,6 @@ exports.updateMeal = async (req, res) => {
   res.json({ message: "Meal updated successfully.", meal });
 };
 
-// ─── Delete Meal ──────────────────────────────────────────────────────────────
 exports.deleteMeal = async (req, res) => {
   const meal = await Meal.findById(req.params.id);
 

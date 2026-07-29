@@ -5,13 +5,11 @@ import { AppText } from "@/ui/components/AppText";
 
 export type Bar = { key: string; label: string; fullLabel?: string; value: number; color: string; dim?: boolean };
 
-// Generic bar chart used by Progress for every granularity: 7 daily bars (week),
-// ~30 daily bars (month) or 12 monthly bars (year). Renders bare (no Card) so it
-// can sit inside the summary card. Tapping a bar calls onSelect(key).
 export function WeeklyBarChart({ bars, maxValue, goalTop, focusKey, onSelect }: {
   bars: Bar[];
   maxValue: number;
-  goalTop?: number;      // goal value for the reference line (daily modes only)
+  // Mục tiêu dùng cho đường tham chiếu, chỉ áp dụng ở chế độ theo ngày.
+  goalTop?: number;
   focusKey?: string;
   onSelect?: (key: string) => void;
 }) {
@@ -23,8 +21,6 @@ export function WeeklyBarChart({ bars, maxValue, goalTop, focusKey, onSelect }: 
     <View style={styles.wrap}>
       <View style={styles.chartWrap}>
         {goalTop != null && (
-          // Bars top out at 80px inside the 100px row, so align the goal line the
-          // same way (100 − scaledHeight) instead of measuring from the very top.
           <View style={[styles.goalLine, { top: 100 - (goalTop / max) * 80 }]} />
         )}
         <View style={[styles.bars, many && styles.barsTight]}>
@@ -32,8 +28,6 @@ export function WeeklyBarChart({ bars, maxValue, goalTop, focusKey, onSelect }: 
             const barH = Math.max(4, (bar.value / max) * 80);
             const isFocus = !!focusKey && bar.key === focusKey;
             const dim = !!focusKey ? !isFocus : !!bar.dim;
-            // Week (7) and year (12) bars are few enough to label every column;
-            // only a very dense daily run (>13) thins labels to every 5th.
             const label = bars.length > 13 && !(i % 5 === 0 || i === bars.length - 1 || isFocus)
               ? ""
               : bar.label;
@@ -63,7 +57,6 @@ export function WeeklyBarChart({ bars, maxValue, goalTop, focusKey, onSelect }: 
           })}
         </View>
       </View>
-      {/* Legend (only when a goal line is shown, i.e. daily modes) */}
       {goalTop != null && (
         <View style={styles.legend}>
           <View style={styles.legendItem}>
@@ -71,11 +64,11 @@ export function WeeklyBarChart({ bars, maxValue, goalTop, focusKey, onSelect }: 
             <AppText variant="subtle" style={styles.legendText}>{t.progress.goalLine(goalTop.toLocaleString())}</AppText>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: theme.colors.accent }]} />
+            <View style={[styles.legendDot, styles.legendOnTrack]} />
             <AppText variant="subtle" style={styles.legendText}>{t.progress.onTrackRange}</AppText>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: theme.colors.accent2 }]} />
+            <View style={[styles.legendDot, styles.legendOver]} />
             <AppText variant="subtle" style={styles.legendText}>{t.progress.overGoalShort}</AppText>
           </View>
         </View>
@@ -101,5 +94,7 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   legendLine: { width: 16, height: 2, backgroundColor: theme.colors.subtle },
   legendDot: { width: 10, height: 10, borderRadius: 3 },
+  legendOnTrack: { backgroundColor: theme.colors.accent },
+  legendOver: { backgroundColor: theme.colors.accent2 },
   legendText: { fontSize: 11 },
 });

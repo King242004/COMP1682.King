@@ -40,8 +40,7 @@ export function TextField({
   inputProps?: Omit<TextInputProps, "value" | "onChangeText" | "placeholder">;
 }) {
   const [focused, setFocused] = useState(false);
-  // Secure fields get a built-in eye toggle — every password input in the app
-  // inherits it without changes at the call site.
+// Ô mật khẩu có sẵn nút con mắt nên mọi nơi sử dụng đều có thể hiện hoặc ẩn mật khẩu.
   const [hidden, setHidden] = useState(true);
 
   return (

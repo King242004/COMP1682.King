@@ -3,8 +3,10 @@ import { apiFetch, apiRequest } from "@/utils/api";
 export type FeedPost = {
   id: string;
   caption: string;
-  image: string | null;   // first image (legacy readers / grid tile)
-  images: string[];       // all images, Instagram-style (max 10)
+  // Ảnh đầu tiên dành cho code cũ và ô bài viết trong lưới.
+  image: string | null;
+  // Toàn bộ ảnh của bài viết, tối đa 10 ảnh.
+  images: string[];
   dishName: string | null;
   meal: MealSnapshot | null;
   likeCount: number;
@@ -28,7 +30,8 @@ export type PublicProfile = {
   isFollowing: boolean;
   isMe: boolean;
   isPrivate: boolean;
-  postsHidden: boolean; // true when someone else views a private profile → hide the grid
+  // Ẩn lưới bài viết khi người khác xem một tài khoản riêng tư.
+  postsHidden: boolean;
 };
 
 export type FeedPage = { posts: FeedPost[]; page: number; hasMore: boolean };
@@ -136,7 +139,6 @@ export async function unfollowUser(token: string, userId: string): Promise<void>
   await apiRequest(`/community/follow/${userId}`, "DELETE", undefined, token);
 }
 
-// Create a post with up to 10 images. A dish name can exist without nutrition.
 export async function createPost(
   token: string,
   input: {
@@ -170,9 +172,6 @@ export async function createPost(
   return data.post;
 }
 
-// Edit an existing post — caption, meal, and photos. keepUrls lists the
-// existing image URLs to keep (in order); newImageUris are appended. Plain
-// JSON when no new files, multipart otherwise.
 export async function updatePost(
   token: string,
   postId: string,
@@ -182,8 +181,10 @@ export async function updatePost(
     meal?: MealSnapshot | null;
     removeDish?: boolean;
     removeMeal?: boolean;
-    keepUrls?: string[];      // existing image URLs to keep (omit = keep all)
-    newImageUris?: string[];  // local URIs to upload and append
+  // Danh sách ảnh cũ cần giữ. Nếu bỏ qua thì giữ toàn bộ ảnh cũ.
+  keepUrls?: string[];
+  // Danh sách URI ảnh mới trên thiết bị cần tải lên.
+  newImageUris?: string[];
   }
 ): Promise<FeedPost> {
   const newUris = (input.newImageUris || []).slice(0, 10);

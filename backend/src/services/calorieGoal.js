@@ -1,6 +1,3 @@
-// Single source of truth for the auto calorie goal (TDEE-based).
-// Used by profileController (Use auto / auto mode), weightController (weight
-// sync → goal follows) and coachContext (nudge when custom goal drifts).
 
 // Mifflin-St Jeor BMR × activity multiplier
 function calculateTDEE(weight, height, age, gender, activityLevel) {
@@ -22,9 +19,6 @@ function calculateTDEE(weight, height, age, gender, activityLevel) {
   return Math.round(bmr * (multipliers[activityLevel] || 1.55));
 }
 
-// TDEE → daily goal by objective, clamped to a SAFE floor so a small person
-// on lose_weight never gets a dangerously low target (standard nutrition
-// guidance: ≥1200 kcal women, ≥1500 kcal men).
 function goalFromTDEE(tdee, goal, gender) {
   let g;
   if (goal === "lose_weight") g = tdee - 500;
@@ -34,8 +28,6 @@ function goalFromTDEE(tdee, goal, gender) {
   return Math.max(floor, g);
 }
 
-// Convenience: compute the auto goal straight from a user-like object.
-// Returns null when body metrics are incomplete.
 function autoGoal(u) {
   const tdee = calculateTDEE(u.weight, u.height, u.age, u.gender, u.activityLevel);
   if (!tdee) return null;

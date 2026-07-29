@@ -24,7 +24,7 @@ function MacroRow({ label, value, total, color }: {
     <View style={styles.macroRow}>
       <View style={styles.macroHead}>
         <View style={styles.macroLabelWrap}>
-          {/* dot color is per-macro, known at runtime */}
+      {/* Màu chấm phụ thuộc từng chất dinh dưỡng và chỉ biết khi chạy. */}
           <View style={[styles.macroDot, { backgroundColor: color }]} />
           <AppText variant="body2">{label}</AppText>
         </View>
@@ -48,10 +48,11 @@ export default function MealDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
+  // Ngày tháng đi theo ngôn ngữ đã chọn trong app.
+  const locale = localeTag(resolveLanguage(user?.language));
   const { meals, historyMeals, deleteMeal } = useMeals();
   const t = useT();
-  // Look in both lists — meal may be opened from today's view OR from history
+  // Tìm trong cả danh sách hôm nay và lịch sử vì món có thể được mở từ hai nơi.
   const meal = meals.find((m) => m.id === id) || historyMeals.find((m) => m.id === id);
   const goal = user?.calorieGoal ?? 2000;
 
@@ -64,16 +65,11 @@ export default function MealDetailScreen() {
     );
   }
 
-  // Time rule: `meal.date` is the day the meal was EATEN (source of truth) —
-  // createdAt is just when the record was saved. They differ for back-logged
-  // meals, so the clock time only makes sense when both fall on the same day.
   const eatenDateLabel = new Date(meal.date + "T00:00:00").toLocaleDateString(locale, {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
   const loggedSameDay = dateKey(new Date(meal.createdAt)) === meal.date;
-  // "Log again for today" only makes sense for a PAST meal. When the meal is
-  // already today's, re-logging it just duplicates today's entry, so the button
-  // is hidden and only Edit remains.
+  // Chỉ cho ghi lại món của ngày cũ. Món hôm nay mà ghi lại sẽ tạo bản trùng.
   const eatenToday = meal.date === dateKey(new Date());
 
   const handleDelete = () => {
@@ -87,8 +83,7 @@ export default function MealDetailScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteMeal(meal.id);
-            // Return to wherever the user came from (Home or History) — both
-            // update instantly via context state / focus refetch.
+    // Quay về Home hoặc Lịch sử. Cả hai nơi đều tự cập nhật dữ liệu mới.
             router.back();
           },
         },
@@ -100,7 +95,7 @@ export default function MealDetailScreen() {
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ScreenHeader />
-        {/* Title — pulled up closer to the Back header */}
+        {/* Đưa tiêu đề gần nút quay lại hơn. */}
         <View style={styles.titleBlock}>
           <AppText variant="h1">{meal.name}</AppText>
           <View style={styles.metaRow}>
@@ -123,7 +118,7 @@ export default function MealDetailScreen() {
           </View>
         </View>
 
-        {/* Calories card with ring */}
+          {/* Thẻ calo có vòng tiến độ. */}
         <Card style={styles.kcalCard}>
           <View style={styles.kcalRow}>
             <View style={styles.kcalBlock}>
@@ -137,7 +132,7 @@ export default function MealDetailScreen() {
           </View>
         </Card>
 
-        {/* Macros */}
+          {/* Các chất dinh dưỡng chính. */}
         <Card style={styles.macroCard}>
           <AppText variant="h2">{t.meals.macros}</AppText>
           {meal.protein || meal.carbs || meal.fat ? (
@@ -157,7 +152,7 @@ export default function MealDetailScreen() {
           )}
         </Card>
 
-        {/* Note — shown only when the meal has one */}
+          {/* Chỉ hiện ghi chú khi món có nội dung. */}
         {!!meal.note?.trim() && (
           <Card style={styles.noteCard}>
             <AppText variant="h2" style={styles.noteTitle}>{t.meals.noteHeading}</AppText>
@@ -165,8 +160,6 @@ export default function MealDetailScreen() {
           </Card>
         )}
 
-        {/* Actions — one consistent button style (same size as Delete). Log
-            again (primary) shows only for a past meal, then Edit, then Delete. */}
         <View style={styles.actions}>
           {!eatenToday && (
             <Button

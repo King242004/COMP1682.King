@@ -12,8 +12,6 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { SectionLabel } from "@/ui/components/SectionLabel";
 
-// Settings-style row: tinted icon square + label + value on the right.
-// Ionicons (not emoji) so the rows match the app's icon language.
 function SettingRow({ icon, label, value, last }: {
   icon: string; label: string; value: string; last?: boolean;
 }) {
@@ -35,10 +33,8 @@ export default function ProfileScreen() {
 
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  // Refresh on focus so changes made in the Edit screen show up on return
   useFocusEffect(useCallback(() => { fetchProfile(); }, [fetchProfile]));
 
-  // Tap on avatar → open image picker → upload to Cloudinary via backend
   const handlePickAvatar = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -69,9 +65,6 @@ export default function ProfileScreen() {
         text: t.profile.logout,
         style: "destructive",
         onPress: () => {
-          // Navigate FIRST, tear down after the transition: clearing auth state
-          // re-renders every mounted screen + hits AsyncStorage, which stutters
-          // the animation when done up front
           router.replace("/auth/login");
           InteractionManager.runAfterInteractions(() => { logout(); });
         },
@@ -90,7 +83,6 @@ export default function ProfileScreen() {
           <AppText variant="muted">{t.profile.subtitle}</AppText>
         </View>
 
-        {/* User card — avatar (tap to change) + name + edit button */}
         <Card style={styles.userCard}>
           <View style={styles.userRow}>
             <Pressable onPress={handlePickAvatar} disabled={isUploadingAvatar}>
@@ -154,7 +146,6 @@ export default function ProfileScreen() {
         {/* Account */}
         <SectionLabel>{t.profile.account}</SectionLabel>
         <Card style={styles.detailCard}>
-          {/* Settings entry — app preferences live in their own screen */}
           <Pressable
             onPress={() => router.push("/profile/settings" as any)}
             style={({ pressed }) => [styles.accountRow, styles.accountRowDivider, pressed && styles.dim]}
@@ -181,7 +172,6 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  // paddingTop 60 = safe-area top (no tab header above anymore)
   content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
   titleBlock: { gap: 4 },
 
@@ -192,7 +182,6 @@ const styles = StyleSheet.create({
   rowLabel: { flex: 1, color: theme.colors.muted },
   rowValue: { fontWeight: "700", textTransform: "capitalize" },
 
-  // User card
   userCard: { padding: theme.space.xl },
   userRow: { flexDirection: "row", alignItems: "center", gap: theme.space.md },
   avatar: { width: 68, height: 68, borderRadius: 24, backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center", overflow: "hidden" },

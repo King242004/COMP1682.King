@@ -1,13 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { scheduleDailyReminder, cancelNotification } from "./notifications";
 
-// Per meal reminders. Each meal type owns one daily notification, so the
-// message can name the meal ("Did you log lunch?") rather than being generic.
-//
-// LIMITATION: a scheduled notification is handed to the operating system, so it
-// fires whether or not the meal was already logged. Skipping a reminder for an
-// already logged meal would require code to run at fire time, which needs a
-// development build rather than the standard development client.
+// Mỗi loại bữa ăn có một thông báo hằng ngày để nội dung nhắc đúng tên bữa.
+// Hạn chế: thông báo đã lên lịch do hệ điều hành quản lý nên vẫn hiện dù món đã được ghi.
+// Muốn bỏ thông báo của bữa đã ghi thì cần chạy code đúng lúc thông báo xuất hiện,
+// việc này cần bản phát triển riêng thay vì ứng dụng thử nghiệm tiêu chuẩn.
 
 export const MEAL_KEYS = ["breakfast", "lunch", "dinner", "snack"] as const;
 export type MealKey = (typeof MEAL_KEYS)[number];
@@ -15,8 +12,7 @@ export type MealKey = (typeof MEAL_KEYS)[number];
 export type Reminder = { enabled: boolean; time: string; id: string | null };
 export type ReminderMap = Record<MealKey, Reminder>;
 
-// Defaults sit AFTER the usual eating window, because the purpose is to prompt
-// logging rather than to prompt eating.
+// Giờ mặc định nằm sau giờ ăn thường gặp vì mục đích là nhắc ghi món, không phải nhắc ăn.
 const DEFAULT_TIMES: Record<MealKey, string> = {
   breakfast: "08:00",
   lunch: "13:00",
@@ -52,9 +48,8 @@ const toMinutes = (t: string) => {
   return p ? p[0] * 60 + p[1] : 0;
 };
 
-// A user who configured the single reminder of the earlier design keeps it:
-// the existing notification id is carried over onto whichever meal type has the
-// closest default time, so nothing needs rescheduling and nothing is lost.
+  // Người đã dùng kiểu một thông báo cũ vẫn giữ được thông báo đó.
+  // Mã thông báo cũ được chuyển sang bữa có giờ mặc định gần nhất.
 async function migrateLegacy(state: ReminderMap): Promise<ReminderMap> {
   const [legacyId, legacyTime] = await Promise.all([
     AsyncStorage.getItem(LEGACY_ID_KEY),
@@ -82,7 +77,7 @@ export async function loadReminders(): Promise<ReminderMap> {
   if (!raw) return migrateLegacy(emptyReminders());
   try {
     const saved = JSON.parse(raw) as Partial<ReminderMap>;
-    // Merge over defaults so a key added in a later version cannot be missing
+    // Gộp với dữ liệu mặc định để phiên bản mới thêm bữa vẫn không bị thiếu khóa.
     const state = emptyReminders();
     for (const k of MEAL_KEYS) if (saved[k]) state[k] = { ...state[k], ...saved[k] };
     return state;
@@ -95,9 +90,8 @@ async function persist(state: ReminderMap) {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-// Turn a reminder on or off, or move it to a different time. Any existing
-// notification for that meal is cancelled first, so changing the time never
-// leaves an orphan firing at the old one.
+// Bật, tắt hoặc đổi giờ nhắc. Thông báo cũ của bữa sẽ được hủy trước,
+// tránh việc đổi giờ nhưng thông báo cũ vẫn tiếp tục xuất hiện.
 export async function applyReminder(
   state: ReminderMap,
   key: MealKey,
@@ -115,7 +109,7 @@ export async function applyReminder(
     const parsed = parseTime(next.time);
     if (parsed) {
       const id = await scheduleDailyReminder(parsed[0], parsed[1], content);
-      // A null id means permission was refused, so the switch must not appear on
+    // Mã rỗng nghĩa là quyền thông báo bị từ chối nên công tắc phải trở về tắt.
       updated[key].id = id;
       updated[key].enabled = !!id;
     }
@@ -129,8 +123,7 @@ export function enabledCount(state: ReminderMap) {
   return MEAL_KEYS.filter((k) => state[k].enabled).length;
 }
 
-// Cancels every scheduled reminder and clears storage. Used on sign out, so
-// reminders belonging to one account never fire for the next account.
+// Hủy toàn bộ lịch nhắc và xóa dữ liệu khi đăng xuất để không nhắc nhầm tài khoản.
 export async function cancelAllReminders() {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -138,10 +131,10 @@ export async function cancelAllReminders() {
       const saved = JSON.parse(raw) as Partial<ReminderMap>;
       await Promise.all(MEAL_KEYS.map((k) => cancelNotification(saved[k]?.id)));
     }
-    // Legacy key, in case sign out happens before the screen has been opened
+  // Xóa cả khóa cũ nếu người dùng đăng xuất trước khi từng mở màn nhắc nhở.
     await cancelNotification(await AsyncStorage.getItem(LEGACY_ID_KEY));
   } catch {
-    // best effort, never block sign out
+    // Nếu hủy thất bại vẫn phải cho phép đăng xuất.
   }
   await AsyncStorage.multiRemove([STORAGE_KEY, LEGACY_ID_KEY, LEGACY_TIME_KEY]);
 }

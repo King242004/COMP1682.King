@@ -12,9 +12,9 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 
-// Change password while logged in: proves identity with the CURRENT password
-// (the forgot-password OTP flow is for when you can't log in at all). Own
-// screen rather than an inline card so the 3 password fields have room.
+// Đổi mật khẩu khi đang đăng nhập cần xác minh bằng mật khẩu hiện tại.
+// Luồng OTP quên mật khẩu dành cho trường hợp không thể đăng nhập.
+// Màn riêng tạo đủ chỗ cho ba ô mật khẩu.
 export default function ChangePasswordScreen() {
   const router = useRouter();
   const { token } = useAuth();

@@ -1,9 +1,5 @@
 import type { Strings } from "@/i18n";
 
-// Gemini free-tier daily quotas reset at midnight PACIFIC TIME — a fixed
-// global mark (about 14:00-15:00 Vietnam time depending on DST), NOT 24 hours
-// after the user's first request. Scan hour by hour for the next moment whose
-// Pacific hour is 0, then floor to the top of that local hour.
 export function nextAiResetLocal(): { date: Date; isToday: boolean } {
   const now = new Date();
   try {
@@ -27,9 +23,7 @@ export function nextAiResetLocal(): { date: Date; isToday: boolean } {
       }
     }
   } catch {
-    // Intl timezone data unavailable → fall through to the fixed-offset guess
   }
-  // Fallback: assume PST (UTC-8) → midnight PT = 08:00 UTC ("about" is fine)
   const cand = new Date(now);
   cand.setUTCHours(8, 0, 0, 0);
   if (cand.getTime() <= now.getTime()) cand.setUTCDate(cand.getUTCDate() + 1);
@@ -39,8 +33,6 @@ export function nextAiResetLocal(): { date: Date; isToday: boolean } {
   };
 }
 
-// "khoảng 14:00 hôm nay" / "around 14:00 tomorrow" — ready to drop into the
-// quota messages (localized via the catalog).
 export function aiResetWhen(t: Strings): string {
   const { date, isToday } = nextAiResetLocal();
   const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;

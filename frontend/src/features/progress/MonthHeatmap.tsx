@@ -3,19 +3,13 @@ import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 
-// Minimal shape a heatmap cell needs — DaySummary (calories) and activity days
-// (burned) both map onto this, so the calendar heatmap is shared.
 export type HeatCell = { key: string; value: number; isFuture: boolean; isToday: boolean };
 
-// hex → rgba so a day cell can shade by amount (heatmap intensity).
 function rgba(hex: string, a: number) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 }
 
-// Month view as a calendar heatmap: one cell per day, shaded by the day's value.
-// Big, tappable cells (easier than thin bars). Monday-first. `shade` lets the
-// caller pick the intensity colour (calories = cyan, burned = orange).
 export function MonthHeatmap({ cells: data, maxValue, selectedKey, onSelect, shade = theme.colors.primary }: {
   cells: HeatCell[];
   maxValue: number;

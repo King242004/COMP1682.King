@@ -60,8 +60,6 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  // ─── Resend: the UI countdown mirrors the server's silent cooldown so a tap
-  // always means a fresh code was eligible to be issued.
   const handleResendOTP = async () => {
     if (resendSeconds > 0 || isLoading) return;
     setOtp("");
@@ -84,9 +82,6 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  // ─── Step 2: Verify OTP ─────────────────────────────────────────────────────
-  // Actually asks the server (used to advance locally — any 6 digits "passed").
-  // Wrong guesses count toward the 5-attempt limit; the 5th burns the code.
   const handleVerifyOTP = async () => {
     if (otp.trim().length !== 6) {
       setError(t.auth.otpMustBe6);
@@ -104,7 +99,6 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  // ─── Step 3: Reset Password ─────────────────────────────────────────────────
   const handleResetPassword = async () => {
     if (newPassword.length < 6) {
       setError(t.auth.passwordTooShort);

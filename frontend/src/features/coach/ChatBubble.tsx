@@ -1,5 +1,3 @@
-// One chat bubble (user or coach), including the suggested-meal card:
-// meal-type chips + Add button while eating, Logged chip + Undo afterwards.
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme } from "@/ui/theme";
@@ -29,7 +27,7 @@ export function ChatBubble({ m, labels, mealOpts, onSetMealType, onAcceptLog, on
         <AppText style={[styles.text, isUser && styles.textUser]}>{m.text}</AppText>
       )}
 
-      {/* Suggested meal: Add card → after adding becomes a Logged chip */}
+      {/* Thẻ món gợi ý sẽ đổi thành trạng thái đã ghi sau khi thêm. */}
       {m.meal && (
         m.loggedId ? (
           <View style={styles.loggedChip}>
@@ -51,7 +49,7 @@ export function ChatBubble({ m, labels, mealOpts, onSetMealType, onAcceptLog, on
                 P {m.meal.protein} · C {m.meal.carbs} · F {m.meal.fat}
               </AppText>
             </View>
-            {/* Meal type picker — only when the user is actually eating it */}
+            {/* Chỉ chọn loại bữa khi người dùng xác nhận đang ăn món này. */}
             {m.eating && (
               <View style={styles.chipRow}>
                 {mealOpts.map(([key, label]) => {
@@ -70,7 +68,7 @@ export function ChatBubble({ m, labels, mealOpts, onSetMealType, onAcceptLog, on
                 })}
               </View>
             )}
-            {/* Accept button — only when the user is actually eating it */}
+          {/* Chỉ hiện nút thêm khi người dùng xác nhận đang ăn. */}
             {m.eating && (
               <Pressable
                 onPress={onAcceptLog}

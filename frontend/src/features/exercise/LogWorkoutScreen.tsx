@@ -24,7 +24,7 @@ export default function AddExerciseScreen() {
   const t = useT();
   const { date } = useLocalSearchParams<{ date?: string }>();
 
-  // Log today or a past day; never the future (guard the param, fall back to today)
+  // Cho phép ghi hôm nay hoặc ngày cũ, không cho ghi ngày tương lai.
   const todayStr = todayKey();
   const logDate = date && date <= todayStr ? date : todayStr;
   const isBackdated = logDate !== todayStr;
@@ -32,8 +32,8 @@ export default function AddExerciseScreen() {
   const [selected, setSelected] = useState<Activity | null>(null);
   const [duration, setDuration] = useState("");
   const [customName, setCustomName] = useState("");
-  // Custom "Other" activity: pick an intensity (plain words), we map it to a
-  // MET behind the scenes — asking users for a raw MET number was confusing.
+  // Với hoạt động "Khác", người dùng chọn mức cường độ dễ hiểu.
+  // Ứng dụng tự đổi mức này sang MET ở bên trong.
   const [customIntensity, setCustomIntensity] = useState<"light" | "moderate" | "intense">("moderate");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,8 +43,8 @@ export default function AddExerciseScreen() {
   const INTENSITY_MET = { light: 3, moderate: 5, intense: 8 } as const;
   const customMet = String(INTENSITY_MET[customIntensity]);
 
-  // "Recent" one-tap chips: the user's own last workouts (people repeat the
-  // same 2-3 activities) — tap = everything prefilled, just hit Save.
+  // Các lựa chọn gần đây lấy từ lịch sử của người dùng.
+  // Chạm một lần sẽ điền sẵn thông tin để chỉ cần bấm Lưu.
   type RecentWorkout = { name: string; met: number; durationMin: number };
   const [recent, setRecent] = useState<RecentWorkout[]>([]);
   useEffect(() => {
@@ -66,8 +66,8 @@ export default function AddExerciseScreen() {
   }, [token]);
 
   const applyRecent = (r: RecentWorkout) => {
-    // Match by CURRENT localized label: simple list first, then the detailed
-    // legacy catalog (old logs like "Tạ nặng"); else reuse via the custom entry.
+    // Tìm theo tên đang được dịch: kiểm tra danh sách mới trước rồi đến danh mục cũ.
+    // Nếu không khớp thì dùng mục hoạt động tự nhập.
     const legacy = ACTIVITY_GROUPS.flatMap((g) => g.items);
     const match = [...SIMPLE_ACTIVITIES, ...legacy].find(
       (a) => !a.custom && (t.exercise.activities[a.key] ?? a.key) === r.name
@@ -78,15 +78,15 @@ export default function AddExerciseScreen() {
       const custom = SIMPLE_ACTIVITIES.find((a) => a.custom)!;
       setSelected(custom);
       setCustomName(r.name);
-      // Map the stored MET back to the nearest intensity bucket
+      // Đổi MET đã lưu về mức cường độ gần nhất.
       setCustomIntensity(r.met <= 4 ? "light" : r.met <= 6.5 ? "moderate" : "intense");
     }
     setDuration(String(r.durationMin));
     setError(null);
   };
 
-  // Effective MET + name (custom entry pulls from the typed fields).
-  // The LOCALIZED label is what gets saved as the workout name.
+  // Với hoạt động tự nhập, tên và MET lấy từ các ô người dùng đã điền.
+  // Tên đã dịch theo ngôn ngữ hiện tại sẽ được lưu làm tên bài tập.
   const met = isCustom ? Number(customMet) : selected?.met ?? 0;
   const name = isCustom
     ? customName.trim()
@@ -137,7 +137,7 @@ export default function AddExerciseScreen() {
           <AppText variant="muted" style={styles.subtitle}>{t.exercise.subtitle}</AppText>
         </View>
 
-        {/* Back-dated banner — make it clear WHICH day this workout goes to */}
+        {/* Báo rõ ngày được ghi khi người dùng thêm bài tập cho ngày cũ. */}
         {isBackdated && (
           <View style={styles.backdateBanner}>
             <Ionicons name="time-outline" size={16} color={theme.colors.primary} />
@@ -147,7 +147,7 @@ export default function AddExerciseScreen() {
           </View>
         )}
 
-        {/* Weight hint — the estimate needs it */}
+        {/* Cần cân nặng để ước tính calo tiêu hao. */}
         {!user?.weight && (
           <View style={styles.warnBanner}>
             <AppText style={styles.warnEmoji}>⚠️</AppText>
@@ -155,7 +155,7 @@ export default function AddExerciseScreen() {
           </View>
         )}
 
-        {/* Guided routines — follow along step by step; finishing auto-logs */}
+        {/* Bài tập hướng dẫn theo từng bước và tự ghi khi hoàn thành. */}
         <View style={styles.group}>
           <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.guidedSection}</AppText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.guidedRow}>
@@ -175,7 +175,7 @@ export default function AddExerciseScreen() {
           </ScrollView>
         </View>
 
-        {/* Recent workouts — one tap prefills everything */}
+        {/* Bài tập gần đây, chạm một lần để điền sẵn. */}
         {recent.length > 0 && (
           <View style={styles.group}>
             <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.recent}</AppText>
@@ -194,8 +194,6 @@ export default function AddExerciseScreen() {
           </View>
         )}
 
-        {/* Manual picker — ONE flat row of coarse activities (what real memory
-            can answer), no groups. "Khác" keeps the precise custom path. */}
         <View style={styles.group}>
           <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.pickManual}</AppText>
           <View style={styles.chipWrap}>
@@ -215,7 +213,7 @@ export default function AddExerciseScreen() {
           </View>
         </View>
 
-        {/* Custom activity fields — name + intensity (plain words, no MET math) */}
+        {/* Hoạt động tự nhập gồm tên và cường độ, không bắt người dùng tính MET. */}
         {isCustom && (
           <Card style={styles.card}>
             <TextField
@@ -247,8 +245,6 @@ export default function AddExerciseScreen() {
           </Card>
         )}
 
-        {/* Duration — pick the NEAREST preset ("cỡ 30 phút"); the exact input
-            below stays as the optional precise path */}
         <Card style={styles.durationCard}>
           <AppText variant="subtle" style={styles.groupLabel}>{t.exercise.duration}</AppText>
           <View style={styles.durRow}>
@@ -267,8 +263,6 @@ export default function AddExerciseScreen() {
               );
             })}
           </View>
-          {/* Breathing room so the optional field reads as a separate choice
-              rather than a caption attached to the chips above */}
           <View style={styles.exactField}>
             <TextField
               label={t.exercise.exactMinutes}
@@ -281,7 +275,7 @@ export default function AddExerciseScreen() {
           </View>
         </Card>
 
-        {/* Live estimate */}
+        {/* Ước tính calo thay đổi ngay theo dữ liệu nhập. */}
         <Card style={styles.estimateCard}>
           <AppText variant="subtle" style={styles.estimateLabel}>{t.exercise.estimatedBurned}</AppText>
           <View style={styles.estimateValueRow}>
@@ -333,8 +327,7 @@ const styles = StyleSheet.create({
   warnText: { fontSize: 12, flex: 1 },
 
   group: { gap: 8 },
-  // 8px matches the label-to-input gap inside TextField, so a section label
-  // sits the same distance above its chips as a field label above its box
+  // Khoảng 8 px giống khoảng cách giữa nhãn và ô nhập trong TextField.
   groupLabel: { fontSize: 12, fontWeight: "700", marginBottom: 8 },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5 },

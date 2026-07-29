@@ -15,8 +15,7 @@ import { SectionLabel } from "@/ui/components/SectionLabel";
 import { TextField } from "@/ui/components/TextField";
 import { resolveLanguage, type Lang } from "@/utils/language";
 
-// Reusable icon square for settings rows — Ionicons, not emoji, so every row
-// renders crisply and matches the icon language of the rest of the app
+// Ô biểu tượng dùng chung giúp các hàng cài đặt có cùng cách trình bày.
 function IconBox({ icon, bg, color }: { icon: string; bg?: string; color?: string }) {
   return (
     <View style={[styles.iconBox, bg ? { backgroundColor: bg } : null]}>
@@ -30,10 +29,17 @@ export default function SettingsScreen() {
   const router = useRouter();
   const t = useT();
 
-  // Delete account (right to erasure): password-confirmed modal
+  // Trạng thái của các hộp thoại và thao tác trong màn cài đặt.
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [deletePw, setDeletePw] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [reminderCount, setReminderCount] = useState(0);
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalInput, setGoalInput] = useState("");
+  const [isSavingGoal, setIsSavingGoal] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(!!user?.isPrivate);
+  const [savingLang, setSavingLang] = useState(false);
+
   const handleDeleteAccount = async () => {
     if (!deletePw || deleting) return;
     setDeleting(true);
@@ -48,32 +54,24 @@ export default function SettingsScreen() {
     }
   };
 
-  // Summary only. Reminders are configured on their own screen, so this
-  // refreshes on focus to pick up changes made there.
-  const [reminderCount, setReminderCount] = useState(0);
+  // Tải lại số lời nhắc khi quay về vì lời nhắc được chỉnh ở màn riêng.
   useFocusEffect(useCallback(() => {
     loadReminders().then((r) => setReminderCount(enabledCount(r)));
   }, []));
 
-  const [editingGoal, setEditingGoal] = useState(false);
-  const [goalInput, setGoalInput] = useState("");
-  const [isSavingGoal, setIsSavingGoal] = useState(false);
-
-  // Private profile: mirrors user.isPrivate, toggled optimistically
-  const [isPrivate, setIsPrivate] = useState(!!user?.isPrivate);
   const togglePrivate = async (value: boolean) => {
     setIsPrivate(value);
     try {
       await updateProfile({ isPrivate: value });
     } catch (e: any) {
-      setIsPrivate(!value); // revert
+      // Trả lại trạng thái cũ nếu cập nhật quyền riêng tư thất bại.
+      setIsPrivate(!value);
       Alert.alert(t.common.errorTitle, e.message || t.settings.failedPrivacy);
     }
   };
 
-  // Language: effective = saved choice or device default. Tapping persists the choice.
+  // Nếu chưa lưu lựa chọn thì dùng ngôn ngữ mặc định của thiết bị.
   const currentLang = resolveLanguage(user?.language);
-  const [savingLang, setSavingLang] = useState(false);
   const handleSetLanguage = async (l: Lang) => {
     if (l === user?.language) return;
     setSavingLang(true);
@@ -86,7 +84,7 @@ export default function SettingsScreen() {
     }
   };
 
-  // ── Daily calorie goal: custom override or auto (recomputed from TDEE) ──────
+  // Lưu mục tiêu calo tự chọn hoặc quay lại giá trị tự tính từ TDEE.
   const handleSaveGoal = async () => {
     const n = Number(goalInput);
     if (!goalInput.trim() || isNaN(n) || n < 800 || n > 10000) {
@@ -105,8 +103,6 @@ export default function SettingsScreen() {
   };
 
   const handleAutoGoal = async () => {
-    // calorieGoal: null = explicit "back to auto (TDEE)" — the backend flips
-    // customGoal off and recomputes from the stored profile metrics
     if (!user?.weight || !user?.height || !user?.age || !user?.gender) {
       Alert.alert(t.settings.missingInfo, t.settings.missingInfoMsg);
       return;
@@ -179,7 +175,6 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        {/* REMINDERS — one per meal type, managed on their own screen */}
         <SectionLabel>{t.settings.reminders}</SectionLabel>
         <Card style={styles.card}>
           <Pressable
@@ -258,7 +253,6 @@ export default function SettingsScreen() {
           </View>
         </Card>
 
-        {/* YOUR DATA — transparency notice + right to erasure */}
         <SectionLabel>{t.settings.dataSection}</SectionLabel>
         <Card style={styles.card}>
           <AppText variant="subtle" style={styles.dataNotice}>{t.settings.dataNotice}</AppText>
@@ -279,7 +273,6 @@ export default function SettingsScreen() {
         <AppText variant="subtle" style={styles.version}>MealMate · v1.0.0</AppText>
       </ScrollView>
 
-      {/* Delete-account confirm: warning + password (destructive, cannot be undone) */}
       <Modal transparent visible={deleteVisible} animationType="fade" onRequestClose={() => !deleting && setDeleteVisible(false)}>
         <Pressable style={styles.backdrop} onPress={() => !deleting && setDeleteVisible(false)}>
           <Pressable onPress={(e) => e.stopPropagation()}>
@@ -357,7 +350,6 @@ const styles = StyleSheet.create({
 
   version: { textAlign: "center", fontSize: 11, marginTop: 4 },
 
-  // Your data + delete account
   dataNotice: { fontSize: 12, lineHeight: 18, paddingTop: theme.space.md },
   deleteTitle: { fontWeight: "600", color: theme.colors.danger },
   deleteBtn: {

@@ -1,5 +1,3 @@
-// Daily Health Score card: ring-style score + tappable warnings/tips
-// (tapping one sends it into the chat for elaboration).
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
@@ -43,7 +41,7 @@ export function InsightCard({ insight, loading, sending, failText, onAskTip }: {
   return (
     <Card style={styles.card}>
       <View style={styles.headRow}>
-        {/* border color depends on the score — runtime value */}
+        {/* Màu viền phụ thuộc điểm nên chỉ biết khi component chạy. */}
         <View style={[styles.scoreRing, { borderColor: color }]}>
           <AppText style={[styles.scoreText, { color }]}>{insight.score}</AppText>
         </View>
@@ -53,7 +51,6 @@ export function InsightCard({ insight, loading, sending, failText, onAskTip }: {
         </View>
       </View>
 
-      {/* Warnings and tips are tappable → sends them to the chat for elaboration */}
       {insight.warnings.map((w, i) => (
         <Pressable
           key={i}

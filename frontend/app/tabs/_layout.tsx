@@ -1,7 +1,6 @@
-// Tab shell — thin route file: the chrome lives in src/ui/components
-// (AppHeader = blue header + streak, TabBar = bottom tabs + center FAB).
-// Single-tier headers: the blue AppHeader belongs to HOME only — the other
-// tabs have their own title row, so stacking both wasted ~90px per screen.
+// Route mỏng cho khu vực tab. Giao diện chung nằm trong src/ui/components.
+// AppHeader gồm thanh đầu màu xanh và streak. TabBar là thanh tab phía dưới.
+// Chỉ Home dùng AppHeader vì các tab khác đã có hàng tiêu đề riêng.
 import { Tabs } from "expo-router";
 import { AppHeader } from "@/ui/components/AppHeader";
 import { TabBar } from "@/ui/components/TabBar";

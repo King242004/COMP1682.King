@@ -5,7 +5,7 @@ import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import type { DaySummary } from "./summary";
 
-// 7-day consistency dots (✓ on track / ! over / · logged / empty) + legend.
+// Bảy chấm thể hiện đúng mục tiêu, vượt mục tiêu, đã ghi hoặc chưa có dữ liệu.
 export function ConsistencyRow({ summaries, goal, daysLogged }: {
   summaries: DaySummary[]; goal: number; daysLogged: number;
 }) {
@@ -18,7 +18,7 @@ export function ConsistencyRow({ summaries, goal, daysLogged }: {
       </View>
       <View style={styles.row}>
         {summaries.map((day, i) => {
-          // Over-goal = warning orange, not danger red (red = errors/destructive)
+          // Vượt mục tiêu dùng màu cam cảnh báo, màu đỏ chỉ dành cho lỗi hoặc xóa.
           const bg = day.onTrack
             ? theme.colors.accent
             : day.calories > goal
@@ -43,18 +43,18 @@ export function ConsistencyRow({ summaries, goal, daysLogged }: {
           );
         })}
       </View>
-      {/* Legend */}
+      {/* Chú thích màu của các chấm. */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: theme.colors.accent }]} />
+          <View style={[styles.legendDot, styles.legendOnTrack]} />
           <AppText variant="subtle" style={styles.legendText}>{t.progress.onTrackShort}</AppText>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: theme.colors.primary }]} />
+          <View style={[styles.legendDot, styles.legendLogged]} />
           <AppText variant="subtle" style={styles.legendText}>{t.progress.logged}</AppText>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: theme.colors.accent2 }]} />
+          <View style={[styles.legendDot, styles.legendOver]} />
           <AppText variant="subtle" style={styles.legendText}>{t.progress.overGoalShort}</AppText>
         </View>
       </View>
@@ -76,5 +76,8 @@ const styles = StyleSheet.create({
   legend: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendOnTrack: { backgroundColor: theme.colors.accent },
+  legendLogged: { backgroundColor: theme.colors.primary },
+  legendOver: { backgroundColor: theme.colors.accent2 },
   legendText: { fontSize: 11 },
 });

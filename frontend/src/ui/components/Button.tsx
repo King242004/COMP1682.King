@@ -13,6 +13,36 @@ import { AppText } from "./AppText";
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "lg" | "md";
 
+function getSizeStyle(size: Size): ViewStyle {
+  return size === "lg" ? styles.large : styles.medium;
+}
+
+function getVariantStyle(variant: Variant): ViewStyle {
+  return styles[variant];
+}
+
+function getPressedVariantStyle(variant: Variant): ViewStyle {
+  const pressedStyles: Record<Variant, ViewStyle> = {
+    primary: styles.primaryPressed,
+    secondary: styles.secondaryPressed,
+    ghost: styles.ghostPressed,
+    danger: styles.dangerPressed,
+  };
+
+  return pressedStyles[variant];
+}
+
+function getTextVariantStyle(variant: Variant): TextStyle {
+  const textStyles: Record<Variant, TextStyle> = {
+    primary: styles.primaryText,
+    secondary: styles.secondaryText,
+    ghost: styles.ghostText,
+    danger: styles.dangerText,
+  };
+
+  return textStyles[variant];
+}
+
 export function Button({
   title,
   onPress,
@@ -40,16 +70,16 @@ export function Button({
       {...props}
       style={({ pressed: isPressed }) => [
         styles.base,
-        sizeStyles[size],
-        variantStyles[variant],
+        getSizeStyle(size),
+        getVariantStyle(variant),
         isPressed && !disabled && styles.pressed,
-        isPressed && !disabled && pressedVariantStyles[variant],
+        isPressed && !disabled && getPressedVariantStyle(variant),
         disabled && styles.disabled,
         style,
       ]}
     >
       {left ? <View style={styles.left}>{left}</View> : null}
-      <AppText variant="body" style={[styles.text, textVariantStyles[variant]]}>
+      <AppText variant="body" style={[styles.text, getTextVariantStyle(variant)]}>
         {title}
       </AppText>
       {right ? <View style={styles.right}>{right}</View> : null}
@@ -92,29 +122,3 @@ const styles = StyleSheet.create({
   ghostText: { color: theme.colors.text },
   dangerText: { color: theme.colors.danger },
 });
-
-const sizeStyles: Record<Size, ViewStyle> = {
-  lg: styles.large,
-  md: styles.medium,
-};
-
-const variantStyles: Record<Variant, ViewStyle> = {
-  primary: styles.primary,
-  secondary: styles.secondary,
-  ghost: styles.ghost,
-  danger: styles.danger,
-};
-
-const pressedVariantStyles: Record<Variant, ViewStyle> = {
-  primary: styles.primaryPressed,
-  secondary: styles.secondaryPressed,
-  ghost: styles.ghostPressed,
-  danger: styles.dangerPressed,
-};
-
-const textVariantStyles: Record<Variant, TextStyle> = {
-  primary: styles.primaryText,
-  secondary: styles.secondaryText,
-  ghost: styles.ghostText,
-  danger: styles.dangerText,
-};

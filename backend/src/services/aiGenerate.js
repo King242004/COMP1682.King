@@ -1,6 +1,3 @@
-// Shared Gemini caller: tries each (key × model) instance in order and falls back
-// to the next on quota (429) or any error, so one exhausted bucket never breaks a
-// feature. Used by coach, scan and plan generation.
 const ATTEMPT_TIMEOUT_MS = 12_000;
 const TOTAL_TIMEOUT_MS = 40_000;
 

@@ -1,5 +1,3 @@
-// "What should I eat now?" — API + cache logic for the plan feature
-// (the endpoint itself is /coach/suggest-meal).
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/api";
 import { stripMarkdown } from "@/features/coach/api";
@@ -18,14 +16,12 @@ export type MealSuggestion = {
 };
 
 export type MealSuggestions = {
-  mealType: string; // slot the server suggested for (breakfast/lunch/dinner/snack)
-  remaining: number; // kcal budget left when suggestions were generated
+  mealType: string;
+  // Lượng kcal còn lại tại thời điểm tạo gợi ý.
+  remaining: number;
   suggestions: MealSuggestion[];
 };
 
-// Slot to suggest for: hour-based slot, skipping slots already eaten today.
-// Mirrors backend nextSlotToSuggest — keep the two in sync so the cache key
-// matches what the server generates for.
 export function nextMealSlot(hour: number, eatenTypes: Set<string>): string {
   const order = ["breakfast", "lunch", "snack", "dinner"];
   let idx = order.indexOf(mealSlotByHour(hour));
@@ -55,8 +51,6 @@ export async function suggestNextMeal(token: string, language: Lang): Promise<Me
   };
 }
 
-// Cache per (date + meal slot + language) — tapping the button again within the
-// same slot reuses the result instead of burning another Gemini request.
 const suggestCacheKey = (date: string, slot: string, language: Lang) =>
   `coach_suggest_${date}_${slot}_${language}`;
 
@@ -73,6 +67,5 @@ export async function cacheSuggestions(date: string, slot: string, language: Lan
   try {
     await AsyncStorage.setItem(suggestCacheKey(date, slot, language), JSON.stringify(s));
   } catch {
-    // ignore cache write failures
   }
 }

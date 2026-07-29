@@ -1,5 +1,5 @@
-// Parse a user-typed number accepting BOTH decimal separators ("12.5" and
-// "12,5") — Vietnamese keyboards give a comma on the iOS decimal pad.
+// Đọc số người dùng nhập với cả dấu chấm và dấu phẩy thập phân.
+// Bàn phím số tiếng Việt trên iOS thường hiển thị dấu phẩy.
 export function parseDecimal(raw: string): number {
   return Number(raw.trim().replace(",", "."));
 }

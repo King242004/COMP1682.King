@@ -24,19 +24,16 @@ function sumMacros(meals) {
   );
 }
 
-// Assembles the full health context for a user on a given date.
-// Returns a structured object the controller uses for both the Health Score
-// (deterministic) and the AI prompt (grounding).
 async function buildContext(userId, date) {
-  // Independent queries — run in parallel to keep AI endpoints snappy
-  const weekStart = shiftDate(date, -6); // last 7 days (incl. `date`)
+  const weekStart = shiftDate(date, -6);
   const [user, todayMeals, todayExercises, weekMeals, weekExercises, weightLogs] = await Promise.all([
     User.findById(userId).select("name gender age weight height goal activityLevel conditions calorieGoal customGoal tastePreferences targetWeight"),
     Meal.find({ user: userId, date }).sort({ createdAt: 1 }),
     Exercise.find({ user: userId, date }).sort({ createdAt: 1 }),
     Meal.find({ user: userId, date: { $gte: weekStart, $lte: date } }),
     Exercise.find({ user: userId, date: { $gte: weekStart, $lte: date } }),
-    WeightLog.find({ user: userId }).sort({ date: -1 }).limit(10), // newest first
+    // Lấy 10 lần ghi cân nặng mới nhất trước.
+    WeightLog.find({ user: userId }).sort({ date: -1 }).limit(10),
   ]);
 
   const todayTotals = sumMacros(todayMeals);
@@ -44,8 +41,6 @@ async function buildContext(userId, date) {
   const loggedDays = new Set(weekMeals.map((m) => m.date));
   const weekTotals = sumMacros(weekMeals);
   const avgCalories = loggedDays.size > 0 ? Math.round(weekTotals.calories / loggedDays.size) : 0;
-  // Week workout picture — without it the coach answers "is my training enough?"
-  // blind (it only saw TODAY's workouts before)
   const activeDays = new Set(weekExercises.map((e) => e.date)).size;
   const weekBurned = weekExercises.reduce((s, e) => s + e.caloriesBurned, 0);
 
@@ -62,9 +57,6 @@ async function buildContext(userId, date) {
       calorieGoal: user?.calorieGoal || 2000,
       tastePreferences: user?.tastePreferences || "",
       targetWeight: user?.targetWeight || null,
-      // Custom-goal drift nudge: when the user typed their own goal but their
-      // body metrics now suggest a clearly different TDEE-based target (>300
-      // kcal apart), the AI may gently suggest reviewing it — never pushy.
       goalDriftKcal: (() => {
         if (!user?.customGoal) return null;
         const suggested = autoGoal(user);
@@ -72,8 +64,6 @@ async function buildContext(userId, date) {
         const drift = suggested - (user.calorieGoal || 2000);
         return Math.abs(drift) > 300 ? { suggested, drift } : null;
       })(),
-      // Weight trend from the log (newest first): latest entry + change vs the
-      // oldest of the last 10 entries — enough for "you're down 1.2kg" advice
       weightTrend: weightLogs.length
         ? {
             latestKg: weightLogs[0].weightKg,
@@ -111,7 +101,6 @@ async function buildContext(userId, date) {
   };
 }
 
-// Compact human-readable block injected into the AI prompt (grounding).
 function contextToText(ctx) {
   const p = ctx.profile;
   const t = ctx.today;
@@ -156,9 +145,6 @@ LAST 7 DAYS
 - Workouts: ${ctx.week.workouts} session(s) across ${ctx.week.activeDays} day(s), ${ctx.week.burnedKcal} kcal burned total`;
 }
 
-// One-line dietary guidance per supported condition — the SINGLE source every
-// AI prompt (coach chat/insight, suggest-meal, weekly plan) appends so a new
-// condition only needs to be added here + the FE picker list.
 const CONDITION_GUIDE =
   "diabetes: low sugar/refined carbs; " +
   "hypertension: low sodium/salty food; " +

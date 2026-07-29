@@ -1,8 +1,8 @@
 import { dateKey } from "./date";
 
-// Consecutive days with at least one logged meal, counting back from today.
-// Time rule: today without a log does NOT break the streak yet (the day isn't
-// over) — counting simply starts from yesterday instead.
+// Đếm số ngày liên tiếp có ít nhất một món, tính lùi từ hôm nay.
+// Nếu hôm nay chưa ghi món thì chuỗi chưa bị ngắt vì ngày vẫn chưa kết thúc.
+// Khi đó bắt đầu đếm từ hôm qua.
 export function mealStreak(loggedDates: Iterable<string>): number {
   const logged = new Set(loggedDates);
   let count = 0;
@@ -17,7 +17,7 @@ export function mealStreak(loggedDates: Iterable<string>): number {
   return count;
 }
 
-// Longest run of consecutive logged days inside a supplied reporting period.
+// Tìm chuỗi ngày ghi món liên tiếp dài nhất trong khoảng báo cáo được cung cấp.
 export function longestMealStreak(loggedDates: Iterable<string>): number {
   const dates = [...new Set(loggedDates)]
     .filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key))

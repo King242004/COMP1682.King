@@ -9,8 +9,8 @@ const PlanMeal = require("../models/PlanMeal");
 const cloudinary = require("../config/cloudinary");
 const { validateCoachChat } = require("../validators/coachChat");
 const { normalizeCoachText } = require("../services/coachLanguage");
+const { todayKey } = require("../utils/date");
 
-// Shared safety + style instruction injected into every coach prompt.
 const SAFETY = `You are "Coach", a warm, easy-going health buddy inside an app — like a supportive friend who keeps the user on track, not a textbook or a customer-service bot.
 
 SAFETY:
@@ -31,12 +31,6 @@ STYLE (very important):
 - Plain text only: no markdown, no asterisks, no bold, no headings, no tables.
 - NEVER use the em dash character (—) in any reply; use a comma, colon or period instead.`;
 
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// Meal type from the current hour (deterministic, overrides the model's guess).
 function mealTypeByHour(h) {
   if (h < 11) return "breakfast";
   if (h < 14) return "lunch";
@@ -45,17 +39,14 @@ function mealTypeByHour(h) {
   return "snack";
 }
 
-// Slot to SUGGEST for: start from the hour-based slot, then skip slots the user
-// already logged (breakfast eaten at 10am → suggest for lunch instead).
-// Mirrored in frontend utils/coach.ts nextMealSlot — keep the two in sync.
 function nextSlotToSuggest(hour, eatenTypes) {
   const order = ["breakfast", "lunch", "snack", "dinner"];
   let idx = order.indexOf(mealTypeByHour(hour));
   while (idx < order.length && eatenTypes.has(order[idx])) idx++;
-  return idx < order.length ? order[idx] : "snack"; // all slots eaten → light late snack
+  // Nếu đã qua tất cả bữa chính thì gợi ý một bữa phụ nhẹ.
+  return idx < order.length ? order[idx] : "snack";
 }
 
-// Normalize requested language and build the reply-language instruction.
 function langDirective(raw) {
   const lang = raw === "vi" ? "vi" : "en";
   const name = lang === "vi" ? "Vietnamese (tiếng Việt)" : "English";
@@ -76,8 +67,6 @@ User: "Can I eat pho?" => {"reply":"Pho can work well. Are you having beef or ch
 User: "I am eating pho" => {"reply":"Enjoy your meal! Adding herbs and bean sprouts while going light on fatty broth will make it more balanced.","meal":{"name":"pho","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":true}`;
 }
 
-// ─── Daily Insight (GET /api/coach/insight?date=) ─────────────────────────────
-// Health Score is computed in code; the AI only writes summary/tips/warnings.
 exports.getInsight = async (req, res) => {
   const date = req.query.date || todayKey();
   const language = req.query.language === "vi" ? "vi" : "en";
@@ -113,7 +102,6 @@ ${langDirective(language)} Every string value in the JSON must be in that langua
       );
     } catch (e) {
       console.error("Coach insight AI error:", e.message);
-      // Graceful fallback so the score still shows even if AI/quota fails
       ai = {
         summary: language === "vi"
           ? (score >= 70 ? "Hôm nay bạn đang làm tốt, tiếp tục nhé!" : "Mình cùng đưa hôm nay trở lại đúng hướng nhé.")
@@ -140,22 +128,16 @@ ${langDirective(language)} Every string value in the JSON must be in that langua
   }
 };
 
-// ─── Chat (POST /api/coach/chat) ──────────────────────────────────────────────
-// body: { message?, history?, language?, image?(base64), mimeType? }
-// If an image is attached, the coach analyzes the food photo together with the
-// user's personal context (conditions, goal, what they ate today).
 exports.chat = async (req, res) => {
   const validated = validateCoachChat(req.body);
   if (validated.error) return res.status(400).json({ message: validated.error });
   const { message: text, history, image, mimeType, source, language } = validated.value;
 
-  // Default question when the user sends only a photo
   const userText = text || "Is this dish suitable for me?";
 
   try {
     const ctx = await buildContext(req.user.id, todayKey());
 
-    // Flatten recent history (cap at last 10 turns) into the prompt
     const historyText = history
       .map((h) => `${h.role === "user" ? "User" : "Coach"}: ${h.text}`)
       .join("\n");
@@ -199,14 +181,12 @@ ${chatExamples(language)}
 
 Always read the history first so repeated or follow-up questions feel natural, not robotic.`;
 
-    // Multimodal payload when an image is present (Gemini 2.5-flash is vision-capable)
     const payload = image
       ? [prompt, { inlineData: { data: image, mimeType: mimeType || "image/jpeg" } }]
       : prompt;
 
     const result = await generateWithFallback(chatModels, payload);
 
-    // Parse the JSON contract; fall back to raw text if parsing fails.
     let parsed = { reply: "", meal: null };
     try {
       parsed = JSON.parse(result.response.text());
@@ -223,14 +203,12 @@ Always read the history first so repeated or follow-up questions feel natural, n
     );
     parsed.reply = localizedText.reply;
     if (parsed.meal?.name && localizedText.mealName) parsed.meal.name = localizedText.mealName;
-    // Guard: ChatMessage.text is required — an empty AI reply must not crash the save.
     const reply =
       (parsed.reply || "").trim() ||
       (language === "vi"
         ? "Mình chưa nghĩ ra câu trả lời, bạn thử hỏi lại nhé."
         : "I couldn't come up with a reply. Try asking again.");
 
-    // Suggested meal (NOT logged here — the app shows an "Add" button when eating).
     let meal = null;
     const m = parsed.meal;
     if (m && m.name && m.calories != null) {
@@ -240,13 +218,13 @@ Always read the history first so repeated or follow-up questions feel natural, n
         protein: Math.max(0, Math.round(Number(m.protein) || 0)),
         carbs: Math.max(0, Math.round(Number(m.carbs) || 0)),
         fat: Math.max(0, Math.round(Number(m.fat) || 0)),
-        mealType: mealTypeByHour(hour), // deterministic by time; user can change with chips
+      // Chọn loại bữa theo giờ hiện tại. Người dùng vẫn có thể đổi bằng chip.
+      mealType: mealTypeByHour(hour),
       };
     }
-    const eating = !!parsed.eating && !!meal; // only show "Add" when the user is actually eating it
+    // Chỉ hiện nút thêm khi người dùng thật sự đang ăn và AI đã trả về món hợp lệ.
+    const eating = !!parsed.eating && !!meal;
 
-    // Upload the photo to Cloudinary so it persists in chat history. Best-effort:
-    // if it fails, we still save the text turn.
     let imageUrl = null;
     let imagePublicId = null;
     if (image) {
@@ -256,7 +234,8 @@ Always read the history first so repeated or follow-up questions feel natural, n
           { folder: "healthysnap/coach", transformation: [{ width: 800, crop: "limit" }] }
         );
         imageUrl = up.secure_url;
-        imagePublicId = up.public_id; // kept so clearHistory can delete the file from Cloudinary
+      // Lưu mã Cloudinary để có thể xóa ảnh khi người dùng xóa lịch sử.
+      imagePublicId = up.public_id;
       } catch (e) {
         console.error("Coach image upload failed:", e.message);
       }
@@ -267,36 +246,26 @@ Always read the history first so repeated or follow-up questions feel natural, n
       { user: req.user.id, role: "coach", language, text: reply, meal: meal || null, mealEating: eating },
     ]);
 
-    // messageId of the coach turn lets the app log/undo the suggested meal later.
     res.json({ reply, meal, eating, image: imageUrl, messageId: docs[1]._id });
   } catch (err) {
     console.error("Coach chat error:", err.message);
-    // Distinguish "out of quota" (429) so the app can show a clearer message.
     const quota = /429|quota|rate limit|too many requests/i.test(String(err.message || ""));
     res.status(quota ? 429 : 500).json({ message: quota ? "QUOTA" : "Coach is unavailable right now. Please try again." });
   }
 };
 
-// ─── "What should I eat now?" (POST /api/coach/suggest-meal) ──────────────────
-// body: { language? } → 3 concrete dishes for the NEXT meal slot, sized to the
-// remaining calorie budget, balancing missing macros, respecting conditions.
-// One AI request per tap (the app caches per date+slot so re-taps are free).
 exports.suggestMeal = async (req, res) => {
   try {
     const language = req.body.language === "vi" ? "vi" : "en";
-    // Context + today's pending plan fetched in parallel (independent queries)
     const [ctx, planPending] = await Promise.all([
       buildContext(req.user.id, todayKey()),
       PlanMeal.find({ user: req.user.id, date: todayKey(), done: false }),
     ]);
     const hour = new Date().getHours();
-    // Skip slots already eaten so we suggest for the meal the user actually faces next
     const eatenTypes = new Set(ctx.today.meals.map((m) => m.mealType));
     const slot = nextSlotToSuggest(hour, eatenTypes);
     const remaining = ctx.profile.calorieGoal - ctx.today.totals.calories + ctx.today.totalBurned;
 
-    // Pending planned meals today: suggestions must complement the plan, not fight it —
-    // if the target slot is already planned, these become ALTERNATIVES (swap options).
     const planText = planPending.length
       ? `\nTODAY'S MEAL PLAN (planned, NOT eaten yet):\n${planPending
           .map((p) => `  - [${p.mealType}] ${p.name}: ${p.calories} kcal`)
@@ -352,8 +321,6 @@ Return ONLY valid JSON:
         fat: Math.max(0, Math.round(Number(s.fat) || 0)),
         reason: String(localized.suggestions?.[index]?.reason || s.reason || "").trim(),
       }));
-    // Layer-2 safety: drop any dish that violates the user's health conditions
-    // (the prompt is layer 1 — this makes it deterministic)
     const { kept, removed } = filterDishes(mapped, ctx.profile.conditions);
     if (removed.length)
       console.warn("Suggest condition-filter removed:", removed.map((r) => `${r.name} (${r.condition})`).join(", "));
@@ -368,11 +335,8 @@ Return ONLY valid JSON:
   }
 };
 
-// ─── Chat History (GET /api/coach/history) ────────────────────────────────────
 exports.getHistory = async (req, res) => {
   const language = req.query.language === "vi" ? "vi" : "en";
-  // Take the LATEST 100 then restore chronological order — sorting ascending with
-  // limit would return the oldest 100 and hide new messages once history grows.
   const msgs = (
     await ChatMessage.find({ user: req.user.id, language }).sort({ createdAt: -1 }).limit(100)
   ).reverse();
@@ -385,13 +349,12 @@ exports.getHistory = async (req, res) => {
       meal: m.meal || null,
       eating: m.mealEating || false,
       loggedId: m.loggedMealId || null,
-      createdAt: m.createdAt, // for day separators in the chat UI
+      // Frontend dùng thời gian này để chia tin nhắn theo ngày.
+      createdAt: m.createdAt,
     })),
   });
 };
 
-// ─── Log a suggested meal from a coach message (POST /api/coach/log) ───────────
-// body: { messageId, mealType? } → creates the Meal in the diary and links it.
 exports.logFromMessage = async (req, res) => {
   const { messageId, mealType } = req.body;
   const msg = await ChatMessage.findOne({ _id: messageId, user: req.user.id });
@@ -415,7 +378,6 @@ exports.logFromMessage = async (req, res) => {
   res.json({ logged: { id: meal._id, name: meal.name, mealType: meal.mealType, calories: meal.calories } });
 };
 
-// ─── Undo a logged meal (POST /api/coach/unlog) ───────────────────────────────
 exports.unlogFromMessage = async (req, res) => {
   const { messageId } = req.body;
   const msg = await ChatMessage.findOne({ _id: messageId, user: req.user.id });
@@ -428,11 +390,8 @@ exports.unlogFromMessage = async (req, res) => {
   res.json({ message: "Removed." });
 };
 
-// ─── Clear History (DELETE /api/coach/history) ────────────────────────────────
-// Also deletes the user's chat photos from Cloudinary so no orphan files pile up.
 exports.clearHistory = async (req, res) => {
   const withImages = await ChatMessage.find({ user: req.user.id, imagePublicId: { $ne: null } }).select("imagePublicId");
-  // Best-effort: a failed Cloudinary delete should not block clearing the chat
   await Promise.allSettled(withImages.map((m) => cloudinary.uploader.destroy(m.imagePublicId)));
   await ChatMessage.deleteMany({ user: req.user.id });
   res.json({ message: "Chat history cleared." });

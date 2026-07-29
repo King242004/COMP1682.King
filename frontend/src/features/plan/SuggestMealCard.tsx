@@ -1,7 +1,3 @@
-// "Ăn gì bây giờ?" card — one tap, AI picks 3 dishes for the next meal slot.
-// When the slot already has a planned dish, picks act as swap alternatives.
-// Self-contained: owns its state/cache; Home only passes today's plan and
-// renders it on today's view.
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -28,19 +24,16 @@ import { Skeleton } from "@/ui/components/Skeleton";
 export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
   const router = useRouter();
   const { user, token } = useAuth();
-  const { meals } = useMeals(); // today's logged meals (parent only renders on today)
+  // Component cha chỉ hiện thẻ này ở ngày hôm nay nên đây là các món của hôm nay.
+  const { meals } = useMeals();
   const lang = resolveLanguage(user?.language);
   const t = useT();
   const dateKey = todayKey();
 
-  // User-initiated only (each call = 1 Gemini request), cached per
-  // (date + meal slot + lang) so re-taps within the same slot are free.
   const [suggest, setSuggest] = useState<MealSuggestions | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Slot: hour-based, skipping meals already logged. Logging a meal moves the
-  // slot forward → cache key changes → stale picks vanish automatically.
   const currentSlot = nextMealSlot(new Date().getHours(), new Set(meals.map((m) => m.mealType)));
   useEffect(() => {
     getCachedSuggestions(dateKey, currentSlot, lang).then(setSuggest);
@@ -65,8 +58,6 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
     }
   };
 
-  // Tap 💬 on a dish → Coach tab with a ready-made cooking question
-  // (same deep-link pattern as the weekly plan's dish rows)
   const askCoachHow = (name: string) =>
     router.push({
       pathname: "/tabs/coach" as any,
@@ -83,7 +74,6 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
 
   return (
     <Card style={styles.card}>
-      {/* Header — tap generates (cache hit = instant, no AI call) */}
       <Pressable
         onPress={() => loadSuggestions()}
         disabled={loading}
@@ -107,7 +97,6 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
         {loading ? (
           <ActivityIndicator size="small" color={theme.colors.accent} />
         ) : suggest ? (
-          /* Regenerate — bypasses the cache (costs 1 AI request) */
           <Pressable onPress={() => loadSuggestions(true)} hitSlop={8} style={({ pressed }) => pressed && styles.dim}>
             <Ionicons name="refresh" size={17} color={theme.colors.subtle} />
           </Pressable>
@@ -121,7 +110,6 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
 
       {!!error && <AppText style={styles.error}>{error}</AppText>}
 
-      {/* First fetch in flight → pulse placeholder rows where dishes will appear */}
       {loading && !suggest && (
         <View style={styles.skeletons}>
           <Skeleton height={44} radius={12} />
@@ -130,7 +118,6 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
         </View>
       )}
 
-      {/* Suggested dishes — 💬 asks the Coach how to cook; "Thêm" prefills Add meal */}
       {suggest?.suggestions.map((s, i) => (
         <View key={`${i}-${s.name}`} style={styles.dishRow}>
           <View style={styles.dishHead}>

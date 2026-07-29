@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
-// On web we don't use expo-notifications at all.
+// Bản web không sử dụng expo-notifications.
 const isWeb = Platform.OS === "web";
 
 type NotificationsModule = typeof import("expo-notifications");
@@ -26,7 +26,7 @@ export async function ensureNotificationPermissions() {
   return status === "granted";
 }
 
-// `content` comes from the i18n catalog so the reminder speaks the app language
+// Nội dung lấy từ i18n để lời nhắc dùng đúng ngôn ngữ của ứng dụng.
 export async function scheduleDailyReminder(
   hour: number,
   minute: number,
@@ -40,8 +40,8 @@ export async function scheduleDailyReminder(
 
   const id = await Notifications.scheduleNotificationAsync({
     content,
-    // DAILY trigger repeats every day at hour:minute (new expo-notifications API
-    // requires an explicit `type` on the trigger object)
+// Trigger DAILY lặp lại mỗi ngày vào đúng giờ và phút đã chọn.
+// API expo-notifications mới yêu cầu khai báo rõ type của trigger.
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
@@ -59,7 +59,7 @@ export async function cancelNotification(id: string | null | undefined) {
   try {
     await Notifications.cancelScheduledNotificationAsync(id);
   } catch {
-    // ignore
+    // Bỏ qua vì lỗi hủy lịch cũ không được làm gián đoạn việc đặt lịch mới.
   }
 }
 

@@ -1,7 +1,6 @@
 import { StyleSheet } from "react-native";
 import { AppText } from "./AppText";
 
-// Small uppercase label above a settings/profile card section.
 export function SectionLabel({ children }: { children: string }) {
   return (
     <AppText variant="subtle" style={styles.label}>{children}</AppText>

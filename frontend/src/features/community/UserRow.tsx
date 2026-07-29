@@ -7,7 +7,7 @@ import { Card } from "@/ui/components/Card";
 import { initials } from "./helpers";
 import type { DiscoverUser } from "./api";
 
-// One user row in Discover: avatar + name/goal + Follow toggle button.
+// Một hàng người dùng trong Discover gồm ảnh, tên, mục tiêu và nút theo dõi.
 export function UserRow({
   user,
   following,

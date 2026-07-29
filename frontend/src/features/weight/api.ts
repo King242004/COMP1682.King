@@ -2,12 +2,14 @@ import { apiRequest } from "@/utils/api";
 
 export type WeightEntry = {
   _id: string;
-  date: string; // YYYY-MM-DD
+  // Ngày theo định dạng YYYY-MM-DD.
+  date: string;
   weightKg: number;
 };
 
 export type WeightHistory = {
-  logs: WeightEntry[]; // oldest → newest (chart-ready)
+  // Dữ liệu từ cũ đến mới để có thể đưa thẳng vào biểu đồ.
+  logs: WeightEntry[];
   currentWeight: number | null;
   targetWeight: number | null;
 };

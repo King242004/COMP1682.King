@@ -8,17 +8,14 @@ const otpSchema = new mongoose.Schema(
       required: true,
       enum: ["registration", "password_reset"],
     },
-    // Store only an HMAC digest. A database read must not reveal a usable code.
     codeHash: { type: String, required: true, select: false },
     expiresAt: { type: Date, required: true },
-    // Wrong-guess counter — the code is destroyed after 5 misses so a 6-digit
-    // OTP can't be brute-forced within its 10-minute lifetime.
     attempts: { type: Number, default: 0 },
   },
-  { timestamps: true } // updatedAt drives the resend cooldown
+  // updatedAt được dùng để tính thời gian chờ trước khi gửi lại mã.
+  { timestamps: true }
 );
 
-// Auto delete expired OTPs
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 otpSchema.index(
   { email: 1, purpose: 1 },

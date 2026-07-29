@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
-import { Animated, type DimensionValue } from "react-native";
+import { Animated, StyleSheet, type DimensionValue } from "react-native";
 
-// Pulsing placeholder bar shown while async content loads (UX rule: any wait
-// over ~300ms needs visible feedback, not a frozen/empty layout).
+// Thanh giữ chỗ nhấp nháy để người dùng biết nội dung vẫn đang được tải.
 export function Skeleton({
   width = "100%",
   height = 12,
@@ -26,7 +25,11 @@ export function Skeleton({
 
   return (
     <Animated.View
-      style={{ width, height, borderRadius: radius, backgroundColor: "rgba(15,23,42,0.08)", opacity }}
+      style={[styles.placeholder, { width, height, borderRadius: radius, opacity }]}
     />
   );
 }
+
+const styles = StyleSheet.create({
+  placeholder: { backgroundColor: "rgba(15,23,42,0.08)" },
+});

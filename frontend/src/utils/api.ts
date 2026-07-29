@@ -47,8 +47,6 @@ type ApiRequestOptions = {
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 
-// Shared transport for JSON and multipart requests. It gives every network
-// action a finite timeout and keeps 401/non-JSON handling consistent.
 export async function apiFetch<T = any>(
   endpoint: string,
   init: RequestInit = {},

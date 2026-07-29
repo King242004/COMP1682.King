@@ -1,6 +1,6 @@
 import * as ImageManipulator from "expo-image-manipulator";
 
-// Resize + compress a food photo to base64 for the vision coach (smaller = faster).
+// Thu nhỏ, nén và đổi ảnh món ăn sang base64 để Coach xử lý nhanh hơn.
 export async function compressToBase64(uri: string): Promise<{ uri: string; base64: string } | null> {
   try {
     const r = await ImageManipulator.manipulateAsync(

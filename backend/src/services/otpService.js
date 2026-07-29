@@ -2,6 +2,7 @@ const OTP = require("../models/OTP");
 const {
   OTP_MAX_ATTEMPTS,
   OTP_RESEND_COOLDOWN_MS,
+  isOTPMatch,
 } = require("../utils/otpSecurity");
 
 async function reserveOTP({ email, purpose, codeHash, expiresAt }) {
@@ -26,8 +27,6 @@ async function reserveOTP({ email, purpose, codeHash, expiresAt }) {
       }
     );
   } catch (error) {
-    // A unique-index conflict means another request reserved this email and
-    // purpose first. Treat it as cooldown instead of leaking a server error.
     if (error?.code === 11000) return null;
     throw error;
   }
@@ -44,8 +43,6 @@ async function recordFailedOTPAttempt(recordId, expectedCodeHash) {
     { returnDocument: "after" }
   ).select("attempts");
 
-  // No match means the record was replaced or consumed by another request;
-  // never delete that newer code.
   if (!updated) return { burned: false };
 
   if (updated.attempts >= OTP_MAX_ATTEMPTS) {
@@ -56,4 +53,27 @@ async function recordFailedOTPAttempt(recordId, expectedCodeHash) {
   return { burned: false };
 }
 
-module.exports = { recordFailedOTPAttempt, reserveOTP };
+async function verifyOTPCode({ email, purpose, candidate, consume = false }) {
+  const record = await OTP.findOne({ email, purpose }).select("+codeHash");
+  if (!record) return "invalid";
+
+  if (record.expiresAt < new Date()) {
+    await record.deleteOne();
+    return "expired";
+  }
+
+  if (!isOTPMatch(record.codeHash, email, purpose, candidate)) {
+    const { burned } = await recordFailedOTPAttempt(record._id, record.codeHash);
+    return burned ? "burned" : "invalid";
+  }
+
+  if (!consume) return "valid";
+  const consumed = await OTP.findOneAndDelete({
+    _id: record._id,
+    codeHash: record.codeHash,
+    expiresAt: { $gt: new Date() },
+  });
+  return consumed ? "valid" : "invalid";
+}
+
+module.exports = { recordFailedOTPAttempt, reserveOTP, verifyOTPCode };

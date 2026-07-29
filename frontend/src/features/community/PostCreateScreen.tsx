@@ -28,7 +28,8 @@ export default function PostCreateScreen() {
   const t = useT();
 
   const [caption, setCaption] = useState("");
-  const [imageUris, setImageUris] = useState<string[]>([]); // Instagram-style, max 10
+  // Một bài viết được chọn tối đa 10 ảnh.
+  const [imageUris, setImageUris] = useState<string[]>([]);
   const [postKind, setPostKind] = useState<PostKind>("share");
   const [mealSource, setMealSource] = useState<MealSource>("manual");
   const [dishName, setDishName] = useState("");
@@ -38,14 +39,13 @@ export default function PostCreateScreen() {
 
   useEffect(() => { fetchMealHistory(); }, [fetchMealHistory]);
 
-  const MAX_IMAGES = 10; // Instagram-style carousel cap
+  // Giới hạn số ảnh trong một bài viết dạng vuốt ngang.
+  const MAX_IMAGES = 10;
 
-  // In-app Instagram-style gallery grid; the modal compresses on confirm
   const pickImages = () => setPickerOpen(true);
 
   const removeImage = (uri: string) => setImageUris((prev) => prev.filter((u) => u !== uri));
 
-  // Instagram rule: at least ONE photo is required — caption/meal are extras
   const hasValidDish = dishName.trim().length >= 2;
   const canPost = imageUris.length > 0 && (postKind === "share" || hasValidDish) && !posting;
 
@@ -82,7 +82,6 @@ export default function PostCreateScreen() {
             }
           : null,
       });
-      // Community tab refetches on focus, so simply going back shows the new post
       router.back();
     } catch (e: any) {
       Alert.alert(t.community.couldntPost, e.message || t.common.tryAgain);
@@ -91,9 +90,6 @@ export default function PostCreateScreen() {
     }
   };
 
-  // Show a handful of recent meals to optionally attach — one card per dish
-  // name (the newest of each) so eating the same thing daily doesn't fill the
-  // list with duplicates.
   const recentMeals = recentUniqueMeals(historyMeals, 8);
 
   return (
@@ -119,8 +115,6 @@ export default function PostCreateScreen() {
           <AppText variant="subtle" style={styles.charCount}>{caption.length}/500</AppText>
         </Card>
 
-        {/* Images — Instagram-style strip: thumbnails with a per-image ✕ and an
-            "add more" tile while under the 10-image cap */}
         {imageUris.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbRow}>
             {imageUris.map((uri) => (

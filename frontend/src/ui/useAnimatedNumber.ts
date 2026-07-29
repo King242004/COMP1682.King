@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
-// Counts the displayed number toward `value` (cubic ease-out, ~450ms) whenever
-// it changes — big stats (kcal eaten) roll to their new value instead of
-// snapping. Interruptions restart smoothly from the current displayed number.
+// Chạy số đang hiển thị dần tới value trong khoảng 450 ms.
+// Các chỉ số lớn như kcal nhờ đó đổi mượt thay vì nhảy ngay sang số mới.
+// Nếu bị ngắt giữa chừng thì hiệu ứng tiếp tục từ số đang hiển thị.
 export function useAnimatedNumber(value: number, duration = 450): number {
   const [display, setDisplay] = useState(value);
   const displayRef = useRef(value);
@@ -21,8 +21,7 @@ export function useAnimatedNumber(value: number, duration = 450): number {
       if (p < 1) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-    // Safety net: rAF can be throttled/paused (backgrounded app) — make sure
-    // the FINAL value always lands even if no frame ever fires.
+    // Đảm bảo luôn chốt đúng giá trị cuối nếu rAF bị tạm dừng khi app chạy nền.
     const settle = setTimeout(() => {
       if (displayRef.current !== value) {
         displayRef.current = value;

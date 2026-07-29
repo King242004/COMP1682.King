@@ -25,7 +25,6 @@ export default function PostDetailScreen() {
   const [post, setPost] = useState<FeedPost | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  // Multi-image carousel: current page + measured page width (paging needs it)
   const [imageIndex, setImageIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
 
@@ -41,7 +40,6 @@ export default function PostDetailScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  // Optimistic like, then sync from server
   const onLike = async () => {
     if (!token || !post) return;
     const prev = post;
@@ -54,7 +52,6 @@ export default function PostDetailScreen() {
     }
   };
 
-  // Optimistic save (WEAR-style bookmark)
   const onSave = async () => {
     if (!token || !post) return;
     const prev = post;
@@ -86,7 +83,6 @@ export default function PostDetailScreen() {
     ]);
   };
 
-  // "Try this meal" actions — the WEAR save-and-act loop
   const askCoachHow = () => {
     const dishName = post?.dishName || post?.meal?.name;
     if (!dishName) return;
@@ -95,7 +91,8 @@ export default function PostDetailScreen() {
       params: {
         ask: t.community.cookQuestion(dishName),
         recipeNotice: "community",
-        askId: String(Date.now()), // unique per tap — consumed once on the Coach tab
+        // Mỗi lần chạm có một mã riêng để tab Coach chỉ xử lý yêu cầu một lần.
+        askId: String(Date.now()),
       },
     });
   };
@@ -197,8 +194,6 @@ export default function PostDetailScreen() {
             <AppText variant="body2" style={styles.caption}>{post.caption}</AppText>
           )}
 
-          {/* Images — single shows plain; 2+ becomes an Instagram-style swipe
-              carousel with dot indicators */}
           {post.images && post.images.length > 1 ? (
             <View onLayout={(e) => setCarouselWidth(e.nativeEvent.layout.width)}>
               {carouselWidth > 0 && (
@@ -223,7 +218,6 @@ export default function PostDetailScreen() {
                 ))}
               </ScrollView>
               )}
-              {/* Instagram-style "n/total" counter, top-right over the photo */}
               <View style={styles.countPill}>
                 <AppText style={styles.countText}>{imageIndex + 1}/{post.images.length}</AppText>
               </View>
@@ -261,7 +255,6 @@ export default function PostDetailScreen() {
             </View>
           )}
 
-          {/* Like + save (edit/delete moved to the ⋯ menu in the header) */}
           <View style={styles.footerRow}>
             <Pressable
               onPress={onLike}
@@ -299,7 +292,6 @@ export default function PostDetailScreen() {
           </View>
         </Card>
 
-        {/* Try this meal — save-and-act loop unique to MealMate */}
         {dishName ? (
           <View style={styles.trySection}>
             <AppText variant="subtle" style={styles.sectionLabel}>{t.community.tryThisMeal}</AppText>

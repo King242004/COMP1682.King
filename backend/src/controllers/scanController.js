@@ -7,21 +7,15 @@ const {
   mergeLocalizedText,
 } = require("../services/scanLanguage");
 
-// ─── Scan Photo (AI Food Recognition)
-// Receives an uploaded image (multer memory storage), sends to Gemini Vision,
-// returns top 3 most likely food candidates with nutrition estimates.
 exports.scanPhoto = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No image provided." });
 
   try {
-    // Convert image buffer to base64 for Gemini API
     const imageBase64 = req.file.buffer.toString("base64");
     const mimeType = req.file.mimetype || "image/jpeg";
     const language = req.body.language === "vi" ? "vi" : "en";
     const languageName = language === "vi" ? "Vietnamese (tiếng Việt)" : "English";
 
-    // Prompt engineered to ALWAYS return top 3 candidates as strict JSON.
-    // Dish names and portion descriptions follow the app language.
     const prompt = `You are a nutrition expert specializing in Vietnamese and international cuisine.
 Analyze this food photo and return the top 3 most likely food matches.
 
@@ -75,8 +69,6 @@ Return ONLY valid JSON in this exact format:
 
     let candidates = Array.isArray(parsed.candidates) ? parsed.candidates : [];
 
-    // Gemini can occasionally mix languages even with a strict prompt. Only when
-    // that happens, run one small text-only correction and preserve all numbers.
     if (hasLanguageMismatch(candidates, language)) {
       try {
         const correction = await generateWithFallback(
@@ -100,9 +92,6 @@ Return ONLY valid JSON in this exact format:
   }
 };
 
-// ─── Scan Barcode (Open Food Facts) 
-// Receives a barcode string, looks up in Open Food Facts free database.
-// No API key needed.
 exports.scanBarcode = async (req, res) => {
   const { barcode } = req.body;
 
@@ -110,8 +99,6 @@ exports.scanBarcode = async (req, res) => {
     return res.status(400).json({ message: "Invalid barcode format." });
 
   try {
-    // Open Food Facts REQUIRES a descriptive User-Agent or it blocks/throttles
-    // requests (default axios UA gets rate-limited). Request only the fields we use.
     const url = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=product_name,product_name_en,brands,image_url,image_front_url,serving_size,serving_quantity,nutriments,status`;
     const { data } = await axios.get(url, {
       timeout: 10000,
@@ -125,7 +112,6 @@ exports.scanBarcode = async (req, res) => {
     const p = data.product;
     const nutriments = p.nutriments || {};
 
-    // Open Food Facts uses per-100g values; we return both per-100g and per-serving
     const servingSize = p.serving_size || "100g";
     const servingQty = parseFloat(p.serving_quantity) || 100;
     const ratio = servingQty / 100;

@@ -1,14 +1,14 @@
-// Single source of truth for meal-type presentation (label + Ionicons icon + tint).
-// Used by Home diary, add/edit meal, plan screens and history so the four meal
-// types look identical everywhere.
 export type MealTypeKey = "breakfast" | "lunch" | "dinner" | "snack";
 
 export type MealTypeMeta = {
   key: MealTypeKey;
   label: string;
-  icon: string;   // Ionicons name
-  color: string;  // icon tint
-  bg: string;     // soft background behind the icon
+  // Tên biểu tượng trong bộ Ionicons.
+  icon: string;
+  // Màu của biểu tượng.
+  color: string;
+  // Màu nền nhẹ phía sau biểu tượng.
+  bg: string;
 };
 
 export const MEAL_TYPE_META: MealTypeMeta[] = [

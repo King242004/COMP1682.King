@@ -1,4 +1,3 @@
-// Bottom sheet with the Open Food Facts product found for a barcode.
 import { Image, Modal, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
@@ -12,7 +11,8 @@ export function ProductSheet({ visible, product, onAdd, onAskCoach, onClose }: {
   visible: boolean;
   product: Product | null;
   onAdd: (p: Product) => void;
-  onAskCoach: (p: Product) => void; // "Right for me?" → Coach judges vs. the user's conditions
+  // Coach dùng tình trạng sức khỏe của người dùng để đánh giá sản phẩm.
+  onAskCoach: (p: Product) => void;
   onClose: () => void;
 }) {
   const t = useT();
@@ -52,7 +52,7 @@ export function ProductSheet({ visible, product, onAdd, onAskCoach, onClose }: {
                     { label: "F", value: product.fat, color: theme.colors.indigo },
                   ].map((m) => (
                     <View key={m.label} style={styles.macroCol}>
-                      {/* color known per item at runtime */}
+                    {/* Màu của từng chỉ số chỉ biết khi component đang chạy. */}
                       <AppText style={[styles.macroVal, { color: m.color }]}>{Math.round(m.value)}</AppText>
                       <AppText variant="subtle" style={styles.macroLabel}>{m.label}</AppText>
                     </View>
@@ -61,8 +61,7 @@ export function ProductSheet({ visible, product, onAdd, onAskCoach, onClose }: {
               </Card>
               <View style={styles.actionWrap}>
                 <Button title={t.scan.addToMeal} size="lg" onPress={() => onAdd(product)} />
-                {/* USP moment: the Coach knows the user's conditions (diabetes, gout...)
-                    and verdicts this exact product for THEM */}
+                {/* Coach dùng tình trạng sức khỏe để đánh giá sản phẩm cụ thể này. */}
                 <Pressable
                   onPress={() => onAskCoach(product)}
                   style={({ pressed }) => [styles.askBtn, pressed && styles.askBtnPressed]}

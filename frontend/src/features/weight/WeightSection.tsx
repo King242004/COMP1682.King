@@ -1,5 +1,3 @@
-// Weight tab content for the Progress screen: current/target summary,
-// log + target modals, trend chart and the entry list.
 import { useState, useEffect, useCallback } from "react";
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from "react-native";
 import { useFocusEffect } from "expo-router";
@@ -15,7 +13,6 @@ import { TextField } from "@/ui/components/TextField";
 import { getWeights, logWeight, deleteWeight, type WeightHistory } from "./api";
 import { WeightChart } from "./WeightChart";
 
-// Small centered input dialog shared by the log + target modals
 function KgModal({ visible, title, sub, initial, onCancel, onSave }: {
   visible: boolean;
   title: string;
@@ -26,7 +23,6 @@ function KgModal({ visible, title, sub, initial, onCancel, onSave }: {
 }) {
   const t = useT();
   const [value, setValue] = useState(initial);
-  // Re-seed the field every time the modal opens
   useEffect(() => { if (visible) setValue(initial); }, [visible, initial]);
 
   return (
@@ -63,7 +59,8 @@ function KgModal({ visible, title, sub, initial, onCancel, onSave }: {
 
 export function WeightSection() {
   const { token, user, updateProfile, fetchProfile } = useAuth();
-  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
+  // Ngày tháng đi theo ngôn ngữ đã chọn trong app.
+  const locale = localeTag(resolveLanguage(user?.language));
   const t = useT();
 
   const [history, setHistory] = useState<WeightHistory | null>(null);
@@ -76,7 +73,6 @@ export function WeightSection() {
     try {
       setHistory(await getWeights(token));
     } catch {
-      // keep whatever we had — the empty state covers first load failures
     } finally {
       setLoading(false);
     }
@@ -85,7 +81,8 @@ export function WeightSection() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const parseKg = (raw: string): number | null => {
-    const n = Number(raw.replace(",", ".")); // accept the Vietnamese decimal comma
+    // Chấp nhận dấu phẩy thập phân thường dùng trong tiếng Việt.
+    const n = Number(raw.replace(",", "."));
     if (!raw.trim() || isNaN(n) || n < 20 || n > 300) return null;
     return n;
   };
@@ -99,14 +96,13 @@ export function WeightSection() {
     setLogVisible(false);
     try {
       await logWeight(token!, kg);
-      await Promise.all([load(), fetchProfile()]); // profile weight synced server-side
+      await Promise.all([load(), fetchProfile()]);
     } catch (e: any) {
       Alert.alert(t.common.errorTitle, e.message || t.weight.saveFailed);
     }
   };
 
   const onSaveTarget = async (raw: string) => {
-    // Empty input clears the target
     const kg = raw.trim() ? parseKg(raw) : null;
     if (raw.trim() && kg == null) {
       Alert.alert(t.common.errorTitle, t.weight.invalidKg);
@@ -161,7 +157,6 @@ export function WeightSection() {
 
   return (
     <>
-      {/* Summary: current | target + distance chip */}
       <Card style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryCol}>
@@ -219,7 +214,6 @@ export function WeightSection() {
         </Card>
       ) : null}
 
-      {/* Entry list — newest first */}
       {logs.length > 0 && (
         <Card style={styles.listCard}>
           <AppText variant="h2">{t.weight.entries}</AppText>

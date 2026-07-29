@@ -19,8 +19,7 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-// Fallback chips for brand-new users with an empty history — familiar
-// Vietnamese staples (the app's whole angle), not Western sample dishes.
+// Người dùng mới chưa có lịch sử sẽ thấy các món Việt quen thuộc làm lựa chọn mẫu.
 const QUICK_SUGGESTIONS = [
   { name: "Bánh mì trứng", calories: 380, protein: 14, carbs: 40, fat: 18, mealType: "breakfast" as MealTypeKey },
   { name: "Phở bò", calories: 420, protein: 28, carbs: 52, fat: 10, mealType: "lunch" as MealTypeKey },
@@ -51,7 +50,8 @@ export default function AddMealScreen() {
   const { user } = useAuth();
   const { addMeal, historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
-  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
+  // Ngày tháng đi theo ngôn ngữ đã chọn trong app.
+  const locale = localeTag(resolveLanguage(user?.language));
   const {
     mealType: defaultType,
     date: dateParam,
@@ -60,7 +60,8 @@ export default function AddMealScreen() {
     prefillProtein,
     prefillCarbs,
     prefillFat,
-    source, // "suggest" when coming from the AI meal suggestion (vs. scan)
+      // Giá trị "suggest" cho biết món đến từ gợi ý AI thay vì quét ảnh.
+      source,
   } = useLocalSearchParams<{
     mealType: MealTypeKey;
     date?: string;
@@ -72,8 +73,8 @@ export default function AddMealScreen() {
     source?: string;
   }>();
 
-  // Time rule: back-logging a PAST day is allowed (people forget to log),
-  // the future never is. Anything invalid falls back to today.
+  // Cho phép ghi bù ngày cũ nhưng không cho ghi ngày tương lai.
+  // Ngày không hợp lệ sẽ trở về hôm nay.
   const todayStr = dateKey(new Date());
   const logDate =
     dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) && dateParam <= todayStr
@@ -90,10 +91,13 @@ export default function AddMealScreen() {
   const [mealType, setMealType] = useState<MealTypeKey>(defaultType ?? "breakfast");
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate meals
+  // Chặn hai lần chạm liên tiếp tạo ra hai món giống nhau.
+  const [isSaving, setIsSaving] = useState(false);
   const isPrefilled = !!prefillName;
-  const isFromCommunity = source === "community"; // "Try this meal" from a community post
-  const isFromRepeat = source === "repeat"; // "Log again" from a past meal's detail
+  // Món được mở từ nút thử món trong bài viết Community.
+  const isFromCommunity = source === "community";
+  // Món được mở từ nút ghi lại trong chi tiết một món cũ.
+  const isFromRepeat = source === "repeat";
   const isFromScan = isPrefilled && source !== "suggest" && !isFromCommunity && !isFromRepeat;
 
   useEffect(() => {
@@ -115,14 +119,14 @@ export default function AddMealScreen() {
     prefillFat,
   ]);
 
-  // Recent dishes power the quick chips (people eat the same things often).
-  // Only needed when the form starts empty — prefilled flows skip the fetch.
+  // Các món gần đây tạo lựa chọn nhanh vì người dùng thường ăn lại món quen.
+  // Chỉ cần tải khi biểu mẫu trống, luồng đã điền sẵn không cần gọi API này.
   useEffect(() => {
     if (!isPrefilled) fetchMealHistory();
   }, [isPrefilled, fetchMealHistory]);
 
-  // Newest first, one chip per dish name; static Vietnamese staples only for
-  // brand-new accounts with an empty history
+      // Món mới nhất đứng trước và mỗi tên chỉ hiện một lần.
+      // Danh sách món Việt mẫu chỉ dành cho tài khoản mới chưa có lịch sử.
   const recentDishes = useMemo(
     () =>
       recentUniqueMeals(historyMeals, 8).map((m) => ({
@@ -183,7 +187,8 @@ export default function AddMealScreen() {
       router.back();
     } catch (err: any) {
       setErrors({ mealName: err.message || t.meals.saveFailed });
-      setIsSaving(false); // only re-enable on failure — success navigates away
+      // Chỉ mở lại nút khi có lỗi vì thành công sẽ chuyển sang màn khác.
+      setIsSaving(false);
     }
   };
 
@@ -226,7 +231,7 @@ export default function AddMealScreen() {
           </AppText>
         </View>
 
-        {/* Back-dated banner — make it unmissable WHICH day this meal goes to */}
+        {/* Báo rõ ngày được ghi khi người dùng thêm món cho ngày cũ. */}
         {isBackdated && (
           <View style={styles.backdateBanner}>
             <Ionicons name="time-outline" size={16} color={theme.colors.primary} />
@@ -236,7 +241,7 @@ export default function AddMealScreen() {
           </View>
         )}
 
-        {/* Prefill badge (scan, AI suggestion, or community post) */}
+        {/* Nhãn nguồn điền sẵn từ quét ảnh, AI hoặc bài Community. */}
         {isPrefilled && (
           <View style={styles.aiBadge}>
             <AppText style={styles.aiBadgeEmoji}>{isFromCommunity ? "🔖" : isFromRepeat ? "🔁" : "🤖"}</AppText>
@@ -255,10 +260,10 @@ export default function AddMealScreen() {
           </View>
         )}
 
-        {/* Meal type selector — shared component (same UI as Edit) */}
+        {/* Bộ chọn loại bữa dùng chung với màn Sửa món. */}
         <MealTypeSelector value={mealType} onChange={setMealType} />
 
-        {/* Form */}
+        {/* Biểu mẫu thông tin món ăn. */}
         <Card style={styles.formCard}>
           <View style={styles.formFields}>
             <View style={styles.fieldWrap}>
@@ -336,7 +341,7 @@ export default function AddMealScreen() {
               )}
             </View>
 
-            {/* Meal model always had `note` — the form finally exposes it */}
+        {/* Ô ghi chú tương ứng với trường `note` đã có trong model món ăn. */}
             <TextField
               label={t.meals.note}
               placeholder={t.meals.notePlaceholder}
@@ -364,8 +369,6 @@ export default function AddMealScreen() {
           />
         </View>
 
-        {/* Quick chips — the user's own recent dishes (fallback: starter list).
-            Only when the form starts empty (no scan/AI/community prefill). */}
         {!isPrefilled && (
           <View style={styles.suggestBlock}>
             <AppText variant="h2" style={styles.suggestTitle}>

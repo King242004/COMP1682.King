@@ -8,15 +8,15 @@ export type { Strings, Lang };
 
 const catalog: Record<Lang, Strings> = { en, vi };
 
-// Active-language string catalog. Reacts to the user's saved language
-// (Settings) and falls back to the device language when unset.
+// Chọn danh mục chuỗi theo ngôn ngữ đã lưu trong Settings.
+// Nếu người dùng chưa chọn thì dùng ngôn ngữ thiết bị.
 export function useT(): Strings {
   const { user } = useAuth();
   const lang = resolveLanguage(user?.language);
   return useMemo(() => catalog[lang], [lang]);
 }
 
-// Non-hook accessor for the rare place outside React (defaults to device lang).
+// Hàm lấy bản dịch bên ngoài React, mặc định theo ngôn ngữ thiết bị.
 export function getStrings(lang: Lang): Strings {
   return catalog[lang];
 }

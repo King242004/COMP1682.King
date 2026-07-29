@@ -1,8 +1,3 @@
-// Full-app API regression (integration test).
-// PREREQUISITES: backend running on localhost:5000 with a reachable MongoDB
-// (npm run dev in another terminal), then:  npm run test:api
-// The script registers a throwaway account, exercises every core rule, then
-// DELETES the account (right-to-erasure endpoint) so it cleans up after itself.
 require("dotenv").config();
 const mongoose = require("mongoose");
 const OTP = require("../../src/models/OTP");
@@ -49,13 +44,11 @@ async function seedRegistrationOTP(email, code = "123456") {
   return code;
 }
 
-// Smallest valid JPEG, used where an endpoint requires a real image upload
 const TINY_JPEG = Buffer.from(
   "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q==",
   "base64"
 );
 
-// Multipart upload helper — the JSON api() helper cannot send files
 async function apiUpload(path, fields, files, token) {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.append(k, v);
@@ -191,7 +184,6 @@ const shift = (days) => {
   check("send-otp hides unknown email with generic 200", otpUnknown.status === 200);
 
   console.log("- COMMUNITY (Instagram rule: a post always carries a photo) -");
-  // Caption without a photo must be refused — a post is a visual artefact
   const textOnly = await api("/community/posts", "POST", { caption: "Bài test tự động" }, token);
   check("text-only post rejected 400", textOnly.status === 400, `got ${textOnly.status}`);
 
@@ -209,7 +201,6 @@ const shift = (days) => {
     post.status === 201 && post.data?.post?.dishName === "Cơm gà" && post.data?.post?.meal === null,
     `got ${post.status}`
   );
-  // Guard: without this a failure above would crash the run and skip the rest
   const postId = post.data?.post?.id || post.data?.post?._id || null;
   check("created post has id", !!postId);
 
@@ -224,8 +215,6 @@ const shift = (days) => {
     const like = await api(`/community/posts/${postId}/like`, "POST", undefined, token);
     check("like toggles", like.status === 200 && like.data.liked === true);
 
-    // Seed lightweight hosted-image documents directly so pagination can be
-    // exercised without uploading 20 files to Cloudinary.
     const ownerId = reLogin.data?.user?.id;
     await Post.insertMany(Array.from({ length: 20 }, (_, index) => ({
       user: ownerId,
@@ -309,8 +298,6 @@ const shift = (days) => {
   check("delete account 200", delOk.status === 200);
   const ghostLogin = await api("/auth/login", "POST", { email, password: PW2 });
   check("login after delete fails 400", ghostLogin.status === 400);
-  // JWT is stateless: the old token stays valid until expiry (documented
-  // limitation) — the guarantee that matters is that ALL data is gone.
   const ghostData = await api("/meals/history", "GET", undefined, token);
   check("all meal data erased after delete", ghostData.status === 200 && ghostData.data.meals.length === 0, `got ${ghostData.status}/${ghostData.data?.meals?.length}`);
 

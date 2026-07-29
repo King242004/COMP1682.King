@@ -14,8 +14,9 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
-// In-app activity list: likes + follows. Opening the screen marks everything
-// read (clears the Community bell badge). Rows deep-link to the post or actor.
+// Danh sách hoạt động trong app gồm lượt thích và theo dõi.
+// Mở màn hình sẽ đánh dấu tất cả đã đọc và xóa số trên chuông Community.
+// Mỗi hàng có thể mở bài viết hoặc hồ sơ liên quan.
 export default function NotificationsScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
@@ -35,7 +36,7 @@ export default function NotificationsScreen() {
       const data = await getNotifications(token);
       setItems(data);
       setLoadError(false);
-      // Clear the badge once the list is on screen
+  // Xóa số thông báo khi danh sách đã xuất hiện trên màn hình.
       markNotificationsRead(token).catch(() => {});
     } catch {
       setLoadError(true);

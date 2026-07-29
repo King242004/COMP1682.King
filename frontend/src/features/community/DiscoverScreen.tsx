@@ -23,13 +23,9 @@ export default function DiscoverScreen() {
   const [results, setResults] = useState<DiscoverUser[]>([]);
   const [suggestions, setSuggestions] = useState<DiscoverUser[]>([]);
   const [loading, setLoading] = useState(false);
-  // Track per-user follow state locally for instant button feedback
   const [followed, setFollowed] = useState<Record<string, boolean>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Monotonic id so a slow, older search response can't overwrite a newer one
   const reqIdRef = useRef(0);
-  // Mirror of `query` for the focus effect — keeps its deps stable so it only
-  // runs on real focus events, not on every keystroke
   const queryRef = useRef("");
 
   const runSearch = useCallback(async (q: string) => {
@@ -37,7 +33,8 @@ export default function DiscoverScreen() {
     const id = ++reqIdRef.current;
     try {
       const data = await searchUsers(token, q);
-      if (id !== reqIdRef.current) return; // stale response — a newer search superseded it
+      // Bỏ kết quả cũ nếu người dùng đã thực hiện tìm kiếm mới hơn.
+      if (id !== reqIdRef.current) return;
       setResults(data);
     } catch {
       if (id !== reqIdRef.current) return;
@@ -47,14 +44,14 @@ export default function DiscoverScreen() {
     }
   }, [token]);
 
-  // Debounced search as the user types
   const onChangeQuery = (text: string) => {
     setQuery(text);
     queryRef.current = text;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = text.trim();
     if (!q) {
-      reqIdRef.current++; // invalidate any in-flight search
+    // Làm cho mọi yêu cầu tìm kiếm đang chạy trở thành dữ liệu cũ.
+    reqIdRef.current++;
       setResults([]);
       setLoading(false);
       return;
@@ -63,14 +60,12 @@ export default function DiscoverScreen() {
     debounceRef.current = setTimeout(() => runSearch(q), 350);
   };
 
-  // Refresh on focus: suggestions exclude people you follow, and search results carry
-  // fresh isFollowing — so follow changes made on the profile screen show up on return.
   useFocusEffect(useCallback(() => {
     if (!token) return;
     getSuggestions(token)
       .then((users) => {
         setSuggestions(users);
-        setFollowed({}); // fresh server data is authoritative — drop optimistic overrides
+      setFollowed({});
       })
       .catch(() => {});
     const q = queryRef.current.trim();
@@ -88,7 +83,8 @@ export default function DiscoverScreen() {
       if (next) await followUser(token, u.id);
       else await unfollowUser(token, u.id);
     } catch {
-      setFollowed((prev) => ({ ...prev, [u.id]: !next })); // revert
+      // Trả lại trạng thái cũ nếu yêu cầu theo dõi thất bại.
+      setFollowed((prev) => ({ ...prev, [u.id]: !next }));
     }
   };
 

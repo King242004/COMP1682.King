@@ -9,10 +9,6 @@ import { AppText } from "@/ui/components/AppText";
 import { initials, communityTime } from "./helpers";
 import type { FeedPost } from "./api";
 
-// WEAR-style lookbook tile for the 2-column grids (feed, explore, profile, saved):
-// photo with author chip overlaid bottom-left, tappable heart bottom-right,
-// kcal chip top-left, optional "x ago" line under the tile (Following feed).
-// Text-only posts render a tinted card so the grid has no holes.
 export function PostTile({
   post,
   onPress,
@@ -70,7 +66,6 @@ export function PostTile({
           </View>
         )}
 
-        {/* Instagram-style stacked-copies badge when the post carries 2+ images */}
         {post.images && post.images.length > 1 && (
           <View style={styles.multiBadge}>
             <Ionicons name="copy" size={14} color="#fff" />
@@ -130,7 +125,8 @@ export function PostTile({
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    maxWidth: "50%", // odd last row: keep the lone tile half-width, not stretched
+    // Ô cuối của hàng lẻ vẫn giữ nửa chiều rộng, không kéo giãn cả hàng.
+    maxWidth: "50%",
     gap: 4,
   },
   tile: {
@@ -142,7 +138,8 @@ const styles = StyleSheet.create({
   image: { width: "100%", height: "100%" },
   fallback: {
     flex: 1, alignItems: "center", justifyContent: "center",
-    gap: 6, padding: theme.space.md, paddingBottom: 40, // keep text clear of the overlay chips
+    // Chừa khoảng dưới để chữ không bị các nhãn nổi che mất.
+    gap: 6, padding: theme.space.md, paddingBottom: 40,
   },
   fallbackText: { textAlign: "center", color: theme.colors.muted, fontWeight: "600" },
   kcalChip: {
@@ -155,12 +152,14 @@ const styles = StyleSheet.create({
   multiBadge: {
     position: "absolute", right: 8, top: 8,
     width: 26, height: 26, borderRadius: 13,
-    backgroundColor: "rgba(0,0,0,0.5)", // bare icon washed out on bright photos, keep the dark pill
+    // Nền tối giúp biểu tượng nhiều ảnh vẫn rõ trên ảnh sáng.
+    backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center", justifyContent: "center",
   },
   authorChip: {
     position: "absolute", left: 8, bottom: 8,
-    maxWidth: "70%", // shrink-to-fit but never overlap the heart button
+    // Giới hạn chiều rộng để nhãn tác giả không đè lên nút tim.
+    maxWidth: "70%",
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingVertical: 3, paddingLeft: 3, paddingRight: 9, borderRadius: theme.radius.pill,
     backgroundColor: "rgba(0,0,0,0.35)",

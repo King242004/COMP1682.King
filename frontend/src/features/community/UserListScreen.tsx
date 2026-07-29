@@ -13,7 +13,7 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
-// Followers / Following list for a user — reachable by tapping the profile stats.
+// Danh sách người theo dõi hoặc đang theo dõi, mở từ thống kê hồ sơ.
 export default function UserListScreen() {
   const { id, type } = useLocalSearchParams<{ id: string; type: "followers" | "following" }>();
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function UserListScreen() {
   const [users, setUsers] = useState<DiscoverUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  // Local follow overrides for instant button feedback
+  // Cập nhật trạng thái theo dõi trên máy trước để nút phản hồi ngay.
   const [followed, setFollowed] = useState<Record<string, boolean>>({});
 
   const isFollowers = type === "followers";
@@ -48,7 +48,8 @@ export default function UserListScreen() {
       if (next) await followUser(token, u.id);
       else await unfollowUser(token, u.id);
     } catch {
-      setFollowed((prev) => ({ ...prev, [u.id]: !next })); // revert
+      // Trả lại trạng thái cũ nếu yêu cầu theo dõi thất bại.
+      setFollowed((prev) => ({ ...prev, [u.id]: !next }));
     }
   };
 

@@ -1,4 +1,3 @@
-// Unit tests: TDEE math + auto calorie goal (safety floors) — pure functions.
 const { calculateTDEE, goalFromTDEE, autoGoal } = require("../../src/services/calorieGoal");
 
 describe("calculateTDEE (Mifflin-St Jeor)", () => {

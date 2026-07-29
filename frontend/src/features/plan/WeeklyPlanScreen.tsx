@@ -1,5 +1,3 @@
-// MEAL PLAN — weekly planner. Flow/state lives here; the generate + grocery
-// modals are in src/features/plan.
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -36,11 +34,12 @@ import { dateKey } from "@/utils/date";
 import { aiResetWhen } from "@/utils/aiQuota";
 
 
-// Monday of the week containing `base`, shifted by `weekOffset` weeks
+// Tìm Thứ hai của tuần chứa base rồi dịch chuyển theo weekOffset.
 function mondayOf(base: Date, weekOffset: number) {
   const d = new Date(base);
   d.setHours(0, 0, 0, 0);
-  const dow = d.getDay(); // 0=Sun
+  // JavaScript đánh số Chủ nhật là 0.
+  const dow = d.getDay();
   d.setDate(d.getDate() - ((dow + 6) % 7) + weekOffset * 7);
   return d;
 }
@@ -50,13 +49,11 @@ export default function MealPlanScreen() {
   const { token, user, updateProfile } = useAuth();
   const { markHealthDataChanged } = useHealthData();
   const lang = resolveLanguage(user?.language);
-  const locale = localeTag(lang); // date labels follow the app language, not the phone
+  // Nhãn ngày tháng đi theo ngôn ngữ trong app, không theo điện thoại.
+  const locale = localeTag(lang);
   const t = useT();
   const L = t.plan;
 
-  // State (not a per-render const) so an app left open past midnight can
-  // follow the day change — refreshed in the focus effect below (same rule
-  // as Home's rollover handling).
   const [todayKey, setTodayKey] = useState(dateKey(new Date()));
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(todayKey);
@@ -64,24 +61,25 @@ export default function MealPlanScreen() {
   const [workouts, setWorkouts] = useState<Record<string, PlanDayWorkout>>({});
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  // Generate modal (week or single day) + optional taste note.
-  // Note prefills from the profile's saved preferences; "remember" writes it back
-  // so EVERY AI feature (suggest, coach, next generations) knows the user's taste.
+  // Hộp tạo thực đơn cho một tuần hoặc một ngày, kèm ghi chú khẩu vị.
+  // Khẩu vị lấy từ hồ sơ và có thể lưu lại để các tính năng AI cùng sử dụng.
   const [genVisible, setGenVisible] = useState(false);
   const [genScope, setGenScope] = useState<"week" | "day">("week");
   const [note, setNote] = useState("");
   const [rememberTaste, setRememberTaste] = useState(true);
-  // AI grocery list + per-item ticks (persisted per week, see plan api cache)
+  // Danh sách mua sắm AI và trạng thái từng món được lưu theo tuần.
   const [grocery, setGrocery] = useState<GroceryGroup[] | null>(null);
   const [groceryChecked, setGroceryChecked] = useState<Record<string, boolean>>({});
   const [groceryVisible, setGroceryVisible] = useState(false);
   const [groceryLoading, setGroceryLoading] = useState(false);
-  // Signature of the loaded plan — grocery cache is only valid while this matches
+  // Dấu nhận diện giúp chỉ dùng lại danh sách mua sắm khi thực đơn chưa đổi.
   const planSigRef = useRef("");
+  // Chặn hai lần chạm liên tiếp ghi cùng một buổi tập.
+  const workoutDoneRef = useRef(false);
 
   const goal = user?.calorieGoal ?? 2000;
 
-  // 7 days (Mon→Sun) of the currently viewed week
+  // Bảy ngày từ Thứ hai đến Chủ nhật của tuần đang xem.
   const weekDays = useMemo(() => {
     const monday = mondayOf(new Date(), weekOffset);
     return Array.from({ length: 7 }, (_, i) => {
@@ -96,13 +94,11 @@ export default function MealPlanScreen() {
 
   const load = useCallback(async () => {
     if (!token) return;
-    // Stale-while-revalidate: paint the cached week INSTANTLY (no spinner),
-    // then refresh from the network in the background.
     const cached = await getCachedPlanWeek(weekStart);
     if (cached) {
       setPlan(cached.meals);
       setWorkouts(cached.workouts);
-      // Seed the signature so a fresh-but-identical fetch doesn't nuke grocery state
+      // Ghi dấu nhận diện để lần tải giống hệt không xóa trạng thái mua sắm.
       if (!planSigRef.current) {
         planSigRef.current = cached.meals.map((m) => m.id).sort().join(",");
       }
@@ -114,8 +110,8 @@ export default function MealPlanScreen() {
       setPlan(meals);
       setWorkouts(workouts);
       cachePlanWeek(weekStart, { meals, workouts });
-      // Drop the grocery list ONLY when the plan actually changed — a plain focus
-      // reload must not throw away a list that cost an AI request.
+      // Chỉ xóa danh sách mua sắm khi thực đơn thật sự thay đổi.
+      // Tải lại do focus không được làm mất kết quả đã tốn một lượt AI.
       const sig = meals.map((m) => m.id).sort().join(",");
       if (sig !== planSigRef.current) {
         planSigRef.current = sig;
@@ -123,7 +119,6 @@ export default function MealPlanScreen() {
         setGroceryChecked({});
       }
     } catch {
-      // Offline/failed refresh: keep showing the cached week if we had one
       if (!cached) {
         setPlan([]);
         setWorkouts({});
@@ -133,21 +128,21 @@ export default function MealPlanScreen() {
     }
   }, [token, weekStart, weekEnd]);
 
-  // Switching weeks moves the selected day too — keeping the old selection would
-  // point at a date that isn't on the visible strip (nothing looks selected).
+  // Đổi tuần cũng đổi ngày đang chọn để ngày đó luôn nằm trong dải đang hiển thị.
   const changeWeek = (delta: number) => {
     const next = weekOffset + delta;
     setWeekOffset(next);
     setSelectedDate(next === 0 ? todayKey : dateKey(mondayOf(new Date(), next)));
   };
 
-  // The AI never plans the past: week scope starts at max(weekStart, today).
-  // (YYYY-MM-DD strings compare correctly.)
+  // AI không tạo kế hoạch cho quá khứ nên khoảng tạo bắt đầu từ hôm nay hoặc đầu tuần.
+  // Chuỗi YYYY-MM-DD có thể so sánh trực tiếp.
   const genRange = (scope: "week" | "day"): [string, string] | null => {
     if (scope === "day") {
       return selectedDate >= todayKey ? [selectedDate, selectedDate] : null;
     }
-    if (weekEnd < todayKey) return null; // entirely past week
+    // Không chọn ngày mặc định khi cả tuần đã nằm trong quá khứ.
+    if (weekEnd < todayKey) return null;
     return [weekStart > todayKey ? weekStart : todayKey, weekEnd];
   };
 
@@ -160,11 +155,11 @@ export default function MealPlanScreen() {
     }
     const show = () => {
       setGenScope(scope);
-      // Prefill with the profile's saved taste preferences (only when empty)
+    // Điền khẩu vị đã lưu trong hồ sơ nếu ô hiện đang trống.
       setNote((n) => n.trim() ? n : (user?.tastePreferences || ""));
       setGenVisible(true);
     };
-    // Regenerating over existing meals is destructive → explicit confirmation first
+    // Yêu cầu xác nhận trước vì tạo lại sẽ thay thế các món hiện có.
     const hasMeals = plan.some((p) => p.date >= range[0] && p.date <= range[1]);
     if (hasMeals) {
       Alert.alert(L.confirmTitle, scope === "day" ? L.confirmDayMsg : L.confirmWeekMsg, [
@@ -181,8 +176,8 @@ export default function MealPlanScreen() {
     if (!token || generating || !range) return;
     setGenVisible(false);
     setGenerating(true);
-    // Remember taste in the profile (best-effort, fire-and-forget) so the
-    // suggest button and the coach respect it too — user types it once.
+      // Lưu khẩu vị vào hồ sơ để Suggest và Coach cũng sử dụng.
+      // Lỗi lưu khẩu vị không được làm thất bại việc tạo thực đơn.
     const taste = note.trim();
     if (rememberTaste && taste && taste !== (user?.tastePreferences || "")) {
       updateProfile({ tastePreferences: taste }).catch(() => {});
@@ -198,11 +193,12 @@ export default function MealPlanScreen() {
     }
   };
 
-  // AI grocery list for the planned meals (today → end of viewed week).
-  // In-memory → AsyncStorage (survives leaving the screen) → only then Gemini.
+  // Danh sách mua sắm dùng các món từ hôm nay đến cuối tuần đang xem.
+  // Ưu tiên bộ nhớ, rồi AsyncStorage, cuối cùng mới gọi Gemini.
   const openGrocery = async () => {
     if (groceryLoading || !token) return;
-    if (grocery) { setGroceryVisible(true); return; } // reuse until the plan changes
+    // Dùng lại danh sách mua sắm cho đến khi thực đơn thay đổi.
+    if (grocery) { setGroceryVisible(true); return; }
     const cached = await getCachedGrocery(weekStart, lang);
     if (cached && cached.sig === planSigRef.current) {
       setGrocery(cached.groups);
@@ -226,7 +222,7 @@ export default function MealPlanScreen() {
     }
   };
 
-  // Tick/untick a grocery item — persisted with the list so it survives reopening
+  // Lưu trạng thái đánh dấu cùng danh sách để đóng mở lại vẫn còn.
   const toggleGroceryItem = (key: string) => {
     setGroceryChecked((prev) => {
       const next = { ...prev, [key]: !prev[key] };
@@ -235,8 +231,8 @@ export default function MealPlanScreen() {
     });
   };
 
-  // Reload on focus (e.g. returning from add screen) and whenever the week changes.
-  // Also day rollover: "today" moves on if the app stayed open past midnight.
+  // Tải lại khi quay về màn hình hoặc đổi tuần.
+  // Đồng thời cập nhật hôm nay nếu app được mở qua nửa đêm.
   useFocusEffect(
     useCallback(() => {
       const fresh = dateKey(new Date());
@@ -245,7 +241,7 @@ export default function MealPlanScreen() {
     }, [load, todayKey])
   );
 
-  // Planned meals for the selected day
+  // Các món trong thực đơn của ngày đang chọn.
   const dayPlan = useMemo(() => plan.filter((p) => p.date === selectedDate), [plan, selectedDate]);
 
   const dayTotals = useMemo(
@@ -263,7 +259,7 @@ export default function MealPlanScreen() {
     [dayPlan]
   );
 
-  // Count of planned items per day, to show a dot on the week strip
+  // Đếm món từng ngày để hiện dấu chấm trên dải tuần.
   const plannedDays = useMemo(() => {
     const set = new Set(plan.map((p) => p.date));
     return set;
@@ -271,24 +267,21 @@ export default function MealPlanScreen() {
 
   const onMarkEaten = async (item: PlanMeal) => {
     if (!token) return;
-    // Optimistic flip
+      // Cập nhật giao diện trước để thao tác phản hồi ngay.
     setPlan((prev) => prev.map((p) => (p.id === item.id ? { ...p, done: true } : p)));
     try {
       await markPlanEaten(token, item.id);
       markHealthDataChanged();
     } catch (e: any) {
-      // revert on failure
       setPlan((prev) => prev.map((p) => (p.id === item.id ? { ...p, done: false } : p)));
       Alert.alert(L.couldntLog, e.message || t.common.tryAgain);
     }
   };
 
-  // One-tap "✓ Done" on the AI workout: logs a real Exercise server-side
-  const workoutDoneRef = useRef(false); // in-flight guard against double-tap
   const onWorkoutDone = async (w: PlanDayWorkout) => {
     if (!token || !w.id || workoutDoneRef.current) return;
     workoutDoneRef.current = true;
-    // Optimistic flip
+    // Cập nhật giao diện trước để thao tác phản hồi ngay.
     setWorkouts((prev) => ({ ...prev, [w.date]: { ...w, done: true } }));
     try {
       await markPlanWorkoutDone(token, w.id);
@@ -313,25 +306,25 @@ export default function MealPlanScreen() {
           try {
             await deletePlanMeal(token, item.id);
           } catch {
-            load(); // resync if the delete failed
+          load();
           }
         },
       },
     ]);
   };
 
-  // Tap the 💬 on a dish → jump to the Coach tab with a ready-made cooking question
   const askCoach = (item: PlanMeal) =>
     router.push({
       pathname: "/tabs/coach" as any,
       params: {
         ask: t.community.cookQuestion(item.name),
-        askId: String(Date.now()), // unique per tap — consumed once on the Coach tab
+        // Mỗi lần chạm có một mã riêng để tab Coach chỉ xử lý yêu cầu một lần.
+        askId: String(Date.now()),
       },
     });
 
-  // Past days are read-only: adding/eating a plan for yesterday makes no sense
-  // (Eat would even log the meal into TODAY's diary). Delete stays available.
+  // Ngày quá khứ chỉ được xem vì thêm hoặc đánh dấu ăn có thể ghi sai vào hôm nay.
+  // Người dùng vẫn có thể xóa món cũ.
   const isPast = selectedDate < todayKey;
 
   const selectedLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(locale, {
@@ -342,13 +335,13 @@ export default function MealPlanScreen() {
 
   return (
     <Screen padded={false}>
-      {/* Fixed header — stays visible while the list scrolls */}
+      {/* Phần đầu cố định khi danh sách cuộn. */}
       <View style={styles.headerWrap}>
         <ScreenHeader title={L.mealPlanTitle} />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Week navigator */}
+        {/* Chuyển qua lại giữa các tuần. */}
         <View style={styles.weekNav}>
           <Pressable
             onPress={() => changeWeek(-1)}
@@ -377,7 +370,7 @@ export default function MealPlanScreen() {
           </Pressable>
         </View>
 
-        {/* 7-day strip */}
+        {/* Dải bảy ngày của tuần. */}
         <View style={styles.weekRow}>
           {weekDays.map((d, i) => {
             const key = dateKey(d);
@@ -409,7 +402,7 @@ export default function MealPlanScreen() {
           })}
         </View>
 
-        {/* Day total card */}
+        {/* Thẻ tổng dinh dưỡng trong ngày. */}
         <Card style={styles.totalCard}>
           {isPast && (
             <View style={styles.pastBanner}>
@@ -417,7 +410,7 @@ export default function MealPlanScreen() {
               <AppText variant="subtle" style={styles.pastBannerText}>{L.pastDay}</AppText>
             </View>
           )}
-          {/* flex-start: the redo button sits level with the date line, clear of the big number */}
+          {/* Đặt nút tạo lại ngang hàng với ngày và tránh số calo lớn. */}
           <View style={styles.totalHead}>
             <View style={styles.totalBlock}>
               <AppText variant="subtle" style={styles.smallLabel}>{selectedLabel}</AppText>
@@ -426,7 +419,7 @@ export default function MealPlanScreen() {
                 <AppText variant="muted" style={styles.totalGoal}>/ {goal.toLocaleString()} {t.common.kcal}</AppText>
               </View>
             </View>
-            {/* Regenerate just this day (today or future only) */}
+            {/* Chỉ tạo lại ngày hôm nay hoặc ngày tương lai. */}
             {selectedDate >= todayKey && dayPlan.length > 0 && (
               <Pressable
                 onPress={() => openGenerate("day")}
@@ -434,7 +427,7 @@ export default function MealPlanScreen() {
                 hitSlop={8}
                 style={({ pressed }) => [styles.redoBtn, pressed && styles.redoBtnPressed]}
               >
-                {/* Fixed 14px box so the spinner doesn't grow the button */}
+                {/* Khung cố định để vòng tải không làm nút lớn lên. */}
                 <View style={styles.redoIconBox}>
                   {generating && genScope === "day" ? (
                     <ActivityIndicator size="small" color={theme.colors.primary} style={styles.redoSpinner} />
@@ -453,8 +446,7 @@ export default function MealPlanScreen() {
             <View style={styles.macroDivider} />
             <AppText variant="subtle" style={[styles.smallLabel, styles.macroF]}>F {Math.round(dayTotals.fat)}g</AppText>
           </View>
-          {/* AI workout suggestion for the selected day — structured suggestions
-              get a one-tap "✓ Done" (today/past only, mirrors the meal Eat rule) */}
+          {/* Bài tập AI có nút hoàn thành nhanh khi dữ liệu có đủ cấu trúc. */}
           {!!workouts[selectedDate] && (
             <View style={styles.workoutTip}>
               <AppText style={styles.tipEmoji}>🏃</AppText>
@@ -484,8 +476,7 @@ export default function MealPlanScreen() {
           </View>
         ) : (
           <>
-          {/* Time-aware empty state: past day → view only; today/future → hint + a
-              Generate CTA RIGHT HERE (the main AI button sits below the fold) */}
+          {/* Ngày cũ chỉ để xem. Hôm nay và tương lai có gợi ý cùng nút tạo thực đơn. */}
           {dayPlan.length === 0 && (
             <View style={styles.emptyBlock}>
               <View style={styles.hintBox}>
@@ -541,9 +532,8 @@ export default function MealPlanScreen() {
                             <Ionicons name="checkmark-circle" size={20} color={theme.colors.accent} />
                           </View>
                         ) : selectedDate === todayKey ? (
-                          /* Eat = log into the diary NOW → only meaningful on today.
-                             Past is read-only; a FUTURE plan can't be "eaten" yet
-                             (backend markEaten enforces the same rule). */
+                          /* Ăn sẽ ghi món vào nhật ký ngay nên chỉ dùng cho hôm nay.
+                             Backend markEaten cũng chặn ngày quá khứ và tương lai. */
                           <Pressable
                             onPress={() => onMarkEaten(item)}
                             hitSlop={6}
@@ -554,7 +544,7 @@ export default function MealPlanScreen() {
                           </Pressable>
                         ) : null}
 
-                        {/* Ask the Coach how to cook this dish */}
+                        {/* Hỏi Coach cách nấu món này. */}
                         <Pressable
                           onPress={() => askCoach(item)}
                           hitSlop={10}
@@ -586,17 +576,15 @@ export default function MealPlanScreen() {
           </>
         )}
 
-        {/* AI actions — kept at the bottom so the calendar stays front and center.
-            When the day is empty the empty-state already shows a Generate CTA, so
-            the bottom button would be a duplicate; only show it once the day has
-            planned items (as a "regenerate the week" entry). */}
+        {/* Đặt hành động AI dưới cùng để lịch tuần vẫn là nội dung chính.
+            Ngày trống đã có nút tạo riêng nên không lặp lại nút tại đây. */}
         <View style={styles.aiActions}>
           {dayPlan.length > 0 && (
             <Button
               title={generating && genScope === "week" ? L.generating : L.generate}
               variant="primary"
               size="lg"
-              // Loading spinner only when the WEEK is generating (day regen has its own)
+              // Chỉ hiện vòng tải này khi tạo cả tuần. Tạo một ngày có vòng tải riêng.
               left={generating && genScope === "week"
                 ? <ActivityIndicator color="#fff" size="small" />
                 : <Ionicons name="sparkles" size={19} color="#fff" />}
@@ -620,7 +608,7 @@ export default function MealPlanScreen() {
         </View>
       </ScrollView>
 
-      {/* Modals — components in src/features/plan */}
+      {/* Các hộp thoại nằm trong src/features/plan. */}
       <GenerateModal
         visible={genVisible}
         scope={genScope}
@@ -655,7 +643,7 @@ const styles = StyleSheet.create({
     gap: theme.space.lg,
   },
 
-  // Week navigator + day strip
+  // Phần chuyển tuần và dải ngày.
   weekNav: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     backgroundColor: theme.colors.surface,
@@ -685,7 +673,7 @@ const styles = StyleSheet.create({
   dayDotPlanned: { backgroundColor: theme.colors.accent },
   dayDotSelected: { backgroundColor: "rgba(255,255,255,0.9)" },
 
-  // Day total card
+  // Thẻ tổng trong ngày.
   totalCard: { padding: theme.space.lg, gap: 10 },
   pastBanner: {
     flexDirection: "row", alignItems: "center", gap: 6,
@@ -708,7 +696,7 @@ const styles = StyleSheet.create({
   redoText: { fontSize: 11, fontWeight: "700", color: theme.colors.primary },
   macroStrip: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 },
   macroDivider: { width: 1, height: 11, backgroundColor: theme.colors.border },
-  // Macro colours match Progress: protein orange, carbs green, fat indigo
+  // Màu macro giống Progress: protein cam, carb xanh lá và fat tím.
   macroP: { color: theme.colors.accent2, fontWeight: "700" },
   macroC: { color: theme.colors.accent, fontWeight: "700" },
   macroF: { color: theme.colors.indigo, fontWeight: "700" },
@@ -720,7 +708,7 @@ const styles = StyleSheet.create({
   tipEmoji: { fontSize: 14 },
   tipText: { flex: 1, fontSize: 13 },
 
-  // Day content
+  // Nội dung của ngày đang chọn.
   loadingWrap: { paddingVertical: theme.space.xl, alignItems: "center" },
   emptyBlock: { gap: theme.space.md },
   hintBox: {
@@ -756,6 +744,6 @@ const styles = StyleSheet.create({
   },
   eatBtnPressed: { backgroundColor: theme.colors.tint },
 
-  // AI actions
+  // Các nút hành động AI.
   aiActions: { gap: 10, marginTop: 6 },
 });

@@ -1,6 +1,5 @@
-// AI-generate confirmation modal (week or single day) + taste note.
-// The "remember" checkbox writes the note back to the profile so EVERY AI
-// feature (suggest, coach, later generations) shares one taste memory.
+// Hộp xác nhận tạo thực đơn AI cho cả tuần hoặc một ngày, kèm ghi chú khẩu vị.
+// Chọn ghi nhớ sẽ lưu khẩu vị vào hồ sơ để Suggest, Coach và lần tạo sau cùng dùng.
 import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";

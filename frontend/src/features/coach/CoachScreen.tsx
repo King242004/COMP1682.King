@@ -1,5 +1,3 @@
-// AI HEALTH COACH (tab) — daily insight + context-aware chat with saved history.
-// Flow/state lives here; InsightCard, ChatBubble, TypingDots are in src/features/coach.
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -59,12 +57,9 @@ export default function CoachTab() {
   const L = t.coach;
   const mealOpts: [string, string][] = MEAL_KEYS.map((k) => [k, t.coach.mealShort[k]]);
 
-  const headerHeight = useHeaderHeight(); // bù chiều cao AppHeader của tab cho keyboard
+  // Bù chiều cao AppHeader để bàn phím không che ô nhập.
+  const headerHeight = useHeaderHeight();
   const scrollRef = useRef<FlatList<ChatMessage>>(null);
-  const scrollToLatest = useCallback((animated = true) => {
-    scrollRef.current?.scrollToEnd({ animated });
-  }, []);
-
   const [insight, setInsight] = useState<CoachInsight | null>(null);
   const [loadingInsight, setLoadingInsight] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -72,6 +67,18 @@ export default function CoachTab() {
   const [sending, setSending] = useState(false);
   const [pendingImage, setPendingImage] = useState<{ uri: string; base64: string } | null>(null);
   const [communityRecipeNotice, setCommunityRecipeNotice] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [showJump, setShowJump] = useState(false);
+
+  // Các ref này bỏ kết quả cũ, tránh xử lý lặp và chặn hai lần chạm.
+  const insightRequestIdRef = useRef(0);
+  const handledRevisionRef = useRef(0);
+  const consumedAskRef = useRef<string | null>(null);
+  const loggingRef = useRef(false);
+
+  const scrollToLatest = useCallback((animated = true) => {
+    scrollRef.current?.scrollToEnd({ animated });
+  }, []);
 
   useEffect(() => {
     const subscription = Keyboard.addListener("keyboardDidShow", () => {
@@ -80,7 +87,7 @@ export default function CoachTab() {
     return () => subscription.remove();
   }, [scrollToLatest]);
 
-  // Pick a food photo from camera or library, then compress to base64
+  // Chọn ảnh món từ camera hoặc thư viện rồi nén thành base64.
   const pickImage = async (source: "camera" | "library") => {
     const perm = source === "camera"
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -106,9 +113,6 @@ export default function CoachTab() {
     ]);
   };
 
-  // Show cached insight instantly; only hit Gemini when the cache is stale (TTL)
-  // or when forced (e.g. right after logging a meal) — saves free-tier quota.
-  const insightRequestIdRef = useRef(0);
   const loadInsight = useCallback(async (force = false) => {
     if (!token) return;
     const requestId = ++insightRequestIdRef.current;
@@ -118,7 +122,8 @@ export default function CoachTab() {
     if (cached) {
       setInsight(cached.insight);
       setLoadingInsight(false);
-      if (!force && Date.now() - cached.at < INSIGHT_TTL_MS) return; // still fresh → skip AI call
+      // Không gọi AI lại khi insight trong bộ nhớ đệm vẫn còn mới.
+      if (!force && Date.now() - cached.at < INSIGHT_TTL_MS) return;
     } else {
       setLoadingInsight(true);
     }
@@ -134,31 +139,28 @@ export default function CoachTab() {
     }
   }, [token, lang]);
 
-  // Deep-linked questions must wait for this — sending while history is still
-  // loading would get overwritten when setMessages(hist) replaces the state.
-  const [historyLoaded, setHistoryLoaded] = useState(false);
+  // Câu hỏi mở từ màn khác phải chờ lịch sử tải xong để không bị ghi đè.
   const loadHistory = useCallback(async () => {
     if (!token) return;
     setHistoryLoaded(false);
     try {
       const hist = await getChatHistory(token, lang);
       setMessages(hist);
-      // Jump to the latest message after history renders
+      // Cuộn tới tin mới nhất sau khi lịch sử hiển thị.
       setTimeout(() => scrollToLatest(false), 150);
     } catch {
-      // keep whatever is in state
+      // Giữ nguyên dữ liệu đang có nếu tải lịch sử thất bại.
     } finally {
       setHistoryLoaded(true);
     }
   }, [lang, scrollToLatest, token]);
 
-  // Chat history loads once so switching tabs never overwrites an in-progress
-  // conversation. Health insight refreshes separately when health data changes.
+  // Lịch sử chỉ tải một lần để đổi tab không ghi đè cuộc trò chuyện đang diễn ra.
+  // Insight được làm mới riêng khi dữ liệu sức khỏe thay đổi.
   useEffect(() => {
     loadHistory();
   }, [loadHistory]);
 
-  const handledRevisionRef = useRef(0);
   useFocusEffect(
     useCallback(() => {
       const changed = revision !== handledRevisionRef.current;
@@ -172,8 +174,8 @@ export default function CoachTab() {
     const msg = text.trim();
     const img = pendingImage;
     if ((!msg && !img) || sending || !token) return;
-    const prior = messages; // history to send (before adding this turn — avoids duplication)
-    // Quick-action buttons show a short label in the bubble but send the full question to the AI.
+    // Gửi lịch sử trước lượt hiện tại để tránh lặp lại cùng một tin nhắn.
+    const prior = messages;
     const userMsg: ChatMessage = { role: "user", text: (displayText ?? msg).trim(), image: img?.uri, createdAt: new Date().toISOString() };
     setMessages([...prior, userMsg]);
     setInput("");
@@ -202,23 +204,19 @@ export default function CoachTab() {
     }
   }, [lang, messages, pendingImage, scrollToLatest, sending, t, token]);
 
-  // Tap an insight tip/warning → ask the coach to elaborate on it in chat
   const askAboutTip = (tip: string) =>
     send(t.coach.askTip(tip));
 
-  // Deep-link question (e.g. tapping a plan dish → "how do I cook X?").
-  // `askId` makes each tap unique; the ref consumes it once so switching back to
-  // the tab later doesn't re-send the same question (tab params persist).
+  // Nhận câu hỏi từ màn khác, ví dụ hỏi cách nấu một món trong Plan.
+  // askId làm mỗi lần chạm là duy nhất để quay lại tab không gửi lặp câu hỏi.
   const { ask, askId, recipeNotice } = useLocalSearchParams<{
     ask?: string;
     askId?: string;
     recipeNotice?: string;
   }>();
-  const consumedAskRef = useRef<string | null>(null);
   useEffect(() => {
     if (!ask || !askId || consumedAskRef.current === askId) return;
-    // Wait for history to finish loading (else setMessages(hist) would wipe the
-    // question bubble) and for any in-flight send. Effect re-runs as these settle.
+    // Chờ lịch sử và yêu cầu đang gửi hoàn tất để bong bóng câu hỏi không bị ghi đè.
     if (!token || sending || !historyLoaded) return;
     consumedAskRef.current = askId;
     const isCommunityRecipe = recipeNotice === "community";
@@ -226,15 +224,13 @@ export default function CoachTab() {
     send(String(ask), undefined, isCommunityRecipe ? "community" : undefined);
   }, [ask, askId, recipeNotice, token, sending, historyLoaded, send]);
 
-  // Pick meal type on the suggested-meal card (before adding) — local only.
+  // Chọn loại bữa cho món gợi ý trước khi thêm. Thay đổi này chỉ ở máy.
   const setMealType = (index: number, mealType: string) => {
     setMessages((prev) =>
       prev.map((m, i) => (i === index && m.meal ? { ...m, meal: { ...m.meal, mealType } } : m))
     );
   };
 
-  // User taps "Add" → log the suggested meal (persisted server-side via its message id).
-  const loggingRef = useRef(false); // in-flight guard: double-tap must not log twice
   const acceptLog = async (index: number) => {
     const m = messages[index];
     if (!token || !m?.id || !m.meal || loggingRef.current) return;
@@ -251,7 +247,7 @@ export default function CoachTab() {
     }
   };
 
-  // Undo: delete the logged meal and show the Add card again.
+  // Hoàn tác sẽ xóa món đã ghi và hiện lại thẻ thêm món.
   const undoLog = async (index: number) => {
     const m = messages[index];
     if (!token || !m?.id) return;
@@ -265,7 +261,6 @@ export default function CoachTab() {
     }
   };
 
-  // Day separator label for the chat stream ("Today" / "Yesterday" / short date)
   const dayLabelFor = (iso?: string) => {
     const d = iso ? dateKey(new Date(iso)) : todayKey();
     const now = new Date();
@@ -277,8 +272,7 @@ export default function CoachTab() {
   };
   const msgDay = (m: ChatMessage) => (m.createdAt ? dateKey(new Date(m.createdAt)) : todayKey());
 
-  // "Jump to latest" appears once the user scrolls up away from the newest message
-  const [showJump, setShowJump] = useState(false);
+  // Hiện nút tới tin mới nhất khi người dùng cuộn lên đọc tin cũ.
   const onChatScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
     const nearBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 150;
@@ -297,7 +291,7 @@ export default function CoachTab() {
           try {
             await clearChatHistory(token);
           } catch {
-            loadHistory(); // resync if it failed
+          loadHistory();
           }
         },
       },
@@ -312,8 +306,7 @@ export default function CoachTab() {
       dismissKeyboardOnTap={false}
     >
       <View style={styles.container}>
-        {/* Header banner — dark primary bar with light text, same visual
-            language as the Home AppHeader */}
+        {/* Thanh đầu màu chính đậm và chữ sáng, cùng phong cách với Home. */}
         <View style={styles.header}>
           <View style={styles.titleLeft}>
             <Ionicons name="sparkles" size={20} color="#fff" />
@@ -333,9 +326,7 @@ export default function CoachTab() {
         </View>
 
         <View style={styles.chatArea}>
-          {/* alwaysBounceVertical: let the area drag/bounce even when empty (the
-              intro + chips are short), so the welcome screen never feels
-              frozen/unloaded */}
+          {/* Cho phép kéo nhẹ cả khi danh sách trống để màn hình không có cảm giác bị đứng. */}
           <FlatList
             ref={scrollRef}
             data={messages}
@@ -350,7 +341,7 @@ export default function CoachTab() {
             keyExtractor={(item, index) => `${item.id ?? item.createdAt ?? item.role}-${index}`}
             ListHeaderComponent={(
               <View style={styles.listSection}>
-                {/* Daily insight */}
+                {/* Insight sức khỏe trong ngày. */}
                 <InsightCard
                   insight={insight}
                   loading={loadingInsight}
@@ -403,7 +394,7 @@ export default function CoachTab() {
                     <AppText style={styles.suggestChipText}>{q}</AppText>
                   </Pressable>
                 ))}
-                {/* Photo capability */}
+                {/* Hành động gửi ảnh món ăn. */}
                 <Pressable
                   onPress={attachImage}
                   style={({ pressed }) => [styles.suggestChip, pressed && styles.suggestChipPressed]}
@@ -415,7 +406,7 @@ export default function CoachTab() {
           )}
           />
 
-        {/* Jump to latest — shown when the user scrolled up into older messages */}
+          {/* Hiện nút tới tin mới nhất khi người dùng đang đọc tin cũ. */}
           {showJump && (
             <Pressable
               onPress={() => scrollToLatest(true)}
@@ -448,7 +439,7 @@ export default function CoachTab() {
           </View>
         )}
 
-        {/* Pending image preview */}
+        {/* Xem trước ảnh đang chờ gửi. */}
         {pendingImage && (
           <View style={styles.pendingRow}>
             <View>
@@ -461,15 +452,15 @@ export default function CoachTab() {
           </View>
         )}
 
-        {/* Keep the medical disclaimer beside the composer so it stays visible above the keyboard. */}
+        {/* Đặt cảnh báo y tế sát ô nhập để luôn thấy phía trên bàn phím. */}
         <View style={styles.disclaimer}>
           <Ionicons name="information-circle-outline" size={15} color={theme.colors.subtle} />
           <AppText variant="subtle" style={styles.disclaimerText}>{L.disclaimer}</AppText>
         </View>
 
-        {/* Input bar */}
+        {/* Thanh nhập tin nhắn. */}
         <View style={styles.inputBar}>
-          {/* Attach food photo */}
+          {/* Đính kèm ảnh món ăn. */}
           <Pressable
             onPress={attachImage}
             disabled={sending}
@@ -514,8 +505,7 @@ const styles = StyleSheet.create({
   pressedFaint: { opacity: 0.8 },
   container: { flex: 1, paddingHorizontal: theme.space.lg },
 
-  // Dark primary header banner with light text — breaks out of the container's
-  // horizontal padding to sit edge-to-edge, mirroring the Home AppHeader.
+  // Thanh đầu tràn hết chiều ngang và dùng màu chính đậm giống Home.
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     marginHorizontal: -theme.space.lg,
@@ -567,8 +557,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   suggestChipPressed: { backgroundColor: theme.colors.tint },
-  // lineHeight + includeFontPadding keep the label vertically centred so
-  // diacritic-heavy labels (ố, ữ) don't ride higher than plain ones
+  // lineHeight và includeFontPadding giữ chữ có dấu nằm giữa theo chiều dọc.
   suggestChipText: { fontSize: 12, lineHeight: 16, includeFontPadding: false, color: theme.colors.primary },
 
   pendingRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 8 },

@@ -1,30 +1,32 @@
-// Simple SVG line chart for the weight journey. Hand-rolled on react-native-svg
-// (already a dependency via ProgressRing) — no chart library needed.
 import { useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
 import { theme } from "@/ui/theme";
 import type { WeightEntry } from "./api";
 
-const H = 160;             // svg height
-const PAD_X = 34;          // left gutter for the kg axis labels
-const PAD_Y = 18;          // breathing room above/below the line
+// Chiều cao của biểu đồ SVG.
+const H = 160;
+// Khoảng bên trái dành cho nhãn kg.
+const PAD_X = 34;
+// Khoảng trống phía trên và dưới đường biểu đồ.
+const PAD_Y = 18;
 
 export function WeightChart({ logs, targetWeight, locale }: {
-  logs: WeightEntry[];       // oldest → newest, length ≥ 2 (parent guards)
+  // Dữ liệu từ cũ đến mới. Component cha đảm bảo có ít nhất hai điểm.
+  logs: WeightEntry[];
   targetWeight: number | null;
-  locale?: string;           // date labels follow the app language
+  // Ngôn ngữ dùng để định dạng nhãn ngày.
+  locale?: string;
 }) {
-  // Chart must fill the card → measure the available width at runtime
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
   const values = logs.map((l) => l.weightKg);
-  // Include the target in the scale so its dashed line is always visible
   const all = targetWeight ? [...values, targetWeight] : values;
   let min = Math.min(...all);
   let max = Math.max(...all);
-  if (max - min < 2) { min -= 1; max += 1; } // flat data → give the line some room
+  // Nới phạm vi khi dữ liệu quá phẳng để đường biểu đồ vẫn dễ nhìn.
+  if (max - min < 2) { min -= 1; max += 1; }
 
   const plotW = width - PAD_X - 8;
   const plotH = H - PAD_Y * 2;
@@ -34,7 +36,6 @@ export function WeightChart({ logs, targetWeight, locale }: {
   const points = logs.map((l, i) => `${x(i)},${y(l.weightKg)}`).join(" ");
   const last = logs[logs.length - 1];
 
-  // Short date labels for first + last entry
   const dLabel = (d: string) =>
     new Date(d + "T00:00:00").toLocaleDateString(locale, { month: "short", day: "numeric" });
 
@@ -71,7 +72,6 @@ export function WeightChart({ logs, targetWeight, locale }: {
             />
           ))}
 
-          {/* First/last date labels under the axis */}
           <SvgText x={PAD_X} y={H + 10} fontSize={10} fill={theme.colors.subtle}>{dLabel(logs[0].date)}</SvgText>
           <SvgText x={width - 8} y={H + 10} fontSize={10} fill={theme.colors.subtle} textAnchor="end">
             {dLabel(last.date)}

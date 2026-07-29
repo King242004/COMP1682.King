@@ -3,21 +3,26 @@ import type { Meal } from "@/context/MealsContext";
 
 export type DaySummary = {
   key: string;
-  label: string;      // short weekday, e.g. "Mon" (bar-chart axis)
-  fullLabel: string;  // weekday + full date, e.g. "Monday, Jun 3, 2026"
+  // Tên thứ viết tắt để hiển thị trên trục biểu đồ, ví dụ "Mon".
+  label: string;
+  // Tên thứ kèm ngày đầy đủ, ví dụ "Monday, Jun 3, 2026".
+  fullLabel: string;
   isToday: boolean;
-  isFuture: boolean;  // day hasn't happened yet (month view shows the whole month)
+  // Cho biết ngày này chưa tới vì chế độ tháng hiển thị cả tháng.
+  isFuture: boolean;
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
   mealCount: number;
-  onTrack: boolean;   // 80–100% of goal
-  distToGoal: number; // |calories − goal|, Infinity when no meals
-  ratio: number;      // calories / goal
+  // Đúng mục tiêu khi lượng calo nằm trong khoảng 80 đến 100 phần trăm.
+  onTrack: boolean;
+  // Khoảng cách tuyệt đối tới mục tiêu, bằng Infinity khi chưa có món.
+  distToGoal: number;
+  // Tỷ lệ giữa lượng calo đã ăn và mục tiêu.
+  ratio: number;
 };
 
-// The trailing N days (oldest → today), midnight-aligned.
 export function getLastNDays(n: number) {
   const days: Date[] = [];
   const today = new Date();
@@ -30,9 +35,6 @@ export function getLastNDays(n: number) {
   return days;
 }
 
-// Every day of a calendar month (day 1 → last day), midnight-aligned. Length
-// matches the real month (28-31). Days after today may be included; the UI dims
-// those not-yet-logged days.
 export function getMonthDays(year: number, month: number) {
   const lastDate = new Date(year, month + 1, 0).getDate();
   const days: Date[] = [];
@@ -50,16 +52,18 @@ export function getCurrentMonthDays() {
 }
 
 export type MonthTotal = {
-  key: string;        // "2026-07"
-  label: string;      // localized short month, e.g. "thg 7"
+  // Khóa tháng theo định dạng "2026-07".
+  key: string;
+  // Tên tháng viết tắt theo ngôn ngữ, ví dụ "thg 7".
+  label: string;
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
-  isFuture: boolean;  // a month later than the current one (this year)
+  // Cho biết tháng này nằm sau tháng hiện tại trong cùng năm.
+  isFuture: boolean;
 };
 
-// The 12 monthly totals for a year — the "Year" view's bars.
 export function getYearMonthTotals(historyMeals: Meal[], year: number, locale?: string): MonthTotal[] {
   const now = new Date();
   const out: MonthTotal[] = [];
@@ -81,13 +85,11 @@ export function getYearMonthTotals(historyMeals: Meal[], year: number, locale?: 
   return out;
 }
 
-// The calendar week (Monday → Sunday) containing `date`, so picking any day
-// keeps the week fixed and just highlights that day, rather than shifting the
-// window so the picked day is always last.
 export function getWeekDays(date: Date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  const dow = (d.getDay() + 6) % 7; // Monday = 0
+  // Chuyển cách đánh số để Thứ hai là 0.
+  const dow = (d.getDay() + 6) % 7;
   const monday = new Date(d);
   monday.setDate(d.getDate() - dow);
   const days: Date[] = [];
@@ -99,16 +101,12 @@ export function getWeekDays(date: Date) {
   return days;
 }
 
-// Build per-day nutrition summaries from history for the given window of days.
-// `locale` (e.g. "vi-VN") makes weekday/date labels follow the app language
-// instead of the phone's locale.
 export function buildDaySummaries(historyMeals: Meal[], goal: number, windowDays: Date[], locale?: string): DaySummary[] {
   const todayKey = dateKey(new Date());
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   return windowDays.map((d) => {
     const key = dateKey(d);
-    // Match on meal.date (logged day) not createdAt (insertion timestamp)
     const dayMeals = historyMeals.filter((m) => m.date === key);
     const calories = dayMeals.reduce((s, m) => s + m.calories, 0);
     const ratio = goal > 0 ? calories / goal : 0;

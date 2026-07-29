@@ -6,8 +6,8 @@ import { useT } from "@/i18n";
 import { theme } from "../theme";
 import { AppText } from "./AppText";
 
-// Consistent screen header: dark back chevron + bold title on one row.
-// Used by every pushed sub-flow so back buttons look the same everywhere.
+// Thanh đầu màn hình dùng chung gồm nút quay lại và tiêu đề đậm trên một hàng.
+// Các luồng con cùng sử dụng để nút quay lại luôn có một kiểu.
 export function ScreenHeader({
   title,
   onBack,
@@ -23,7 +23,7 @@ export function ScreenHeader({
   return (
     <View style={styles.header}>
       {title ? (
-        // Titled header: chevron + big title
+  // Có tiêu đề: biểu tượng quay lại và tiêu đề lớn.
         <>
           <Pressable
             onPress={goBack}
@@ -37,7 +37,7 @@ export function ScreenHeader({
           <AppText variant="h1" style={styles.title}>{title}</AppText>
         </>
       ) : (
-        // No title: chevron + "Back" at the same h1 size as other headers
+  // Không có tiêu đề: biểu tượng và chữ quay lại cùng cỡ h1.
         <Pressable
           onPress={goBack}
           hitSlop={12}

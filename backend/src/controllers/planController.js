@@ -7,16 +7,10 @@ const { insightModels } = require("../config/gemini");
 const { generateWithFallback } = require("../services/aiGenerate");
 const { CONDITION_GUIDE } = require("../services/coachContext");
 const { filterDishes } = require("../services/conditionFilter");
+const { todayKey } = require("../utils/date");
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
-// Local YYYY-MM-DD for "today" — string compare works for date keys
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// ─── Add Plan Meal ──────────────────────────────────────────────────────────
 exports.addPlanMeal = async (req, res) => {
   const { name, mealType, calories, protein, carbs, fat, note, date } = req.body;
 
@@ -47,8 +41,6 @@ exports.addPlanMeal = async (req, res) => {
   res.status(201).json({ message: "Planned meal added.", planMeal });
 };
 
-// ─── Get Plan Meals by date range ───────────────────────────────────────────
-// Returns flat list for the range (+ AI workout suggestions per day).
 exports.getPlanMeals = async (req, res) => {
   const { startDate, endDate } = req.query;
 
@@ -57,7 +49,6 @@ exports.getPlanMeals = async (req, res) => {
     filter.date = { $gte: startDate, $lte: endDate };
   }
 
-  // Parallel — the two collections are independent
   const [planMeals, planWorkouts] = await Promise.all([
     PlanMeal.find(filter).sort({ date: 1, createdAt: 1 }),
     PlanWorkout.find(filter).sort({ date: 1 }),
@@ -65,16 +56,11 @@ exports.getPlanMeals = async (req, res) => {
   res.json({ planMeals, planWorkouts });
 };
 
-// ─── Generate a week plan with AI (POST /api/plan/generate) ──────────────────
-// body: { startDate, endDate, language } — REPLACES the whole range with an
-// AI-generated Vietnamese-friendly menu + one workout suggestion per day,
-// tailored to the user's goal, calorie target and health conditions.
 exports.generatePlan = async (req, res) => {
   const { startDate, endDate, language, note } = req.body;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(endDate || ""))
     return res.status(400).json({ message: "startDate and endDate must be YYYY-MM-DD." });
 
-  // Explicit date list so the model can't drift outside the requested week
   const dates = [];
   const cur = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
@@ -89,7 +75,6 @@ exports.generatePlan = async (req, res) => {
     const conditions = user?.conditions?.length ? user.conditions.join(", ") : "none";
     const goalCal = user?.calorieGoal || 2000;
     const langName = language === "vi" ? "Vietnamese (tiếng Việt)" : "English";
-    // Saved profile preferences + this-generation note, deduped into one directive
     const prefs = [user?.tastePreferences, note]
       .map((s) => String(s || "").trim())
       .filter(Boolean)
@@ -129,7 +114,6 @@ Return ONLY valid JSON:
       return res.status(500).json({ message: "AI returned an invalid plan. Please try again." });
     }
 
-    // Validate + normalize every generated item before touching the DB
     const num = (v) => Math.max(0, Math.round(Number(v) || 0));
     const mealDocs = [];
     const workoutDocs = [];
@@ -148,8 +132,6 @@ Return ONLY valid JSON:
           date: day.date,
         });
       }
-      // Workout: object with structured fields (one-tap logging) — tolerate the
-      // old plain-string form; rest days store text only (no loggable fields)
       const w = day.workout;
       if (w) {
         const text = String((typeof w === "object" ? w.text : w) || "").trim().slice(0, 200);
@@ -169,8 +151,6 @@ Return ONLY valid JSON:
         }
       }
     }
-    // Layer-2 safety: deterministically drop any dish that violates the user's
-    // health conditions (the prompt is layer 1 — this guarantees it)
     const { kept: safeMealDocs, removed } = filterDishes(mealDocs, user?.conditions || []);
     if (removed.length)
       console.warn("Plan condition-filter removed:", removed.map((r) => `${r.name} (${r.condition})`).join(", "));
@@ -178,7 +158,6 @@ Return ONLY valid JSON:
     if (safeMealDocs.length === 0)
       return res.status(500).json({ message: "AI plan came back empty. Please try again." });
 
-    // Replace the whole week (user confirmed in the app before calling this)
     const range = { user: req.user.id, date: { $gte: startDate, $lte: endDate } };
     await PlanMeal.deleteMany(range);
     await PlanWorkout.deleteMany(range);
@@ -193,9 +172,6 @@ Return ONLY valid JSON:
   }
 };
 
-// ─── Grocery list from the planned week (POST /api/plan/grocery) ─────────────
-// body: { startDate, endDate, language } — AI turns the planned dishes into a
-// one-person shopping list grouped by category with estimated quantities.
 exports.groceryList = async (req, res) => {
   const { startDate, endDate, language } = req.body;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(endDate || ""))
@@ -245,7 +221,6 @@ Return ONLY valid JSON:
   }
 };
 
-// ─── Update Plan Meal ───────────────────────────────────────────────────────
 exports.updatePlanMeal = async (req, res) => {
   const planMeal = await PlanMeal.findById(req.params.id);
 
@@ -278,7 +253,6 @@ exports.updatePlanMeal = async (req, res) => {
   res.json({ message: "Planned meal updated.", planMeal });
 };
 
-// ─── Delete Plan Meal ───────────────────────────────────────────────────────
 exports.deletePlanMeal = async (req, res) => {
   const planMeal = await PlanMeal.findById(req.params.id);
 
@@ -291,10 +265,6 @@ exports.deletePlanMeal = async (req, res) => {
   res.json({ message: "Planned meal deleted." });
 };
 
-// ─── Mark plan workout done ─────────────────────────────────────────────────
-// One-tap confirm of the AI-suggested workout: creates a REAL Exercise entry
-// (calorie burn from the user's current weight) and flips `done`. Mirrors the
-// meal markEaten rules: owner-only, idempotent, never for a future day.
 exports.markWorkoutDone = async (req, res) => {
   const pw = await PlanWorkout.findById(req.params.id);
   if (!pw) return res.status(404).json({ message: "Planned workout not found." });
@@ -325,9 +295,6 @@ exports.markWorkoutDone = async (req, res) => {
   res.json({ message: "Workout logged.", planWorkout: pw, exercise });
 };
 
-// ─── Mark as eaten ──────────────────────────────────────────────────────────
-// Flips `done` and copies the planned meal into the real diary as a Meal.
-// Idempotent: if already done, we don't create a duplicate Meal log.
 exports.markEaten = async (req, res) => {
   const planMeal = await PlanMeal.findById(req.params.id);
 
@@ -339,9 +306,6 @@ exports.markEaten = async (req, res) => {
   if (planMeal.done)
     return res.status(400).json({ message: "This meal is already marked as eaten." });
 
-  // Time rule: the diary records the past — a FUTURE planned meal cannot be
-  // "eaten" yet (would create a future-dated diary entry, which mealController
-  // itself forbids). Mirrors the meal add/update guards.
   if (planMeal.date > todayKey())
     return res.status(400).json({ message: "Cannot mark a future planned meal as eaten." });
 

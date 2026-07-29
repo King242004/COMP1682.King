@@ -17,8 +17,8 @@ export async function loadAuthToken(): Promise<string | null> {
   const secureToken = await SecureStore.getItemAsync(SECURE_TOKEN_KEY, secureOptions);
   if (secureToken) return secureToken;
 
-  // One-time migration for users already signed in before SecureStore was
-  // introduced. Move the JWT, then remove its unencrypted legacy copy.
+// Chuyển JWT của người dùng cũ sang SecureStore một lần.
+// Sau khi chuyển xong thì xóa bản cũ chưa được mã hóa.
   const legacyToken = await AsyncStorage.getItem(LEGACY_TOKEN_KEY);
   if (legacyToken) {
     await SecureStore.setItemAsync(SECURE_TOKEN_KEY, legacyToken, secureOptions);

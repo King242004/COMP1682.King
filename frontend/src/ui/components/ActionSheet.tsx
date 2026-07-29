@@ -10,8 +10,8 @@ export type ActionItem = {
   onPress: () => void;
 };
 
-// Themed bottom-sheet menu (Instagram/WEAR-style ⋯ menu). Tapping the backdrop
-// or an item closes it; the parent owns `visible`.
+// Menu trượt từ dưới lên dùng chung theme của ứng dụng.
+// Chạm nền hoặc một lựa chọn sẽ đóng menu, component cha quản lý visible.
 export function ActionSheet({
   visible,
   onClose,
@@ -24,7 +24,7 @@ export function ActionSheet({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
-        {/* Stop taps on the sheet itself from closing */}
+        {/* Chạm bên trong menu không được làm menu tự đóng. */}
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.grabber} />
           {items.map((item, i) => (

@@ -1,9 +1,3 @@
-// Layer-2 safety net for AI-generated dishes: a DETERMINISTIC ingredient
-// blocklist per health condition. Layer 1 (the prompts) ASKS the model to
-// respect conditions; this layer ENFORCES it in code, so a generated dish
-// whose name contains a forbidden ingredient never reaches the user.
-// Matching is on dish NAMES (vi + en), intentionally conservative: with
-// health conditions, over-blocking a safe dish beats serving a harmful one.
 
 const RULES = {
   gout: /tôm|tép|cua|ghẹ|ốc|nghêu|sò|hàu|hến|hải sản|mực|gan|lòng|tim|cật|óc|nội tạng|bò|bê|dê|cừu|bia|shrimp|prawn|crab|shellfish|mussel|oyster|clam|snail|squid|organ|liver|kidney|beef|lamb|beer/i,
@@ -13,7 +7,6 @@ const RULES = {
   gastritis: /cay|ớt|sa tế|kim chi|dưa chua|canh chua|gỏi chua|cà phê|rượu|bia|chanh|spicy|chili|sriracha|sour|pickled|coffee|alcohol|lemon/i,
 };
 
-// Returns the FIRST violated condition for a dish name, or null when safe.
 function forbiddenFor(name, conditions = []) {
   const n = String(name || "");
   for (const c of conditions) {
@@ -23,8 +16,6 @@ function forbiddenFor(name, conditions = []) {
   return null;
 }
 
-// Splits a dish list into { kept, removed } against the user's conditions.
-// `removed` carries { name, condition } for logging/traceability.
 function filterDishes(dishes, conditions = [], getName = (d) => d.name) {
   const kept = [];
   const removed = [];

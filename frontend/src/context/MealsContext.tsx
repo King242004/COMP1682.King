@@ -61,10 +61,10 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
   const updateMeal = useCallback(async (id: string, updates: UpdateMeal) => {
     if (!token) return;
     const updated = await updateMealRequest(id, updates, token);
-    // Update in both today's list and history list (meal might exist in either)
+    // Cập nhật cả danh sách hôm nay và lịch sử vì món có thể nằm ở một trong hai.
     setMeals((prev) => prev.map((m) => (m.id === id ? updated : m)));
     setHistoryMeals((prev) => prev.map((m) => (m.id === id ? updated : m)));
-    // Recompute daily totals if the meal is in today's view
+    // Tính lại tổng trong ngày nếu món thuộc ngày đang xem.
     setDailyTotals((prev) => {
       const old = meals.find((m) => m.id === id);
       if (!old) return prev;
@@ -81,7 +81,7 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
   const deleteMeal = useCallback(async (id: string) => {
     if (!token) return;
     await deleteMealRequest(id, token);
-    // Remove from BOTH lists so meal-history refreshes immediately (bug B fix)
+    // Xóa khỏi cả hai danh sách để lịch sử món cập nhật ngay.
     const deleted = meals.find((m) => m.id === id);
     setMeals((prev) => prev.filter((m) => m.id !== id));
     setHistoryMeals((prev) => prev.filter((m) => m.id !== id));

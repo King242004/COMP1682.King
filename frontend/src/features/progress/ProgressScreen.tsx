@@ -24,26 +24,28 @@ type Mode = "week" | "month" | "year";
 
 export default function ProgressScreen() {
   const { user } = useAuth();
-  // Use historyMeals (all logged days) — `meals` only holds the selected date.
+  // historyMeals chứa mọi ngày đã ghi, còn meals chỉ chứa ngày đang chọn.
   const { historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
-  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
+  // Ngày tháng đi theo ngôn ngữ đã chọn trong app.
+  const locale = localeTag(resolveLanguage(user?.language));
   const [activeTab, setActiveTab] = useState<Tab>("calories");
   const [mode, setMode] = useState<Mode>("week");
-  // Anchor = a date inside the current period; ‹ › arrows move it by week/month/year.
+  // anchor là một ngày trong kỳ hiện tại. Hai mũi tên đổi tuần, tháng hoặc năm.
   const [anchor, setAnchor] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
-  const [selectedKey, setSelectedKey] = useState<string | null>(null); // tapped bar
+  // Khóa của cột biểu đồ mà người dùng đang chọn.
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const now = new Date(); now.setHours(0, 0, 0, 0);
 
-  // Daily-detail widgets + the other tabs aren't month-bucket aware, so Year
-  // clamps their window to the anchor's month.
+  // Các phần chi tiết theo ngày không hiểu dữ liệu gộp theo năm.
+  // Vì vậy chế độ năm dùng tháng của anchor cho các phần này.
   const subMode: "week" | "month" = mode === "week" ? "week" : "month";
   const windowDays = subMode === "week"
     ? getWeekDays(anchor)
     : getMonthDays(anchor.getFullYear(), anchor.getMonth());
   const days = windowDays.length;
 
-  // Priority order: calories in → activity out → weight.
+  // Thứ tự tab là calo nạp, hoạt động tiêu hao rồi cân nặng.
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "calories", label: t.progress.tabCalories, icon: "flame-outline" },
     { key: "activity", label: t.progress.tabActivity, icon: "walk-outline" },
@@ -64,7 +66,7 @@ export default function ProgressScreen() {
       : summaries.filter((summary) => summary.calories > 0).map((summary) => summary.key);
   const longestStreak = longestMealStreak(periodMealDates);
 
-  // Chart bars: daily bars (week/month) or 12 monthly bars (year).
+  // Biểu đồ dùng cột theo ngày cho tuần hoặc tháng, theo tháng cho năm.
   const yearMonths = mode === "year" ? getYearMonthTotals(historyMeals, anchor.getFullYear(), locale) : [];
   const bars: Bar[] = mode === "year"
     ? yearMonths.map((mt, i) => ({ key: mt.key, label: String(i + 1), fullLabel: mt.label, value: mt.calories, color: theme.colors.primary, dim: mt.isFuture }))
@@ -75,12 +77,11 @@ export default function ProgressScreen() {
         color: d.calories > goal ? theme.colors.accent2 : d.onTrack ? theme.colors.accent : theme.colors.primary,
         dim: d.isFuture,
       }));
-  // Include the goal in the scale (daily modes) so the goal line always fits on
-  // the chart even when every day is under goal.
+  // Đưa mục tiêu vào thang đo để đường mục tiêu luôn nằm trong biểu đồ.
   const rawMax = bars.reduce((m, b) => Math.max(m, b.value), 0);
   const maxValue = (mode === "year" ? rawMax : Math.max(rawMax, goal)) || 1;
 
-  // Period total + average (per day for week/month, per month for year)
+  // Tính tổng và trung bình theo ngày hoặc theo tháng tùy chế độ.
   const unitsWithData = mode === "year" ? yearMonths.filter((mt) => mt.calories > 0).length : daysWithMeals.length;
   const maxMonth = mode === "year" ? Math.max(0, ...yearMonths.map((mt) => mt.calories)) : 0;
   const periodTotal = bars.reduce((s, b) => s + b.value, 0);
@@ -89,8 +90,8 @@ export default function ProgressScreen() {
 
   const daysOnTrack = summaries.filter((s) => s.onTrack).length;
 
-  // Hero macros follow the period: avg per logged DAY (week/month) or avg per
-  // logged MONTH (year), so the number matches the calorie average beside it.
+  // Macro trung bình theo ngày ở tuần và tháng, theo tháng ở chế độ năm.
+  // Cách tính này khớp với số calo trung bình bên cạnh.
   const macroUnits: { protein: number; carbs: number; fat: number }[] =
     mode === "year" ? yearMonths.filter((mt) => mt.calories > 0) : daysWithMeals;
   const heroMacro = (pick: (u: { protein: number; carbs: number; fat: number }) => number) =>
@@ -106,7 +107,7 @@ export default function ProgressScreen() {
   const selectedBar = selectedKey ? bars.find((b) => b.key === selectedKey) ?? null : null;
   const selectedSummary = selectedKey ? summaries.find((s) => s.key === selectedKey) ?? null : null;
 
-  // ‹ › navigator label + movement
+  // Nhãn và xử lý của nút chuyển kỳ.
   const periodLabel = mode === "week"
     ? `${windowDays[0].toLocaleDateString(locale, { day: "numeric", month: "short" })} – ${windowDays[6].toLocaleDateString(locale, { day: "numeric", month: "short" })}`
     : mode === "month"
@@ -135,7 +136,7 @@ export default function ProgressScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header + Week/Month/Year toggle */}
+        {/* Phần đầu và bộ chọn tuần, tháng hoặc năm. */}
         <ScreenHeader
           title={t.progress.title}
           right={
@@ -155,7 +156,7 @@ export default function ProgressScreen() {
           }
         />
 
-        {/* Tabs — 4 equal-width tabs (icon + label) fit the phone width */}
+        {/* Các tab có cùng chiều rộng để vừa màn hình điện thoại. */}
         <View style={styles.tabRow}>
           {tabs.map((tab) => {
             const active = activeTab === tab.key;
@@ -172,10 +173,10 @@ export default function ProgressScreen() {
           })}
         </View>
 
-        {/* CALORIES TAB */}
+          {/* Tab calo. */}
         {activeTab === "calories" && (
           <>
-            {/* One card: ‹ period › navigator → chart → period totals */}
+            {/* Một thẻ gồm chuyển kỳ, biểu đồ và tổng của kỳ. */}
             <Card style={styles.todayCard}>
               <View style={styles.periodNav}>
                 <Pressable onPress={() => shiftPeriod(-1)} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
@@ -206,14 +207,14 @@ export default function ProgressScreen() {
                 )}
               </View>
 
-              {/* Tapped unit → its value */}
+                {/* Giá trị của cột người dùng vừa chọn. */}
               {selectedBar && (
                 <AppText variant="subtle" style={styles.selectedLine}>
                   {(selectedSummary?.fullLabel ?? selectedBar.fullLabel ?? selectedBar.label)}: {selectedBar.value.toLocaleString()} {t.common.kcal}
                 </AppText>
               )}
 
-              {/* Total — label sits tight above the number */}
+                {/* Tổng của kỳ với nhãn nằm sát phía trên. */}
               <View style={styles.eatenGroup}>
                 <AppText variant="subtle" style={styles.todayLabel}>{t.progress.eatenLabel}</AppText>
                 <View style={styles.todayValueRow}>
@@ -229,16 +230,16 @@ export default function ProgressScreen() {
               <View style={styles.macroBlock}>
                 <AppText variant="subtle" style={styles.macroNote}>{mode === "year" ? t.progress.avgMacroNoteMonth : t.progress.avgMacroNote}</AppText>
                 <View style={styles.focusMacros}>
-                  <AppText variant="subtle" style={[styles.focusMacro, { color: theme.colors.accent2 }]}>{t.labels.protein} {heroProtein}g</AppText>
+                  <AppText variant="subtle" style={[styles.focusMacro, styles.focusProtein]}>{t.labels.protein} {heroProtein}g</AppText>
                   <View style={styles.focusMacroDiv} />
-                  <AppText variant="subtle" style={[styles.focusMacro, { color: theme.colors.accent }]}>{t.labels.carbs} {heroCarbs}g</AppText>
+                  <AppText variant="subtle" style={[styles.focusMacro, styles.focusCarbs]}>{t.labels.carbs} {heroCarbs}g</AppText>
                   <View style={styles.focusMacroDiv} />
-                  <AppText variant="subtle" style={[styles.focusMacro, { color: theme.colors.indigo }]}>{t.labels.fat} {heroFat}g</AppText>
+                  <AppText variant="subtle" style={[styles.focusMacro, styles.focusFat]}>{t.labels.fat} {heroFat}g</AppText>
                 </View>
               </View>
             </Card>
 
-            {/* Stats — per day (week/month) or per month (year) */}
+                {/* Thống kê theo ngày hoặc theo tháng tùy chế độ. */}
             <View style={styles.statsRow}>
               <Card style={styles.statCard}>
                 <AppText variant="h2" style={styles.statPrimary}>
@@ -259,7 +260,7 @@ export default function ProgressScreen() {
               </Card>
             </View>
 
-            {/* Week: full day-by-day list */}
+              {/* Tuần hiển thị danh sách chi tiết từng ngày. */}
             {mode === "week" && (
               <Card style={styles.sectionCard}>
                 <AppText variant="h2">{t.progress.summaryTitle}</AppText>
@@ -298,14 +299,14 @@ export default function ProgressScreen() {
               </Card>
             )}
 
-            {/* Month: heatmap already shows each day → just a "logged X/N" line */}
+              {/* Tháng đã có heatmap nên chỉ cần hiện số ngày đã ghi. */}
             {mode === "month" && (
               <Card style={styles.sectionCard}>
                 <AppText variant="subtle">{t.progress.daysLoggedMonth(daysWithMeals.length, days)}</AppText>
               </Card>
             )}
 
-            {/* Best day = closest to goal (week/month only) */}
+              {/* Ngày tốt nhất là ngày gần mục tiêu nhất trong tuần hoặc tháng. */}
             {mode !== "year" && bestDay && (
               <Card style={styles.bestCard}>
                 <View style={styles.bestHead}>
@@ -320,7 +321,7 @@ export default function ProgressScreen() {
               </Card>
             )}
 
-            {/* Week: 7-day consistency dots */}
+              {/* Tuần hiển thị bảy chấm về mức độ đều đặn. */}
             {mode === "week" && (
               <ConsistencyRow
                 summaries={summaries.slice(-7)}
@@ -329,7 +330,7 @@ export default function ProgressScreen() {
               />
             )}
 
-            {/* Year: month-by-month breakdown */}
+              {/* Năm hiển thị chi tiết từng tháng. */}
             {mode === "year" && (
               <Card style={styles.sectionCard}>
                 <AppText variant="h2">{t.progress.monthlyTitle}</AppText>
@@ -348,7 +349,7 @@ export default function ProgressScreen() {
           </>
         )}
 
-        {/* ACTIVITY TAB — mirrors Calories: period-aware chart + consistency */}
+          {/* Tab hoạt động dùng kỳ, biểu đồ và độ đều đặn tương tự tab calo. */}
         {activeTab === "activity" && (
           <ActivitySection
             mode={mode}
@@ -364,7 +365,6 @@ export default function ProgressScreen() {
         )}
 
 
-        {/* WEIGHT TAB — journey tracking, self-contained in features/weight */}
         {activeTab === "weight" && <WeightSection />}
       </ScrollView>
     </Screen>
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: "#fff" },
   pressed: { opacity: 0.7 },
 
-  // Focus-day card
+  // Thẻ của ngày đang được chọn.
   todayCard: { padding: theme.space.xl, gap: theme.space.md },
   datePick: {
     flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start",
@@ -397,7 +397,8 @@ const styles = StyleSheet.create({
   periodNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   periodLabel: { fontWeight: "700" },
   selectedLine: { fontSize: 12, fontWeight: "700", color: theme.colors.primary },
-  chartBox: { marginTop: theme.space.sm }, // breathing room between the nav and the chart
+  // Tạo khoảng cách giữa phần chuyển kỳ và biểu đồ.
+  chartBox: { marginTop: theme.space.sm },
   todayValueRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
   todayValue: { fontSize: 32, color: theme.colors.primary },
   todayTrack: { height: 8, borderRadius: 99, backgroundColor: theme.colors.tint, overflow: "hidden" },
@@ -411,13 +412,16 @@ const styles = StyleSheet.create({
   macroBlock: { gap: 4 },
   todayLabel: { fontSize: 12 },
   focusMacro: { fontSize: 12, fontWeight: "700" },
+  focusProtein: { color: theme.colors.accent2 },
+  focusCarbs: { color: theme.colors.accent },
+  focusFat: { color: theme.colors.indigo },
   focusMacroDiv: { width: 1, height: 11, backgroundColor: theme.colors.border },
 
-  // Date picker (iOS sheet)
+  // Bộ chọn ngày dạng sheet trên iOS.
   pickerBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", padding: theme.space.xl },
   pickerSheet: { backgroundColor: theme.colors.surface, borderRadius: theme.radius.card, padding: theme.space.md, gap: theme.space.sm },
 
-  // Stats row
+  // Hàng thống kê.
   statsRow: { flexDirection: "row", gap: theme.space.md },
   statCard: { flex: 1, padding: theme.space.lg, gap: 4, alignItems: "center" },
   statPrimary: { color: theme.colors.primary, fontSize: 18 },
@@ -426,21 +430,22 @@ const styles = StyleSheet.create({
   statStreak: { flexDirection: "row", alignItems: "center", gap: 2 },
   statLabel: { fontSize: 11, textAlign: "center" },
 
-  // Generic section card
+  // Thẻ phần nội dung dùng chung.
   sectionCard: { padding: theme.space.lg, gap: theme.space.lg },
   bold: { fontWeight: "700" },
 
-  // Daily breakdown
+  // Chi tiết từng ngày.
   summaryList: { gap: 10 },
   summaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 10, borderBottomWidth: 0.5, borderBottomColor: theme.colors.border },
-  summaryRowDim: { opacity: 0.4 }, // days not yet logged (incl. future days in month view)
+  // Làm mờ ngày chưa ghi dữ liệu, gồm cả ngày tương lai trong chế độ tháng.
+  summaryRowDim: { opacity: 0.4 },
   summaryLeft: { gap: 2 },
   summaryMeta: { fontSize: 11 },
   summaryRight: { alignItems: "flex-end", gap: 2 },
   summaryKcal: { fontSize: 14, fontWeight: "700" },
   summaryDelta: { fontSize: 11 },
 
-  // Best day
+  // Ngày gần mục tiêu nhất.
   bestCard: { padding: theme.space.lg, gap: 6, borderColor: "rgba(5,150,105,0.2)", backgroundColor: "rgba(5,150,105,0.06)" },
   bestHead: { flexDirection: "row", alignItems: "center", gap: 6 },
   bestTitle: { fontSize: 14 },

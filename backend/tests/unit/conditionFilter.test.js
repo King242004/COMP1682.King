@@ -1,4 +1,3 @@
-// Unit tests: layer-2 condition safety filter for AI-generated dishes.
 const { forbiddenFor, filterDishes } = require("../../src/services/conditionFilter");
 
 describe("forbiddenFor (per-condition ingredient blocklist)", () => {

@@ -1,4 +1,6 @@
 jest.mock("../../src/models/OTP", () => ({
+  findOne: jest.fn(),
+  findOneAndDelete: jest.fn(),
   findOneAndUpdate: jest.fn(),
   deleteOne: jest.fn(),
 }));
@@ -7,11 +9,14 @@ const OTP = require("../../src/models/OTP");
 const {
   recordFailedOTPAttempt,
   reserveOTP,
+  verifyOTPCode,
 } = require("../../src/services/otpService");
+const { hashOTP } = require("../../src/utils/otpSecurity");
 
 describe("OTP atomic state changes", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.JWT_SECRET = "test-secret";
   });
 
   test("reserves one code with an atomic cooldown condition", async () => {
@@ -73,5 +78,42 @@ describe("OTP atomic state changes", () => {
 
     await expect(recordFailedOTPAttempt("otp-id", "old-digest")).resolves.toEqual({ burned: false });
     expect(OTP.deleteOne).not.toHaveBeenCalled();
+  });
+
+  test("verifies a valid code without consuming it during the pre-check", async () => {
+    const record = {
+      _id: "otp-id",
+      codeHash: hashOTP("person@example.com", "password_reset", "123456"),
+      expiresAt: new Date(Date.now() + 60_000),
+    };
+    OTP.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(record) });
+
+    await expect(verifyOTPCode({
+      email: "person@example.com",
+      purpose: "password_reset",
+      candidate: "123456",
+    })).resolves.toBe("valid");
+    expect(OTP.findOneAndDelete).not.toHaveBeenCalled();
+  });
+
+  test("consumes the exact valid code when requested", async () => {
+    const record = {
+      _id: "otp-id",
+      codeHash: hashOTP("person@example.com", "registration", "123456"),
+      expiresAt: new Date(Date.now() + 60_000),
+    };
+    OTP.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(record) });
+    OTP.findOneAndDelete.mockResolvedValue(record);
+
+    await expect(verifyOTPCode({
+      email: "person@example.com",
+      purpose: "registration",
+      candidate: "123456",
+      consume: true,
+    })).resolves.toBe("valid");
+    expect(OTP.findOneAndDelete).toHaveBeenCalledWith(expect.objectContaining({
+      _id: "otp-id",
+      codeHash: record.codeHash,
+    }));
   });
 });

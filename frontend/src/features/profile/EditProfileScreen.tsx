@@ -3,7 +3,6 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
-import { GOAL_KEYS, ACTIVITY_KEYS, CONDITION_KEYS } from "@/utils/profileOptions";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -11,6 +10,10 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
+
+const GOAL_KEYS = ["lose_weight", "gain_muscle", "eat_healthy"] as const;
+const ACTIVITY_KEYS = ["sedentary", "moderate", "active"] as const;
+const CONDITION_KEYS = ["diabetes", "hypertension", "gout", "high_cholesterol", "gastritis", "none"] as const;
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -38,7 +41,6 @@ export default function EditProfileScreen() {
   const isConditionActive = (c: string) => (c === "none" ? conditions.length === 0 : conditions.includes(c));
 
   const handleSave = async () => {
-    // Validate name first (backend rule: 2+ chars, letters only)
     const trimmedName = name.trim();
     if (!trimmedName || trimmedName.length < 2) {
       Alert.alert(t.editProfile.invalidName, t.editProfile.nameMin);
@@ -63,7 +65,6 @@ export default function EditProfileScreen() {
     }
     setIsSaving(true);
     try {
-      // Only call changeName if it actually changed (saves a request)
       if (trimmedName !== user?.name) await changeName(trimmedName);
       await updateProfile({
         gender: gender || undefined,
@@ -73,7 +74,8 @@ export default function EditProfileScreen() {
         goal: goal || undefined,
         activityLevel: activityLevel || undefined,
         conditions,
-        tastePreferences: taste.trim(), // empty string clears saved preferences
+        // Chuỗi rỗng sẽ xóa sở thích ăn uống đã lưu trước đó.
+        tastePreferences: taste.trim(),
       });
       router.back();
     } catch (e: any) {
@@ -119,7 +121,6 @@ export default function EditProfileScreen() {
           <TextField label={t.editProfile.weightLabel} placeholder={t.editProfile.weightPlaceholder} value={weight} onChangeText={setWeight} keyboardType="number-pad" />
           <TextField label={t.editProfile.heightLabel} placeholder={t.editProfile.heightPlaceholder} value={height} onChangeText={setHeight} keyboardType="number-pad" />
 
-          {/* Goal */}
           <View style={styles.field}>
             <AppText variant="muted">{t.profile.goal}</AppText>
             <View style={styles.stackList}>
@@ -194,7 +195,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
   card: { padding: theme.space.lg, gap: theme.space.md },
   field: { gap: 6 },
-  // Shared option-button visual states
   optActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
   optIdle: { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
   optText: { color: theme.colors.subtle, textTransform: "capitalize" },

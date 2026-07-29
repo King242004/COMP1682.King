@@ -1,4 +1,4 @@
-// Manual barcode entry — self-contained (owns its input + validation).
+// Hộp nhập mã vạch thủ công tự quản lý ô nhập và kiểm tra dữ liệu.
 import { useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";

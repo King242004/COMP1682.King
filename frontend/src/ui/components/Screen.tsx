@@ -25,7 +25,7 @@ export function Screen({
   padded?: boolean;
   keyboard?: boolean;
   dismissKeyboardOnTap?: boolean;
-  keyboardOffset?: number; // chiều cao header phía trên (vd tab có AppHeader) để KAV bù đúng
+  keyboardOffset?: number;
   backgroundColor?: string;
   statusBarStyle?: "dark-content" | "light-content";
   style?: ViewStyle;

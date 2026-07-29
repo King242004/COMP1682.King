@@ -1,4 +1,4 @@
-// Overlay on top of the camera: top bar + mode toggle, viewfinder, bottom controls.
+// Lớp phủ camera gồm thanh đầu, chọn chế độ, khung ngắm và nút điều khiển dưới.
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
@@ -24,13 +24,18 @@ export function ScanOverlay({
   const t = useT();
   const isBarcode = mode === "barcode";
   const { width, height } = useWindowDimensions();
-  const frameW = width - 72;       // clear scan window width
-  const frameH = frameW * 1.45;    // taller window (same for both modes)
-  const frameTop = (height - frameH) / 2; // vertical offset (window is centered)
-  const R = 28;                    // inner corner radius of the hole
-  const BIG = Math.max(width, height); // border thickness big enough to cover screen
+  // Chiều rộng vùng nhìn rõ để quét.
+  const frameW = width - 72;
+  // Cả hai chế độ dùng chung một khung quét dọc.
+  const frameH = frameW * 1.45;
+  // Canh vùng quét vào giữa theo chiều dọc.
+  const frameTop = (height - frameH) / 2;
+  // Bán kính góc bên trong của vùng quét.
+  const R = 28;
+  // Viền phải đủ dày để phủ kín phần còn lại của màn hình.
+  const BIG = Math.max(width, height);
 
-  // Small circular icon button used in the bottom row
+// Nút biểu tượng tròn nhỏ dùng ở hàng dưới.
   const IconBtn = ({ icon, onPress, active }: { icon: any; onPress: () => void; active?: boolean }) => (
     <Pressable
       onPress={onPress}
@@ -45,7 +50,7 @@ export function ScanOverlay({
     </Pressable>
   );
 
-  // Plain icon button for top bar (back / flip) — no background
+// Nút biểu tượng không nền ở thanh đầu, dùng để quay lại hoặc đổi camera.
   const TopBtn = ({ icon, onPress }: { icon: any; onPress: () => void }) => (
     <Pressable onPress={onPress} hitSlop={10} style={({ pressed }) => [styles.topBtn, pressed && styles.dim]}>
       <Ionicons name={icon} size={28} color="#fff" />
@@ -54,9 +59,6 @@ export function ScanOverlay({
 
   return (
     <View style={styles.flex1}>
-      {/* Dimmed overlay with a clear rounded scan window (only when camera live).
-          "Donut" trick: a huge dim border leaves a rounded-rectangle hole in the
-          middle. Inner corner radius = borderRadius - borderWidth = R. */}
       {cameraGranted && (
         <>
           <View
@@ -70,7 +72,7 @@ export function ScanOverlay({
               borderRadius: BIG + R,
             }]}
           />
-          {/* White frame line on top of the hole edge */}
+          {/* Viền trắng nằm trên mép khung trong suốt. */}
           <View
             pointerEvents="none"
             style={[styles.frameLine, { top: frameTop, width: frameW, height: frameH, borderRadius: R }]}
@@ -78,9 +80,9 @@ export function ScanOverlay({
         </>
       )}
 
-      {/* Controls layer (sits above the dim/cutout) */}
+      {/* Lớp nút điều khiển nằm trên phần làm tối. */}
       <View style={styles.flex1}>
-        {/* Top bar: circular back + title, flip on the right (photo only) */}
+        {/* Thanh đầu gồm nút quay lại, tiêu đề và đổi camera ở chế độ ảnh. */}
         <View style={styles.topBar}>
           <View style={styles.topBarLeft}>
             <TopBtn icon="chevron-back" onPress={onClose} />
@@ -93,7 +95,7 @@ export function ScanOverlay({
           )}
         </View>
 
-        {/* Mode toggle: Photo | Barcode */}
+        {/* Chuyển giữa chế độ Ảnh và Mã vạch. */}
         <View style={styles.toggleWrap}>
           <View style={styles.toggle}>
             {([["photo", t.scan.photo], ["barcode", t.scan.barcode]] as [ScanMode, string][]).map(([key, label]) => {
@@ -112,19 +114,15 @@ export function ScanOverlay({
           </View>
         </View>
 
-        {/* Middle: hint pill (over the clear window) or permission message */}
+        {/* Phần giữa hiện hướng dẫn trên khung hoặc thông báo quyền camera. */}
         <View style={styles.middle}>
           {!cameraGranted ? (
             <View style={styles.permBlock}>
               <Ionicons name="camera-outline" size={56} color="rgba(255,255,255,0.5)" />
               <AppText style={styles.permTitle}>{t.scan.cameraNotEnabled}</AppText>
-              {/* Accurate for hard-denied iOS: no in-app tap can re-trigger the
-                  permission prompt — Settings is the only way back */}
               <AppText style={styles.permText}>
                 {isBarcode ? t.scan.camOffBarcode : t.scan.camOffPhoto}
               </AppText>
-              {/* Hard-denied ("Don't allow") users can only fix it in Settings —
-                  the OS silently blocks any further permission prompt */}
               <Pressable
                 onPress={() => Linking.openSettings()}
                 style={({ pressed }) => [styles.settingsBtn, pressed && styles.dim]}
@@ -134,7 +132,7 @@ export function ScanOverlay({
               </Pressable>
             </View>
           ) : (
-            // marginBottom is runtime math: sit near the top edge of the frame
+                // marginBottom được tính khi chạy để lời nhắc nằm gần mép trên khung.
             <View style={[styles.hintPill, { marginBottom: frameH - 56 }]}>
               <AppText style={styles.hintText}>
                 {isBarcode ? t.scan.pointBarcode : t.scan.pointMeal}
@@ -143,10 +141,10 @@ export function ScanOverlay({
           )}
         </View>
 
-        {/* Bottom controls */}
+        {/* Các nút điều khiển phía dưới. */}
         <View style={styles.bottom}>
           {isBarcode ? (
-            // Barcode mode: auto live-scan. Center main action = enter code manually
+            // Chế độ mã vạch tự quét trực tiếp, nút giữa dùng để nhập mã thủ công.
             <>
               <AppText style={styles.bottomHint}>{t.scan.holdSteady}</AppText>
               <View style={styles.controlRow}>
@@ -162,7 +160,7 @@ export function ScanOverlay({
               </View>
             </>
           ) : (
-            // Photo mode: library (left) | capture (center) | flash (right)
+            // Chế độ ảnh: thư viện bên trái, chụp ở giữa và đèn flash bên phải.
             <>
               <AppText style={styles.bottomHint}>{t.scan.photoHint}</AppText>
               <View style={styles.controlRow}>
@@ -188,7 +186,8 @@ export function ScanOverlay({
   );
 }
 
-const DIM = "rgba(0,0,0,0.72)"; // darkened area around the scan window
+// Màu làm tối khu vực nằm ngoài khung quét.
+const DIM = "rgba(0,0,0,0.72)";
 
 const styles = StyleSheet.create({
   flex1: { flex: 1 },

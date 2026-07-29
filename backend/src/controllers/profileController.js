@@ -1,7 +1,6 @@
 const User = require("../models/User");
 const { calculateTDEE, autoGoal } = require("../services/calorieGoal");
 
-// ─── Calculate BMI ────────────────────────────────────────────────────────────
 const calculateBMI = (weight, height) => {
   if (!weight || !height) return null;
   const heightM = height / 100;
@@ -16,7 +15,6 @@ const getBMICategory = (bmi) => {
   return "Obese";
 };
 
-// ─── Get Profile ──────────────────────────────────────────────────────────────
 exports.getProfile = async (req, res) => {
   const user = await User.findById(req.user.id).select("-password");
   if (!user) return res.status(404).json({ message: "User not found." });
@@ -34,7 +32,6 @@ exports.getProfile = async (req, res) => {
   });
 };
 
-// ─── Update Profile ───────────────────────────────────────────────────────────
 exports.updateProfile = async (req, res) => {
   const { name, gender, age, weight, height, goal, activityLevel, conditions, calorieGoal, avatar, language, tastePreferences, isPrivate, targetWeight } = req.body;
 
@@ -45,7 +42,6 @@ exports.updateProfile = async (req, res) => {
   if (weight && (weight < 20 || weight > 300))
     return res.status(400).json({ message: "Weight must be between 20 and 300 kg." });
 
-  // null clears the target; a number must be a sane body weight
   if (targetWeight !== undefined && targetWeight !== null && (targetWeight < 20 || targetWeight > 300))
     return res.status(400).json({ message: "Target weight must be between 20 and 300 kg." });
 
@@ -68,10 +64,6 @@ exports.updateProfile = async (req, res) => {
       (typeof calorieGoal !== "number" || calorieGoal < 800 || calorieGoal > 10000))
     return res.status(400).json({ message: "Calorie goal must be between 800 and 10,000 kcal." });
 
-  // ── Calorie goal modes ────────────────────────────────────────────────────
-  // calorieGoal: number → the user typed it (custom, NEVER auto-overwritten)
-  // calorieGoal: null   → "Use auto": back to TDEE mode + recompute now
-  // calorieGoal absent  → keep the current mode; auto mode follows body changes
   const current = await User.findById(req.user.id).select(
     "customGoal weight height age gender activityLevel goal"
   );
@@ -84,8 +76,6 @@ exports.updateProfile = async (req, res) => {
   if (typeof calorieGoal === "number") {
     finalCalorieGoal = calorieGoal;
   } else if (!customGoal) {
-    // Recompute from the MERGED profile (incoming values win over stored ones)
-    // so updating just the weight still refreshes the goal in auto mode.
     finalCalorieGoal = autoGoal({
       weight: weight ?? current.weight,
       height: height ?? current.height,
@@ -111,7 +101,6 @@ exports.updateProfile = async (req, res) => {
       customGoal,
       ...(avatar !== undefined && { avatar }),
       ...(language && { language }),
-      // !== undefined so an empty string can CLEAR saved preferences
       ...(tastePreferences !== undefined && { tastePreferences: String(tastePreferences).trim().slice(0, 300) }),
       ...(isPrivate !== undefined && { isPrivate: !!isPrivate }),
       ...(targetWeight !== undefined && { targetWeight }),

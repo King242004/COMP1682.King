@@ -14,35 +14,39 @@ export type CoachInsight = {
   disclaimer: string;
 };
 
-// A meal the coach identified from the conversation/photo. Not logged until the
-// user taps "Add" — then we store the created meal id in `loggedId`.
+// Món Coach nhận ra từ hội thoại hoặc ảnh chỉ được ghi khi người dùng chạm thêm.
+// Sau đó mã món đã tạo được lưu trong loggedId.
 export type SuggestedMeal = { name: string; calories: number; protein: number; carbs: number; fat: number; mealType: string };
 
-// `image` is a LOCAL uri kept only for display in the current session (not saved to history).
-// `meal` = suggested meal (shows an Add card). `loggedId` = id once the user added it (shows ✓ + Undo).
 export type ChatMessage = {
-  id?: string;            // server ChatMessage id (for log/undo of the suggested meal)
+  id?: string;
   role: "user" | "coach";
   text: string;
   image?: string;
   meal?: SuggestedMeal | null;
-  eating?: boolean;       // user is actually eating the dish → show "Add" button
+  // Chỉ hiện nút thêm món khi người dùng xác nhận họ đang ăn món này.
+  eating?: boolean;
   loggedId?: string | null;
-  createdAt?: string;     // ISO timestamp — drives the day separators in chat
+  // Thời gian ISO dùng để chia tin nhắn theo ngày.
+  createdAt?: string;
 };
 type RawChatMessage = ChatMessage;
 
-// Strip leftover markdown so chat/insight read as natural text (no **, *, #, `).
 export function stripMarkdown(s: string): string {
   return (s || "")
     .replace(/\*\*/g, "")
-    .replace(/\*/g, "")               // lone asterisks
+    // Xóa các dấu sao Markdown còn sót lại.
+    .replace(/\*/g, "")
     .replace(/__/g, "")
     .replace(/`/g, "")
-    .replace(/^\s*#{1,6}\s*/gm, "")   // headings
-    .replace(/^\s*[-]\s+/gm, "• ")    // bullet markers → bullet dot
-    .replace(/[ \t]{2,}/g, " ")       // gộp khoảng trắng đôi
-    .replace(/ +([,.!?:])/g, "$1")    // bỏ space thừa trước dấu câu
+    // Bỏ ký hiệu tiêu đề Markdown.
+    .replace(/^\s*#{1,6}\s*/gm, "")
+    // Đổi gạch đầu dòng Markdown thành dấu chấm tròn.
+    .replace(/^\s*[-]\s+/gm, "• ")
+    // Gộp các khoảng trắng liên tiếp.
+    .replace(/[ \t]{2,}/g, " ")
+    // Bỏ khoảng trắng thừa trước dấu câu.
+    .replace(/ +([,.!?:])/g, "$1")
     .trim();
 }
 
@@ -70,10 +74,9 @@ export async function chatWithCoach(
   image?: { base64: string; mimeType: string },
   source?: "community"
 ): Promise<{ reply: string; meal: SuggestedMeal | null; eating: boolean; messageId: string | null }> {
-  // Sliding window: the AI only needs recent conversational flow — durable
-  // facts (profile, conditions, meals...) are re-grounded from the DB every
-  // request anyway. Sending ALL 100 loaded messages just bloats tokens/latency.
-  // Only role+text is sent (local image uris stripped). Image goes as base64.
+  // Chỉ gửi phần hội thoại gần đây vì dữ liệu hồ sơ và sức khỏe luôn lấy lại từ DB.
+  // Gửi toàn bộ 100 tin sẽ tốn token và tăng thời gian chờ.
+  // Lịch sử chỉ gửi role và text, ảnh hiện tại được gửi riêng bằng base64.
   const slimHistory = history.slice(-16).map((h) => ({ role: h.role, text: h.text }));
   const data = await apiRequest(
     "/coach/chat",
@@ -90,13 +93,13 @@ export async function chatWithCoach(
   };
 }
 
-// Log the meal suggested in a coach message (persisted server-side). Returns the created meal id.
+// Ghi món được gợi ý trong tin Coach và trả về mã món đã tạo.
 export async function logMealFromMessage(token: string, messageId: string, mealType: string): Promise<string> {
   const data = await apiRequest("/coach/log", "POST", { messageId, mealType }, token);
   return data.logged?.id || "";
 }
 
-// Undo a meal logged from a coach message.
+// Hoàn tác món đã ghi từ tin nhắn Coach.
 export async function unlogMealFromMessage(token: string, messageId: string): Promise<void> {
   await apiRequest("/coach/unlog", "POST", { messageId }, token);
 }
@@ -108,7 +111,7 @@ export async function getChatHistory(token: string, language: Lang): Promise<Cha
     undefined,
     token
   );
-  // Clean markdown; carry id/meal/loggedId/image so action buttons persist on reload.
+// Xóa Markdown và giữ dữ liệu hành động để các nút vẫn còn sau khi tải lại.
   return (data.messages || []).map((m) => ({
     id: m.id,
     role: m.role,
@@ -125,16 +128,11 @@ export async function clearChatHistory(token: string): Promise<void> {
   await apiRequest("/coach/history", "DELETE", undefined, token);
 }
 
-// "What should I eat now?" logic moved to src/plan/suggest.ts (feature module
-// with SuggestMealCard) — this file keeps chat/insight/history only.
 
-// ─── Insight cache (AsyncStorage) ─────────────────────────────────────────────
-// Cache today's insight so reopening the Coach tab is instant, WITH a timestamp so
-// callers can skip the Gemini refresh while the cache is still fresh (saves quota:
-// Home refetches on every focus otherwise). Keyed by date + language.
 const insightKey = (date: string, language: Lang) => `coach_insight_v2_${date}_${language}`;
 
-export const INSIGHT_TTL_MS = 10 * 60 * 1000; // consider the cached insight fresh for 10 minutes
+// Dữ liệu insight trong bộ nhớ đệm còn mới trong 10 phút.
+export const INSIGHT_TTL_MS = 10 * 60 * 1000;
 
 export type CachedInsight = { insight: CoachInsight; at: number };
 
@@ -144,7 +142,8 @@ export async function getCachedInsight(date: string, language: Lang): Promise<Ca
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed?.insight) return parsed as CachedInsight;
-    if (parsed?.score != null) return { insight: parsed as CoachInsight, at: 0 }; // legacy entry → treat as stale
+    // Dữ liệu cũ không có thời gian lưu nên phải xem là đã hết hạn.
+    if (parsed?.score != null) return { insight: parsed as CoachInsight, at: 0 };
     return null;
   } catch {
     return null;
@@ -155,6 +154,5 @@ export async function cacheInsight(date: string, language: Lang, insight: CoachI
   try {
     await AsyncStorage.setItem(insightKey(date, language), JSON.stringify({ insight, at: Date.now() }));
   } catch {
-    // ignore cache write failures
   }
 }

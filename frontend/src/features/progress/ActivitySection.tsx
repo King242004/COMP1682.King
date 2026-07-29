@@ -17,8 +17,8 @@ type BurnMonth = { key: string; label: string; burned: number; count: number; is
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-// One row per day in the window (oldest → today). `locale` makes labels follow
-// the app language, not the phone's.
+// Mỗi ngày trong khoảng có một dòng, từ ngày cũ nhất đến hôm nay.
+// `locale` giúp nhãn theo ngôn ngữ ứng dụng thay vì ngôn ngữ điện thoại.
 function buildBurnDays(exercises: Exercise[], windowDays: Date[], locale?: string): BurnDay[] {
   const todayK = dateKey(new Date());
   const todayStart = new Date();
@@ -38,7 +38,7 @@ function buildBurnDays(exercises: Exercise[], windowDays: Date[], locale?: strin
   });
 }
 
-// The 12 monthly burn totals for a year — the "Year" view's bars.
+// Tổng calo tiêu hao của 12 tháng dùng cho biểu đồ Năm.
 function buildBurnMonths(exercises: Exercise[], year: number, locale?: string): BurnMonth[] {
   const now = new Date();
   const out: BurnMonth[] = [];
@@ -58,9 +58,8 @@ function buildBurnMonths(exercises: Exercise[], year: number, locale?: string): 
   return out;
 }
 
-// The activity side of Progress — mirrors the Calories tab: ‹ period › navigator,
-// a chart per granularity (week bars / month heatmap / year 12-month bars), the
-// period's total + average burned, a workout-consistency row (week), and stats.
+// Phần hoạt động có cách bố trí giống tab calo: chuyển khoảng thời gian, biểu đồ,
+// tổng và trung bình calo tiêu hao, mức duy trì tập luyện và các số liệu.
 export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey, onSelectKey, periodLabel, onShiftPeriod, nextDisabled }: {
   mode: Mode;
   anchor: Date;
@@ -78,11 +77,11 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
   const [loading, setLoading] = useState(true);
   const days = windowDays.length;
   const year = anchor.getFullYear();
-  // Year needs the whole calendar year (12 month bars); week/month just the window.
+  // Chế độ Năm cần đủ 12 tháng, còn Tuần và Tháng chỉ cần khoảng đang xem.
   const start = mode === "year" ? `${year}-01-01` : dateKey(windowDays[0]);
   const end = mode === "year" ? `${year}-12-31` : dateKey(windowDays[windowDays.length - 1]);
 
-  // Depend on the date strings (stable), not the array identity.
+    // Dùng chuỗi ngày ổn định làm phụ thuộc thay vì dùng chính mảng.
   useEffect(() => {
     if (!token) return;
     let alive = true;
@@ -94,13 +93,13 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
     return () => { alive = false; };
   }, [token, start, end]);
 
-  // Weekly workout target from the activity level (sedentary 3 / moderate 4 / active 5).
+  // Mục tiêu số buổi mỗi tuần dựa trên mức vận động: ít 3, vừa 4, cao 5.
   const weekTarget = ({ sedentary: 3, moderate: 4, active: 5 } as Record<string, number>)[user?.activityLevel ?? ""] ?? 4;
 
   const burnDays = buildBurnDays(exercises, windowDays, locale);
   const burnMonths = mode === "year" ? buildBurnMonths(exercises, year, locale) : [];
 
-  // Chart bars: daily bars (week) or 12 monthly bars (year); month uses a heatmap.
+  // Tuần dùng cột theo ngày, Năm dùng 12 cột theo tháng, Tháng dùng bản đồ nhiệt.
   const bars: Bar[] = mode === "year"
     ? burnMonths.map((mt, i) => ({ key: mt.key, label: String(i + 1), fullLabel: mt.label, value: mt.burned, color: theme.colors.accent2, dim: mt.isFuture }))
     : burnDays.map((d, i) => ({ key: d.key, label: t.labels.daysShort[i], value: d.burned, color: theme.colors.accent2, dim: d.isFuture }));
@@ -108,7 +107,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
     ? Math.max(0, ...burnMonths.map((mt) => mt.burned))
     : burnDays.reduce((m, d) => Math.max(m, d.burned), 0)) || 1;
 
-  // Period total + average (per active day for week/month, per active month for year)
+  // Tính tổng và trung bình theo ngày có hoạt động hoặc theo tháng có hoạt động.
   const activeDays = burnDays.filter((d) => d.count > 0);
   const activeMonths = burnMonths.filter((mt) => mt.count > 0);
   const totalWorkouts = mode === "year"
@@ -121,7 +120,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
 
   const selBar = selectedKey ? bars.find((b) => b.key === selectedKey) ?? null : null;
 
-  // Consistency (week): trained vs rest, against the weekly target.
+  // Mức duy trì trong tuần so sánh số ngày tập với mục tiêu tuần.
   const daysTrained = burnDays.filter((d) => d.count > 0).length;
 
   if (loading) {
@@ -130,7 +129,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
 
   return (
     <>
-      {/* One card: ‹ period › navigator → chart → period totals */}
+      {/* Một thẻ gồm chuyển khoảng thời gian, biểu đồ và tổng số liệu. */}
       <Card style={styles.heroCard}>
         <View style={styles.periodNav}>
           <Pressable onPress={() => onShiftPeriod(-1)} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
@@ -177,7 +176,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
         </AppText>
       </Card>
 
-      {/* Workout consistency (week only) — did the user train regularly? */}
+      {/* Mức duy trì tập luyện chỉ hiện ở chế độ Tuần. */}
       {mode === "week" && (
         <Card style={styles.consistencyCard}>
           <View style={styles.consistencyHead}>
@@ -204,7 +203,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
         </Card>
       )}
 
-      {/* Stats — per active day (week/month) or per active month (year) */}
+      {/* Số liệu theo ngày hoạt động hoặc theo tháng hoạt động. */}
       <View style={styles.statsRow}>
         <Card style={styles.statCard}>
           <AppText variant="h2" style={styles.statOrange}>{totalWorkouts}</AppText>
@@ -228,7 +227,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
 const styles = StyleSheet.create({
   loading: { paddingVertical: theme.space.xl, alignItems: "center" },
 
-  // Hero card (mirrors ProgressScreen todayCard)
+  // Thẻ chính có kiểu giống thẻ hôm nay trong ProgressScreen.
   heroCard: { padding: theme.space.xl, gap: theme.space.md },
   periodNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   periodLabel: { fontWeight: "700" },
@@ -242,7 +241,7 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 32, color: theme.colors.accent2 },
   avgText: { fontSize: 12 },
 
-  // Consistency
+  // Khu vực mức duy trì tập luyện.
   consistencyCard: { padding: theme.space.lg, gap: theme.space.md },
   consistencyHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   consistencyMeta: { fontSize: 12 },
@@ -257,7 +256,7 @@ const styles = StyleSheet.create({
   dotLabelToday: { fontWeight: "700", color: theme.colors.accent2 },
   targetText: { fontSize: 11 },
 
-  // Stats row (mirrors ProgressScreen)
+  // Hàng số liệu có kiểu giống ProgressScreen.
   statsRow: { flexDirection: "row", gap: theme.space.md },
   statCard: { flex: 1, padding: theme.space.lg, gap: 4, alignItems: "center" },
   statPrimary: { color: theme.colors.primary, fontSize: 18 },

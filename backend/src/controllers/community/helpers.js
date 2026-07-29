@@ -11,7 +11,6 @@ async function addNotification({ user, actor, type, post = null }) {
       { upsert: true }
     );
   } catch {
-    // A failed notification must never break the like or follow action.
   }
 }
 

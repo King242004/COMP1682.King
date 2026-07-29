@@ -1,4 +1,3 @@
-// Scan feature — upload/lookup helpers + shared types.
 import * as ImageManipulator from "expo-image-manipulator";
 import { apiFetch } from "@/utils/api";
 import type { Lang } from "@/utils/language";
@@ -26,16 +25,12 @@ export type Product = {
   fat: number;
 };
 
-// One list for BOTH the live camera scanner and still-image scanning
 export const BARCODE_TYPES = ["ean13", "ean8", "upc_a", "upc_e", "code128"] as const;
 
-// Stable reference so CameraView doesn't reconfigure the session each render
 export const BARCODE_SETTINGS = { barcodeTypes: [...BARCODE_TYPES] } as {
   barcodeTypes: ("ean13" | "ean8" | "upc_a" | "upc_e" | "code128")[];
 };
 
-// Compress + resize before upload: big phone photos (4000px) → max 1024px wide,
-// JPEG quality 0.5. Cuts upload size ~5-10x → faster scan. Falls back to original on error.
 export async function compressImage(uri: string): Promise<string> {
   try {
     const result = await ImageManipulator.manipulateAsync(
@@ -49,8 +44,6 @@ export async function compressImage(uri: string): Promise<string> {
   }
 }
 
-// Upload helper - returns parsed candidates or throws.
-// Accepts an AbortSignal so the user can cancel an in-flight scan.
 export async function scanImage(
   uri: string,
   token: string,
@@ -72,7 +65,6 @@ export async function scanImage(
   return data.candidates || [];
 }
 
-// Look up a packaged product by barcode (Open Food Facts via backend)
 export async function lookupBarcode(barcode: string, token: string): Promise<Product> {
   const data = await apiFetch("/scan/barcode", {
     method: "POST",

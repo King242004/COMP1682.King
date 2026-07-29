@@ -26,8 +26,6 @@ export default function UserProfileScreen() {
   const { token, user } = useAuth();
   const t = useT();
 
-  // Whether this is my own community profile — decided locally so the Saved tab
-  // and its fetch don't wait on the server profile to load.
   const viewingSelf = !!user && id === user.id;
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -48,7 +46,7 @@ export default function UserProfileScreen() {
     postsHasMoreRef.current = false;
     savedHasMoreRef.current = false;
     try {
-      // Saved is private → only fetched (and shown) on my own profile
+    // Bài đã lưu là riêng tư nên chỉ tải và hiện trong hồ sơ của chính mình.
       const [p, ps, sv] = await Promise.all([
         getPublicProfile(token, id),
         getUserPosts(token, id),
@@ -69,7 +67,7 @@ export default function UserProfileScreen() {
     }
   }, [token, id, viewingSelf]);
 
-  // Refetch on focus so counts, follow state and the saved list stay fresh
+  // Tải lại khi màn được mở để số lượng, theo dõi và bài đã lưu luôn mới.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const loadMore = useCallback(async () => {
@@ -99,7 +97,7 @@ export default function UserProfileScreen() {
         postsHasMoreRef.current = result.hasMore;
       }
     } catch {
-      // Keep the loaded page visible. Reaching the end again retries safely.
+      // Giữ trang đã tải trên màn hình. Kéo đến cuối lần nữa sẽ thử tải lại an toàn.
     } finally {
       loadingMoreRef.current = false;
       setLoadingMore(false);
@@ -109,7 +107,7 @@ export default function UserProfileScreen() {
   const onToggleFollow = async () => {
     if (!token || !id || !profile) return;
     const wasFollowing = profile.isFollowing;
-    // optimistic
+    // Cập nhật giao diện trước để thao tác có phản hồi ngay.
     setProfile({
       ...profile,
       isFollowing: !wasFollowing,
@@ -120,16 +118,16 @@ export default function UserProfileScreen() {
       if (wasFollowing) await unfollowUser(token, id);
       else await followUser(token, id);
     } catch {
-      load(); // revert from server on failure
+      load();
     } finally {
       setBusy(false);
     }
   };
 
-  // Like/save/delete all live on the post-detail screen; this screen refetches
-  // on focus, so counts and the grid stay in sync when the user comes back.
+  // Thích, lưu và xóa được xử lý ở chi tiết bài. Màn này tải lại khi quay về
+  // để số lượng và lưới bài viết luôn đồng bộ.
 
-  // Loading / error states keep the header so the user can always go back
+  // Khi tải hoặc lỗi vẫn giữ phần đầu để người dùng luôn có thể quay lại.
   if (!profile) {
     return (
       <Screen padded={false}>
@@ -158,7 +156,8 @@ export default function UserProfileScreen() {
 
   const isMe = viewingSelf || profile.isMe;
   const showSaved = isMe && tab === "saved";
-  const postsHidden = profile.postsHidden; // private profile viewed by someone else
+  // Ẩn bài viết khi người xem không có quyền xem tài khoản riêng tư.
+  const postsHidden = profile.postsHidden;
   const data = postsHidden ? [] : showSaved ? saved : posts;
 
   const Stat = ({ label, value, onPress }: { label: string; value: number; onPress?: () => void }) => (
@@ -188,7 +187,7 @@ export default function UserProfileScreen() {
           <View style={styles.header}>
             <ScreenHeader title={t.community.profile} />
 
-            {/* Header card */}
+      {/* Thẻ thông tin đầu trang. */}
             <Card style={styles.profileCard}>
               <View style={styles.avatar}>
                 {profile.user.avatar ? (
@@ -209,7 +208,7 @@ export default function UserProfileScreen() {
 
               <View style={styles.statsRow}>
                 <Stat label={t.community.posts} value={profile.stats.postCount} />
-                {/* A private profile's follow lists are locked to non-owners */}
+      {/* Người ngoài không được xem danh sách theo dõi của tài khoản riêng tư. */}
                 <Stat label={t.community.followers} value={profile.stats.followers} onPress={postsHidden ? undefined : () => openList("followers")} />
                 <Stat label={t.community.following} value={profile.stats.following} onPress={postsHidden ? undefined : () => openList("following")} />
               </View>
@@ -226,7 +225,7 @@ export default function UserProfileScreen() {
               )}
             </Card>
 
-            {/* My posts / Saved tabs (own profile only, WEAR-style) */}
+      {/* Tab bài của tôi và bài đã lưu chỉ có trong hồ sơ chính mình. */}
             {isMe ? (
               <View style={styles.tabRow}>
                 {([["posts", t.community.myPosts], ["saved", t.community.saved]] as const).map(
@@ -250,7 +249,7 @@ export default function UserProfileScreen() {
               <AppText variant="subtle" style={styles.sectionLabel}>{t.community.posts}</AppText>
             ) : null}
 
-            {/* Private profile viewed by someone else — grid replaced with a lock */}
+      {/* Hồ sơ riêng tư được người khác xem sẽ hiện khóa thay cho lưới bài. */}
             {postsHidden && (
               <Card style={styles.lockCard}>
                 <Ionicons name="lock-closed" size={30} color={theme.colors.subtle} />
@@ -261,7 +260,8 @@ export default function UserProfileScreen() {
           </View>
         }
         ListEmptyComponent={
-          postsHidden ? null : ( // lock card already shown in the header
+          // Không hiện trạng thái trống vì phần đầu đã có thẻ báo tài khoản bị khóa.
+          postsHidden ? null : (
             <Card style={styles.emptyCard}>
               <View style={styles.emptyIcon}>
                 <Ionicons
@@ -281,9 +281,10 @@ export default function UserProfileScreen() {
           )
         }
         renderItem={({ item }) => (
+          /* Bài đã lưu có thể thuộc nhiều người nên cần hiện tên tác giả. */
           <PostTile
             post={item}
-            showAuthor={showSaved} // saved posts come from various people; my own grid doesn't need my name
+            showAuthor={showSaved}
             onPress={() => router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } })}
           />
         )}

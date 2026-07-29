@@ -22,8 +22,6 @@ const ICONS: Record<MealKey, keyof typeof Ionicons.glyphMap> = {
   snack: "nutrition-outline",
 };
 
-// One daily reminder per meal type. Each row owns its own switch and time, so
-// there is nothing to add or remove and turning a meal on takes a single tap.
 export default function RemindersScreen() {
   const t = useT();
   const [state, setState] = useState<ReminderMap>(emptyReminders());
@@ -43,8 +41,6 @@ export default function RemindersScreen() {
   const toggle = async (key: MealKey, value: boolean) => {
     if (busy) return;
     setBusy(true);
-    // Optimistic flip so the switch responds immediately, corrected below if
-    // the operating system refuses permission
     setState((prev) => ({ ...prev, [key]: { ...prev[key], enabled: value } }));
     try {
       const next = await applyReminder(
@@ -71,7 +67,6 @@ export default function RemindersScreen() {
     setEditing(null);
     setBusy(true);
     try {
-      // Reschedules in place when the reminder is already on
       setState(await applyReminder(state, key, { enabled: state[key].enabled, time }, notifContent(key)));
     } finally {
       setBusy(false);

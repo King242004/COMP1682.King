@@ -1,8 +1,5 @@
 const mongoose = require("mongoose");
 
-// A PLANNED meal for a future/specific day. Kept separate from Meal so the
-// weekly plan never mixes into the real diary. `done` flips to true once the
-// user marks it eaten (which also creates a real Meal log).
 const planMealSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -17,7 +14,8 @@ const planMealSchema = new mongoose.Schema(
     carbs: { type: Number, default: 0, min: 0 },
     fat: { type: Number, default: 0, min: 0 },
     note: { type: String, default: "" },
-    date: { type: String, required: true }, // format: "YYYY-MM-DD"
+    // Ngày theo định dạng YYYY-MM-DD.
+    date: { type: String, required: true },
     done: { type: Boolean, default: false },
   },
   { timestamps: true }

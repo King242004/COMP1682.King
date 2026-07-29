@@ -38,7 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Refs let callbacks registered once read the latest session values.
   const userRef = useRef<User | null>(null);
   const tokenRef = useRef<string | null>(null);
   const langRef = useRef<string | null>(null);
@@ -46,14 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   tokenRef.current = token;
   langRef.current = user?.language ?? null;
 
-  // Login and registration both finish by saving the same session data.
   const saveSession = useCallback(async (session: AuthSession) => {
     setUser(session.user);
     setToken(session.token);
     await saveStoredAuthSession(session);
   }, []);
 
-  // Restore the saved session once when the app starts.
   useEffect(() => {
     async function loadAuth() {
       try {
@@ -63,8 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session.user);
         }
       } catch {
-        // Corrupt local session data must never trap the app on its splash.
-        await Promise.allSettled([clearStoredAuthSession()]);
+        await clearStoredAuthSession().catch(() => {});
       } finally {
         setIsLoading(false);
       }
@@ -72,7 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadAuth();
   }, []);
 
-  // Public authentication actions used by the Login and Register screens.
   const login = async (email: string, password: string) => {
     const data = await loginRequest(email, password);
     await saveSession(data);
@@ -87,7 +82,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveSession(data);
   };
 
-  // Remove both the active session and data cached for the previous account.
   const logout = useCallback(async () => {
     userRef.current = null;
     tokenRef.current = null;
@@ -97,10 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearStoredAccountData();
   }, []);
 
-  // Any authenticated request can report an expired or invalid token.
   useEffect(() => {
     setOnUnauthorized(() => {
-      // Home can fire parallel requests, so only the first 401 logs out.
       if (!tokenRef.current) return;
       tokenRef.current = null;
       router.replace("/auth/login");
@@ -111,7 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setOnUnauthorized(null);
   }, [logout]);
 
-  // Keep profile updates consistent in state and on-device storage.
   const mergeAndStoreUser = useCallback(async (patch: UserPatch) => {
     const current = userRef.current;
     if (!current) return;
@@ -141,8 +132,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await mergeAndStoreUser(res.user);
   };
 
-  // Permanently deletes the account + ALL server-side data (password-confirmed),
-  // then clears local state exactly like a logout.
   const deleteAccount = async (password: string) => {
     if (!token) return;
     await deleteAccountRequest(password, token);

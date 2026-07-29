@@ -1,6 +1,3 @@
-// SCAN SCREEN — photo (AI recognition) + barcode (Open Food Facts).
-// Flow/state machine lives here; camera overlay + result sheets are in
-// src/features/scan.
 import { useEffect, useState, useRef } from "react";
 import { Alert, Pressable, View, ActivityIndicator, Image, Linking, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
@@ -38,11 +35,10 @@ export default function ScanScreen() {
   const [torch, setTorch] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const abortRef = useRef<AbortController | null>(null);
-  // Prevents the live barcode scanner from firing repeatedly on the same frame
+  // Chặn máy quét mã vạch gọi lặp nhiều lần trên cùng một khung hình.
   const barcodeLockRef = useRef(false);
 
-  // Ask for camera access as soon as the screen opens (once). Barcode mode had
-  // NO way to trigger the prompt at all — only the photo shutter asked.
+  // Xin quyền camera một lần ngay khi mở màn hình để cả hai chế độ đều dùng được.
   const askedRef = useRef(false);
   useEffect(() => {
     if (permission && !permission.granted && !askedRef.current) {
@@ -51,7 +47,7 @@ export default function ScanScreen() {
     }
   }, [permission, requestPermission]);
 
-  // ── Photo flow: upload → show candidates ───────────────────────────────────
+  // Luồng ảnh: tải lên rồi hiện các món dự đoán.
   const processImage = async (uri: string) => {
     if (!token) {
       Alert.alert(t.scan.notLoggedIn, t.scan.loginAgain);
@@ -87,7 +83,7 @@ export default function ScanScreen() {
     setPreviewUri(null);
   };
 
-  // ── Pick from library (photo mode) ─────────────────────────────────────────
+  // Chọn ảnh trong thư viện cho chế độ ảnh.
   const handlePickFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -103,7 +99,7 @@ export default function ScanScreen() {
     await processImage(result.assets[0].uri);
   };
 
-  // ── Pick an image from library and read a barcode out of it (barcode mode) ─
+  // Chọn ảnh trong thư viện và đọc mã vạch từ ảnh.
   const handleBarcodeFromLibrary = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -113,7 +109,7 @@ export default function ScanScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 1, allowsEditing: false });
     if (result.canceled || !result.assets?.[0]?.uri) return;
     try {
-      // CameraView can extract barcodes from a still image file
+      // CameraView có thể đọc mã vạch từ một file ảnh tĩnh.
       const found = await scanFromURLAsync(result.assets[0].uri, [...BARCODE_TYPES]);
       if (found && found.length > 0) {
         doBarcodeLookup(found[0].data);
@@ -125,7 +121,7 @@ export default function ScanScreen() {
     }
   };
 
-  // ── Capture (photo mode) ───────────────────────────────────────────────────
+  // Chụp ảnh trong chế độ nhận diện món.
   const handleCapture = async () => {
     if (isScanning) return;
     if (!permission?.granted) {
@@ -153,7 +149,7 @@ export default function ScanScreen() {
     }
   };
 
-  // ── Barcode flow ───────────────────────────────────────────────────────────
+  // Luồng xử lý mã vạch.
   const doBarcodeLookup = async (code: string) => {
     if (!token) {
       Alert.alert(t.scan.notLoggedIn, t.scan.loginAgain);
@@ -172,14 +168,13 @@ export default function ScanScreen() {
           { text: "OK", style: "cancel" },
         ]
       );
-      barcodeLockRef.current = false; // allow re-scan after a miss
+      // Cho phép quét lại khi lần quét trước không tìm thấy sản phẩm.
+      barcodeLockRef.current = false;
     } finally {
       setIsScanning(false);
     }
   };
 
-  // Live scanner callback — always attached (toggling the prop would reconfigure
-  // the camera session and freeze ~2s). Gate by mode/state inside instead.
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
     if (mode !== "barcode" || barcodeLockRef.current || isScanning || product) return;
     barcodeLockRef.current = true;
@@ -191,9 +186,6 @@ export default function ScanScreen() {
     doBarcodeLookup(code);
   };
 
-  // ── Shared navigation helpers ──────────────────────────────────────────────
-  // REPLACE scan with the Add screen: after saving, back() lands on Home/diary
-  // instead of dropping the user back onto the live camera.
   const handleManual = () => {
     setCandidates(null);
     setProduct(null);
@@ -233,9 +225,8 @@ export default function ScanScreen() {
     barcodeLockRef.current = false;
   };
 
-  // "Right for me?" → Coach tab with the product's facts; the Coach grounds the
-  // verdict in the user's saved conditions (diabetes, gout, ...). REPLACE like
-  // the other scan exits so back() from Coach doesn't land on a live camera.
+  // Gửi thông tin sản phẩm sang Coach để đánh giá theo tình trạng sức khỏe đã lưu.
+  // Dùng replace để quay lại không rơi vào camera đang chạy.
   const handleAskCoach = (p: Product) => {
     setProduct(null);
     barcodeLockRef.current = false;
@@ -246,7 +237,8 @@ export default function ScanScreen() {
           p.brand ? `${p.name} (${p.brand})` : p.name,
           Math.round(p.calories), Math.round(p.protein), Math.round(p.carbs), Math.round(p.fat)
         ),
-        askId: String(Date.now()), // unique per tap — consumed once on the Coach tab
+        // Mỗi lần chạm có một mã riêng để tab Coach chỉ xử lý yêu cầu một lần.
+        askId: String(Date.now()),
       },
     });
   };
@@ -266,7 +258,7 @@ export default function ScanScreen() {
 
   const cameraGranted = permission.granted;
 
-  // Torch only makes sense on the back camera
+  // Đèn pin chỉ dùng được với camera sau.
   const torchOn = torch && facing === "back";
 
   const overlay = (
@@ -302,8 +294,6 @@ export default function ScanScreen() {
         <View style={styles.screen}>{overlay}</View>
       )}
 
-      {/* ── Loading overlay — absolute View (NOT a Modal) so it never collides
-            with the manual-entry Modal dismissing (that combo freezes iOS) ──── */}
       {isScanning && (
         <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
           {previewUri && <Image source={{ uri: previewUri }} style={styles.loadingPreview} />}
@@ -322,7 +312,7 @@ export default function ScanScreen() {
         </View>
       )}
 
-      {/* Result sheets + manual entry (components in src/features/scan) */}
+      {/* Các bảng kết quả và nhập thủ công nằm trong src/features/scan. */}
       <CandidatesSheet
         visible={!!candidates && !isScanning}
         candidates={candidates}

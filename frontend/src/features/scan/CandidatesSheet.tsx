@@ -1,4 +1,4 @@
-// Bottom sheet with the AI's top-3 dish guesses after a photo scan.
+// Bảng trượt hiển thị tối đa ba món AI đoán sau khi quét ảnh.
 import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";

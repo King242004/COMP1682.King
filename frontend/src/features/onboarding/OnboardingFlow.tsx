@@ -1,6 +1,6 @@
-// New-account onboarding: intro → goal → body (live TDEE) → health & taste.
-// Every answer feeds the AI features (coach, suggestions, weekly plan) from
-// minute one. Every step can be skipped — the user lands on Home regardless.
+// Thiết lập tài khoản mới đi từ giới thiệu, mục tiêu, cơ thể đến sức khỏe và khẩu vị.
+// Câu trả lời cung cấp dữ liệu cho Coach, gợi ý và kế hoạch tuần ngay từ đầu.
+// Mọi bước đều có thể bỏ qua và người dùng vẫn vào được Home.
 import { useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -17,8 +17,8 @@ import { TextField } from "@/ui/components/TextField";
 type Step = "intro" | "goal" | "body" | "health";
 const STEPS: Step[] = ["intro", "goal", "body", "health"];
 
-// Mifflin-St Jeor — display estimate only; the backend recomputes the
-// authoritative goal from the same inputs when the profile is saved.
+// Mifflin-St Jeor chỉ dùng để hiện ước tính. Backend sẽ tính lại mục tiêu chính thức
+// từ cùng dữ liệu khi hồ sơ được lưu.
 function calcTDEE(w: number, h: number, age: number, gender: "male" | "female", activity: string) {
   const bmr = 10 * w + 6.25 * h - 5 * age + (gender === "male" ? 5 : -161);
   const factor = activity === "sedentary" ? 1.2 : activity === "active" ? 1.725 : 1.55;
@@ -62,7 +62,7 @@ export function OnboardingFlow() {
 
   const stepIndex = STEPS.indexOf(step);
 
-  // Live TDEE preview — the "wow" moment: numbers react as they type
+  // TDEE ước tính thay đổi ngay khi người dùng nhập dữ liệu.
   const w = Number(weight), h = Number(height), a = Number(age);
   const tdee = gender && w > 0 && h > 0 && a > 0 ? calcTDEE(w, h, a, gender, activity) : null;
   const goalCal = tdee === null ? null : goal === "lose_weight" ? tdee - 500 : goal === "gain_muscle" ? tdee + 300 : tdee;
@@ -72,8 +72,8 @@ export function OnboardingFlow() {
 
   const goHome = () => router.replace("/tabs");
 
-  // Save whatever was answered; backend auto-computes calorieGoal from TDEE
-  // when body metrics are present. Failures never trap the user here.
+    // Lưu các câu đã trả lời. Backend tự tính calorieGoal từ TDEE khi đủ số đo.
+    // Nếu lưu lỗi vẫn không được giữ người dùng mắc kẹt ở màn này.
   const finish = async () => {
     if (saving) return;
     setSaving(true);
@@ -96,7 +96,7 @@ export function OnboardingFlow() {
     }
   };
 
-  // Shared selectable chip
+  // Lựa chọn dạng thẻ dùng chung cho nhiều bước.
   const Chip = ({ active, label, onPress, flex }: { active: boolean; label: string; onPress: () => void; flex?: boolean }) => (
     <Pressable
       onPress={onPress}
@@ -118,7 +118,7 @@ export function OnboardingFlow() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Progress segments + Skip */}
+        {/* Thanh tiến độ và nút bỏ qua. */}
         <View style={styles.progressRow}>
           <View style={styles.segments}>
             {STEPS.map((s, i) => (
@@ -130,7 +130,7 @@ export function OnboardingFlow() {
           </Pressable>
         </View>
 
-        {/* ── Intro ── */}
+        {/* Bước giới thiệu. */}
         {step === "intro" && (
           <View style={styles.introWrap}>
             <Image
@@ -150,7 +150,7 @@ export function OnboardingFlow() {
                 { icon: "calendar", text: L.featPlan, color: theme.colors.indigo, bg: "rgba(99,102,241,0.10)" },
               ].map((f) => (
                 <View key={f.icon} style={styles.featureRow}>
-                  {/* per-feature tint, known at runtime */}
+                {/* Mỗi tính năng có màu riêng được xác định khi chạy. */}
                   <View style={[styles.featureIcon, { backgroundColor: f.bg }]}>
                     <Ionicons name={f.icon as any} size={19} color={f.color} />
                   </View>
@@ -162,7 +162,7 @@ export function OnboardingFlow() {
           </View>
         )}
 
-        {/* ── Goal ── */}
+        {/* Bước chọn mục tiêu. */}
         {step === "goal" && (
           <View style={styles.stepWrap}>
             <View style={styles.headerBlockTight}>
@@ -195,7 +195,7 @@ export function OnboardingFlow() {
           </View>
         )}
 
-        {/* ── Body + live TDEE ── */}
+        {/* Bước nhập cơ thể và xem TDEE trực tiếp. */}
         {step === "body" && (
           <View style={styles.stepWrap}>
             <View style={styles.headerBlockTight}>
@@ -226,7 +226,7 @@ export function OnboardingFlow() {
               </View>
             </View>
 
-            {/* The wow moment: TDEE + goal appear the second the inputs are complete */}
+          {/* Hiện TDEE và mục tiêu ngay khi người dùng nhập đủ dữ liệu. */}
             {tdee !== null && (
               <Card style={styles.tdeeCard}>
                 <AppText variant="subtle" style={styles.smallLabel}>{L.tdeeLabel}</AppText>
@@ -247,7 +247,7 @@ export function OnboardingFlow() {
           </View>
         )}
 
-        {/* ── Health & taste ── */}
+        {/* Bước nhập sức khỏe và khẩu vị. */}
         {step === "health" && (
           <View style={styles.stepWrap}>
             <View style={styles.headerBlockTight}>

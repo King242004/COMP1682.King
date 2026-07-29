@@ -1,4 +1,4 @@
-// Animated "typing" dots shown while the coach is composing a reply
+// Các chấm chuyển động báo rằng Coach đang soạn câu trả lời.
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { theme } from "@/ui/theme";

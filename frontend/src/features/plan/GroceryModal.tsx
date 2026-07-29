@@ -1,5 +1,5 @@
-// AI grocery list bottom sheet — tickable rows (state persisted per week
-// together with the list, see plan api cacheGrocery).
+// Bảng danh sách mua sắm AI cho phép đánh dấu từng món.
+// Trạng thái được lưu theo tuần cùng danh sách trong cacheGrocery.
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
@@ -31,7 +31,7 @@ export function GroceryModal({ visible, groups, checked, onToggle, onClose }: {
               <View key={g.name} style={styles.group}>
                 <AppText style={styles.groupName}>{g.name}</AppText>
                 {g.items.map((it, idx) => {
-                  // Tick state keyed by group+item text (stable across reopenings)
+          // Dùng tên nhóm và món làm khóa để trạng thái giữ nguyên khi mở lại.
                   const key = `${g.name}|${it}`;
                   const isChecked = !!checked[key];
                   return (

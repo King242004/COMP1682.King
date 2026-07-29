@@ -3,8 +3,8 @@ import Svg, { Circle } from "react-native-svg";
 import { theme } from "../theme";
 import { AppText } from "./AppText";
 
-// Circular calorie progress: % in the middle, turns red once over the goal.
-// One component for every size (Home hero 116px, meal detail 64px, ...).
+// Vòng tiến độ calo hiển thị phần trăm ở giữa và đổi đỏ khi vượt mục tiêu.
+// Một component dùng được cho mọi kích thước trong Home và chi tiết món.
 export function ProgressRing({
   eaten,
   goal,
@@ -23,7 +23,8 @@ export function ProgressRing({
   const progress = goal > 0 ? Math.min(eaten / goal, 1) : 0;
   const over = eaten > goal;
   const color = over ? theme.colors.danger : theme.colors.primary;
-  const pctSize = Math.max(11, Math.round(size * 0.19)); // % text scales with the ring
+  // Cỡ chữ phần trăm thay đổi theo kích thước vòng tròn.
+  const pctSize = Math.max(11, Math.round(size * 0.19));
 
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>

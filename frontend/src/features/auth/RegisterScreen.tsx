@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useT } from "@/i18n";
@@ -266,11 +266,9 @@ export default function RegisterScreen() {
           )}
 
           <View style={styles.linkRow}>
-            <Link replace href="/auth/login" asChild>
-              <Pressable hitSlop={10}>
-                <AppText variant="body2" style={styles.linkPrimary}>{t.auth.haveAccount}</AppText>
-              </Pressable>
-            </Link>
+            <Pressable hitSlop={10} onPress={() => router.back()}>
+              <AppText variant="body2" style={styles.linkPrimary}>{t.auth.haveAccount}</AppText>
+            </Pressable>
           </View>
         </View>
       </View>

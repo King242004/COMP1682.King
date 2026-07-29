@@ -8,7 +8,6 @@ const followSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// One follow edge per pair; also speeds up "who do I follow" / "who follows me"
 followSchema.index({ follower: 1, following: 1 }, { unique: true });
 followSchema.index({ following: 1 });
 

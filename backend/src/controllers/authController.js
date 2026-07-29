@@ -3,13 +3,12 @@ const jwt = require("jsonwebtoken");
 const { sendOTP } = require("../config/mailer");
 const OTP = require("../models/OTP");
 const User = require("../models/User");
-const { recordFailedOTPAttempt, reserveOTP } = require("../services/otpService");
+const { reserveOTP, verifyOTPCode } = require("../services/otpService");
 const {
   OTP_PURPOSE,
   OTP_TTL_MS,
   generateOTP,
   hashOTP,
-  isOTPMatch,
   normalizeEmail,
   waitForResponseFloor,
 } = require("../utils/otpSecurity");
@@ -17,9 +16,6 @@ const {
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });
 
-// Full safe user payload for auth responses. Login/register used to return only
-// a few fields, so the app lacked language/conditions/weight/avatar until the
-// user happened to open the Profile tab (wrong coach language, 60kg fallback...).
 const publicUser = (u) => ({
   id: u._id,
   name: u.name,
@@ -104,34 +100,16 @@ exports.register = async (req, res) => {
     return res.status(400).json({ message: "Password must be at least 6 characters, include one uppercase letter and one number." });
 
   const purpose = OTP_PURPOSE.REGISTRATION;
-  const record = await OTP.findOne({ email, purpose }).select("+codeHash");
-  if (!record) return res.status(400).json({ message: "Invalid verification code." });
-
-  if (record.expiresAt < new Date()) {
-    await record.deleteOne();
+  const otpStatus = await verifyOTPCode({ email, purpose, candidate: otp, consume: true });
+  if (otpStatus === "expired") {
     return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
   }
-
-  if (!isOTPMatch(record.codeHash, email, purpose, otp)) {
-    const { burned } = await recordFailedOTPAttempt(record._id, record.codeHash);
-    if (burned) {
-      return res.status(400).json({ message: "Too many wrong attempts. Please request a new code." });
-    }
-    return res.status(400).json({ message: "Invalid verification code." });
+  if (otpStatus === "burned") {
+    return res.status(400).json({ message: "Too many wrong attempts. Please request a new code." });
   }
-
-  // Consume the exact verified code atomically. This makes the OTP single-use
-  // even when two registration requests arrive at the same time.
-  const consumed = await OTP.findOneAndDelete({
-    _id: record._id,
-    codeHash: record.codeHash,
-    expiresAt: { $gt: new Date() },
-  });
-  if (!consumed)
+  if (otpStatus !== "valid")
     return res.status(400).json({ message: "Invalid verification code." });
 
-  // Check uniqueness only after mailbox ownership is proven. Otherwise this
-  // endpoint becomes an account-enumeration oracle for arbitrary callers.
   const exists = await User.exists({ email });
   if (exists) {
     return res.status(400).json({ message: "Unable to create an account with this email." });
@@ -178,7 +156,6 @@ exports.login = async (req, res) => {
   res.json({ token: generateToken(user._id), user: publicUser(user) });
 };
 
-// ─── Get current user ─────────────────────────────────────────────────────────
 exports.getMe = async (req, res) => {
   const user = await User.findById(req.user.id).select("-password");
   res.json(user);

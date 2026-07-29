@@ -1,55 +1,13 @@
-// Custom bottom tab bar (Home · Community · [+] · Coach · Profile) with the
-// center FAB opening the add-meal sheet (Scan / Add manually).
 import { useState, type ComponentProps } from "react";
-import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "./AppText";
+import { ActionSheet } from "./ActionSheet";
 
-function FABModal({ visible, onClose, onScan, onAdd }: {
-  visible: boolean;
-  onClose: () => void;
-  onScan: () => void;
-  onAdd: () => void;
-}) {
-  const t = useT();
-  return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <View style={styles.sheet}>
-          <AppText style={styles.sheetTitle}>{t.nav.addMealTitle}</AppText>
-
-          <Pressable onPress={onScan} style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}>
-            <View style={[styles.optionIcon, styles.optionIconScan]}>
-              <Ionicons name="scan" size={22} color="#fff" />
-            </View>
-            <View style={styles.flex1}>
-              <AppText style={styles.optionTitle}>{t.nav.scanMeal}</AppText>
-              <AppText style={styles.optionSub}>{t.nav.scanMealSub}</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
-          </Pressable>
-
-          <Pressable onPress={onAdd} style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}>
-            <View style={[styles.optionIcon, styles.optionIconAdd]}>
-              <Ionicons name="pencil" size={22} color="#fff" />
-            </View>
-            <View style={styles.flex1}>
-              <AppText style={styles.optionTitle}>{t.nav.addManually}</AppText>
-              <AppText style={styles.optionSub}>{t.nav.addManuallySub}</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
-          </Pressable>
-        </View>
-      </Pressable>
-    </Modal>
-  );
-}
-
-// Tab metadata; labels resolve from the i18n catalog by key
 type IconName = ComponentProps<typeof Ionicons>["name"];
 type TabItem = {
   name: string;
@@ -93,16 +51,15 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 
   return (
     <>
-      <FABModal
+      <ActionSheet
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onScan={() => { setModalVisible(false); router.push("/scan"); }}
-        onAdd={() => { setModalVisible(false); router.push("/meals/add"); }}
+        items={[
+          { label: t.nav.scanMeal, icon: "scan", onPress: () => router.push("/scan") },
+          { label: t.nav.addManually, icon: "pencil", onPress: () => router.push("/meals/add") },
+        ]}
       />
 
-      {/* App-bg layer behind the bar so the rounded top corners reveal the
-          screen's cyan bg, not the navigator's default grey (which made the two
-          corners look like a mismatched colour). */}
       <View style={styles.barWrap}>
         <View style={styles.bar}>
           {LEFT_TABS.map(renderTab)}
@@ -112,8 +69,6 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               onPress={() => setModalVisible(true)}
               style={({ pressed }) => pressed && styles.fabPressed}
             >
-              {/* Scan glyph, not a plain +, so the flagship food-scan entry is
-                  not visually identical to the community new-post + button */}
               <View style={styles.fab}>
                 <Ionicons name="scan" size={26} color="#FFFFFF" />
               </View>
@@ -128,36 +83,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 const styles = StyleSheet.create({
-  flex1: { flex: 1 },
   dim: { opacity: 0.6 },
-
-  // FAB sheet
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  sheet: {
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
-    gap: 12,
-  },
-  sheetTitle: { fontSize: 16, fontWeight: "700", color: theme.colors.text, marginBottom: 4 },
-  option: {
-    flexDirection: "row", alignItems: "center", gap: 14,
-    padding: 16, borderRadius: 16,
-    backgroundColor: "rgba(8,145,178,0.06)",
-  },
-  optionPressed: { backgroundColor: theme.colors.tint },
-  optionIcon: {
-    width: 44, height: 44, borderRadius: 14,
-    alignItems: "center", justifyContent: "center",
-  },
-  optionIconScan: { backgroundColor: theme.colors.primary },
-  optionIconAdd: { backgroundColor: theme.colors.accent },
-  optionTitle: { fontSize: 15, fontWeight: "700", color: theme.colors.text },
-  optionSub: { fontSize: 13, color: theme.colors.muted, marginTop: 2 },
-
-  // Bar
   barWrap: { backgroundColor: theme.colors.bg },
   bar: {
     flexDirection: "row",

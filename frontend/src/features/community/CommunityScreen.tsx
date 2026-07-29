@@ -24,7 +24,7 @@ export default function CommunityScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
   const t = useT();
-  // Explore first (WEAR-style): new users land on content, not an empty feed
+  // Mở Explore trước để người dùng mới thấy nội dung thay vì feed trống.
   const [tab, setTab] = useState<Tab>("explore");
   const [tabCache, setTabCache] = useState<Record<Tab, TabCache>>({
     feed: { posts: [], loadError: false },
@@ -33,7 +33,8 @@ export default function CommunityScreen() {
   const [loadingByTab, setLoadingByTab] = useState<Record<Tab, boolean>>({ feed: false, explore: false });
   const [refreshingByTab, setRefreshingByTab] = useState<Record<Tab, boolean>>({ feed: false, explore: false });
   const [loadingMoreByTab, setLoadingMoreByTab] = useState<Record<Tab, boolean>>({ feed: false, explore: false });
-  const [unread, setUnread] = useState(0); // notification bell badge
+  // Số thông báo chưa đọc hiển thị trên biểu tượng chuông.
+  const [unread, setUnread] = useState(0);
   const pageRef = useRef<Record<Tab, number>>({ feed: 1, explore: 1 });
   const hasMoreRef = useRef<Record<Tab, boolean>>({ feed: true, explore: true });
   const loadedRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
@@ -44,17 +45,14 @@ export default function CommunityScreen() {
   const loading = loadingByTab[tab] && posts.length === 0;
   const loadError = tabCache[tab].loadError;
 
-  // Shared fetch. `mode` decides which spinner reflects this load:
-  // "refresh" drives RefreshControl (user gesture), otherwise the centered loader.
-  // Driving RefreshControl programmatically during a screen transition leaves its
-  // spinner stuck, so focus/initial loads must NOT touch `refreshing`.
-  // On failure we KEEP the previous posts (an error shouldn't wipe the feed).
+  // Hàm tải dùng chung. mode quyết định loại vòng tải được hiển thị.
+  // refresh điều khiển RefreshControl, các chế độ khác dùng vòng tải ở giữa.
+  // Không bật refreshing khi focus vì có thể làm vòng tải bị kẹt lúc chuyển màn.
+  // Nếu tải lỗi thì giữ các bài cũ thay vì xóa feed.
   const load = useCallback(async (which: Tab, mode: LoadMode = "load") => {
     if (!token) return;
-    // Never paginate before the first page has landed: on web an empty FlatList
-    // fires onEndReached immediately, and that premature "more" would bump the
-    // requestId and orphan the in-flight first load — leaving the tab spinning
-    // forever. Require a completed first load (and no initial load in flight).
+    // Không tải trang tiếp theo trước khi trang đầu hoàn tất.
+    // FlatList trống trên web có thể gọi onEndReached ngay và làm mất kết quả trang đầu.
     if (mode === "more" && (
       !hasMoreRef.current[which] ||
       loadingMoreRef.current[which] ||
@@ -120,16 +118,14 @@ export default function CommunityScreen() {
     }
   }, [token]);
 
-  // Keep each tab's last result and prefetch the other tab. Switching tabs then
-  // changes the content immediately instead of waiting on Render/network latency.
+  // Giữ kết quả gần nhất của từng tab và tải trước tab còn lại để chuyển tab ngay.
   useFocusEffect(useCallback(() => {
     load(tab, loadedRef.current[tab] ? "prefetch" : "load");
     const other: Tab = tab === "explore" ? "feed" : "explore";
     if (!loadedRef.current[other]) load(other, "prefetch");
   }, [tab, load]));
 
-  // Refresh the bell badge whenever the tab regains focus (e.g. back from the
-  // notifications screen, which marks everything read)
+  // Làm mới số trên chuông khi tab được focus lại.
   useFocusEffect(useCallback(() => {
     if (token) getUnreadCount(token).then(setUnread).catch(() => {});
   }, [token]));
@@ -147,7 +143,6 @@ export default function CommunityScreen() {
     }));
   };
 
-  // Optimistic like toggle, then sync count/state from the server response
   const onLike = async (post: FeedPost) => {
     if (!token) return;
     updatePostAcrossTabs(post.id, (current) => ({
@@ -163,7 +158,7 @@ export default function CommunityScreen() {
         likeCount: res.likeCount,
       }));
     } catch {
-      // revert on failure
+      // Trả lại trạng thái cũ nếu yêu cầu thất bại.
       updatePostAcrossTabs(post.id, (current) => ({
         ...current,
         isLiked: post.isLiked,
@@ -175,8 +170,8 @@ export default function CommunityScreen() {
   const openDetail = (item: FeedPost) =>
     router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } });
 
-  // WEAR-style lookbook: both tabs are 2-column grids with time-ago under tiles;
-  // save/delete live in post-detail.
+  // Hai tab dùng lưới hai cột và hiện thời gian dưới mỗi ô.
+  // Hành động lưu và xóa nằm trong chi tiết bài viết.
   const renderPost = ({ item }: { item: FeedPost }) => (
     <PostTile
       post={item}
@@ -230,7 +225,7 @@ export default function CommunityScreen() {
             <View style={styles.titleRow}>
               <AppText variant="h1">{t.community.title}</AppText>
               <View style={styles.titleActions}>
-                {/* Discover: search people + follow suggestions */}
+            {/* Tìm người dùng và xem gợi ý theo dõi. */}
                 <Pressable
                   onPress={() => router.push("/community/discover")}
                   accessibilityRole="button"
@@ -239,7 +234,7 @@ export default function CommunityScreen() {
                 >
                   <Ionicons name="search-outline" size={19} color={theme.colors.primary} />
                 </Pressable>
-                {/* Notifications bell with unread badge */}
+            {/* Chuông thông báo kèm số chưa đọc. */}
                 <Pressable
                   onPress={() => { setUnread(0); router.push("/community/notifications"); }}
                   accessibilityRole="button"
@@ -261,7 +256,7 @@ export default function CommunityScreen() {
                 >
                   <Ionicons name="add" size={22} color="#fff" />
                 </Pressable>
-                {/* My community profile (own lookbook) — avatar on the right, WEAR-style */}
+            {/* Hồ sơ Community của chính người dùng. */}
                 {user && (
                   <Pressable
                     onPress={() => router.push({ pathname: "/community/user-profile", params: { id: user.id } })}
@@ -283,7 +278,7 @@ export default function CommunityScreen() {
                 )}
               </View>
             </View>
-            {/* Feed / Explore toggle */}
+        {/* Chuyển giữa Feed và Explore. */}
             <View style={styles.tabRow}>
               {([["explore", t.community.explore], ["feed", t.community.following]] as [Tab, string][]).map(([key, label]) => {
                 const active = tab === key;
@@ -318,8 +313,7 @@ export default function CommunityScreen() {
 }
 
 const styles = StyleSheet.create({
-  // paddingTop 60 = safe-area top (no tab header above anymore) — same value
-  // every pushed screen uses
+  // Khoảng trên 60 bù vùng an toàn vì màn này không còn AppHeader phía trên.
   listContent: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.sm },
   gridColumn: { gap: theme.space.sm },
   header: { gap: theme.space.md, marginBottom: theme.space.sm },

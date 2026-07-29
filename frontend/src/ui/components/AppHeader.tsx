@@ -1,4 +1,3 @@
-// Blue app header for the Home tab: avatar + greeting + streak pill + bell.
 import { useCallback, useState } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -21,13 +20,9 @@ export function AppHeader() {
   const { user, token } = useAuth();
   const router = useRouter();
   const t = useT();
-  // historyMeals = all logged days (`meals` only holds one day). Streak logic is
-  // shared in utils/streak so every screen shows the same number.
   const { historyMeals } = useMeals();
   const streak = mealStreak(historyMeals.map((m) => m.date));
 
-  // Notification bell badge — refetched whenever Home regains focus (e.g. back
-  // from the notifications screen, which marks everything read)
   const [unread, setUnread] = useState(0);
   useFocusEffect(useCallback(() => {
     if (token) getUnreadCount(token).then(setUnread).catch(() => {});
@@ -46,7 +41,6 @@ export function AppHeader() {
       </View>
 
       <View style={styles.right}>
-        {/* Frosted pill — same visual language as the avatar circle on this header */}
         {streak > 0 && (
           <View style={styles.streakPill}>
             <Ionicons name="flame" size={14} color="#fff" />

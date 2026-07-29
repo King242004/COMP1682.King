@@ -1,7 +1,6 @@
-// Guided mini workouts: static, equipment-free routines with per-step timers.
-// CONTENT lives here bilingual-inline (same pattern as the Vietnamese starter
-// meals in meals/add) — UI chrome strings stay in the i18n catalog.
-// METs are conservative averages; finishing a routine auto-logs an Exercise.
+// Các bài tập hướng dẫn ngắn, không cần dụng cụ và có bộ đếm cho từng bước.
+// Nội dung bài tập Anh Việt nằm tại đây, còn chữ giao diện nằm trong i18n.
+// MET dùng mức ước tính thận trọng. Hoàn thành bài sẽ tự ghi một Exercise.
 
 export type GuidedStep = { vi: string; en: string; seconds: number };
 
@@ -9,7 +8,8 @@ export type GuidedRoutine = {
   key: string;
   icon: string;
   met: number;
-  durationMin: number; // sum of steps, rounded
+  // Tổng thời gian các bước, làm tròn theo phút.
+  durationMin: number;
   title: { vi: string; en: string };
   steps: GuidedStep[];
 };

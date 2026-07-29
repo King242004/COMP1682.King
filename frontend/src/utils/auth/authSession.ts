@@ -42,7 +42,6 @@ export async function clearStoredAuthSession(): Promise<void> {
 export async function clearStoredAccountData(): Promise<void> {
   await clearStoredAuthSession();
 
-  // Cache cleanup is best-effort and must never block the logout itself.
   try {
     await cancelAllReminders();
     const keys = await AsyncStorage.getAllKeys();
@@ -51,6 +50,6 @@ export async function clearStoredAccountData(): Promise<void> {
     );
     if (staleKeys.length) await AsyncStorage.multiRemove(staleKeys);
   } catch {
-    // The authenticated session has already been removed above.
+  // Phiên đăng nhập đã được xóa ở phía trên.
   }
 }

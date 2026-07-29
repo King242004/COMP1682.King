@@ -24,7 +24,7 @@ export type Stats = {
   tdee: number | null;
 };
 
-// A null calorieGoal switches the backend back to its automatic TDEE target.
+  // calorieGoal bằng null sẽ cho backend quay lại mục tiêu TDEE tự động.
 export type ProfileUpdate = Partial<Omit<User, "calorieGoal">> & {
   calorieGoal?: number | null;
 };

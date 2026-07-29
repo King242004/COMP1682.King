@@ -7,14 +7,15 @@ const userSchema = new mongoose.Schema(
     emailVerifiedAt: { type: Date, default: null },
     password: { type: String, required: true, select: false },
     avatar: { type: String, default: null },
-    // Cloudinary identifier is kept server-side so replacing an avatar or
-    // deleting an account can remove the underlying asset as well as its URL.
     avatarPublicId: { type: String, default: null },
     gender: { type: String, enum: ["male", "female"], default: null },
     age: { type: Number, default: null },
-    weight: { type: Number, default: null }, // kg — kept in sync with the newest WeightLog
-    targetWeight: { type: Number, default: null }, // kg — goal weight for the journey
-    height: { type: Number, default: null }, // cm
+    // Cân nặng hiện tại theo kg, luôn đồng bộ với WeightLog mới nhất.
+    weight: { type: Number, default: null },
+    // Cân nặng mục tiêu theo kg.
+    targetWeight: { type: Number, default: null },
+    // Chiều cao theo cm.
+    height: { type: Number, default: null },
     goal: {
       type: String,
       enum: ["lose_weight", "gain_muscle", "eat_healthy"],
@@ -25,17 +26,13 @@ const userSchema = new mongoose.Schema(
       enum: ["sedentary", "moderate", "active"],
       default: "moderate",
     },
-    conditions: [{ type: String }], // e.g. ["diabetes", "hypertension"]
+    // Danh sách tình trạng sức khỏe, ví dụ tiểu đường hoặc cao huyết áp.
+    conditions: [{ type: String }],
     calorieGoal: { type: Number, default: 2000 },
-    // true = the user typed their own calorie goal (Settings) — the app must
-    // NEVER auto-recalculate over it. false = goal follows TDEE automatically.
     customGoal: { type: Boolean, default: false },
-    language: { type: String, enum: ["vi", "en"] }, // AI Coach reply language (unset = follow device)
-    // Saved taste preferences ("không ăn hải sản, thích gà") — read by ALL AI
-    // features (meal suggestions, weekly plan, coach) so the user types it once.
+    // Ngôn ngữ AI Coach. Nếu chưa chọn thì frontend dùng ngôn ngữ thiết bị.
+    language: { type: String, enum: ["vi", "en"] },
     tastePreferences: { type: String, default: "" },
-    // Private profile: when true, this user's posts are hidden from Explore,
-    // other people's feeds, and their public profile (only the owner sees them).
     isPrivate: { type: Boolean, default: false },
 
   },

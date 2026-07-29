@@ -1,4 +1,4 @@
-// HOME SCREEN
+// Màn Home tổng hợp nhật ký ăn uống, hoạt động, kế hoạch và Coach.
 import { useCallback, useState, useRef } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -37,6 +37,15 @@ export default function HomeScreen() {
   const [coachInsight, setCoachInsight] = useState<CoachInsight | null>(null);
   const [planToday, setPlanToday] = useState<PlanMeal[]>([]);
   const [planWorkout, setPlanWorkout] = useState<PlanDayWorkout | null>(null);
+  const [weekActiveDays, setWeekActiveDays] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  // Các ref này chặn thao tác lặp và bỏ kết quả tải đã cũ.
+  const eatingPlanRef = useRef(false);
+  const workoutDoneRef = useRef(false);
+  const insightRequestIdRef = useRef(0);
+  const handledRevisionRef = useRef(0);
 
   const loadExercises = useCallback(async () => {
     if (!token) return;
@@ -50,9 +59,7 @@ export default function HomeScreen() {
     }
   }, [token, selectedDate]);
 
-  // Weekly workout goal: days with at least one workout THIS week vs a target
-  // from the activity level (sedentary 3 / moderate 4 / active 5)
-  const [weekActiveDays, setWeekActiveDays] = useState(0);
+  // Mục tiêu tuần dựa trên mức vận động: ít 3, vừa 4 và cao 5 ngày.
   const weekTarget = ({ sedentary: 3, moderate: 4, active: 5 } as Record<string, number>)[user?.activityLevel ?? ""] ?? 4;
   const loadWeekActivity = useCallback(async () => {
     if (!token) return;
@@ -61,11 +68,11 @@ export default function HomeScreen() {
       const list = await getExerciseHistory(token, dateKey(days[0]), dateKey(days[6]));
       setWeekActiveDays(new Set(list.map((e) => e.date)).size);
     } catch {
-      // keep last value
+      // Giữ lại giá trị gần nhất nếu tải thất bại.
     }
   }, [token]);
 
-  // Today's plan (meals not yet eaten + AI workout tip) for the Home card
+  // Tải các món chưa ăn và bài tập AI của hôm nay cho thẻ Home.
   const loadPlanToday = useCallback(async () => {
     if (!token) return;
     try {
@@ -78,8 +85,7 @@ export default function HomeScreen() {
     }
   }, [token, todayKey]);
 
-  // Tick a planned meal inside the Diary → logs it to the real diary (markEaten)
-  const eatingPlanRef = useRef(false); // in-flight guard against double-tap
+  // Đánh dấu món trong thực đơn là đã ăn và ghi món đó vào nhật ký thật.
   const eatPlanned = async (p: PlanMeal) => {
     if (!token || eatingPlanRef.current) return;
     eatingPlanRef.current = true;
@@ -94,13 +100,12 @@ export default function HomeScreen() {
     }
   };
 
-  // One-tap "✓ Done" on today's AI workout → logs a real Exercise, then the
-  // Activity card refreshes to show the burn
-  const workoutDoneRef = useRef(false);
+  // Hoàn thành bài tập AI sẽ tạo Exercise thật rồi cập nhật thẻ hoạt động.
   const doPlanWorkout = async (w: PlanDayWorkout) => {
     if (!token || !w.id || workoutDoneRef.current) return;
     workoutDoneRef.current = true;
-    setPlanWorkout({ ...w, done: true }); // optimistic
+    // Cập nhật giao diện trước để thao tác có phản hồi ngay.
+    setPlanWorkout({ ...w, done: true });
     try {
       await markPlanWorkoutDone(token, w.id);
       loadExercises();
@@ -114,7 +119,7 @@ export default function HomeScreen() {
     }
   };
 
-  // Remove a planned meal right from the Diary (edit lives in the Plan screen)
+  // Xóa món dự kiến ngay trong nhật ký. Việc sửa món nằm ở màn Plan.
   const removePlanned = (p: PlanMeal) => {
     Alert.alert(t.home.removePlanTitle, t.home.removePlanMsg(p.name), [
       { text: t.common.cancel, style: "cancel" },
@@ -127,20 +132,17 @@ export default function HomeScreen() {
           try {
             await deletePlanMeal(token, p.id);
           } catch {
-            loadPlanToday(); // resync on failure
+            loadPlanToday();
           }
         },
       },
     ]);
   };
 
-  // Coach insight is for "today" only. Show cached instantly; only hit Gemini when
-  // the cache is stale (TTL) — this runs on EVERY focus, so without the TTL each
-  // visit to Home would burn a free-tier AI request.
   const lang = resolveLanguage(user?.language);
-  const locale = localeTag(lang); // date labels follow the app language, not the phone
+  // Nhãn ngày tháng đi theo ngôn ngữ trong app, không theo ngôn ngữ điện thoại.
+  const locale = localeTag(lang);
   const t = useT();
-  const insightRequestIdRef = useRef(0);
   const loadInsight = useCallback(async (force = false) => {
     if (!token || selectedDate !== todayKey) { setCoachInsight(null); return; }
     const requestId = ++insightRequestIdRef.current;
@@ -148,7 +150,8 @@ export default function HomeScreen() {
     if (requestId !== insightRequestIdRef.current) return;
     if (cached) {
       setCoachInsight(cached.insight);
-      if (!force && Date.now() - cached.at < INSIGHT_TTL_MS) return; // fresh enough → no AI call
+      // Không gọi AI lại khi insight trong bộ nhớ đệm vẫn còn mới.
+      if (!force && Date.now() - cached.at < INSIGHT_TTL_MS) return;
     }
     try {
       const fresh = await getInsight(token, todayKey, lang);
@@ -160,8 +163,7 @@ export default function HomeScreen() {
     }
   }, [token, selectedDate, todayKey, lang]);
 
-  // Pull-to-refresh re-runs every loader and explicitly requests a fresh insight.
-  const [refreshing, setRefreshing] = useState(false);
+  // Kéo để làm mới sẽ tải lại mọi nguồn và yêu cầu insight mới.
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
@@ -183,14 +185,10 @@ export default function HomeScreen() {
     loadPlanToday,
   ]);
 
-  // Refetch on focus (and when the selected date changes) so meals/workouts logged
-  // elsewhere — e.g. "Eat" from the Meal Plan — show up on return.
-  const handledRevisionRef = useRef(0);
+  // Tải lại khi focus hoặc đổi ngày để món và bài tập ghi ở màn khác xuất hiện ngay.
   useFocusEffect(
     useCallback(() => {
-      // Day rollover: if the app stayed open past midnight, "today" moved on.
-      // Follow it when the user was still looking at the old today — the state
-      // change re-renders with a fresh todayKey and re-runs this effect.
+      // Nếu app mở qua nửa đêm thì cập nhật ngày hôm nay và chạy lại effect.
       const freshToday = dateKey(new Date());
       if (todayKey !== freshToday && selectedDate === todayKey) {
         setSelectedDate(freshToday);
@@ -232,7 +230,7 @@ export default function HomeScreen() {
             loadWeekActivity();
             markHealthDataChanged();
           } catch {
-            loadExercises(); // resync on failure
+            loadExercises();
           }
         },
       },
@@ -240,7 +238,7 @@ export default function HomeScreen() {
   };
 
   const goal = user?.calorieGoal ?? 2000;
-  // Animated: the big number + ring + status chip roll to new values together
+  // Số lớn, vòng tiến độ và trạng thái cùng chuyển động tới giá trị mới.
   const eaten = useAnimatedNumber(dailyTotals.calories);
   const netCalories = eaten - totalBurned;
   const remaining = Math.max(0, goal - netCalories);
@@ -249,9 +247,8 @@ export default function HomeScreen() {
   const totalFat = dailyTotals.fat;
   const totalProtein = dailyTotals.protein;
 
-  // Diary week browsing: back through the past freely, forward only up to the
-  // current week — future diary days don't exist (that's the Plan screen's job).
-  const [weekOffset, setWeekOffset] = useState(0);
+  // Nhật ký cho phép xem tuần cũ nhưng không đi quá tuần hiện tại.
+  // Ngày tương lai thuộc trách nhiệm của màn Plan.
   const changeWeek = (delta: number) => {
     const next = weekOffset + delta;
     if (next > 0) return;
@@ -276,8 +273,7 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} colors={[theme.colors.primary]} />
         }
       >
-        {/* Header — title left, week navigator right ("Week N" keeps the arrows apart).
-            Forward is disabled at the current week: the diary has no future weeks. */}
+        {/* Tiêu đề bên trái và nút chuyển tuần bên phải. Tuần tương lai bị khóa. */}
         <View style={styles.headerRow}>
           <AppText variant="h1">
             {isToday ? t.meals.today : new Date(selectedDate + "T00:00:00").toLocaleDateString(locale, { weekday: "long", month: "short", day: "numeric" })}
@@ -292,7 +288,7 @@ export default function HomeScreen() {
             >
               <Ionicons name="chevron-back" size={20} color={theme.colors.subtle} />
             </Pressable>
-            {/* Same week-label language as the Plan screen: "This week" or a date range */}
+            {/* Nhãn tuần dùng cùng cách dịch với màn Plan. */}
             <AppText variant="body2" style={[styles.weekLabel, weekOffset === 0 && styles.weekLabelCurrent]}>
               {weekOffset === 0
                 ? t.plan.thisWeek
@@ -313,13 +309,14 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Current week row (Mon→Sun) - past/today clickable, future dimmed */}
+        {/* Dải Thứ hai đến Chủ nhật. Ngày tương lai được làm mờ. */}
         <View style={styles.weekRow}>
           {weekDays.map((d, i) => {
             const key = dateKey(d);
             const logged = loggedDays.has(key);
             const isSelected = key === selectedDate;
-            const isFuture = key > todayKey; // YYYY-MM-DD so string compare works
+            // Chuỗi YYYY-MM-DD có thể so sánh trực tiếp để nhận biết ngày tương lai.
+            const isFuture = key > todayKey;
             return (
               <Pressable
                 key={i}
@@ -328,7 +325,7 @@ export default function HomeScreen() {
                 style={({ pressed }) => [
                   styles.dayChip,
                   logged && styles.dayChipLogged,
-                  // Soft UI: every chip floats gently; the selected one sits deeper
+                  // Mọi chip có bóng nhẹ, chip được chọn trông chìm sâu hơn.
                   isSelected ? styles.dayChipSelected : shadow(1),
                   isFuture && styles.dayChipFuture,
                   pressed && styles.dayChipPressed,
@@ -340,15 +337,14 @@ export default function HomeScreen() {
                 <AppText style={[styles.dayNum, isSelected ? styles.dayNumSelected : logged && styles.dayNumLogged]}>
                   {d.getDate()}
                 </AppText>
-                {/* Tiny dot marks logged days */}
+                {/* Dấu chấm nhỏ cho biết ngày đã có dữ liệu. */}
                 <View style={[styles.dayDot, isSelected ? styles.dayDotSelected : logged && styles.dayDotLogged]} />
               </Pressable>
             );
           })}
         </View>
 
-        {/* Today summary — calories + macros merged into ONE elevated soft card
-            (Soft UI Evolution: fewer, deeper blocks instead of many flat ones) */}
+        {/* Một thẻ chính gộp calo và macro của ngày đang xem. */}
         <Card style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <View style={styles.eatenBlock}>
@@ -395,7 +391,7 @@ export default function HomeScreen() {
                 </View>
                 <AppText variant="subtle" style={styles.macroUnit}>/ {m.goal}g</AppText>
                 <View style={styles.macroTrack}>
-                  {/* width known only at runtime */}
+                  {/* Chiều rộng chỉ tính được khi component đang chạy. */}
                   <View style={[styles.macroFill, { width: `${Math.min(m.value / m.goal, 1) * 100}%`, backgroundColor: m.color }]} />
                 </View>
               </View>
@@ -403,7 +399,7 @@ export default function HomeScreen() {
           </View>
         </Card>
 
-        {/* Diary */}
+        {/* Nhật ký bữa ăn. */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <AppText variant="h2">{t.home.diary}</AppText>
@@ -430,9 +426,9 @@ export default function HomeScreen() {
             const isEmptySlot = typeMeals.length === 0 && plannedForType.length === 0;
 
             return (
-              /* Empty slots collapse to a slim card — full-height cards are for real content */
+              /* Bữa trống dùng thẻ thấp, bữa có dữ liệu dùng thẻ đầy đủ. */
               <Card key={mt.key} style={[styles.mealCard, isEmptySlot && styles.mealCardEmpty]}>
-                {/* Header: icon + label | tổng kcal + nút thêm món bên phải */}
+                {/* Biểu tượng, tên bữa, tổng kcal và nút thêm món. */}
                 <View style={styles.mealCardHeader}>
                   <View style={styles.mealCardTitle}>
                     <View style={[styles.iconBox, { backgroundColor: mt.bg }]}>
@@ -446,9 +442,7 @@ export default function HomeScreen() {
                         {typeCalories} <AppText variant="subtle" style={styles.typeKcalUnit}>{t.common.kcal}</AppText>
                       </AppText>
                     )}
-                    {/* Quick add — preselects this meal type AND the day being viewed.
-                        Back-logging a past day is allowed (people forget); the week
-                        strip already blocks future days. */}
+                    {/* Thêm nhanh chọn sẵn loại bữa và ngày. Có thể ghi bổ sung ngày cũ. */}
                     <Pressable
                       onPress={() => router.push({ pathname: "/meals/add", params: { mealType: mt.key, date: selectedDate } })}
                       hitSlop={8}
@@ -461,7 +455,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Eaten meals — soft inset rows, tap → detail (edit/delete there) */}
+                {/* Chạm món đã ăn để mở chi tiết, sửa hoặc xóa. */}
                 {typeMeals.map((m) => (
                   <Pressable
                     key={m.id}
@@ -474,7 +468,7 @@ export default function HomeScreen() {
                   </Pressable>
                 ))}
 
-                {/* Planned (not yet eaten) — dashed frame: ✓ logs it, ✕ removes it */}
+                {/* Món dự kiến có viền nét đứt, có thể ghi đã ăn hoặc xóa. */}
                 {plannedForType.map((p) => (
                   <View key={p.id} style={styles.plannedRow}>
                     <AppText variant="body2" numberOfLines={1} style={styles.plannedName}>{p.name}</AppText>
@@ -499,20 +493,19 @@ export default function HomeScreen() {
                   </View>
                 ))}
 
-                {/* Empty only when there is nothing at all in this slot;
-                    while fetching, pulse a skeleton instead of flashing "No meals logged" */}
+                {/* Chỉ hiện trống khi bữa không có món. Trong lúc tải thì hiện Skeleton. */}
                 {typeMeals.length === 0 && plannedForType.length === 0 && (
                   isLoading
                     ? <Skeleton width="55%" height={14} />
                     : <AppText variant="subtle" style={styles.emptyText}>{t.progress.noMealsLogged}</AppText>
                 )}
 
-                {/* Slim macro split bar (percent details live in the summary card above) */}
+                {/* Thanh nhỏ thể hiện tỷ lệ các macro. */}
                 {totalMacroG > 0 && (
                   <View style={styles.splitBar}>
-                    {carbPct > 0 && <View style={{ flex: carbPct, backgroundColor: theme.colors.accent }} />}
-                    {fatPct > 0 && <View style={{ flex: fatPct, backgroundColor: theme.colors.indigo }} />}
-                    {proteinPct > 0 && <View style={{ flex: proteinPct, backgroundColor: theme.colors.accent2 }} />}
+                    {carbPct > 0 && <View style={[styles.splitCarbs, { flex: carbPct }]} />}
+                    {fatPct > 0 && <View style={[styles.splitFat, { flex: fatPct }]} />}
+                    {proteinPct > 0 && <View style={[styles.splitProtein, { flex: proteinPct }]} />}
                   </View>
                 )}
               </Card>
@@ -520,11 +513,11 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {/* Activity — section header outside (same rhythm as Diary), Log as header link */}
+        {/* Phần hoạt động có liên kết ghi bài tập ở tiêu đề. */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <AppText variant="h2">{t.home.activity}</AppText>
-            {/* Allow logging for today AND past days (back-dating), never the future */}
+            {/* Cho phép ghi hôm nay và ngày cũ, không cho ghi ngày tương lai. */}
             {selectedDate <= todayKey && (
               <Pressable
                 onPress={() => router.push({ pathname: "/exercise/log-workout" as any, params: { date: selectedDate } })}
@@ -535,8 +528,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Whole card taps through to logging (today/past only) — not just the
-              small header link */}
+          {/* Cả thẻ có thể mở màn ghi bài tập cho hôm nay hoặc ngày cũ. */}
           <Pressable
             onPress={() => {
               if (selectedDate <= todayKey) {
@@ -556,7 +548,7 @@ export default function HomeScreen() {
               </AppText>
             </View>
 
-            {/* Weekly goal dots — habit loop: days trained this week vs target */}
+            {/* Các chấm so sánh số ngày tập trong tuần với mục tiêu. */}
             <View style={styles.weekDotsRow}>
               {Array.from({ length: weekTarget }).map((_, i) => (
                 <View key={i} style={[styles.weekDot, i < weekActiveDays && styles.weekDotOn]} />
@@ -566,7 +558,7 @@ export default function HomeScreen() {
               </AppText>
             </View>
 
-            {/* Net calories: eaten − burned */}
+            {/* Calo ròng bằng lượng ăn trừ lượng đốt. */}
             {totalBurned > 0 && (
               <View style={styles.netRow}>
                 <Ionicons name="checkmark-circle-outline" size={15} color={theme.colors.accent} />
@@ -574,14 +566,14 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {/* Logged workouts — soft inset rows, same language as the Diary */}
+            {/* Các bài tập đã ghi dùng cùng cách trình bày với nhật ký món. */}
             {exercises.map((ex) => (
               <View key={ex.id} style={styles.workoutRow}>
                 <View style={styles.flex1}>
                   <AppText variant="body2" numberOfLines={1} style={styles.mealName}>{ex.name}</AppText>
                   <AppText variant="subtle" style={styles.workoutMeta}>{ex.durationMin} {t.home.min} · {ex.caloriesBurned} {t.common.kcal}</AppText>
                 </View>
-                {/* Delete works on any viewed day, not just today */}
+                {/* Có thể xóa bài tập ở bất kỳ ngày nào đang xem. */}
                 <Pressable
                   onPress={() => onDeleteExercise(ex)}
                   hitSlop={6}
@@ -597,7 +589,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* For you — weekly plan status card + "Ăn gì bây giờ?" card in one section */}
+        {/* Phần dành cho bạn gồm kế hoạch tuần và gợi ý món. */}
         {isToday && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -616,7 +608,7 @@ export default function HomeScreen() {
                   <View style={[styles.iconBox, styles.planIconBox]}>
                     <Ionicons name="calendar" size={18} color={theme.colors.indigo} />
                   </View>
-                  {/* Title + gray status line (same layout as the suggest card below) */}
+                  {/* Tiêu đề và trạng thái dùng cùng bố cục với thẻ gợi ý. */}
                   <View style={styles.planTitleBlock}>
                     <AppText variant="h2" style={styles.cardTitleText}>{t.home.weeklyPlan}</AppText>
                     <AppText variant="subtle" numberOfLines={1} style={styles.smallLabel}>
@@ -654,12 +646,12 @@ export default function HomeScreen() {
               </Card>
             </Pressable>
 
-            {/* "Ăn gì bây giờ?" — extracted to src/features/plan/SuggestMealCard */}
+            {/* Thẻ gợi ý món nằm trong src/features/plan/SuggestMealCard. */}
             <SuggestMealCard planToday={planToday} />
           </View>
         )}
 
-        {/* AI Coach — flagship entry */}
+        {/* Lối vào AI Coach. */}
         {isToday && (
           <Pressable
             onPress={() => router.push("/tabs/coach" as any)}
@@ -687,7 +679,7 @@ export default function HomeScreen() {
                 <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
               </View>
 
-              {/* Top warning, if any */}
+              {/* Hiện cảnh báo quan trọng nhất nếu có. */}
               {coachInsight && coachInsight.warnings.length > 0 && (
                 <View style={styles.warnRow}>
                   <Ionicons name="warning-outline" size={15} color={theme.colors.danger} />
@@ -711,7 +703,6 @@ const styles = StyleSheet.create({
     gap: theme.space.lg,
   },
 
-  // Shared bits
   flex1: { flex: 1 },
   pressedDim: { opacity: 0.5 },
   pressedFaint: { opacity: 0.9 },
@@ -723,7 +714,7 @@ const styles = StyleSheet.create({
   iconBox: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   cardTitleText: { fontSize: 15 },
 
-  // Header + week navigator
+  // Phần đầu và nút chuyển tuần.
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   weekNav: { flexDirection: "row", alignItems: "center", gap: 6 },
   navBtn: { padding: 4 },
@@ -731,7 +722,7 @@ const styles = StyleSheet.create({
   weekLabel: { fontWeight: "700", color: theme.colors.text },
   weekLabelCurrent: { color: theme.colors.primary },
 
-  // Week day chips
+  // Các chip ngày trong tuần.
   weekRow: { flexDirection: "row", justifyContent: "space-between" },
   dayChip: {
     width: 42, paddingVertical: 9, borderRadius: 14,
@@ -756,7 +747,7 @@ const styles = StyleSheet.create({
   dayDotLogged: { backgroundColor: theme.colors.accent },
   dayDotSelected: { backgroundColor: "rgba(255,255,255,0.9)" },
 
-  // Today summary card
+  // Thẻ tổng kết ngày đang xem.
   summaryCard: { padding: theme.space.xl, gap: theme.space.lg, ...shadow(2) },
   summaryRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   eatenBlock: { gap: 10, flex: 1 },
@@ -769,8 +760,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(5,150,105,0.12)",
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
   },
-  // Over-goal = WARNING orange (accent2), not danger red — red is reserved for
-  // destructive/error states; eating over budget is a nudge, not an emergency
+  // Vượt mục tiêu dùng màu cam. Màu đỏ chỉ dành cho lỗi và hành động nguy hiểm.
   statusChipOver: { backgroundColor: "rgba(255,138,61,0.12)" },
   statusChipText: { fontSize: 13, fontWeight: "700", color: theme.colors.accent },
   statusChipTextOver: { color: theme.colors.accent2 },
@@ -788,12 +778,12 @@ const styles = StyleSheet.create({
   macroTrack: { height: 6, width: "80%", borderRadius: 99, backgroundColor: "rgba(22,78,99,0.08)", overflow: "hidden" },
   macroFill: { height: "100%", borderRadius: 99 },
 
-  // Sections
+  // Các phần nội dung.
   section: { gap: 4 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   sectionLink: { fontSize: 13, color: theme.colors.primary },
 
-  // Diary meal cards
+  // Thẻ món trong nhật ký.
   mealCard: { padding: theme.space.lg, gap: 10 },
   mealCardEmpty: { paddingVertical: theme.space.md, gap: 6 },
   mealCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -810,7 +800,7 @@ const styles = StyleSheet.create({
   mealRow: {
     flexDirection: "row", alignItems: "center", gap: 8,
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-    // Soft inset row instead of a hard border (Soft UI Evolution)
+    // Dùng nền chìm nhẹ thay cho đường viền cứng.
     backgroundColor: theme.colors.bg,
   },
   rowPressed: { backgroundColor: theme.colors.tint },
@@ -831,8 +821,11 @@ const styles = StyleSheet.create({
   eatBtnText: { fontSize: 12, fontWeight: "700", color: theme.colors.accent },
   emptyText: { fontSize: 12 },
   splitBar: { flexDirection: "row", height: 3, borderRadius: 99, overflow: "hidden", gap: 1 },
+  splitCarbs: { backgroundColor: theme.colors.accent },
+  splitFat: { backgroundColor: theme.colors.indigo },
+  splitProtein: { backgroundColor: theme.colors.accent2 },
 
-  // Activity
+  // Phần hoạt động.
   activityHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   weekDotsRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   weekDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.tint },
@@ -851,7 +844,7 @@ const styles = StyleSheet.create({
   },
   workoutMeta: { fontSize: 11 },
 
-  // For you (weekly plan card)
+  // Phần dành cho bạn và thẻ kế hoạch tuần.
   planHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   planIconBox: { backgroundColor: "rgba(99,102,241,0.12)" },
   planTitleBlock: { flex: 1, gap: 2 },
@@ -862,7 +855,7 @@ const styles = StyleSheet.create({
   tipEmoji: { fontSize: 13 },
   tipText: { flex: 1, fontSize: 12 },
 
-  // AI Coach card
+  // Thẻ AI Coach.
   coachCard: {
     padding: theme.space.lg,
     borderColor: "rgba(8,145,178,0.20)",

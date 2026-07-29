@@ -1,5 +1,5 @@
-// One meal-type selector for Add + Edit (they used to ship two different
-// designs for the same action). Style follows the Soft UI tint pattern.
+// Bộ chọn loại bữa dùng chung cho cả màn thêm và sửa món.
+// Nhờ đó cùng một thao tác luôn có cùng thiết kế.
 import { Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";

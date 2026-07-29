@@ -12,7 +12,7 @@ export function Card({
         {
           backgroundColor: theme.colors.surface,
           borderRadius: theme.radius.card,
-          // Invisible border by default — accent cards can still pass borderColor
+// Viền mặc định trong suốt, thẻ nhấn mạnh vẫn có thể truyền borderColor riêng.
           borderWidth: 1,
           borderColor: "transparent",
           padding: theme.space.lg,

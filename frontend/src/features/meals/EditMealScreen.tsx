@@ -36,7 +36,6 @@ export default function EditMealScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { meals, historyMeals, updateMeal, deleteMeal } = useMeals();
   const t = useT();
-  // Look in both lists - meal may have been opened from today's view OR meal history
   const meal = meals.find((m) => m.id === id) || historyMeals.find((m) => m.id === id);
 
   const [mealName, setMealName] = useState(meal?.name ?? "");
@@ -48,7 +47,8 @@ export default function EditMealScreen() {
   const [mealType, setMealType] = useState<MealTypeKey>((meal?.mealType as MealTypeKey) ?? "breakfast");
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [isSaving, setIsSaving] = useState(false); // block double-tap → no duplicate updates
+  // Chặn hai lần chạm liên tiếp gửi hai yêu cầu cập nhật.
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (meal) {
@@ -98,19 +98,18 @@ export default function EditMealScreen() {
       await updateMeal(id, {
         name: mealName.trim(),
         calories: parseDecimal(calories),
-        // Cleared field = 0, same rule as Add (undefined would silently KEEP the old value)
         protein: protein.trim() ? parseDecimal(protein) : 0,
         carbs: carbs.trim() ? parseDecimal(carbs) : 0,
         fat: fat.trim() ? parseDecimal(fat) : 0,
         mealType,
-        note: note.trim(), // empty string clears a previous note
+        // Chuỗi rỗng sẽ xóa ghi chú cũ của món ăn.
+        note: note.trim(),
       });
-      // Return to wherever the user came from (detail, Home or History) —
-      // replacing to History used to hijack the back stack.
       router.back();
     } catch (err: any) {
       setErrors({ mealName: err.message || t.meals.saveChangesFailed });
-      setIsSaving(false); // only re-enable on failure — success navigates away
+      // Chỉ mở lại nút khi có lỗi vì thành công sẽ chuyển sang màn khác.
+      setIsSaving(false);
     }
   };
 
@@ -126,8 +125,6 @@ export default function EditMealScreen() {
           onPress: async () => {
             if (!id) return;
             await deleteMeal(id);
-            // One step back is the detail of the meal we just deleted → skip
-            // over it and land where the user actually came from (Home/History).
             if (router.canDismiss()) router.dismiss(2);
             else router.replace("/meals/history");
           },
@@ -151,7 +148,6 @@ export default function EditMealScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with Delete on the right */}
         <ScreenHeader
           title={t.meals.editTitle}
           right={
@@ -165,7 +161,6 @@ export default function EditMealScreen() {
           }
         />
 
-        {/* Meal type — shared component (same UI as Add) */}
         <MealTypeSelector value={mealType} onChange={setMealType} />
 
         {/* Form */}

@@ -15,7 +15,8 @@ const mealSchema = new mongoose.Schema(
     fat: { type: Number, default: 0, min: 0 },
     image: { type: String, default: null },
     note: { type: String, default: "" },
-    date: { type: String, required: true }, // format: "YYYY-MM-DD"
+    // Ngày theo định dạng YYYY-MM-DD.
+    date: { type: String, required: true },
   },
   { timestamps: true }
 );

@@ -19,7 +19,7 @@ export type PlanMeal = {
 };
 type RawPlanMeal = Omit<PlanMeal, "id"> & { _id: string };
 
-// Map backend (_id) → frontend (id) shape
+// Đổi dữ liệu backend dùng `_id` sang dạng frontend dùng `id`.
 function mapPlan(p: RawPlanMeal): PlanMeal {
   return {
     id: p._id,
@@ -35,8 +35,9 @@ function mapPlan(p: RawPlanMeal): PlanMeal {
   };
 }
 
-// AI workout suggestion for one planned day. Structured fields (name/met/
-// durationMin) power the one-tap "✓ Done" — rest days carry text only.
+// Gợi ý bài tập AI cho một ngày trong kế hoạch. Các trường có cấu trúc như
+// name, met và durationMin giúp nút "✓ Xong" ghi bài tập chỉ bằng một lần chạm.
+// Ngày nghỉ chỉ có nội dung chữ.
 export type PlanDayWorkout = {
   id: string;
   date: string;
@@ -71,19 +72,19 @@ export async function getPlanMeals(
     undefined,
     token
   );
-  // Index workouts by date for easy per-day lookup
+  // Nhóm bài tập theo ngày để mỗi ngày có thể tìm nhanh.
   const workouts: Record<string, PlanDayWorkout> = {};
   for (const w of data.planWorkouts || []) workouts[w.date] = mapWorkout(w);
   return { meals: (data.planMeals || []).map(mapPlan), workouts };
 }
 
-// One-tap confirm of the AI-suggested workout → creates a real Exercise entry
+// Xác nhận bài tập AI bằng một lần chạm rồi tạo bản ghi Exercise thật.
 export async function markPlanWorkoutDone(token: string, id: string): Promise<void> {
   await apiRequest(`/plan/workout/${id}/done`, "POST", undefined, token);
 }
 
-// Ask the AI to generate the range (meals + daily workout tip). REPLACES the range.
-// `note` = optional taste preferences ("không ăn hải sản, thích gà"...).
+// Yêu cầu AI tạo món ăn và gợi ý tập cho khoảng ngày, thay thế kế hoạch cũ trong khoảng đó.
+// `note` là sở thích ăn uống không bắt buộc, ví dụ "không ăn hải sản, thích gà".
 export async function generateWeekPlan(
   token: string,
   startDate: string,
@@ -102,7 +103,7 @@ export async function generateWeekPlan(
 
 export type GroceryGroup = { name: string; items: string[] };
 
-// AI grocery shopping list built from the planned meals in the range.
+// Danh sách mua sắm do AI tạo từ các món trong khoảng kế hoạch.
 export async function getGroceryList(
   token: string,
   startDate: string,
@@ -119,9 +120,8 @@ export async function getGroceryList(
   return data.groups || [];
 }
 
-// ─── Plan week cache (AsyncStorage) ───────────────────────────────────────────
-// Stale-while-revalidate: the weekly screen paints the cached week instantly and
-// refreshes from the network in the background — no more staring at a spinner.
+// Bộ nhớ tạm kế hoạch tuần trong AsyncStorage.
+// Màn tuần hiện dữ liệu cũ ngay, sau đó âm thầm tải dữ liệu mới từ mạng.
 export type PlanWeekCache = { meals: PlanMeal[]; workouts: Record<string, PlanDayWorkout> };
 
 const planWeekKey = (weekStart: string) => `plan_week_${weekStart}`;
@@ -131,7 +131,7 @@ export async function getCachedPlanWeek(weekStart: string): Promise<PlanWeekCach
     const raw = await AsyncStorage.getItem(planWeekKey(weekStart));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PlanWeekCache;
-    // Legacy cache entries stored workouts as plain strings — normalize
+    // Dữ liệu cũ từng lưu bài tập bằng chuỗi nên cần đổi về cùng một cấu trúc.
     for (const [date, w] of Object.entries(parsed.workouts || {})) {
       if (typeof w === "string") {
         parsed.workouts[date] = { id: "", date, text: w, name: null, met: null, durationMin: null, done: false };
@@ -147,14 +147,14 @@ export async function cachePlanWeek(weekStart: string, cache: PlanWeekCache): Pr
   try {
     await AsyncStorage.setItem(planWeekKey(weekStart), JSON.stringify(cache));
   } catch {
-    // ignore cache write failures
+    // Lỗi ghi bộ nhớ tạm không được làm hỏng luồng chính.
   }
 }
 
-// ─── Grocery cache (AsyncStorage) ─────────────────────────────────────────────
-// The list costs 1 Gemini request, so it persists per (week + language) together
-// with the user's tick state. `sig` = signature of the plan it was built from —
-// when the plan changes the signature stops matching and the cache is ignored.
+// Bộ nhớ tạm danh sách mua sắm trong AsyncStorage.
+// Mỗi danh sách tốn một lượt gọi Gemini nên được lưu theo tuần và ngôn ngữ,
+// kèm trạng thái đã đánh dấu của người dùng. `sig` là dấu nhận diện kế hoạch.
+// Khi kế hoạch đổi, dấu này không còn khớp nên dữ liệu cũ sẽ bị bỏ qua.
 export type GroceryCache = { groups: GroceryGroup[]; checked: Record<string, boolean>; sig: string };
 
 const groceryCacheKey = (weekStart: string, language: string) => `grocery_${weekStart}_${language}`;
@@ -172,7 +172,7 @@ export async function cacheGrocery(weekStart: string, language: string, cache: G
   try {
     await AsyncStorage.setItem(groceryCacheKey(weekStart, language), JSON.stringify(cache));
   } catch {
-    // ignore cache write failures
+    // Lỗi ghi bộ nhớ tạm không được làm hỏng luồng chính.
   }
 }
 
@@ -180,7 +180,7 @@ export async function deletePlanMeal(token: string, id: string): Promise<void> {
   await apiRequest(`/plan/${id}`, "DELETE", undefined, token);
 }
 
-// Marks the planned meal as eaten — backend also logs it to the real diary
+// Đánh dấu món trong kế hoạch là đã ăn, backend đồng thời ghi món vào nhật ký thật.
 export async function markPlanEaten(token: string, id: string): Promise<PlanMeal> {
   const data = await apiRequest(`/plan/${id}/eaten`, "POST", undefined, token);
   return mapPlan(data.planMeal);

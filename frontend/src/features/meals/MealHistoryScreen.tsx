@@ -37,7 +37,8 @@ export default function MealHistoryScreen() {
   const { user } = useAuth();
   const { historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
-  const locale = localeTag(resolveLanguage(user?.language)); // dates follow app language
+  // Ngày tháng đi theo ngôn ngữ đã chọn trong app.
+  const locale = localeTag(resolveLanguage(user?.language));
 
   useEffect(() => {
     fetchMealHistory();
@@ -87,8 +88,8 @@ export default function MealHistoryScreen() {
           <View style={styles.group}>
             <AppText variant="subtle" style={styles.groupLabel}>{group.label}</AppText>
             {group.meals.map((item) => {
-              // Clock time = when the record was saved; only meaningful when the
-              // meal was logged the same day it was eaten (back-logged meals skip it)
+              // Chỉ hiện giờ lưu khi món được ghi đúng ngày đã ăn.
+              // Món ghi bổ sung cho ngày cũ sẽ không hiện giờ này.
               const loggedSameDay = dateKey(new Date(item.createdAt)) === item.date;
               return (
                 <Pressable

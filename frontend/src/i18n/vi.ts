@@ -1,6 +1,6 @@
 import type { Strings } from "./en";
 
-// Vietnamese catalog, must mirror en.ts exactly (typed as Strings).
+// Danh mục tiếng Việt phải có cấu trúc giống hệt en.ts.
 export const vi: Strings = {
   a11y: {
     prevWeek: "Tuần trước",

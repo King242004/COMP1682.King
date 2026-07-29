@@ -21,8 +21,6 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
-// Edit caption, post kind, dish details and photos. Existing photos can be
-// removed and new ones added, with the same 1 to 10 rule as post-create.
 export default function PostEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -38,8 +36,10 @@ export default function PostEditScreen() {
   const [mealSource, setMealSource] = useState<MealSource>("manual");
   const [dishName, setDishName] = useState("");
   const [selectedMeal, setSelectedMeal] = useState<PostMealChoice | null>(null);
-  const [keepUrls, setKeepUrls] = useState<string[]>([]); // existing images kept
-  const [newUris, setNewUris] = useState<string[]>([]);   // freshly picked, local
+  // Các ảnh cũ mà người dùng muốn giữ lại.
+  const [keepUrls, setKeepUrls] = useState<string[]>([]);
+  // Các ảnh mới vừa chọn trên thiết bị.
+  const [newUris, setNewUris] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -73,7 +73,6 @@ export default function PostEditScreen() {
   const totalImages = keepUrls.length + newUris.length;
   const recentMeals = recentUniqueMeals(historyMeals, 8);
 
-  // Photo-required rule: the post must keep at least one image after the edit
   const hasValidDish = dishName.trim().length >= 2;
   const canSave = totalImages > 0 && (postKind === "share" || hasValidDish) && !saving;
 
@@ -105,7 +104,8 @@ export default function PostEditScreen() {
         keepUrls,
         newImageUris: newUris,
       });
-      router.back(); // detail refetches on focus → shows the update
+      // Màn chi tiết sẽ tự tải lại bài viết khi được mở lại.
+      router.back();
     } catch (e: any) {
       Alert.alert(t.community.couldntSave, e.message || t.common.tryAgain);
     } finally {
@@ -155,7 +155,6 @@ export default function PostEditScreen() {
           <AppText variant="subtle" style={styles.charCount}>{caption.length}/500</AppText>
         </Card>
 
-        {/* Photos — same strip as post-create: ✕ per image + add tile */}
         <View style={styles.photoSection}>
           <AppText variant="subtle" style={styles.sectionLabel}>{t.community.photosLabel}</AppText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbRow}>
@@ -195,7 +194,6 @@ export default function PostEditScreen() {
           )}
         </View>
 
-        {/* Post kind and optional dish details */}
         <PostMealSelector
           kind={postKind}
           onKindChange={setPostKind}

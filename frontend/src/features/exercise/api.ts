@@ -10,9 +10,6 @@ export type Exercise = {
 };
 type RawExercise = Omit<Exercise, "id"> & { _id: string };
 
-// MET values from the Compendium of Physical Activities (common subset).
-// `key` looks up the localized label in t.exercise.groups / t.exercise.activities.
-// `custom` marks the "Other" entry where the user types their own MET.
 export type Activity = { key: string; met: number; icon: string; custom?: boolean };
 
 export const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
@@ -70,26 +67,23 @@ export const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
   },
 ];
 
-// SIMPLE picker list — what real memory can answer ("tập gym cỡ 1 tiếng").
-// Coarse activity classes with AVERAGE METs; the detailed 26-item catalog
-// above stays for recent-chip matching and the custom entry. Manual logging
-// is the quick-estimate lane; precision lives in AI-assigned + guided flows.
 export const SIMPLE_ACTIVITIES: Activity[] = [
   { key: "walking", met: 3.5, icon: "🚶" },
   { key: "jogging", met: 8.0, icon: "🏃" },
   { key: "cycling", met: 6.0, icon: "🚴" },
   { key: "swimming", met: 6.0, icon: "🏊" },
-  { key: "gym", met: 5.0, icon: "🏋️" },          // averages light/heavy weights, HIIT...
-  { key: "sports", met: 6.5, icon: "⚽" },        // football, badminton, tennis...
-  { key: "yoga_stretch", met: 2.8, icon: "🧘" },  // yoga, pilates, stretching
+  // Mức MET trung bình cho tập tạ nhẹ, nặng và HIIT.
+  { key: "gym", met: 5.0, icon: "🏋️" },
+  // Mức MET trung bình cho bóng đá, cầu lông và quần vợt.
+  { key: "sports", met: 6.5, icon: "⚽" },
+  // Mức MET trung bình cho yoga, pilates và giãn cơ.
+  { key: "yoga_stretch", met: 2.8, icon: "🧘" },
   { key: "dancing", met: 5.0, icon: "🕺" },
   { key: "other", met: 0, icon: "➕", custom: true },
 ];
 
-// Duration presets (minutes) — pick the nearest, don't recall the exact number
 export const DURATION_PRESETS = [15, 30, 45, 60, 90];
 
-// Live preview helper — mirrors the backend MET formula
 export function estimateBurned(met: number, durationMin: number, weight: number | null) {
   const w = weight && weight > 0 ? weight : 60;
   return Math.round(met * w * (durationMin / 60));
@@ -126,8 +120,6 @@ export async function deleteExercise(token: string, id: string): Promise<void> {
   await apiRequest(`/exercise/${id}`, "DELETE", undefined, token);
 }
 
-// Full or ranged history (newest first). Powers the "Recent" quick chips on
-// the log screen and the weekly-goal dots on Home.
 export async function getExerciseHistory(
   token: string,
   startDate?: string,
