@@ -1,11 +1,7 @@
 const axios = require("axios");
 const { visionModels } = require("../config/gemini");
 const { generateWithFallback } = require("../services/aiGenerate");
-const {
-  hasLanguageMismatch,
-  buildLanguageCorrectionPrompt,
-  mergeLocalizedText,
-} = require("../services/scanLanguage");
+const { hasLanguageMismatch, buildLanguageCorrectionPrompt, mergeLocalizedText } = require("../services/scanLanguage");
 
 exports.scanPhoto = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No image provided." });

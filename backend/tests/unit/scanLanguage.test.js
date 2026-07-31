@@ -1,8 +1,4 @@
-const {
-  hasLanguageMismatch,
-  buildLanguageCorrectionPrompt,
-  mergeLocalizedText,
-} = require("../../src/services/scanLanguage");
+const { hasLanguageMismatch, buildLanguageCorrectionPrompt, mergeLocalizedText } = require("../../src/services/scanLanguage");
 
 describe("scan result language", () => {
   test("detects Vietnamese text in an English result", () => {

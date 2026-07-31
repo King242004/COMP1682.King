@@ -1,10 +1,5 @@
 const express = require("express");
-const {
-  addExercise,
-  getExercisesByDate,
-  getExerciseHistory,
-  deleteExercise,
-} = require("../controllers/exerciseController");
+const { addExercise, getExercisesByDate, getExerciseHistory, deleteExercise } = require("../controllers/exerciseController");
 const protect = require("../middleware/auth");
 
 const router = express.Router();

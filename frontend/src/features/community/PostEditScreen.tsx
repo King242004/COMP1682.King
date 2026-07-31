@@ -6,12 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
 import { getPost, updatePost, type FeedPost } from "@/features/community/api";
 import { PhotoPickerModal } from "@/features/community/PhotoPickerModal";
-import {
-  PostMealSelector,
-  type MealSource,
-  type PostKind,
-  type PostMealChoice,
-} from "@/features/community/PostMealSelector";
+import { PostMealSelector, type MealSource, type PostKind, type PostMealChoice } from "@/features/community/PostMealSelector";
 import { recentUniqueMeals } from "@/utils/meals/mealSlot";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

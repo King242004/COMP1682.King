@@ -4,14 +4,7 @@ const { sendOTP } = require("../config/mailer");
 const OTP = require("../models/OTP");
 const User = require("../models/User");
 const { reserveOTP, verifyOTPCode } = require("../services/otpService");
-const {
-  OTP_PURPOSE,
-  OTP_TTL_MS,
-  generateOTP,
-  hashOTP,
-  normalizeEmail,
-  waitForResponseFloor,
-} = require("../utils/otpSecurity");
+const { OTP_PURPOSE, OTP_TTL_MS, generateOTP, hashOTP, normalizeEmail, waitForResponseFloor } = require("../utils/otpSecurity");
 
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "30d" });

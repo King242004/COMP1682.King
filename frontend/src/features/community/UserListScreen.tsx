@@ -2,9 +2,7 @@ import { useState, useCallback } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import {
-  getFollowers, getFollowing, followUser, unfollowUser, type DiscoverUser,
-} from "@/features/community/api";
+import { getFollowers, getFollowing, followUser, unfollowUser, type DiscoverUser } from "@/features/community/api";
 import { UserRow } from "@/features/community/UserRow";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

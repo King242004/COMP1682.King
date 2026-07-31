@@ -1,17 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Image,
-  Keyboard,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from "react-native";
+import { Alert, FlatList, Image, Keyboard, Platform, Pressable, StyleSheet, TextInput, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -19,19 +7,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useHealthData } from "@/context/HealthDataContext";
 import { useMeals } from "@/context/MealsContext";
-import {
-  getInsight,
-  chatWithCoach,
-  getChatHistory,
-  clearChatHistory,
-  getCachedInsight,
-  cacheInsight,
-  INSIGHT_TTL_MS,
-  logMealFromMessage,
-  unlogMealFromMessage,
-  type CoachInsight,
-  type ChatMessage,
-} from "@/features/coach/api";
+import { getInsight, chatWithCoach, getChatHistory, clearChatHistory, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, logMealFromMessage, unlogMealFromMessage, type CoachInsight, type ChatMessage } from "@/features/coach/api";
 import { compressToBase64 } from "@/features/coach/image";
 import { TypingDots } from "@/features/coach/TypingDots";
 import { InsightCard } from "@/features/coach/InsightCard";

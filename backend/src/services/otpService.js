@@ -1,9 +1,5 @@
 const OTP = require("../models/OTP");
-const {
-  OTP_MAX_ATTEMPTS,
-  OTP_RESEND_COOLDOWN_MS,
-  isOTPMatch,
-} = require("../utils/otpSecurity");
+const { OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_MS, isOTPMatch } = require("../utils/otpSecurity");
 
 async function reserveOTP({ email, purpose, codeHash, expiresAt }) {
   const cooldownCutoff = new Date(Date.now() - OTP_RESEND_COOLDOWN_MS);

@@ -1,14 +1,5 @@
 import { ReactNode } from "react";
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  StatusBar,
-  TouchableWithoutFeedback,
-  View,
-  type ViewStyle,
-} from "react-native";
+import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, StatusBar, TouchableWithoutFeedback, View, type ViewStyle } from "react-native";
 import { theme } from "../theme";
 
 export function Screen({

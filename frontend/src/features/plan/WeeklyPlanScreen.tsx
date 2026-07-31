@@ -4,21 +4,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useHealthData } from "@/context/HealthDataContext";
-import {
-  getPlanMeals,
-  deletePlanMeal,
-  markPlanEaten,
-  markPlanWorkoutDone,
-  generateWeekPlan,
-  getGroceryList,
-  getCachedGrocery,
-  cacheGrocery,
-  getCachedPlanWeek,
-  cachePlanWeek,
-  type PlanMeal,
-  type PlanDayWorkout,
-  type GroceryGroup,
-} from "@/features/plan/api";
+import { getPlanMeals, deletePlanMeal, markPlanEaten, markPlanWorkoutDone, generateWeekPlan, getGroceryList, getCachedGrocery, cacheGrocery, getCachedPlanWeek, cachePlanWeek, type PlanMeal, type PlanDayWorkout, type GroceryGroup } from "@/features/plan/api";
 import { GenerateModal } from "@/features/plan/GenerateModal";
 import { GroceryModal } from "@/features/plan/GroceryModal";
 import { resolveLanguage, localeTag } from "@/utils/language";

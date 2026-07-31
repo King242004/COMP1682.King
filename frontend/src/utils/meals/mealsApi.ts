@@ -1,10 +1,4 @@
-import type {
-  DailyTotals,
-  Meal,
-  NewMeal,
-  RawMeal,
-  UpdateMeal,
-} from "@/context/mealTypes";
+import type { DailyTotals, Meal, NewMeal, RawMeal, UpdateMeal } from "@/context/mealTypes";
 import { apiRequest } from "../api";
 
 function mapMeal(meal: RawMeal): Meal {

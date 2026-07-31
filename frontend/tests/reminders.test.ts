@@ -9,12 +9,7 @@ jest.mock("@/utils/notifications/notifications", () => ({
   scheduleDailyReminder: jest.fn(),
 }));
 
-import {
-  emptyReminders,
-  enabledCount,
-  formatTime,
-  parseTime,
-} from "@/utils/notifications/reminders";
+import { emptyReminders, enabledCount, formatTime, parseTime } from "@/utils/notifications/reminders";
 
 describe("reminder helpers", () => {
   test.each([

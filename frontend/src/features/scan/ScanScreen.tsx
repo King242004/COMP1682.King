@@ -4,11 +4,7 @@ import { useRouter } from "expo-router";
 import { CameraView, CameraType, useCameraPermissions, scanFromURLAsync, type BarcodeScanningResult } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/context/AuthContext";
-import {
-  compressImage, scanImage, lookupBarcode,
-  BARCODE_TYPES, BARCODE_SETTINGS,
-  type Candidate, type Product, type ScanMode,
-} from "@/features/scan/api";
+import { compressImage, scanImage, lookupBarcode, BARCODE_TYPES, BARCODE_SETTINGS, type Candidate, type Product, type ScanMode } from "@/features/scan/api";
 import { ScanOverlay } from "@/features/scan/ScanOverlay";
 import { CandidatesSheet } from "@/features/scan/CandidatesSheet";
 import { ProductSheet } from "@/features/scan/ProductSheet";

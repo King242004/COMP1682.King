@@ -1,9 +1,4 @@
-import type {
-  AuthSession,
-  ProfileResponse,
-  ProfileUpdate,
-  UserResponse,
-} from "@/context/authTypes";
+import type { AuthSession, ProfileResponse, ProfileUpdate, UserResponse } from "@/context/authTypes";
 import { apiFetch, apiRequest } from "../api";
 
 export function loginRequest(email: string, password: string): Promise<AuthSession> {

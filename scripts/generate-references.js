@@ -60,7 +60,7 @@ const children = [
   new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { after: 120 },
-    children: [new TextRun({ text: "Đồ án Meal Snap (HealthySnap) — COMP-1682 · Lê Mạc Hoàng King", size: 22, color: "2563EB" })],
+    children: [new TextRun({ text: "Đồ án MealMate (HealthySnap) — COMP-1682 · Lê Mạc Hoàng King", size: 22, color: "2563EB" })],
   }),
   new Paragraph({
     alignment: AlignmentType.CENTER,
@@ -81,7 +81,7 @@ const children = [
   ...ref({
     cite: "Meyers, A., et al. (2015). Im2Calories: Towards an Automated Mobile Vision Food Diary. IEEE International Conference on Computer Vision (ICCV).",
     summary: "Hệ thống của Google ước lượng calo trực tiếp từ ảnh món ăn trên di động: nhận diện món, phân đoạn, ước lượng thể tích và quy ra năng lượng.",
-    relevance: "Tiền thân học thuật trực tiếp của tính năng AI Scan trong Meal Snap — so sánh cách tiếp cận CNN chuyên dụng (2015) với multimodal LLM (2026).",
+    relevance: "Tiền thân học thuật trực tiếp của tính năng AI Scan trong MealMate — so sánh cách tiếp cận CNN chuyên dụng (2015) với multimodal LLM (2026).",
   }),
   ...ref({
     cite: "Thames, Q., et al. (2021). Nutrition5k: Towards Automatic Nutritional Understanding of Generic Food. IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR).",
@@ -96,12 +96,12 @@ const children = [
   ...ref({
     cite: "Nguyen, T. T., et al. (2021). VinaFood21: A Novel Dataset for Evaluating Vietnamese Food Recognition. arXiv preprint.",
     summary: "Bộ dữ liệu ảnh món ăn Việt Nam (21 món phổ biến như phở, bún bò, cơm tấm) phục vụ đánh giá mô hình nhận diện món Việt.",
-    relevance: "Chứng minh nhận diện món ăn Việt là bài toán được cộng đồng quan tâm; lý giải vì sao Meal Snap chọn LLM đa phương thức (hiểu ngữ cảnh món Việt) thay vì model phân loại đóng.",
+    relevance: "Chứng minh nhận diện món ăn Việt là bài toán được cộng đồng quan tâm; lý giải vì sao MealMate chọn LLM đa phương thức (hiểu ngữ cảnh món Việt) thay vì model phân loại đóng.",
   }),
   ...ref({
     cite: "Gemini Team, Google (2024). Gemini: A Family of Highly Capable Multimodal Models. arXiv:2312.11805.",
     summary: "Báo cáo kỹ thuật về họ mô hình Gemini — kiến trúc đa phương thức xử lý đồng thời văn bản và hình ảnh.",
-    relevance: "Trích dẫn chính thức cho công nghệ AI vision mà Meal Snap sử dụng (Gemini 2.5 Flash).",
+    relevance: "Trích dẫn chính thức cho công nghệ AI vision mà MealMate sử dụng (Gemini 2.5 Flash).",
   }),
 
   // ════════════════════════════════════════════════════════════
@@ -109,17 +109,17 @@ const children = [
   ...ref({
     cite: "Martin, C. K., et al. (2009). A novel method to remotely measure food intake of free-living individuals in real time: the Remote Food Photography Method. British Journal of Nutrition, 101(3).",
     summary: "Đề xuất phương pháp đo lượng ăn từ xa bằng ảnh chụp bữa ăn (RFPM), được kiểm chứng về độ tin cậy so với phương pháp truyền thống.",
-    relevance: "Nền tảng phương pháp luận cho việc 'chụp ảnh thay vì nhập tay' — triết lý cốt lõi của Meal Snap.",
+    relevance: "Nền tảng phương pháp luận cho việc 'chụp ảnh thay vì nhập tay' — triết lý cốt lõi của MealMate.",
   }),
   ...ref({
     cite: "Gemming, L., Utter, J., & Ni Mhurchu, C. (2015). Image-assisted dietary assessment: a systematic review of the evidence. Journal of the Academy of Nutrition and Dietetics, 115(1).",
     summary: "Tổng quan hệ thống cho thấy đánh giá khẩu phần có hỗ trợ hình ảnh cải thiện độ chính xác và giảm gánh nặng ghi chép so với tự khai báo.",
-    relevance: "Bằng chứng khoa học rằng cách tiếp cận bằng ảnh của Meal Snap vượt trội nhập liệu thủ công về trải nghiệm và độ chính xác.",
+    relevance: "Bằng chứng khoa học rằng cách tiếp cận bằng ảnh của MealMate vượt trội nhập liệu thủ công về trải nghiệm và độ chính xác.",
   }),
   ...ref({
     cite: "Cordeiro, F., et al. (2015). Rethinking the Mobile Food Journal: Exploring Opportunities for Lightweight Photo-Based Capture. ACM CHI Conference on Human Factors in Computing Systems.",
     summary: "Nghiên cứu HCI chỉ ra người dùng bỏ cuộc với food journal truyền thống vì quá phiền; ghi chép bằng ảnh 'nhẹ' giữ chân người dùng tốt hơn.",
-    relevance: "Căn cứ thiết kế UX: flow chụp → AI điền sẵn → xác nhận 1 chạm của Meal Snap chính là 'lightweight capture' mà bài này khuyến nghị.",
+    relevance: "Căn cứ thiết kế UX: flow chụp → AI điền sẵn → xác nhận 1 chạm của MealMate chính là 'lightweight capture' mà bài này khuyến nghị.",
   }),
 
   // ════════════════════════════════════════════════════════════
@@ -127,7 +127,7 @@ const children = [
   ...ref({
     cite: "Mifflin, M. D., St Jeor, S. T., et al. (1990). A new predictive equation for resting energy expenditure in healthy individuals. The American Journal of Clinical Nutrition, 51(2).",
     summary: "Công bố phương trình Mifflin-St Jeor ước tính năng lượng chuyển hóa cơ bản (BMR) từ cân nặng, chiều cao, tuổi, giới tính — được ADA đánh giá là chính xác nhất cho người trưởng thành.",
-    relevance: "Đây CHÍNH LÀ công thức backend Meal Snap dùng để tính TDEE và gợi ý mục tiêu calo. Bắt buộc trích dẫn.",
+    relevance: "Đây CHÍNH LÀ công thức backend MealMate dùng để tính TDEE và gợi ý mục tiêu calo. Bắt buộc trích dẫn.",
   }),
   ...ref({
     cite: "Harris, J. A., & Benedict, F. G. (1918). A Biometric Study of Human Basal Metabolism. Proceedings of the National Academy of Sciences, 4(12).",
@@ -165,7 +165,7 @@ const children = [
   ...ref({
     cite: "Lieffers, J. R., & Hanning, R. M. (2012). Dietary assessment and self-monitoring with nutrition applications for mobile devices. Canadian Journal of Dietetic Practice and Research, 73(3).",
     summary: "Đánh giá các ứng dụng dinh dưỡng di động thời kỳ đầu: tiện lợi nhưng hạn chế về cơ sở dữ liệu món ăn và nhập liệu thủ công.",
-    relevance: "Chỉ ra khoảng trống (gap) mà Meal Snap lấp: nhận diện tự động bằng AI thay vì tra cứu thủ công.",
+    relevance: "Chỉ ra khoảng trống (gap) mà MealMate lấp: nhận diện tự động bằng AI thay vì tra cứu thủ công.",
   }),
 
   // ════════════════════════════════════════════════════════════
@@ -173,12 +173,12 @@ const children = [
   ...ref({
     cite: "Laranjo, L., et al. (2015). The influence of social networking sites on health behavior change: a systematic review and meta-analysis. Journal of the American Medical Informatics Association, 22(1).",
     summary: "Tổng quan hệ thống: can thiệp sức khỏe qua mạng xã hội tạo thay đổi hành vi tích cực có ý nghĩa thống kê.",
-    relevance: "Căn cứ học thuật TRỰC TIẾP cho định hướng cộng đồng chia sẻ kiểu WEAR của Meal Snap.",
+    relevance: "Căn cứ học thuật TRỰC TIẾP cho định hướng cộng đồng chia sẻ kiểu WEAR của MealMate.",
   }),
   ...ref({
     cite: "Hwang, K. O., et al. (2010). Social support in an Internet weight loss community. International Journal of Medical Informatics, 79(1).",
     summary: "Phân tích cộng đồng giảm cân trực tuyến: sự khích lệ, chia sẻ kinh nghiệm và cảm giác trách nhiệm với nhóm là động lực duy trì chính.",
-    relevance: "Giải thích vì sao tính năng đăng bài + follow (không cần chat) vẫn đủ tạo social support — đúng thiết kế Meal Snap chọn.",
+    relevance: "Giải thích vì sao tính năng đăng bài + follow (không cần chat) vẫn đủ tạo social support — đúng thiết kế MealMate chọn.",
   }),
   ...ref({
     cite: "Maher, C. A., et al. (2014). Are health behavior change interventions delivered through online social networks effective? A systematic review. Journal of Medical Internet Research, 16(2).",
@@ -229,7 +229,7 @@ const children = [
 
 const doc = new Document({
   creator: "Le Mac Hoang King",
-  title: "Meal Snap - Academic References",
+  title: "MealMate - Academic References",
   styles: {
     default: { document: { run: { font: "Calibri", size: 22 } } },
     paragraphStyles: [

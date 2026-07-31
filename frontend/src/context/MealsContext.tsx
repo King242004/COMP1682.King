@@ -1,20 +1,8 @@
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { useAuth } from "./AuthContext";
 import { useHealthData } from "./HealthDataContext";
-import type {
-  DailyTotals,
-  Meal,
-  MealsContextType,
-  NewMeal,
-  UpdateMeal,
-} from "./mealTypes";
-import {
-  addMealRequest,
-  deleteMealRequest,
-  fetchMealHistoryRequest,
-  fetchMealsByDateRequest,
-  updateMealRequest,
-} from "../utils/meals/mealsApi";
+import type { DailyTotals, Meal, MealsContextType, NewMeal, UpdateMeal } from "./mealTypes";
+import { addMealRequest, deleteMealRequest, fetchMealHistoryRequest, fetchMealsByDateRequest, updateMealRequest } from "../utils/meals/mealsApi";
 
 export type { Meal } from "./mealTypes";
 

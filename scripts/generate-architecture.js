@@ -209,7 +209,7 @@ const titlePage = [
   new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { after: 800 },
-    children: [new TextRun({ text: "Meal Snap (HealthySnap)", bold: true, size: 48, color: "0B2A6F" })],
+    children: [new TextRun({ text: "MealMate (HealthySnap)", bold: true, size: 48, color: "0B2A6F" })],
   }),
   new Paragraph({
     alignment: AlignmentType.CENTER,
@@ -231,7 +231,7 @@ const titlePage = [
 // ─── Overview ───────────────────────────────────────────────────────────────
 const overview = [
   h1("1. Giới thiệu tài liệu"),
-  p("Tài liệu này mô tả chi tiết luồng xử lý dữ liệu của ứng dụng Meal Snap theo mô hình 3 khối:"),
+  p("Tài liệu này mô tả chi tiết luồng xử lý dữ liệu của ứng dụng MealMate theo mô hình 3 khối:"),
   bullet("📥 INPUT VARIABLES — Biến đầu vào (data type, ràng buộc, ví dụ)"),
   bullet("⚙️ ALGORITHM / FRAMEWORK — Thuật toán xử lý (pseudocode + công thức toán)"),
   bullet("📤 OUTPUT VARIABLES — Biến đầu ra (data type, ví dụ)"),
@@ -1160,7 +1160,7 @@ const sectionCommon = [
 // ─── Final Document ────────────────────────────────────────────────────────
 const doc = new Document({
   creator: "Le Mac Hoang King",
-  title: "Data Flow - Meal Snap",
+  title: "Data Flow - MealMate",
   description: "Input/Algorithm/Output documentation cho mỗi use case",
 
   styles: {
@@ -1197,7 +1197,7 @@ const doc = new Document({
       default: new Header({
         children: [new Paragraph({
           alignment: AlignmentType.RIGHT,
-          children: [new TextRun({ text: "Meal Snap — Luồng xử lý dữ liệu", italics: true, size: 18, color: "888888" })],
+          children: [new TextRun({ text: "MealMate — Luồng xử lý dữ liệu", italics: true, size: 18, color: "888888" })],
         })],
       }),
     },

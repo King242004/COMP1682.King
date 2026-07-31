@@ -3,10 +3,7 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "r
 import { useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
-import {
-  MEAL_KEYS, applyReminder, emptyReminders, formatTime, loadReminders, parseTime,
-  type MealKey, type ReminderMap,
-} from "@/utils/notifications/reminders";
+import { MEAL_KEYS, applyReminder, emptyReminders, formatTime, loadReminders, parseTime, type MealKey, type ReminderMap } from "@/utils/notifications/reminders";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";

@@ -1,8 +1,4 @@
-const {
-  hasLanguageMismatch,
-  mergeTextValues,
-  normalizeCoachText,
-} = require("../../src/services/coachLanguage");
+const { hasLanguageMismatch, mergeTextValues, normalizeCoachText } = require("../../src/services/coachLanguage");
 
 describe("Coach response language", () => {
   test("detects Vietnamese in an English response", () => {

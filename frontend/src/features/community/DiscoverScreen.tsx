@@ -3,9 +3,7 @@ import { FlatList, Pressable, StyleSheet, TextInput, View, ActivityIndicator } f
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
-import {
-  searchUsers, getSuggestions, followUser, unfollowUser, type DiscoverUser,
-} from "@/features/community/api";
+import { searchUsers, getSuggestions, followUser, unfollowUser, type DiscoverUser } from "@/features/community/api";
 import { UserRow } from "@/features/community/UserRow";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

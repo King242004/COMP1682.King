@@ -73,7 +73,7 @@ const children = [
   new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { after: 240 },
-    children: [new TextRun({ text: "Meal Snap (HealthySnap) — Smart Nutrition Tracking & Personal Health App", size: 24, color: "2563EB", bold: true })],
+    children: [new TextRun({ text: "MealMate (HealthySnap) — Smart Nutrition Tracking & Personal Health App", size: 24, color: "2563EB", bold: true })],
   }),
   dataTable([], [], [3000, 6360]) && new Table({
     width: { size: 9360, type: WidthType.DXA },
@@ -93,7 +93,7 @@ const children = [
 
   // ── 1. Định hướng ──
   h1("1. Định hướng dự án"),
-  p("Meal Snap là ứng dụng di động theo dõi dinh dưỡng cá nhân, điểm nhấn là dùng AI nhận diện món ăn từ ảnh chụp (hỗ trợ tốt món ăn Việt Nam) và tự động ước lượng calo, macro. Ứng dụng tính toán chỉ số sức khỏe (BMI, TDEE), gợi ý mục tiêu calo theo mục tiêu cá nhân (giảm cân / tăng cơ / ăn lành mạnh) và nhắc nhở thói quen hằng ngày."),
+  p("MealMate là ứng dụng di động theo dõi dinh dưỡng cá nhân, điểm nhấn là dùng AI nhận diện món ăn từ ảnh chụp (hỗ trợ tốt món ăn Việt Nam) và tự động ước lượng calo, macro. Ứng dụng tính toán chỉ số sức khỏe (BMI, TDEE), gợi ý mục tiêu calo theo mục tiêu cá nhân (giảm cân / tăng cơ / ăn lành mạnh) và nhắc nhở thói quen hằng ngày."),
   p("Về dài hạn, dự án phát triển theo mô hình mạng xã hội chia sẻ tương tự ứng dụng WEAR (Nhật Bản) nhưng dành cho đồ ăn healthy: người dùng đăng bài chia sẻ bữa ăn (kèm thẻ dinh dưỡng lấy từ dữ liệu đã log/scan), kinh nghiệm tập luyện và quản lý cân nặng; tương tác bằng like / lưu bài / follow — không có tính năng chat. Điểm khác biệt so với mạng xã hội thông thường: mỗi bài đăng gắn dữ liệu dinh dưỡng thật, người xem có thể lưu món về nhật ký của chính mình."),
 
   // ── 2. Tech stack ──
@@ -187,7 +187,7 @@ const children = [
 
 const doc = new Document({
   creator: "Le Mac Hoang King",
-  title: "Meal Snap - Requirements",
+  title: "MealMate - Requirements",
   styles: {
     default: { document: { run: { font: "Calibri", size: 22 } } },
     paragraphStyles: [

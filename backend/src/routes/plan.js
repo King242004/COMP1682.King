@@ -1,14 +1,5 @@
 const express = require("express");
-const {
-  addPlanMeal,
-  getPlanMeals,
-  updatePlanMeal,
-  deletePlanMeal,
-  markEaten,
-  markWorkoutDone,
-  generatePlan,
-  groceryList,
-} = require("../controllers/planController");
+const { addPlanMeal, getPlanMeals, updatePlanMeal, deletePlanMeal, markEaten, markWorkoutDone, generatePlan, groceryList } = require("../controllers/planController");
 const protect = require("../middleware/auth");
 const { aiLimiter } = require("../middleware/rateLimiters");
 

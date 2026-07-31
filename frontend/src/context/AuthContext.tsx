@@ -4,31 +4,9 @@ import { router } from "expo-router";
 import { setOnUnauthorized } from "../utils/api";
 import { getStrings } from "../i18n";
 import { resolveLanguage } from "../utils/language";
-import type {
-  AuthContextType,
-  AuthSession,
-  ProfileUpdate,
-  Stats,
-  User,
-  UserPatch,
-} from "./authTypes";
-import {
-  changeNameRequest,
-  deleteAccountRequest,
-  fetchProfileRequest,
-  loginRequest,
-  registerRequest,
-  sendRegistrationOTP,
-  updateProfileRequest,
-  uploadAvatarRequest,
-} from "../utils/auth/accountApi";
-import {
-  clearStoredAccountData,
-  clearStoredAuthSession,
-  loadStoredAuthSession,
-  saveStoredAuthSession,
-  saveStoredUser,
-} from "../utils/auth/authSession";
+import type { AuthContextType, AuthSession, ProfileUpdate, Stats, User, UserPatch } from "./authTypes";
+import { changeNameRequest, deleteAccountRequest, fetchProfileRequest, loginRequest, registerRequest, sendRegistrationOTP, updateProfileRequest, uploadAvatarRequest } from "../utils/auth/accountApi";
+import { clearStoredAccountData, clearStoredAuthSession, loadStoredAuthSession, saveStoredAuthSession, saveStoredUser } from "../utils/auth/authSession";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 

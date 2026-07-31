@@ -13,14 +13,7 @@ const Follow = require("../models/Follow");
 const ChatMessage = require("../models/ChatMessage");
 const Notification = require("../models/Notification");
 const { reserveOTP, verifyOTPCode } = require("../services/otpService");
-const {
-  OTP_PURPOSE,
-  OTP_TTL_MS,
-  generateOTP,
-  hashOTP,
-  normalizeEmail,
-  waitForResponseFloor,
-} = require("../utils/otpSecurity");
+const { OTP_PURPOSE, OTP_TTL_MS, generateOTP, hashOTP, normalizeEmail, waitForResponseFloor } = require("../utils/otpSecurity");
 
 function uploadAvatarToCloudinary(buffer) {
   return new Promise((resolve, reject) => {

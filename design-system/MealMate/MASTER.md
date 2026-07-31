@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** Meal Snap
+**Project:** MealMate
 **Generated:** 2026-07-03 03:22:54
 **Category:** Mental Health App
 

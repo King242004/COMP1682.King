@@ -1,34 +1,10 @@
 const express = require("express");
 const protect = require("../middleware/auth");
 const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
-const {
-  createPost,
-  deletePost,
-  getPost,
-  toggleLike,
-  toggleSave,
-  updatePost,
-} = require("../controllers/community/postController");
-const {
-  getExplore,
-  getFeed,
-  getSavedPosts,
-  getUserPosts,
-} = require("../controllers/community/feedController");
-const {
-  followUser,
-  getFollowers,
-  getFollowing,
-  getPublicProfile,
-  getSuggestions,
-  searchUsers,
-  unfollowUser,
-} = require("../controllers/community/socialController");
-const {
-  getNotifications,
-  getUnreadCount,
-  markNotificationsRead,
-} = require("../controllers/community/notificationController");
+const { createPost, deletePost, getPost, toggleLike, toggleSave, updatePost } = require("../controllers/community/postController");
+const { getExplore, getFeed, getSavedPosts, getUserPosts } = require("../controllers/community/feedController");
+const { followUser, getFollowers, getFollowing, getPublicProfile, getSuggestions, searchUsers, unfollowUser } = require("../controllers/community/socialController");
+const { getNotifications, getUnreadCount, markNotificationsRead } = require("../controllers/community/notificationController");
 
 const router = express.Router();
 

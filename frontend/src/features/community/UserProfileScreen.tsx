@@ -4,10 +4,7 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
-import {
-  getPublicProfile, getUserPosts, getSavedPosts, followUser, unfollowUser,
-  type FeedPost, type PublicProfile,
-} from "@/features/community/api";
+import { getPublicProfile, getUserPosts, getSavedPosts, followUser, unfollowUser, type FeedPost, type PublicProfile } from "@/features/community/api";
 import { PostTile } from "@/features/community/PostTile";
 import { initials } from "@/features/community/helpers";
 import { useT } from "@/i18n";

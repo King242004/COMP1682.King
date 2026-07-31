@@ -6,11 +6,7 @@ jest.mock("../../src/models/OTP", () => ({
 }));
 
 const OTP = require("../../src/models/OTP");
-const {
-  recordFailedOTPAttempt,
-  reserveOTP,
-  verifyOTPCode,
-} = require("../../src/services/otpService");
+const { recordFailedOTPAttempt, reserveOTP, verifyOTPCode } = require("../../src/services/otpService");
 const { hashOTP } = require("../../src/utils/otpSecurity");
 
 describe("OTP atomic state changes", () => {

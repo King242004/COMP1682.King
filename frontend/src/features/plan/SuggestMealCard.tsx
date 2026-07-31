@@ -4,13 +4,7 @@ import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { useMeals } from "@/context/MealsContext";
-import {
-  suggestNextMeal,
-  getCachedSuggestions,
-  cacheSuggestions,
-  nextMealSlot,
-  type MealSuggestions,
-} from "@/features/plan/suggest";
+import { suggestNextMeal, getCachedSuggestions, cacheSuggestions, nextMealSlot, type MealSuggestions } from "@/features/plan/suggest";
 import type { PlanMeal } from "@/features/plan/api";
 import { todayKey } from "@/utils/date";
 import { aiResetWhen } from "@/utils/aiQuota";

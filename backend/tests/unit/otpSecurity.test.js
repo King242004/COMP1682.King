@@ -1,10 +1,4 @@
-const {
-  OTP_PURPOSE,
-  generateOTP,
-  hashOTP,
-  isOTPMatch,
-  normalizeEmail,
-} = require("../../src/utils/otpSecurity");
+const { OTP_PURPOSE, generateOTP, hashOTP, isOTPMatch, normalizeEmail } = require("../../src/utils/otpSecurity");
 
 describe("OTP security helpers", () => {
   beforeAll(() => {

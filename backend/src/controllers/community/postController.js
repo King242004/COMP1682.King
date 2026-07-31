@@ -1,12 +1,7 @@
 const cloudinary = require("../../config/cloudinary");
 const Notification = require("../../models/Notification");
 const Post = require("../../models/Post");
-const {
-  addNotification,
-  postHiddenFrom,
-  shapePost,
-  uploadToCloudinary,
-} = require("./helpers");
+const { addNotification, postHiddenFrom, shapePost, uploadToCloudinary } = require("./helpers");
 
 exports.createPost = async (req, res) => {
   const { caption, dishName, mealName, calories, protein, carbs, fat } = req.body;
