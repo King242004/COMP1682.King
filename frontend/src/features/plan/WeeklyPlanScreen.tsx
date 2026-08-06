@@ -1,22 +1,43 @@
+// Màn Kế hoạch tuần. Đây là file BẮT ĐẦU của luồng tạo kế hoạch an toàn,
+// một trong bốn luồng quan trọng nhất của app.
+// LUỒNG TẠO KẾ HOẠCH AN TOÀN
+// 1. Bấm nút Tạo, GenerateModal mở ra cho chọn phạm vi và ghi chú khẩu vị
+// 2. Bấm xác nhận, chạy runGenerate ở file này
+// 3. generateWeekPlan          (POST /plan/generate)
+// 4. backend planController.generatePlan đọc hồ sơ và BỆNH NỀN
+// 5. LỚP AN TOÀN 1, đưa bệnh nền vào câu lệnh gửi cho Gemini
+// 6. Gemini trả các món cho từng ngày
+// 7. LỚP AN TOÀN 2, conditionFilter lọc lại theo tên món ở server
+// 8. backend ghi kế hoạch mới thành công rồi mới thay kế hoạch cũ trong khoảng ngày
+// 9. màn này tải lại và hiện kế hoạch
+// Vì sao cần hai lớp: lớp 1 chỉ là lời dặn, AI có thể quên.
+// Lớp 2 chạy ở server nên người dùng không tắt được.
+// Giới hạn phải nói rõ khi bảo vệ: lớp 2 chỉ đọc TÊN món,
+// không phân tích được nguyên liệu, nên đây là lưới chắn thêm
+// chứ không phải bảo đảm y khoa.
+// BIẾN KẾ HOẠCH THÀNH DỮ LIỆU THẬT
+//   "Đã ăn" gọi POST /plan/:id/eaten, backend chép món sang nhật ký.
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
-import { useHealthData } from "@/context/HealthDataContext";
-import { getPlanMeals, deletePlanMeal, markPlanEaten, markPlanWorkoutDone, generateWeekPlan, getGroceryList, getCachedGrocery, cacheGrocery, getCachedPlanWeek, cachePlanWeek, type PlanMeal, type PlanDayWorkout, type GroceryGroup } from "@/features/plan/api";
+import { useAuth } from "@/features/auth/AuthContext";
+import { useHealthDataRefresh } from "@/context/HealthDataRefreshContext";
+import { getPlanMeals, deletePlanMeal, markPlanEaten, generateWeekPlan, getGroceryList, getCachedGrocery, cacheGrocery, getCachedPlanWeek, cachePlanWeek, type PlanMeal, type PlanDayWorkout, type GroceryGroup } from "@/features/plan/planApi";
+import { resolvePlannedRoutine } from "@/features/exercise/guidedRoutines";
 import { GenerateModal } from "@/features/plan/GenerateModal";
 import { GroceryModal } from "@/features/plan/GroceryModal";
-import { resolveLanguage, localeTag } from "@/utils/language";
+import { resolveLanguage, localeTag } from "@/utils/languageUtils";
+import { getUserErrorMessage } from "@/utils/errorUtils";
 import { useT } from "@/i18n";
 import { theme, shadow } from "@/ui/theme";
-import { MEAL_TYPE_META } from "@/ui/mealTypes";
+import { MEAL_TYPE_META } from "@/features/meals/mealTypeDisplay";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
-import { dateKey } from "@/utils/date";
+import { dateKey } from "@/utils/dateUtils";
 import { aiResetWhen } from "@/utils/aiQuota";
 
 
@@ -30,10 +51,10 @@ function mondayOf(base: Date, weekOffset: number) {
   return d;
 }
 
-export default function MealPlanScreen() {
+export default function WeeklyPlanScreen() {
   const router = useRouter();
   const { token, user, updateProfile } = useAuth();
-  const { markHealthDataChanged } = useHealthData();
+  const { markHealthDataChanged } = useHealthDataRefresh();
   const lang = resolveLanguage(user?.language);
   // Nhãn ngày tháng đi theo ngôn ngữ trong app, không theo điện thoại.
   const locale = localeTag(lang);
@@ -60,10 +81,9 @@ export default function MealPlanScreen() {
   const [groceryLoading, setGroceryLoading] = useState(false);
   // Dấu nhận diện giúp chỉ dùng lại danh sách mua sắm khi thực đơn chưa đổi.
   const planSigRef = useRef("");
-  // Chặn hai lần chạm liên tiếp ghi cùng một buổi tập.
-  const workoutDoneRef = useRef(false);
 
-  const goal = user?.calorieGoal ?? 2000;
+  // Chưa đủ hồ sơ thì mục tiêu là rỗng. Không thay bằng con số mặc định.
+  const goal = user?.calorieGoal ?? null;
 
   // Bảy ngày từ Thứ hai đến Chủ nhật của tuần đang xem.
   const weekDays = useMemo(() => {
@@ -78,6 +98,8 @@ export default function MealPlanScreen() {
   const weekStart = dateKey(weekDays[0]);
   const weekEnd = dateKey(weekDays[6]);
 
+  // planSigRef ghi dấu danh sách mã món. Nếu dấu không đổi thì kế hoạch
+  // vẫn y nguyên, nên KHÔNG xóa danh sách đi chợ đã tốn một lượt AI để tạo.
   const load = useCallback(async () => {
     if (!token) return;
     const cached = await getCachedPlanWeek(weekStart);
@@ -92,10 +114,10 @@ export default function MealPlanScreen() {
       setLoading(true);
     }
     try {
-      const { meals, workouts } = await getPlanMeals(token, weekStart, weekEnd);
+      const { meals, workouts: nextWorkouts } = await getPlanMeals(token, weekStart, weekEnd);
       setPlan(meals);
-      setWorkouts(workouts);
-      cachePlanWeek(weekStart, { meals, workouts });
+      setWorkouts(nextWorkouts);
+      cachePlanWeek(weekStart, { meals, workouts: nextWorkouts });
       // Chỉ xóa danh sách mua sắm khi thực đơn thật sự thay đổi.
       // Tải lại do focus không được làm mất kết quả đã tốn một lượt AI.
       const sig = meals.map((m) => m.id).sort().join(",");
@@ -132,6 +154,8 @@ export default function MealPlanScreen() {
     return [weekStart > todayKey ? weekStart : todayKey, weekEnd];
   };
 
+  // Nút Tạo kế hoạch. Chưa gọi AI, mới chỉ mở hộp thoại.
+  // Phải hỏi xác nhận vì tạo lại sẽ XÓA HẲN kế hoạch cũ trong khoảng đó.
   const openGenerate = (scope: "week" | "day") => {
     if (generating) return;
     const range = genRange(scope);
@@ -141,13 +165,14 @@ export default function MealPlanScreen() {
     }
     const show = () => {
       setGenScope(scope);
-    // Điền khẩu vị đã lưu trong hồ sơ nếu ô hiện đang trống.
+      // Điền khẩu vị đã lưu trong hồ sơ nếu ô hiện đang trống.
       setNote((n) => n.trim() ? n : (user?.tastePreferences || ""));
       setGenVisible(true);
     };
     // Yêu cầu xác nhận trước vì tạo lại sẽ thay thế các món hiện có.
-    const hasMeals = plan.some((p) => p.date >= range[0] && p.date <= range[1]);
-    if (hasMeals) {
+    const hasExistingPlan = plan.some((p) => p.date >= range[0] && p.date <= range[1]) ||
+      Object.values(workouts).some((workout) => workout.date >= range[0] && workout.date <= range[1]);
+    if (hasExistingPlan) {
       Alert.alert(L.confirmTitle, scope === "day" ? L.confirmDayMsg : L.confirmWeekMsg, [
         { text: L.cancel, style: "cancel" },
         { text: L.continue, style: "destructive", onPress: show },
@@ -157,14 +182,17 @@ export default function MealPlanScreen() {
     }
   };
 
+  // Đây là bước gọi AI thật, chạy khi người dùng xác nhận trong hộp thoại.
   const runGenerate = async () => {
     const range = genRange(genScope);
     if (!token || generating || !range) return;
     setGenVisible(false);
     setGenerating(true);
-      // Lưu khẩu vị vào hồ sơ để Suggest và Coach cũng sử dụng.
-      // Lỗi lưu khẩu vị không được làm thất bại việc tạo thực đơn.
+    // Lưu khẩu vị vào hồ sơ để Suggest và Coach cũng sử dụng.
+    // Lỗi lưu khẩu vị không được làm thất bại việc tạo thực đơn.
     const taste = note.trim();
+    // Không chờ lệnh lưu này xong, và nuốt lỗi của nó, vì lưu khẩu vị
+    // thất bại không được làm hỏng việc tạo kế hoạch.
     if (rememberTaste && taste && taste !== (user?.tastePreferences || "")) {
       updateProfile({ tastePreferences: taste }).catch(() => {});
     }
@@ -179,8 +207,9 @@ export default function MealPlanScreen() {
     }
   };
 
-  // Danh sách mua sắm dùng các món từ hôm nay đến cuối tuần đang xem.
-  // Ưu tiên bộ nhớ, rồi AsyncStorage, cuối cùng mới gọi Gemini.
+  // Nút Danh sách đi chợ.
+  // Tìm theo ba bậc để tiết kiệm lượt gọi AI, vì mỗi danh sách tốn một lượt.
+  // Bản lưu chỉ dùng lại khi dấu nhận diện còn khớp với kế hoạch hiện tại.
   const openGrocery = async () => {
     if (groceryLoading || !token) return;
     // Dùng lại danh sách mua sắm cho đến khi thực đơn thay đổi.
@@ -248,38 +277,26 @@ export default function MealPlanScreen() {
   // Đếm món từng ngày để hiện dấu chấm trên dải tuần.
   const plannedDays = useMemo(() => {
     const set = new Set(plan.map((p) => p.date));
+    Object.keys(workouts).forEach((date) => set.add(date));
     return set;
-  }, [plan]);
+  }, [plan, workouts]);
 
+  // Nút "Đã ăn". Đây là chỗ kế hoạch biến thành dữ liệu thật.
   const onMarkEaten = async (item: PlanMeal) => {
     if (!token) return;
-      // Cập nhật giao diện trước để thao tác phản hồi ngay.
+    // Cập nhật giao diện trước để thao tác phản hồi ngay.
     setPlan((prev) => prev.map((p) => (p.id === item.id ? { ...p, done: true } : p)));
     try {
       await markPlanEaten(token, item.id);
       markHealthDataChanged();
-    } catch (e: any) {
+    } catch (error) {
       setPlan((prev) => prev.map((p) => (p.id === item.id ? { ...p, done: false } : p)));
-      Alert.alert(L.couldntLog, e.message || t.common.tryAgain);
+      Alert.alert(L.couldntLog, getUserErrorMessage(error, t, t.common.tryAgain));
     }
   };
 
-  const onWorkoutDone = async (w: PlanDayWorkout) => {
-    if (!token || !w.id || workoutDoneRef.current) return;
-    workoutDoneRef.current = true;
-    // Cập nhật giao diện trước để thao tác phản hồi ngay.
-    setWorkouts((prev) => ({ ...prev, [w.date]: { ...w, done: true } }));
-    try {
-      await markPlanWorkoutDone(token, w.id);
-      markHealthDataChanged();
-    } catch (e: any) {
-      setWorkouts((prev) => ({ ...prev, [w.date]: { ...w, done: false } }));
-      Alert.alert(L.couldntLog, e.message || t.common.tryAgain);
-    } finally {
-      workoutDoneRef.current = false;
-    }
-  };
-
+  // Xóa một món khỏi kế hoạch.
+  // Bỏ khỏi màn hình trước rồi mới gọi mạng, lỗi thì tải lại cho hiện lại.
   const onDelete = (item: PlanMeal) => {
     Alert.alert(t.home.removePlanTitle, L.removePlanMsg(item.name), [
       { text: t.common.cancel, style: "cancel" },
@@ -301,7 +318,7 @@ export default function MealPlanScreen() {
 
   const askCoach = (item: PlanMeal) =>
     router.push({
-      pathname: "/tabs/coach" as any,
+      pathname: "/tabs/coach",
       params: {
         ask: t.community.cookQuestion(item.name),
         // Mỗi lần chạm có một mã riêng để tab Coach chỉ xử lý yêu cầu một lần.
@@ -312,6 +329,10 @@ export default function MealPlanScreen() {
   // Ngày quá khứ chỉ được xem vì thêm hoặc đánh dấu ăn có thể ghi sai vào hôm nay.
   // Người dùng vẫn có thể xóa món cũ.
   const isPast = selectedDate < todayKey;
+  const plannedWorkout = workouts[selectedDate] || null;
+  const plannedRoutine = plannedWorkout
+    ? resolvePlannedRoutine(plannedWorkout.category, plannedWorkout.durationMin, selectedDate)
+    : null;
 
   const selectedLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(locale, {
     weekday: "long",
@@ -402,7 +423,7 @@ export default function MealPlanScreen() {
               <AppText variant="subtle" style={styles.smallLabel}>{selectedLabel}</AppText>
               <View style={styles.baselineRow}>
                 <AppText variant="h0" style={styles.totalKcal}>{dayTotals.calories.toLocaleString()}</AppText>
-                <AppText variant="muted" style={styles.totalGoal}>/ {goal.toLocaleString()} {t.common.kcal}</AppText>
+                {goal != null && <AppText variant="muted" style={styles.totalGoal}>/ {goal.toLocaleString()} {t.common.kcal}</AppText>}
               </View>
             </View>
             {/* Chỉ tạo lại ngày hôm nay hoặc ngày tương lai. */}
@@ -432,29 +453,73 @@ export default function MealPlanScreen() {
             <View style={styles.macroDivider} />
             <AppText variant="subtle" style={[styles.smallLabel, styles.macroF]}>F {Math.round(dayTotals.fat)}g</AppText>
           </View>
-          {/* Bài tập AI có nút hoàn thành nhanh khi dữ liệu có đủ cấu trúc. */}
-          {!!workouts[selectedDate] && (
-            <View style={styles.workoutTip}>
-              <AppText style={styles.tipEmoji}>🏃</AppText>
-              <AppText variant="body2" style={styles.tipText}>{workouts[selectedDate].text}</AppText>
-              {workouts[selectedDate].done ? (
-                <View style={styles.workoutDoneChip}>
-                  <AppText style={styles.eatenText}>{L.workoutDone}</AppText>
-                  <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
-                </View>
-              ) : workouts[selectedDate].name && selectedDate === todayKey ? (
-                <Pressable
-                  onPress={() => onWorkoutDone(workouts[selectedDate])}
-                  hitSlop={6}
-                  style={({ pressed }) => [styles.eatBtn, pressed && styles.eatBtnPressed]}
-                >
-                  <AppText style={styles.eatenText}>{L.markWorkoutDone}</AppText>
-                  <Ionicons name="checkmark" size={15} color={theme.colors.accent} />
-                </Pressable>
-              ) : null}
-            </View>
-          )}
         </Card>
+
+        {plannedWorkout && plannedRoutine && (
+          <Card style={[styles.workoutCard, plannedWorkout.done && styles.workoutCardDone]}>
+            <View style={styles.workoutHead}>
+              <View style={styles.workoutIcon}>
+                <Ionicons name="fitness-outline" size={20} color={theme.colors.primary} />
+              </View>
+              <View style={styles.flex1}>
+                <AppText variant="subtle" style={styles.workoutEyebrow}>{L.plannedActivity}</AppText>
+                <AppText variant="h2" style={styles.workoutTitle}>{plannedRoutine.title[lang]}</AppText>
+              </View>
+              {plannedWorkout.done && (
+                <Ionicons name="checkmark-circle" size={24} color={theme.colors.accent} />
+              )}
+            </View>
+
+            <View style={styles.workoutMeta}>
+              <View style={styles.workoutMetaItem}>
+                <Ionicons name="time-outline" size={15} color={theme.colors.subtle} />
+                <AppText variant="subtle" style={styles.workoutMetaText}>
+                  {t.exercise.durationMinutes(plannedRoutine.durationMin)}
+                </AppText>
+              </View>
+              <View style={styles.workoutMetaItem}>
+                <Ionicons name="home-outline" size={15} color={theme.colors.subtle} />
+                <AppText variant="subtle" style={styles.workoutMetaText}>{t.exercise.noEquipment}</AppText>
+              </View>
+              <View style={styles.workoutMetaItem}>
+                <Ionicons name="speedometer-outline" size={15} color={theme.colors.subtle} />
+                <AppText variant="subtle" style={styles.workoutMetaText}>
+                  {t.exercise.levels[plannedRoutine.level]}
+                </AppText>
+              </View>
+            </View>
+
+            {plannedWorkout.done ? (
+              <View style={styles.workoutStatus}>
+                <AppText style={styles.workoutStatusText}>{L.workoutDone}</AppText>
+              </View>
+            ) : selectedDate === todayKey ? (
+              <Pressable
+                onPress={() => router.push({
+                  pathname: "/exercise/guided",
+                  params: { routine: plannedRoutine.key, planWorkoutId: plannedWorkout.id },
+                })}
+                style={({ pressed }) => [styles.workoutStart, pressed && styles.workoutStartPressed]}
+              >
+                <Ionicons name="play" size={17} color="#fff" />
+                <AppText style={styles.workoutStartText}>{L.startPlannedWorkout}</AppText>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => router.push({
+                  pathname: "/exercise/guided",
+                  params: { routine: plannedRoutine.key, previewOnly: "1", planDate: selectedDate },
+                })}
+                style={({ pressed }) => [styles.workoutPreview, pressed && styles.dim]}
+              >
+                <AppText variant="subtle" style={styles.workoutReadOnly}>
+                  {isPast ? L.pastWorkout : L.scheduledWorkout}
+                </AppText>
+                <Ionicons name="chevron-forward" size={17} color={theme.colors.primary} />
+              </Pressable>
+            )}
+          </Card>
+        )}
 
         {loading && dayPlan.length === 0 ? (
           <View style={styles.loadingWrap}>
@@ -686,14 +751,31 @@ const styles = StyleSheet.create({
   macroP: { color: theme.colors.accent2, fontWeight: "700" },
   macroC: { color: theme.colors.accent, fontWeight: "700" },
   macroF: { color: theme.colors.indigo, fontWeight: "700" },
-  workoutTip: {
-    flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10,
-    backgroundColor: "rgba(255,138,61,0.08)", borderRadius: 10, padding: 10,
+  workoutCard: { padding: theme.space.lg, gap: theme.space.md },
+  workoutCardDone: { borderColor: "rgba(5,150,105,0.25)" },
+  workoutHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  workoutIcon: {
+    width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center",
+    backgroundColor: theme.colors.tint,
   },
-  workoutDoneChip: { flexDirection: "row", alignItems: "center", gap: 4 },
-  tipEmoji: { fontSize: 14 },
-  tipText: { flex: 1, fontSize: 13 },
-
+  workoutEyebrow: { fontSize: 11, fontWeight: "700", color: theme.colors.primary },
+  workoutTitle: { fontSize: 16 },
+  workoutMeta: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  workoutMetaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  workoutMetaText: { fontSize: 11 },
+  workoutStart: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
+    backgroundColor: theme.colors.primary, borderRadius: 12, paddingVertical: 11,
+  },
+  workoutStartPressed: { backgroundColor: theme.colors.primary2 },
+  workoutStartText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  workoutStatus: {
+    alignSelf: "flex-start", backgroundColor: "rgba(5,150,105,0.10)",
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6,
+  },
+  workoutStatusText: { color: theme.colors.accent, fontSize: 12, fontWeight: "700" },
+  workoutPreview: { flexDirection: "row", alignItems: "center", gap: 8 },
+  workoutReadOnly: { flex: 1, fontSize: 11 },
   // Nội dung của ngày đang chọn.
   loadingWrap: { paddingVertical: theme.space.xl, alignItems: "center" },
   emptyBlock: { gap: theme.space.md },

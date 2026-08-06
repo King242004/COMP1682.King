@@ -1,9 +1,20 @@
+// Màn Nhắc nhở. Đây là file BẮT ĐẦU của luồng đặt lời nhắc.
+// LUỒNG ĐẶT LỜI NHẮC
+// 1. Bật công tắc của một bữa, hoặc đổi giờ nhắc
+// 2. reminders.applyReminder
+// 3. hủy lời nhắc cũ của bữa đó trước
+// 4. notifications.scheduleDailyReminder xin quyền rồi đặt lịch mới
+// 5. lưu trạng thái vào bộ nhớ máy
+// Điểm quan trọng: luồng này KHÔNG gọi backend. Lời nhắc do hệ điều hành
+// của điện thoại giữ, không liên quan tới server.
+// Vì vậy thông báo vẫn hiện dù món của bữa đó đã được ghi rồi.
+// Đăng xuất sẽ hủy toàn bộ lời nhắc, để không nhắc nhầm tài khoản khác.
 import { useCallback, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
-import { MEAL_KEYS, applyReminder, emptyReminders, formatTime, loadReminders, parseTime, type MealKey, type ReminderMap } from "@/utils/notifications/reminders";
+import { MEAL_KEYS, applyReminder, emptyReminders, formatTime, loadReminders, parseTime, type MealKey, type ReminderMap } from "@/utils/notifications/reminderSettings";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -11,6 +22,7 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
+import { INPUT_LIMITS } from "@/config/inputLimits";
 
 const ICONS: Record<MealKey, keyof typeof Ionicons.glyphMap> = {
   breakfast: "sunny-outline",
@@ -26,7 +38,8 @@ export default function RemindersScreen() {
   const [timeInput, setTimeInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useFocusEffect(useCallback(() => { loadReminders().then(setState); }, []));
+  // Tự đọc trạng thái bốn lời nhắc từ bộ nhớ máy khi mở màn.
+  useFocusEffect(useCallback(() => { void loadReminders().then(setState).catch(() => {}); }, []));
 
   const mealLabel = (key: MealKey) => t.labels.mealType[key] ?? key;
 
@@ -77,9 +90,10 @@ export default function RemindersScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t.settings.mealReminder} />
-
-        <AppText variant="muted" style={styles.intro}>{t.settings.reminderScreenIntro}</AppText>
+        <View>
+          <ScreenHeader title={t.settings.mealReminder} />
+          <AppText variant="muted" style={styles.intro}>{t.settings.reminderScreenIntro}</AppText>
+        </View>
 
         <Card style={styles.card}>
           {MEAL_KEYS.map((key, i) => (
@@ -136,6 +150,7 @@ export default function RemindersScreen() {
               onChangeText={setTimeInput}
               keyboardType="numbers-and-punctuation"
               placeholder="19:30"
+              maxLength={INPUT_LIMITS.REMINDER_TIME}
             />
             <View style={styles.modalBtns}>
               <View style={styles.flex1}>
@@ -154,7 +169,7 @@ export default function RemindersScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.md },
-  intro: { fontSize: 13, lineHeight: 19 },
+  intro: { marginTop: -8, fontSize: 13, lineHeight: 19 },
   card: { paddingHorizontal: theme.space.md },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: theme.space.md },
   rowDivider: { borderTopWidth: 1, borderTopColor: theme.colors.border },

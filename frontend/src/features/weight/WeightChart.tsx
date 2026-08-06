@@ -1,8 +1,10 @@
+// Biểu đồ đường cân nặng theo thời gian.
+// Vẽ bằng View thường chứ không dùng thư viện biểu đồ, để không thêm phụ thuộc.
 import { useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
 import { theme } from "@/ui/theme";
-import type { WeightEntry } from "./api";
+import type { WeightEntry } from "./weightApi";
 
 // Chiều cao của biểu đồ SVG.
 const H = 160;
@@ -19,6 +21,8 @@ export function WeightChart({ logs, targetWeight, locale }: {
   locale?: string;
 }) {
   const [width, setWidth] = useState(0);
+  // Đo bề rộng thật của khung sau khi vẽ xong,
+  // để tính tỷ lệ các điểm trên biểu đồ cho khớp mọi cỡ màn hình.
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
   const values = logs.map((l) => l.weightKg);

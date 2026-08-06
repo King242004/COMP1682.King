@@ -1,3 +1,5 @@
+// Cửa nhận file ảnh, chạy sau kiểm tra đăng nhập và trước controller.
+// imageUploadLimiter đếm số lần tải lên trong 15 phút để chặn spam.
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 

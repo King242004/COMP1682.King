@@ -1,10 +1,24 @@
+// Màn Cài đặt. Đây là file BẮT ĐẦU của nhiều luồng nhỏ.
+// BỐN NHÓM CÀI ĐẶT
+//   Ngôn ngữ, chọn Tiếng Việt hoặc English. Lưu qua PUT /profile.
+//     Đổi ngôn ngữ làm Coach tải lại lịch sử của ngôn ngữ mới,
+//     và làm mọi lời nhắc được đặt lại bằng ngôn ngữ đó.
+//   Mục tiêu cân nặng, dẫn tới màn riêng để chỉnh đích cân, tốc độ và calo.
+//   Tài khoản riêng tư, bật lên thì bài đăng bị ẩn khỏi Community.
+//   Xóa tài khoản, đây là thao tác KHÔNG hoàn tác được.
+// LUỒNG XÓA TÀI KHOẢN
+// 1. Bấm Xóa tài khoản, hộp thoại yêu cầu nhập mật khẩu
+// 2. AuthContext.deleteAccount           (DELETE /user/account)
+// 3. backend so mật khẩu, xóa mọi ảnh trên kho ảnh,
+//    rồi xóa dữ liệu ở tất cả các bảng, cuối cùng xóa tài khoản
+// 4. app tự đăng xuất và quay về màn Đăng nhập
 import { useCallback, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
-import { enabledCount, loadReminders } from "@/utils/notifications/reminders";
+import { enabledCount, loadReminders } from "@/utils/notifications/reminderSettings";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -13,7 +27,10 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { SectionLabel } from "@/ui/components/SectionLabel";
 import { TextField } from "@/ui/components/TextField";
-import { resolveLanguage, type Lang } from "@/utils/language";
+import { resolveLanguage, type Lang } from "@/utils/languageUtils";
+import { getUserErrorMessage } from "@/utils/errorUtils";
+import { resolveDraftWeightDirection, WEIGHT_GOAL_BY_DIRECTION } from "@/config/nutritionCalculations";
+import { INPUT_LIMITS } from "@/config/inputLimits";
 
 // Ô biểu tượng dùng chung giúp các hàng cài đặt có cùng cách trình bày.
 function IconBox({ icon, bg, color }: { icon: string; bg?: string; color?: string }) {
@@ -25,7 +42,7 @@ function IconBox({ icon, bg, color }: { icon: string; bg?: string; color?: strin
 }
 
 export default function SettingsScreen() {
-  const { user, updateProfile, deleteAccount } = useAuth();
+  const { user, stats, updateProfile, deleteAccount } = useAuth();
   const router = useRouter();
   const t = useT();
 
@@ -34,12 +51,10 @@ export default function SettingsScreen() {
   const [deletePw, setDeletePw] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [reminderCount, setReminderCount] = useState(0);
-  const [editingGoal, setEditingGoal] = useState(false);
-  const [goalInput, setGoalInput] = useState("");
-  const [isSavingGoal, setIsSavingGoal] = useState(false);
   const [isPrivate, setIsPrivate] = useState(!!user?.isPrivate);
   const [savingLang, setSavingLang] = useState(false);
 
+  // Nút Xóa tài khoản. Đây là thao tác KHÔNG hoàn tác được.
   const handleDeleteAccount = async () => {
     if (!deletePw || deleting) return;
     setDeleting(true);
@@ -47,8 +62,8 @@ export default function SettingsScreen() {
       await deleteAccount(deletePw);
       setDeleteVisible(false);
       router.replace("/auth/login");
-    } catch (e: any) {
-      Alert.alert(t.common.errorTitle, e.message || t.settings.deleteFailed);
+    } catch (error) {
+      Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.settings.deleteFailed));
     } finally {
       setDeleting(false);
     }
@@ -56,65 +71,41 @@ export default function SettingsScreen() {
 
   // Tải lại số lời nhắc khi quay về vì lời nhắc được chỉnh ở màn riêng.
   useFocusEffect(useCallback(() => {
-    loadReminders().then((r) => setReminderCount(enabledCount(r)));
+    void loadReminders().then((r) => setReminderCount(enabledCount(r))).catch(() => {});
   }, []));
 
   const togglePrivate = async (value: boolean) => {
     setIsPrivate(value);
     try {
       await updateProfile({ isPrivate: value });
-    } catch (e: any) {
+    } catch (error) {
       // Trả lại trạng thái cũ nếu cập nhật quyền riêng tư thất bại.
       setIsPrivate(!value);
-      Alert.alert(t.common.errorTitle, e.message || t.settings.failedPrivacy);
+      Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.settings.failedPrivacy));
     }
   };
 
   // Nếu chưa lưu lựa chọn thì dùng ngôn ngữ mặc định của thiết bị.
   const currentLang = resolveLanguage(user?.language);
+  const displayedDirection = resolveDraftWeightDirection(
+    user?.weight ?? null,
+    user?.targetWeight ?? null,
+    stats?.maintainWeightThresholdKg,
+  ) ?? stats?.weightDirection;
+  const displayedGoal = displayedDirection ? WEIGHT_GOAL_BY_DIRECTION[displayedDirection] : user?.goal;
+  // Đổi ngôn ngữ app. Lưu qua PUT /profile chứ không chỉ lưu ở máy,
+  // vì backend cần biết để dặn AI trả lời đúng tiếng.
+  // Đổi xong thì Coach tải lịch sử của ngôn ngữ mới, và các lời nhắc
+  // được đặt lại bằng ngôn ngữ đó.
   const handleSetLanguage = async (l: Lang) => {
     if (l === user?.language) return;
     setSavingLang(true);
     try {
       await updateProfile({ language: l });
-    } catch (e: any) {
-      Alert.alert(t.common.errorTitle, e.message || t.settings.failedLanguage);
+    } catch (error) {
+      Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.settings.failedLanguage));
     } finally {
       setSavingLang(false);
-    }
-  };
-
-  // Lưu mục tiêu calo tự chọn hoặc quay lại giá trị tự tính từ TDEE.
-  const handleSaveGoal = async () => {
-    const n = Number(goalInput);
-    if (!goalInput.trim() || isNaN(n) || n < 800 || n > 10000) {
-      Alert.alert(t.settings.invalidGoal, t.settings.goalRange);
-      return;
-    }
-    setIsSavingGoal(true);
-    try {
-      await updateProfile({ calorieGoal: n });
-      setEditingGoal(false);
-    } catch (e: any) {
-      Alert.alert(t.common.errorTitle, e.message || t.settings.failedGoal);
-    } finally {
-      setIsSavingGoal(false);
-    }
-  };
-
-  const handleAutoGoal = async () => {
-    if (!user?.weight || !user?.height || !user?.age || !user?.gender) {
-      Alert.alert(t.settings.missingInfo, t.settings.missingInfoMsg);
-      return;
-    }
-    setIsSavingGoal(true);
-    try {
-      await updateProfile({ calorieGoal: null });
-      setEditingGoal(false);
-    } catch (e: any) {
-      Alert.alert(t.common.errorTitle, e.message || t.settings.failedGoal);
-    } finally {
-      setIsSavingGoal(false);
     }
   };
 
@@ -126,46 +117,30 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title={t.settings.title} />
-        <AppText variant="muted" style={styles.subtitle}>{t.settings.subtitle}</AppText>
 
         {/* GOALS */}
         <SectionLabel>{t.settings.goals}</SectionLabel>
         <Card style={styles.card}>
           <Pressable
-            onPress={() => {
-              setGoalInput(String(user?.calorieGoal ?? 2000));
-              setEditingGoal((v) => !v);
-            }}
+            onPress={() => router.push("/profile/goals")}
             style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}
           >
             <IconBox icon="flag" />
             <View style={styles.rowText}>
-              <AppText variant="body2" style={styles.rowTitle}>{t.settings.dailyCalorieGoal}</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>{t.settings.goalRowSub}</AppText>
+              <AppText variant="body2" style={styles.rowTitle}>{t.weightGoals.title}</AppText>
+              <AppText variant="subtle" style={styles.rowSub}>{t.labels.goal[displayedGoal ?? ""] ?? "-"}</AppText>
             </View>
-            <AppText variant="body2" style={styles.rowValue}>{(user?.calorieGoal ?? 2000).toLocaleString()} {t.common.kcal}</AppText>
-            <Ionicons name={editingGoal ? "chevron-up" : "chevron-forward"} size={16} color={theme.colors.subtle} />
+            <AppText variant="body2" style={styles.rowValue}>
+              {user?.calorieGoal != null ? `${user.calorieGoal.toLocaleString()} ${t.common.kcal}` : "-"}
+            </AppText>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
-
-          {editingGoal && (
-            <View style={styles.goalEditor}>
-              <TextField label={t.settings.customGoal} placeholder={t.settings.customGoalPlaceholder} value={goalInput} onChangeText={setGoalInput} keyboardType="number-pad" />
-              <View style={styles.goalBtns}>
-                <View style={styles.flex1}>
-                  <Button title={t.settings.useAuto} variant="secondary" onPress={handleAutoGoal} disabled={isSavingGoal} />
-                </View>
-                <View style={styles.flex1}>
-                  <Button title={isSavingGoal ? t.common.saving : t.common.save} onPress={handleSaveGoal} disabled={isSavingGoal} />
-                </View>
-              </View>
-            </View>
-          )}
         </Card>
 
         {/* INSIGHTS */}
         <SectionLabel>{t.settings.insights}</SectionLabel>
         <Card style={styles.card}>
-          <Pressable onPress={() => router.push("/profile/progress" as any)} style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}>
+          <Pressable onPress={() => router.push("/profile/progress")} style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}>
             <IconBox icon="stats-chart" bg="rgba(5,150,105,0.12)" color={theme.colors.accent} />
             <View style={styles.rowText}>
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.progressStats}</AppText>
@@ -202,7 +177,6 @@ export default function SettingsScreen() {
             <IconBox icon="key" />
             <View style={styles.rowText}>
               <AppText variant="body2" style={styles.rowTitle}>{t.settings.changePassword}</AppText>
-              <AppText variant="subtle" style={styles.rowSub}>{t.settings.changePasswordSub}</AppText>
             </View>
             <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
           </Pressable>
@@ -288,6 +262,7 @@ export default function SettingsScreen() {
                 onChangeText={setDeletePw}
                 secureTextEntry
                 textContentType="password"
+                maxLength={INPUT_LIMITS.PASSWORD}
               />
               <View style={styles.timeActions}>
                 <View style={styles.flex1}>
@@ -314,7 +289,6 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
-  subtitle: { marginTop: -8 },
   card: { paddingVertical: 4, paddingHorizontal: theme.space.lg },
 
   iconBox: { width: 34, height: 34, borderRadius: 11, backgroundColor: theme.colors.tintSoft, alignItems: "center", justifyContent: "center" },
@@ -327,8 +301,6 @@ const styles = StyleSheet.create({
   rowValue: { fontWeight: "700", color: theme.colors.primary },
   dim: { opacity: 0.6 },
 
-  goalEditor: { gap: theme.space.md, paddingBottom: theme.space.md },
-  goalBtns: { flexDirection: "row", gap: theme.space.md },
   flex1: { flex: 1 },
 
   backdrop: {

@@ -1,3 +1,4 @@
+// Bảng danh sách đi chợ do AI gộp từ các món trong kế hoạch.
 // Bảng danh sách mua sắm AI cho phép đánh dấu từng món.
 // Trạng thái được lưu theo tuần cùng danh sách trong cacheGrocery.
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -5,7 +6,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
-import type { GroceryGroup } from "@/features/plan/api";
+import type { GroceryGroup } from "@/features/plan/planApi";
 
 export function GroceryModal({ visible, groups, checked, onToggle, onClose }: {
   visible: boolean;
@@ -31,7 +32,7 @@ export function GroceryModal({ visible, groups, checked, onToggle, onClose }: {
               <View key={g.name} style={styles.group}>
                 <AppText style={styles.groupName}>{g.name}</AppText>
                 {g.items.map((it, idx) => {
-          // Dùng tên nhóm và món làm khóa để trạng thái giữ nguyên khi mở lại.
+                  // Dùng tên nhóm và món làm khóa để trạng thái giữ nguyên khi mở lại.
                   const key = `${g.name}|${it}`;
                   const isChecked = !!checked[key];
                   return (

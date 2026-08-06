@@ -1,16 +1,30 @@
+// Màn Community, tab thứ hai. Đây là file BẮT ĐẦU của luồng xem bài đăng.
+// LUỒNG XEM FEED, tự chạy khi vào tab
+// 1. useFocusEffect gọi hàm tải theo tab đang chọn
+// 2. getFeed hoặc getExplore hoặc getSavedPosts   (GET /community/posts/...)
+// 3. backend lọc bỏ bài của tài khoản riêng tư, chia trang, tính sẵn
+//    số tim và hai cờ đã tim đã lưu
+// 4. danh sách hiện lên, cuộn tới cuối thì tải trang kế tiếp
+// BA TAB
+//   Đang theo dõi, chỉ bài của người mình theo dõi.
+//   Khám phá, bài của tất cả mọi người.
+//   Đã lưu, bài mình đã bấm lưu.
+// Các lối đi từ màn này: Tạo bài, Chi tiết bài, Trang cá nhân,
+// Khám phá người dùng, và Thông báo.
 import { useState, useCallback, useRef } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
-import { getFeed, getExplore, toggleLike, getUnreadCount, type FeedPost } from "@/features/community/api";
-import { PostTile } from "@/features/community/PostTile";
-import { initials } from "@/features/community/helpers";
+import { useAuth } from "@/features/auth/AuthContext";
+import { getFeed, getExplore, toggleLike, getUnreadCount, type FeedPost } from "@/features/community/communityApi";
+import { PostTile } from "@/features/community/posts/PostTile";
+import { CommunityTabs } from "@/features/community/CommunityTabs";
+import { CommunityStateCard } from "@/features/community/CommunityStateCard";
+import { initials } from "@/features/community/communityDisplay";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
-import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 
 type Tab = "feed" | "explore";
@@ -143,6 +157,8 @@ export default function CommunityScreen() {
     }));
   };
 
+  // Nút tim trên một ô bài. Đổi giao diện trước rồi mới gọi mạng,
+  // lỗi thì trả về như cũ.
   const onLike = async (post: FeedPost) => {
     if (!token) return;
     updatePostAcrossTabs(post.id, (current) => ({
@@ -168,7 +184,7 @@ export default function CommunityScreen() {
   };
 
   const openDetail = (item: FeedPost) =>
-    router.push({ pathname: "/community/post-detail" as any, params: { id: item.id } });
+    router.push({ pathname: "/community/post-detail", params: { id: item.id } });
 
   // Hai tab dùng lưới hai cột và hiện thời gian dưới mỗi ô.
   // Hành động lưu và xóa nằm trong chi tiết bài viết.
@@ -186,28 +202,18 @@ export default function CommunityScreen() {
       <ActivityIndicator color={theme.colors.primary} />
     </View>
   ) : loadError ? (
-    <Card style={styles.emptyCard}>
-      <View style={styles.emptyIcon}>
-        <Ionicons name="cloud-offline-outline" size={28} color={theme.colors.primary} />
-      </View>
-      <AppText variant="h2" style={styles.centerText}>{t.community.loadPostsError}</AppText>
-      <AppText variant="muted" style={styles.centerText}>{t.common.checkConnection}</AppText>
-      <Pressable onPress={() => load(tab)} style={({ pressed }) => [styles.retryBtn, pressed && styles.pressed]}>
-        <AppText style={styles.retryText}>{t.common.retry}</AppText>
-      </Pressable>
-    </Card>
+    <CommunityStateCard
+      icon="cloud-offline-outline"
+      title={t.community.loadPostsError}
+      subtitle={t.common.checkConnection}
+      onRetry={() => load(tab)}
+    />
   ) : (
-    <Card style={styles.emptyCard}>
-      <View style={styles.emptyIcon}>
-        <Ionicons name="restaurant-outline" size={28} color={theme.colors.primary} />
-      </View>
-      <AppText variant="h2" style={styles.centerText}>
-        {tab === "feed" ? t.community.feedEmptyTitle : t.community.exploreEmptyTitle}
-      </AppText>
-      <AppText variant="muted" style={styles.centerText}>
-        {tab === "feed" ? t.community.feedEmptySub : t.community.exploreEmptySub}
-      </AppText>
-    </Card>
+    <CommunityStateCard
+      icon="restaurant-outline"
+      title={tab === "feed" ? t.community.feedEmptyTitle : t.community.exploreEmptyTitle}
+      subtitle={tab === "feed" ? t.community.feedEmptySub : t.community.exploreEmptySub}
+    />
   );
 
   return (
@@ -279,22 +285,11 @@ export default function CommunityScreen() {
               </View>
             </View>
         {/* Chuyển giữa Feed và Explore. */}
-            <View style={styles.tabRow}>
-              {([["explore", t.community.explore], ["feed", t.community.following]] as [Tab, string][]).map(([key, label]) => {
-                const active = tab === key;
-                return (
-                  <Pressable
-                    key={key}
-                    onPress={() => setTab(key)}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: active }}
-                    style={({ pressed }) => [styles.tabBtn, active && styles.tabBtnActive, pressed && styles.pressed]}
-                  >
-                    <AppText style={[styles.tabText, active && styles.tabTextActive]}>{label}</AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <CommunityTabs
+              value={tab}
+              options={[{ key: "explore", label: t.community.explore }, { key: "feed", label: t.community.following }]}
+              onChange={setTab}
+            />
           </View>
         }
         ListEmptyComponent={emptyState}
@@ -345,26 +340,7 @@ const styles = StyleSheet.create({
   },
   myAvatarImg: { width: "100%", height: "100%" },
   myAvatarInitials: { color: theme.colors.primary, fontSize: 13, fontWeight: "700" },
-  tabRow: { flexDirection: "row", gap: 6 },
-  tabBtn: {
-    flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 12,
-    backgroundColor: theme.colors.tintSoft,
-  },
-  tabBtnActive: { backgroundColor: theme.colors.primary },
-  tabText: { fontSize: 13, fontWeight: "700", color: theme.colors.subtle },
-  tabTextActive: { color: "#fff" },
   loadingBox: { paddingVertical: theme.space.xl, alignItems: "center" },
   loadMoreBox: { paddingVertical: theme.space.lg, alignItems: "center" },
-  emptyCard: { padding: theme.space.xl, alignItems: "center", gap: 10 },
-  emptyIcon: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center",
-  },
-  centerText: { textAlign: "center" },
-  retryBtn: {
-    marginTop: 4, paddingHorizontal: 20, paddingVertical: 9,
-    borderRadius: theme.radius.pill, backgroundColor: theme.colors.primary,
-  },
-  retryText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   pressed: { opacity: 0.7 },
 });

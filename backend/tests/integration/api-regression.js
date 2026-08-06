@@ -2,6 +2,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const OTP = require("../../src/models/OTP");
 const Post = require("../../src/models/Post");
+const { autoGoal } = require("../../src/services/nutrition/calorieGoal");
 const { OTP_PURPOSE, OTP_TTL_MS, hashOTP, normalizeEmail } = require("../../src/utils/otpSecurity");
 
 const BASE = process.env.API_BASE_URL || "http://localhost:5000/api";
@@ -134,12 +135,22 @@ const shift = (days) => {
   check("history has 2 meals", hist.status === 200 && hist.data.meals.length === 2);
 
   console.log("- EXERCISE -");
-  const exOk = await api("/exercise", "POST", { name: "Chạy bộ", met: 8, durationMin: 30, date: todayKey() }, token);
-  check("log workout 201 + burn computed", exOk.status === 201 && exOk.data.exercise.caloriesBurned > 0);
-  const exFut = await api("/exercise", "POST", { name: "Chạy mai", met: 8, durationMin: 30, date: shift(1) }, token);
+  await api("/profile", "PUT", { gender: "male", age: 25, weight: 70, height: 175, activityLevel: "moderate", goal: "lose_weight" }, token);
+  const exOk = await api("/exercise", "POST", { name: "Chạy bộ", activityKey: "jogging", met: 25, durationMin: 30, date: todayKey() }, token);
+  check("server stores a traceable MET snapshot", exOk.status === 201 &&
+    exOk.data.exercise.sourceType === "external" &&
+    exOk.data.exercise.sourceKey === "jogging" &&
+    exOk.data.exercise.met === 7.5 &&
+    exOk.data.exercise.metCode === "12020" &&
+    exOk.data.exercise.weightKgAtLog > 0 &&
+    exOk.data.exercise.caloriesBurned > 0);
+  const exUnknown = await api("/exercise", "POST", { name: "Bịa", activityKey: "made-up", durationMin: 30, date: todayKey() }, token);
+  check("unknown activity reference 400", exUnknown.status === 400);
+  const exFut = await api("/exercise", "POST", { name: "Chạy mai", activityKey: "jogging", durationMin: 30, date: shift(1) }, token);
   check("future workout 400", exFut.status === 400);
-  const exDel = await api(`/exercise/${exOk.data.exercise._id}`, "DELETE", undefined, token);
-  check("delete workout 200", exDel.status === 200);
+  const exerciseId = exOk.data?.exercise?._id;
+  const exDel = exerciseId ? await api(`/exercise/${exerciseId}`, "DELETE", undefined, token) : null;
+  check("delete workout 200", exDel?.status === 200);
 
   console.log("- PLAN (markEaten time rule) -");
   const pToday = await api("/plan", "POST", { name: "Món plan hôm nay", mealType: "dinner", calories: 450, date: todayKey() }, token);
@@ -162,7 +173,15 @@ const shift = (days) => {
   const wOk = await api("/weight", "POST", { weightKg: 68 }, token);
   check("log weight 201", wOk.status === 201);
   let prof = await api("/profile", "GET", undefined, token);
-  check("auto goal follows weight (68kg -> 2063)", prof.data.user.calorieGoal === 2063, `got ${prof.data?.user?.calorieGoal}`);
+  const expectedAutoGoal = autoGoal({
+    weight: 68,
+    height: 175,
+    age: 25,
+    gender: "male",
+    activityLevel: "moderate",
+    goal: "lose_weight",
+  });
+  check("auto goal follows the updated weight", prof.data.user.calorieGoal === expectedAutoGoal, `got ${prof.data?.user?.calorieGoal}`);
   await api("/profile", "PUT", { calorieGoal: 1800 }, token);
   await api("/weight", "POST", { weightKg: 66 }, token);
   prof = await api("/profile", "GET", undefined, token);

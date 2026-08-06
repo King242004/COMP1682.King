@@ -1,8 +1,13 @@
+// Đây là dịch vụ riêng chạy trên Vercel, tách khỏi backend chính.
+// Vì sao tách riêng: Render chặn cổng SMTP ở gói miễn phí, nên backend
+// không tự gửi mail được. Vercel gọi được SMTP nên đứng ra gửi hộ.
+// Chữ ký là thứ duy nhất chứng minh request đến từ backend thật.
 const nodemailer = require("nodemailer");
-const { verifySignature } = require("../src/signature");
-const { buildOtpEmail } = require("../src/template");
+const { verifySignature } = require("../src/requestSignature");
+const { buildOtpEmail } = require("../src/otpEmailTemplate");
 
 const ALLOWED_PURPOSES = new Set(["registration", "password_reset"]);
+const ALLOWED_LANGUAGES = new Set(["vi", "en"]);
 
 const parseBody = (body) => {
   if (typeof body !== "string") return body;
@@ -22,7 +27,8 @@ const isValidPayload = (payload) =>
   isValidEmail(payload.to) &&
   typeof payload.otp === "string" &&
   /^\d{6}$/.test(payload.otp) &&
-  ALLOWED_PURPOSES.has(payload.purpose);
+  ALLOWED_PURPOSES.has(payload.purpose) &&
+  ALLOWED_LANGUAGES.has(payload.language);
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -57,9 +63,12 @@ module.exports = async (req, res) => {
     to: body.to,
     otp: body.otp,
     purpose: body.purpose,
+    language: body.language ?? "en",
   };
   const timestamp = req.headers["x-mealmate-timestamp"];
   const signature = req.headers["x-mealmate-signature"];
+  // Kiểm chữ ký TRƯỚC khi kiểm nội dung, để người lạ không dò được
+  // định dạng dữ liệu hợp lệ bằng cách xem thông báo lỗi khác nhau.
   if (!verifySignature(payload, timestamp, signature, relaySecret)) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -86,7 +95,7 @@ module.exports = async (req, res) => {
   });
 
   try {
-    const email = buildOtpEmail(payload.otp, payload.purpose);
+    const email = buildOtpEmail(payload.otp, payload.purpose, payload.language);
     await transporter.sendMail({
       from: {
         name: process.env.SMTP_FROM_NAME?.trim() || "MealMate",

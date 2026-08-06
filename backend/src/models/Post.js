@@ -1,9 +1,22 @@
 const mongoose = require("mongoose");
+const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
 
+// Bảng bài đăng Community.
+// Nơi ghi vào: màn Tạo bài và màn Sửa bài.
+// Nơi đọc ra: bốn danh sách bài, màn Chi tiết bài, và lưới bài trong trang cá nhân.
+// Ba trường dễ nhầm:
+//   dishName là TÊN món, có thể có mà không kèm dinh dưỡng.
+//   meal là phần dinh dưỡng, chỉ có khi người dùng chọn món từ nhật ký.
+//   image và imagePublicId là ảnh đầu tiên, giữ lại cho các bài cũ chỉ có một ảnh.
+// likes và saves lưu thẳng danh sách mã người dùng, nên đếm số tim
+// chỉ là đếm độ dài mảng, không cần truy vấn thêm bảng khác.
 const postSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    caption: { type: String, default: "", maxlength: 500 },
+    // Dùng trần lịch sử, không dùng giới hạn hiện hành. Validator của Mongoose
+    // chạy mỗi lần ghi, nên hạ số ở đây sẽ làm bài cũ dài hơn số mới không lưu
+    // lại được. Giới hạn mới được áp ở giao diện và ở đường tạo bài.
+    caption: { type: String, default: "", maxlength: LEGACY_LIMITS.POST_CAPTION },
     image: { type: String, default: null },
     imagePublicId: { type: String, default: null },
     images: [
@@ -12,13 +25,20 @@ const postSchema = new mongoose.Schema(
         publicId: { type: String, default: null },
       },
     ],
-    dishName: { type: String, trim: true, maxlength: 100, default: null },
+    dishName: { type: String, trim: true, maxlength: LEGACY_LIMITS.MEAL_NAME, default: null },
     meal: {
       name: { type: String },
-      calories: { type: Number },
-      protein: { type: Number },
-      carbs: { type: Number },
-      fat: { type: Number },
+      calories: { type: Number, min: 0 },
+      protein: { type: Number, min: 0 },
+      carbs: { type: Number, min: 0 },
+      fat: { type: Number, min: 0 },
+      portionAmount: { type: Number, default: null, min: 0 },
+      portionUnit: { type: String, default: "", trim: true, maxlength: INPUT_LIMITS.PORTION_UNIT },
+      portionText: { type: String, default: "", trim: true, maxlength: LEGACY_LIMITS.PORTION_TEXT },
+      nutritionSource: {
+        type: String,
+        enum: ["manual", "ai_estimate", "ai_adjusted", "photo_scan", "barcode", "community", "repeat", "ai_suggestion"],
+      },
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     saves: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -26,7 +46,7 @@ const postSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Feed queries filter by author and sort by recency
+// Các truy vấn feed lọc theo tác giả rồi sắp theo bài mới nhất
 postSchema.index({ user: 1, createdAt: -1 });
 postSchema.index({ createdAt: -1 });
 

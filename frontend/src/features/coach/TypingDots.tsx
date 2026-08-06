@@ -1,3 +1,5 @@
+// Ba chấm chuyển động báo Coach đang soạn câu trả lời.
+// Hiện ngay khi bấm gửi, thay bằng câu trả lời thật khi AI trả về.
 // Các chấm chuyển động báo rằng Coach đang soạn câu trả lời.
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
@@ -5,6 +7,8 @@ import { theme } from "@/ui/theme";
 
 export function TypingDots() {
   const dots = useRef([new Animated.Value(0.3), new Animated.Value(0.3), new Animated.Value(0.3)]).current;
+  // Chạy hiệu ứng ba chấm khi component xuất hiện.
+  // Dọn hiệu ứng khi biến mất để không chạy nền vô ích.
   useEffect(() => {
     const anims = dots.map((v, i) =>
       Animated.loop(

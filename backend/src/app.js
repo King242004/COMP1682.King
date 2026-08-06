@@ -1,10 +1,13 @@
+// File này là cửa vào của mọi request từ app điện thoại.
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const { getEmailStatus } = require("./config/mailer");
+const { getEmailStatus } = require("./services/emailRelayClient");
 const errorHandler = require("./middleware/errorHandler");
 const { authLimiter } = require("./middleware/rateLimiters");
 
+// Chỉ cho phép các địa chỉ web đã khai báo gọi vào.
+// Để trống danh sách nghĩa là cho tất cả, dùng khi chạy máy nhà.
 function corsOptions() {
   const allowedOrigins = String(process.env.CORS_ORIGINS || "")
     .split(",")
@@ -32,18 +35,23 @@ function createApp() {
   app.use(helmet());
   app.use(cors(corsOptions()));
 
-  app.use("/api/coach", express.json({ limit: "8mb" }), require("./routes/coach"));
+  // Coach cho phép dữ liệu tới 8mb vì ảnh món ăn được gửi kèm trong JSON.
+  app.use("/api/coach", express.json({ limit: "8mb" }), require("./routes/coachRoutes"));
+  // Các nhóm còn lại chỉ gửi chữ và số nên 1mb là đủ.
   app.use(express.json({ limit: "1mb" }));
 
-  app.use("/api/auth", authLimiter, require("./routes/auth"));
-  app.use("/api/meals", require("./routes/meal"));
-  app.use("/api/plan", require("./routes/plan"));
-  app.use("/api/exercise", require("./routes/exercise"));
-  app.use("/api/weight", require("./routes/weight"));
-  app.use("/api/profile", require("./routes/profile"));
-  app.use("/api/user", require("./routes/user"));
-  app.use("/api/scan", require("./routes/scan"));
-  app.use("/api/community", require("./routes/community"));
+  // Bảng chia việc. Địa chỉ bắt đầu bằng gì thì giao cho file route đó.
+  app.use("/api/auth", authLimiter, require("./routes/authRoutes"));
+  app.use("/api/meals", require("./routes/mealRoutes"));
+  app.use("/api/plan", require("./routes/planRoutes"));
+  app.use("/api/exercise", require("./routes/exerciseRoutes"));
+  app.use("/api/weight", require("./routes/weightRoutes"));
+  app.use("/api/profile", require("./routes/profileRoutes"));
+  app.use("/api/user", require("./routes/accountRoutes"));
+  app.use("/api/scan", require("./routes/scanRoutes"));
+  app.use("/api/community", require("./routes/communityRoutes"));
+  // Địa chỉ duy nhất không cần đăng nhập. Dùng để đánh thức server và xem
+  // phần gửi email đã cấu hình chưa.
   app.get("/", (req, res) => {
     const emailStatus = getEmailStatus();
     res.json({
@@ -54,6 +62,7 @@ function createApp() {
     });
   });
 
+  // Phải đặt sau tất cả route thì mới bắt được lỗi của chúng.
   app.use(errorHandler);
   return app;
 }

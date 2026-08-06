@@ -1,9 +1,10 @@
+// Hàng chấm tròn báo những ngày nào đã ghi món trong khoảng đang xem.
 import { StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
-import type { DaySummary } from "./summary";
+import type { DaySummary } from "./progressSummary";
 
 // Bảy chấm thể hiện đúng mục tiêu, vượt mục tiêu, đã ghi hoặc chưa có dữ liệu.
 export function ConsistencyRow({ summaries, goal, daysLogged }: {

@@ -1,6 +1,9 @@
+// File này tính giờ Gemini cấp lại lượt gọi miễn phí.
+// Nơi dùng: khi backend trả chữ QUOTA, các màn AI hiện câu này
+// để người dùng biết khi nào dùng lại được.
 import type { Strings } from "@/i18n";
 
-export function nextAiResetLocal(): { date: Date; isToday: boolean } {
+function nextAiResetLocal(): { date: Date; isToday: boolean } {
   const now = new Date();
   try {
     const ptHour = (d: Date) =>

@@ -1,5 +1,9 @@
 const Notification = require("../../models/Notification");
 
+// File này lo màn Thông báo và chấm đỏ báo có thông báo mới.
+
+// Bỏ qua thông báo mà người gây ra đã xóa tài khoản, hoặc thông báo tim
+// mà bài đã bị xóa, để màn hình không hiện dòng trống bấm vào không ra gì.
 exports.getNotifications = async (req, res) => {
   const notifications = await Notification.find({ user: req.user.id })
     .sort({ createdAt: -1 })
@@ -39,6 +43,7 @@ exports.getUnreadCount = async (req, res) => {
   res.json({ count });
 };
 
+// Chạy tự động khi người dùng mở màn Thông báo, không cần bấm nút nào.
 exports.markNotificationsRead = async (req, res) => {
   await Notification.updateMany({ user: req.user.id, read: false }, { $set: { read: true } });
   res.json({ message: "Marked read." });

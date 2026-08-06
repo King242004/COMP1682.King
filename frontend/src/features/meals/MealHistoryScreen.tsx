@@ -1,14 +1,21 @@
+// Màn Lịch sử món.
+// LUỒNG XEM LỊCH SỬ, tự chạy khi mở màn
+// 1. useEffect gọi MealsContext.fetchMealHistory
+// 2. mealsApi.fetchMealHistoryRequest    (GET /meals/history)
+// 3. backend trả toàn bộ món, mới nhất lên đầu
+// 4. màn gom món theo từng ngày rồi hiện thành các nhóm
+// Chạm một món sẽ mở màn Chi tiết món.
 import { useEffect } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth } from "@/context/AuthContext";
-import { useMeals, Meal } from "@/context/MealsContext";
-import { resolveLanguage, localeTag } from "@/utils/language";
+import { useAuth } from "@/features/auth/AuthContext";
+import { useMeals, Meal } from "@/features/meals/MealsContext";
+import { resolveLanguage, localeTag } from "@/utils/languageUtils";
 import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
-import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
-import { dateKey } from "@/utils/date";
+import { MEAL_TYPE_BY_KEY } from "@/features/meals/mealTypeDisplay";
+import { dateKey } from "@/utils/dateUtils";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Screen } from "@/ui/components/Screen";
@@ -40,8 +47,9 @@ export default function MealHistoryScreen() {
   // Ngày tháng đi theo ngôn ngữ đã chọn trong app.
   const locale = localeTag(resolveLanguage(user?.language));
 
+  // Tự tải toàn bộ lịch sử món khi mở màn.
   useEffect(() => {
-    fetchMealHistory();
+    void fetchMealHistory().catch(() => {});
   }, [fetchMealHistory]);
 
   const grouped: { date: string; label: string; meals: Meal[] }[] = [];

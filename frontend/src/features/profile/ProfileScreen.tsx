@@ -1,28 +1,46 @@
+// Màn Hồ sơ, tab thứ tư. Đây là màn cửa ngõ dẫn sang nhiều màn khác.
+// LUỒNG MỞ HỒ SƠ, tự chạy khi vào tab
+// 1. useFocusEffect gọi AuthContext.fetchProfile
+// 2. accountApi.fetchProfileRequest      (GET /profile)
+// 3. backend profileController.getProfile tính BMI và TDEE rồi trả về
+// 4. màn hiện tên, ảnh đại diện, và ba chỉ số
+// Các lối đi từ màn này: Sửa hồ sơ, Cài đặt, Tiến trình, Nhắc nhở,
+// Đổi mật khẩu, và nút Đăng xuất.
 import { useCallback, useState } from "react";
 import { Alert, Image, InteractionManager, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
-import { initials } from "@/utils/name";
+import { initials } from "@/utils/nameUtils";
+import { getUserErrorMessage } from "@/utils/errorUtils";
+import { resolveDraftWeightDirection, WEIGHT_GOAL_BY_DIRECTION } from "@/config/nutritionCalculations";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { SectionLabel } from "@/ui/components/SectionLabel";
 
-function SettingRow({ icon, label, value, last }: {
-  icon: string; label: string; value: string; last?: boolean;
+function SettingRow({ icon, label, value, last, onPress }: {
+  icon: string; label: string; value: string; last?: boolean; onPress?: () => void;
 }) {
-  return (
-    <View style={[styles.row, last && styles.rowLast]}>
+  const content = (
+    <>
       <View style={styles.rowIcon}>
         <Ionicons name={icon as any} size={16} color={theme.colors.primary} />
       </View>
       <AppText variant="body2" style={styles.rowLabel}>{label}</AppText>
       <AppText variant="body2" style={styles.rowValue}>{value}</AppText>
-    </View>
+      {onPress && <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />}
+    </>
+  );
+  return onPress ? (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, last && styles.rowLast, pressed && styles.dim]}>
+      {content}
+    </Pressable>
+  ) : (
+    <View style={[styles.row, last && styles.rowLast]}>{content}</View>
   );
 }
 
@@ -33,8 +51,12 @@ export default function ProfileScreen() {
 
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  useFocusEffect(useCallback(() => { fetchProfile(); }, [fetchProfile]));
+  // Tự tải lại hồ sơ mỗi lần quay về tab này,
+  // để BMI và TDEE luôn khớp với số đo mới nhất.
+  useFocusEffect(useCallback(() => { void fetchProfile().catch(() => {}); }, [fetchProfile]));
 
+
+  // Chạm vào ảnh đại diện.
   const handlePickAvatar = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -51,13 +73,17 @@ export default function ProfileScreen() {
     setIsUploadingAvatar(true);
     try {
       await uploadAvatar(result.assets[0].uri);
-    } catch (e: any) {
-      Alert.alert(t.profile.uploadFailed, e.message || t.profile.uploadFailedMsg);
+    } catch (error) {
+      Alert.alert(t.profile.uploadFailed, getUserErrorMessage(error, t, t.profile.uploadFailedMsg));
     } finally {
       setIsUploadingAvatar(false);
     }
   };
 
+  // Nút Đăng xuất.
+  // Hỏi xác nhận rồi gọi AuthContext.logout, hàm đó xóa phiên,
+  // hủy mọi lời nhắc và dọn dữ liệu tạm của tài khoản.
+  // Sau đó app tự quay về màn Đăng nhập.
   const handleLogout = () => {
     Alert.alert(t.profile.logout, t.profile.logoutMsg, [
       { text: t.common.cancel, style: "cancel" },
@@ -72,8 +98,14 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const displayName = user?.name ?? "MealMate User";
+  const displayName = user?.name ?? t.profile.fallbackName;
   const badge = initials(displayName);
+  const displayedDirection = resolveDraftWeightDirection(
+    user?.weight ?? null,
+    user?.targetWeight ?? null,
+    stats?.maintainWeightThresholdKg,
+  ) ?? stats?.weightDirection;
+  const displayedGoal = displayedDirection ? WEIGHT_GOAL_BY_DIRECTION[displayedDirection] : user?.goal;
 
   return (
     <Screen padded={false}>
@@ -93,8 +125,9 @@ export default function ProfileScreen() {
                   <AppText variant="h2" style={styles.avatarBadge}>{badge}</AppText>
                 )}
               </View>
+              {/* Dùng cùng bộ icon với cả màn thay vì emoji, để nét vẽ đồng bộ. */}
               <View style={styles.avatarCam}>
-                <AppText style={styles.avatarCamText}>📷</AppText>
+                <Ionicons name="camera" size={12} color="#fff" />
               </View>
             </Pressable>
             <View style={styles.userInfo}>
@@ -103,7 +136,7 @@ export default function ProfileScreen() {
               {isUploadingAvatar && <AppText variant="muted" style={styles.uploadingText}>{t.profile.uploading}</AppText>}
             </View>
             <Pressable
-              onPress={() => router.push("/profile/edit" as any)}
+              onPress={() => router.push("/profile/edit")}
               style={({ pressed }) => [styles.editBtn, pressed && styles.editBtnPressed]}
             >
               <Ionicons name="pencil" size={18} color={theme.colors.primary} />
@@ -111,33 +144,64 @@ export default function ProfileScreen() {
           </View>
         </Card>
 
-        {/* Health stats strip */}
+        {/* Dải này chỉ chứa SỰ THẬT VỀ CƠ THỂ, tính ra từ số đo của người dùng.
+            Mục tiêu calo KHÔNG nằm ở đây: nó là thứ người dùng nhắm tới chứ không
+            phải số đo, và ở đây bấm vào nó cũng không làm được gì. Nơi của nó là
+            Trang chủ để theo dõi mỗi ngày, và Cài đặt để sửa.
+
+            Ba ô đọc từ trái sang phải chính là mạch tính:
+              BMI  cân nặng so với chiều cao,
+              BMR  mức đốt khi nằm yên cả ngày,
+              TDEE bằng BMR nhân hệ số vận động. */}
         {stats && (
           <View style={styles.statsStrip}>
             <Card style={styles.statCard}>
               <AppText variant="h0" style={styles.statValue}>{stats.bmi ?? "-"}</AppText>
               <AppText variant="subtle" style={styles.statLabel}>{t.profile.bmi}</AppText>
-              {stats.bmiCategory && <AppText variant="subtle" style={styles.statSub}>{stats.bmiCategory}</AppText>}
+            </Card>
+            <Card style={styles.statCard}>
+              <AppText variant="h0" style={styles.statValue}>{stats.bmr ?? "-"}</AppText>
+              <AppText variant="subtle" style={styles.statLabel}>{t.profile.bmr}</AppText>
             </Card>
             <Card style={styles.statCard}>
               <AppText variant="h0" style={styles.statValue}>{stats.tdee ?? "-"}</AppText>
               <AppText variant="subtle" style={styles.statLabel}>{t.profile.tdee}</AppText>
             </Card>
-            <Card style={styles.statCard}>
-              <AppText variant="h0" style={styles.statValue}>{user?.calorieGoal ?? 2000}</AppText>
-              <AppText variant="subtle" style={styles.statLabel}>{t.profile.goalKcal}</AppText>
-            </Card>
           </View>
+        )}
+        {stats?.bmi && user?.age && user.age < 18 ? (
+          <AppText variant="subtle" style={styles.bmiYouthNote}>{t.profile.bmiYouthNote}</AppText>
+        ) : null}
+
+        {/* Thiếu số đo thì cả ba ô chỉ hiện dấu gạch, không nói vì sao.
+            Thay bằng lời mời hoàn thiện hồ sơ kèm lối đi thẳng tới màn sửa. */}
+        {stats && stats.bmi == null && stats.bmr == null && stats.tdee == null && (
+          <Card style={styles.statsEmpty}>
+            <Ionicons name="body-outline" size={22} color={theme.colors.primary} />
+            <AppText variant="body2" style={styles.statsEmptyText}>{t.profile.statsEmpty}</AppText>
+            <Pressable
+              onPress={() => router.push("/profile/edit")}
+              style={({ pressed }) => [styles.statsEmptyBtn, pressed && styles.dim]}
+            >
+              <AppText style={styles.statsEmptyBtnText}>{t.profile.statsEmptyCta}</AppText>
+            </Pressable>
+          </Card>
         )}
 
         {/* Health details */}
         <SectionLabel>{t.profile.healthDetails}</SectionLabel>
         <Card style={styles.detailCard}>
-          <SettingRow icon="person" label={t.profile.gender} value={user?.gender ?? "-"} />
+          {/* Dùng danh mục ngôn ngữ như mọi hàng khác, nếu không sẽ hiện male hoặc female. */}
+          <SettingRow icon="person" label={t.profile.gender} value={t.labels.gender[user?.gender ?? ""] ?? "-"} />
           <SettingRow icon="calendar" label={t.profile.age} value={user?.age ? t.profile.ageValue(user.age) : "-"} />
           <SettingRow icon="scale" label={t.profile.weight} value={user?.weight ? t.profile.weightValue(user.weight) : "-"} />
           <SettingRow icon="resize" label={t.profile.height} value={user?.height ? t.profile.heightValue(user.height) : "-"} />
-          <SettingRow icon="flag" label={t.profile.goal} value={t.labels.goal[user?.goal ?? ""] ?? "-"} />
+          <SettingRow
+            icon="flag"
+            label={t.profile.goal}
+            value={t.labels.goal[displayedGoal ?? ""] ?? "-"}
+            onPress={() => router.push("/profile/goals")}
+          />
           <SettingRow icon="walk" label={t.profile.activity} value={t.labels.activity[user?.activityLevel ?? ""] ?? "-"} />
           <SettingRow icon="heart" label={t.profile.conditions} value={user?.conditions?.length ? user.conditions.map((c) => t.labels.condition[c] ?? c).join(", ") : t.profile.none} />
           <SettingRow icon="restaurant" label={t.profile.taste} value={user?.tastePreferences?.trim() ? user.tastePreferences : "-"} last />
@@ -147,7 +211,17 @@ export default function ProfileScreen() {
         <SectionLabel>{t.profile.account}</SectionLabel>
         <Card style={styles.detailCard}>
           <Pressable
-            onPress={() => router.push("/profile/settings" as any)}
+            onPress={() => router.push("/profile/help")}
+            style={({ pressed }) => [styles.accountRow, styles.accountRowDivider, pressed && styles.dim]}
+          >
+            <View style={styles.accountIcon}>
+              <Ionicons name="help-circle-outline" size={17} color={theme.colors.primary} />
+            </View>
+            <AppText variant="body2" style={styles.accountLabel}>{t.profile.help}</AppText>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.subtle} />
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/profile/settings")}
             style={({ pressed }) => [styles.accountRow, styles.accountRowDivider, pressed && styles.dim]}
           >
             <View style={styles.accountIcon}>
@@ -193,23 +267,29 @@ const styles = StyleSheet.create({
     width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center",
     borderWidth: 2, borderColor: theme.colors.surface,
   },
-  avatarCamText: { fontSize: 11, color: "#fff" },
   userInfo: { flex: 1, gap: 4 },
   userEmail: { fontSize: 13 },
   uploadingText: { fontSize: 11 },
   editBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center" },
   editBtnPressed: { backgroundColor: "rgba(8,145,178,0.18)" },
 
-  // Stats strip
+  // Dải chỉ số: BMI, BMR, TDEE
   statsStrip: { flexDirection: "row", gap: theme.space.md },
+  bmiYouthNote: { textAlign: "center", paddingHorizontal: theme.space.md },
+  statsEmpty: { padding: theme.space.lg, alignItems: "center", gap: theme.space.sm },
+  statsEmptyText: { textAlign: "center", color: theme.colors.muted },
+  statsEmptyBtn: {
+    paddingHorizontal: theme.space.lg, paddingVertical: theme.space.sm,
+    borderRadius: theme.radius.pill, backgroundColor: theme.colors.tint,
+  },
+  statsEmptyBtnText: { fontSize: 13, fontWeight: "700", color: theme.colors.primary },
   statCard: { flex: 1, padding: theme.space.lg, alignItems: "center", gap: 4 },
   statValue: { fontSize: 24, color: theme.colors.primary },
   statLabel: { fontSize: 12 },
-  statSub: { fontSize: 11 },
 
   detailCard: { paddingVertical: 4, paddingHorizontal: theme.space.lg },
 
-  // Account rows
+  // Các hàng trong thẻ Tài khoản
   accountRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
   accountRowDivider: { borderBottomWidth: 0.5, borderBottomColor: theme.colors.border },
   accountIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: theme.colors.tintSoft, alignItems: "center", justifyContent: "center" },

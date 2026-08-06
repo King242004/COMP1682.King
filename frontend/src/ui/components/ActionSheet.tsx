@@ -1,3 +1,5 @@
+// Bảng lựa chọn trượt lên từ đáy màn hình.
+// Nơi dùng: menu nút quét ở thanh tab dưới.
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme, shadow } from "../theme";

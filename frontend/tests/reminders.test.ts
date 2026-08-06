@@ -4,12 +4,12 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   multiRemove: jest.fn(),
 }));
 
-jest.mock("@/utils/notifications/notifications", () => ({
+jest.mock("@/utils/notifications/notificationService", () => ({
   cancelNotification: jest.fn(),
   scheduleDailyReminder: jest.fn(),
 }));
 
-import { emptyReminders, enabledCount, formatTime, parseTime } from "@/utils/notifications/reminders";
+import { emptyReminders, enabledCount, formatTime, parseTime } from "@/utils/notifications/reminderSettings";
 
 describe("reminder helpers", () => {
   test.each([

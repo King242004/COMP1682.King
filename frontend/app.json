@@ -1,15 +1,15 @@
 {
   "expo": {
     "name": "MealMate",
-    "slug": "healthysnap",
+    "slug": "mealmate",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/mealmate-expo-icon-blue.png",
-    "scheme": "healthysnap",
+    "icon": "./assets/images/mealmate-logo-transparent.png",
+    "scheme": "mealmate",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/images/mealmate-expo-icon-blue.png"
+      "icon": "./assets/images/mealmate-logo-transparent.png"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +20,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/mealmate-logo-transparent.png"
     },
     "plugins": [
       "expo-router",

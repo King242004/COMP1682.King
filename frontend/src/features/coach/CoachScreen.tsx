@@ -1,43 +1,60 @@
+// Màn AI Coach. Đây là file BẮT ĐẦU của luồng trò chuyện.
+// Màn này có hai phần: thẻ điểm sức khỏe ở trên, và khung chat ở dưới.
+// LUỒNG GỬI TIN NHẮN
+// 1. Bấm nút gửi, chạy send ở file này
+// 2. hiện ngay tin của mình cộng ba chấm đang gõ, chưa chờ mạng
+// 3. chatWithCoach gửi tin cộng 16 tin gần nhất  (POST /coach/chat)
+// 4. backend coachController.chat gom dữ liệu thật của người dùng
+// 5. gửi cho Gemini kèm dữ liệu đó, nhận câu trả lời
+// 6. backend lưu hai tin nhắn vào database rồi trả về
+// 7. thay ba chấm bằng câu trả lời thật
+// LUỒNG GHI MÓN TỪ TIN NHẮN
+// 1. Coach nhận ra người dùng đang ăn một món, tin nhắn có nút Thêm
+// 2. Bấm Thêm, gọi POST /coach/log
+// 3. backend tạo một món thật trong nhật ký
+// 4. nút đổi thành đã thêm, bấm lần nữa là hoàn tác
+// LUỒNG XEM ĐIỂM SỨC KHỎE, tự chạy khi mở màn
+// 1. loadInsight hiện bản lưu trong máy ngay
+// 2. nếu bản lưu quá 10 phút thì gọi GET /coach/insight lấy bản mới
+// 3. điểm do CODE tính chứ không phải AI chấm, AI chỉ viết lời nhận xét
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, FlatList, Image, Keyboard, Platform, Pressable, StyleSheet, TextInput, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useHeaderHeight } from "@react-navigation/elements";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
-import { useHealthData } from "@/context/HealthDataContext";
-import { useMeals } from "@/context/MealsContext";
-import { getInsight, chatWithCoach, getChatHistory, clearChatHistory, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, logMealFromMessage, unlogMealFromMessage, type CoachInsight, type ChatMessage } from "@/features/coach/api";
-import { compressToBase64 } from "@/features/coach/image";
+import { useAuth } from "@/features/auth/AuthContext";
+import { useHealthDataRefresh } from "@/context/HealthDataRefreshContext";
+import { getInsight, chatWithCoach, getChatHistory, clearChatHistory, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight, type ChatMessage } from "@/features/coach/coachApi";
+import { prepareCoachImage } from "@/features/coach/coachImage";
 import { TypingDots } from "@/features/coach/TypingDots";
 import { InsightCard } from "@/features/coach/InsightCard";
 import { ChatBubble } from "@/features/coach/ChatBubble";
-import { todayKey, dateKey } from "@/utils/date";
+import { todayKey, dateKey } from "@/utils/dateUtils";
 import { aiResetWhen } from "@/utils/aiQuota";
-import { resolveLanguage, localeTag } from "@/utils/language";
-import { getErrorMessage } from "@/utils/errors";
+import { resolveLanguage, localeTag } from "@/utils/languageUtils";
+import { getErrorMessage } from "@/utils/errorUtils";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Screen } from "@/ui/components/Screen";
+import { INPUT_LIMITS } from "@/config/inputLimits";
 
-const MEAL_KEYS = ["breakfast", "lunch", "dinner", "snack"] as const;
-
-export default function CoachTab() {
+export default function CoachScreen() {
+  const router = useRouter();
   const { token, user } = useAuth();
-  const { revision, markHealthDataChanged } = useHealthData();
-  const { fetchMealsByDate } = useMeals();
+  const { revision } = useHealthDataRefresh();
   const lang = resolveLanguage(user?.language);
   const t = useT();
   const suggestions = t.coach.suggestions;
   const L = t.coach;
-  const mealOpts: [string, string][] = MEAL_KEYS.map((k) => [k, t.coach.mealShort[k]]);
 
   // Bù chiều cao AppHeader để bàn phím không che ô nhập.
   const headerHeight = useHeaderHeight();
   const scrollRef = useRef<FlatList<ChatMessage>>(null);
   const [insight, setInsight] = useState<CoachInsight | null>(null);
   const [loadingInsight, setLoadingInsight] = useState(true);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -50,12 +67,13 @@ export default function CoachTab() {
   const insightRequestIdRef = useRef(0);
   const handledRevisionRef = useRef(0);
   const consumedAskRef = useRef<string | null>(null);
-  const loggingRef = useRef(false);
 
   const scrollToLatest = useCallback((animated = true) => {
     scrollRef.current?.scrollToEnd({ animated });
   }, []);
 
+  // Tự cuộn xuống tin mới nhất khi bàn phím bật lên,
+  // để bàn phím không che mất tin đang đọc. Gỡ lắng nghe khi thoát màn.
   useEffect(() => {
     const subscription = Keyboard.addListener("keyboardDidShow", () => {
       requestAnimationFrame(() => scrollToLatest(true));
@@ -63,7 +81,8 @@ export default function CoachTab() {
     return () => subscription.remove();
   }, [scrollToLatest]);
 
-  // Chọn ảnh món từ camera hoặc thư viện rồi nén thành base64.
+  // Đổi sang base64 vì tin nhắn Coach gửi ảnh kèm trong JSON,
+  // khác luồng Quét ảnh vốn gửi file riêng.
   const pickImage = async (source: "camera" | "library") => {
     const perm = source === "camera"
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -76,7 +95,7 @@ export default function CoachTab() {
       ? await ImagePicker.launchCameraAsync({ mediaTypes: "images", quality: 0.7 })
       : await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.7 });
     if (result.canceled || !result.assets?.[0]?.uri) return;
-    const compressed = await compressToBase64(result.assets[0].uri);
+      const compressed = await prepareCoachImage(result.assets[0].uri);
     if (compressed) setPendingImage(compressed);
     else Alert.alert(L.imgErrTitle, L.imgErrMsg);
   };
@@ -89,6 +108,8 @@ export default function CoachTab() {
     ]);
   };
 
+  // insightRequestIdRef đánh số từng lần gọi, kết quả về muộn hơn lần mới nhất
+  // sẽ bị bỏ, tránh dữ liệu cũ đè lên dữ liệu mới.
   const loadInsight = useCallback(async (force = false) => {
     if (!token) return;
     const requestId = ++insightRequestIdRef.current;
@@ -107,15 +128,18 @@ export default function CoachTab() {
       const fresh = await getInsight(token, date, lang);
       if (requestId !== insightRequestIdRef.current) return;
       setInsight(fresh);
+      setProfileIncomplete(false);
       cacheInsight(date, lang, fresh);
-    } catch {
+    } catch (error) {
+      setProfileIncomplete(getErrorMessage(error) === "PROFILE_INCOMPLETE");
       if (requestId === insightRequestIdRef.current && !cached) setInsight(null);
     } finally {
       if (requestId === insightRequestIdRef.current) setLoadingInsight(false);
     }
   }, [token, lang]);
 
-  // Câu hỏi mở từ màn khác phải chờ lịch sử tải xong để không bị ghi đè.
+  // Lọc theo ngôn ngữ nên đổi sang tiếng Anh sẽ không lẫn tin tiếng Việt cũ.
+  // historyLoaded phải bật kể cả khi lỗi, vì câu hỏi gửi từ màn khác chờ cờ này.
   const loadHistory = useCallback(async () => {
     if (!token) return;
     setHistoryLoaded(false);
@@ -125,7 +149,7 @@ export default function CoachTab() {
       // Cuộn tới tin mới nhất sau khi lịch sử hiển thị.
       setTimeout(() => scrollToLatest(false), 150);
     } catch {
-      // Giữ nguyên dữ liệu đang có nếu tải lịch sử thất bại.
+    // Giữ nguyên dữ liệu đang có nếu tải lịch sử thất bại.
     } finally {
       setHistoryLoaded(true);
     }
@@ -137,6 +161,9 @@ export default function CoachTab() {
     loadHistory();
   }, [loadHistory]);
 
+  // Tự động làm mới điểm khi quay lại tab này, không do ai bấm.
+  // Chỉ gọi AI lại khi dữ liệu sức khỏe thật sự đổi, để đỡ tốn lượt gọi.
+  // Chờ 350 mili giây khi có thay đổi, để backend kịp ghi xong món vừa thêm.
   useFocusEffect(
     useCallback(() => {
       const changed = revision !== handledRevisionRef.current;
@@ -146,11 +173,12 @@ export default function CoachTab() {
     }, [loadInsight, revision])
   );
 
+  // Nút gửi tin nhắn, điểm bắt đầu của luồng trò chuyện.
+  // Hiện tin của mình trước khi gọi mạng; backend tự đọc lịch sử từ database.
   const send = useCallback(async (text: string, displayText?: string, source?: "community") => {
     const msg = text.trim();
     const img = pendingImage;
     if ((!msg && !img) || sending || !token) return;
-    // Gửi lịch sử trước lượt hiện tại để tránh lặp lại cùng một tin nhắn.
     const prior = messages;
     const userMsg: ChatMessage = { role: "user", text: (displayText ?? msg).trim(), image: img?.uri, createdAt: new Date().toISOString() };
     setMessages([...prior, userMsg]);
@@ -162,7 +190,6 @@ export default function CoachTab() {
       const { reply, meal, eating, messageId } = await chatWithCoach(
         token,
         msg,
-        prior,
         lang,
         img ? { base64: img.base64, mimeType: "image/jpeg" } : undefined,
         source
@@ -183,13 +210,16 @@ export default function CoachTab() {
   const askAboutTip = (tip: string) =>
     send(t.coach.askTip(tip));
 
-  // Nhận câu hỏi từ màn khác, ví dụ hỏi cách nấu một món trong Plan.
-  // askId làm mỗi lần chạm là duy nhất để quay lại tab không gửi lặp câu hỏi.
+  // Tự động gửi câu hỏi đến từ màn khác, không do người dùng gõ tại đây.
+  // Nơi gọi: nút hỏi cách nấu ở Kế hoạch tuần, và nút xem cách làm ở bài Community.
+  // consumedAskRef nhớ mã đã xử lý, để quay lại tab này không gửi lại câu hỏi cũ.
   const { ask, askId, recipeNotice } = useLocalSearchParams<{
     ask?: string;
     askId?: string;
     recipeNotice?: string;
   }>();
+  // Tự động gửi câu hỏi đến từ màn khác. Chỉ chạy khi lịch sử đã tải xong
+  // và chưa gửi tin nào khác, để bong bóng câu hỏi không bị ghi đè.
   useEffect(() => {
     if (!ask || !askId || consumedAskRef.current === askId) return;
     // Chờ lịch sử và yêu cầu đang gửi hoàn tất để bong bóng câu hỏi không bị ghi đè.
@@ -201,41 +231,26 @@ export default function CoachTab() {
   }, [ask, askId, recipeNotice, token, sending, historyLoaded, send]);
 
   // Chọn loại bữa cho món gợi ý trước khi thêm. Thay đổi này chỉ ở máy.
-  const setMealType = (index: number, mealType: string) => {
-    setMessages((prev) =>
-      prev.map((m, i) => (i === index && m.meal ? { ...m, meal: { ...m.meal, mealType } } : m))
-    );
+  const reviewMeal = (m: ChatMessage) => {
+    if (!m.meal) return;
+    router.push({
+      pathname: "/meals/add",
+      params: {
+        mealType: m.meal.mealType,
+        prefillName: m.meal.name,
+        prefillCalories: String(m.meal.calories),
+        prefillProtein: String(m.meal.protein),
+        prefillCarbs: String(m.meal.carbs),
+        prefillFat: String(m.meal.fat),
+        source: "coach",
+      },
+    });
   };
 
-  const acceptLog = async (index: number) => {
-    const m = messages[index];
-    if (!token || !m?.id || !m.meal || loggingRef.current) return;
-    loggingRef.current = true;
-    try {
-      const mealId = await logMealFromMessage(token, m.id, m.meal.mealType);
-      setMessages((prev) => prev.map((x, i) => (i === index ? { ...x, loggedId: mealId } : x)));
-      await fetchMealsByDate(todayKey());
-      markHealthDataChanged();
-    } catch {
-      Alert.alert(L.error, L.addErr);
-    } finally {
-      loggingRef.current = false;
-    }
-  };
+  // Nút "Thêm" trên tin nhắn Coach có kèm món.
+  // loggingRef chặn bấm hai lần, tránh ghi trùng món.
 
-  // Hoàn tác sẽ xóa món đã ghi và hiện lại thẻ thêm món.
-  const undoLog = async (index: number) => {
-    const m = messages[index];
-    if (!token || !m?.id) return;
-    try {
-      await unlogMealFromMessage(token, m.id);
-      setMessages((prev) => prev.map((x, i) => (i === index ? { ...x, loggedId: null } : x)));
-      await fetchMealsByDate(todayKey());
-      markHealthDataChanged();
-    } catch {
-      Alert.alert(L.undoErrTitle, L.undoErrMsg);
-    }
-  };
+  // Nút hoàn tác món vừa thêm.
 
   const dayLabelFor = (iso?: string) => {
     const d = iso ? dateKey(new Date(iso)) : todayKey();
@@ -255,6 +270,7 @@ export default function CoachTab() {
     setShowJump(!nearBottom && messages.length > 0);
   };
 
+  // Nút xóa lịch sử trò chuyện.
   const onClear = () => {
     if (messages.length === 0 || !token) return;
     Alert.alert(L.clearTitle, L.clearMsg, [
@@ -323,6 +339,9 @@ export default function CoachTab() {
                   loading={loadingInsight}
                   sending={sending}
                   failText={L.insightFail}
+                  profileIncomplete={profileIncomplete}
+                  onCompleteProfile={() => router.push("/profile/edit")}
+                  onLogMeal={() => router.push("/meals/add")}
                   onAskTip={askAboutTip}
                 />
               </View>
@@ -342,10 +361,7 @@ export default function CoachTab() {
                 <ChatBubble
                   m={m}
                   labels={L}
-                  mealOpts={mealOpts}
-                  onSetMealType={(t) => setMealType(i, t)}
-                  onAcceptLog={() => acceptLog(i)}
-                  onUndoLog={() => undoLog(i)}
+                  onReviewMeal={() => reviewMeal(m)}
                 />
               </View>
             );
@@ -452,6 +468,7 @@ export default function CoachTab() {
             placeholder={L.placeholder}
             placeholderTextColor={theme.colors.subtle}
             style={styles.input}
+            maxLength={INPUT_LIMITS.COACH_MESSAGE}
             onFocus={() => scrollToLatest(true)}
             onSubmitEditing={() => send(input)}
             returnKeyType="send"
@@ -494,14 +511,18 @@ const styles = StyleSheet.create({
   title: { color: "#fff" },
 
   chatArea: { flex: 1 },
-  chatContent: { paddingTop: theme.space.sm, paddingBottom: 20, gap: theme.space.md },
+  // Đệm đáy vừa đủ để tin nhắn cuối không dính mép, phần tách khỏi dòng
+  // cảnh báo đã do marginTop của chính dòng cảnh báo lo.
+  chatContent: { paddingTop: theme.space.sm, paddingBottom: 14, gap: theme.space.md },
   listSection: { gap: theme.space.md },
   msgBlock: { gap: theme.space.md },
   daySep: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 2 },
   daySepLine: { flex: 1, height: 1, backgroundColor: "rgba(22,78,99,0.15)" },
   daySepText: { fontSize: 11, fontWeight: "700" },
   jumpBtn: {
-    position: "absolute", right: 4, bottom: 10,
+    // Nâng cao hơn mép dưới vùng chat để nút này không nằm sát ô nhập,
+    // tránh bấm nhầm khi định chạm vào ô nhập tin nhắn.
+    position: "absolute", right: 4, bottom: 36,
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: theme.colors.primary,
     alignItems: "center", justifyContent: "center",
@@ -512,7 +533,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 6,
     flexShrink: 0,
     backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 8, marginTop: 6,
+    paddingHorizontal: 10, paddingVertical: 8, marginTop: 12,
   },
   disclaimerText: { fontSize: 11, flex: 1 },
 

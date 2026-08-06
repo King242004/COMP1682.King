@@ -1,3 +1,7 @@
+// File này giữ toàn bộ màu, khoảng cách, bo góc và cỡ chữ của app.
+// Mọi màn đều lấy giá trị từ đây thay vì tự ghi số, nên đổi một chỗ
+// là cả app đổi theo.
+// App khóa tông màu sáng, không có chế độ tối.
 export const theme = {
   colors: {
     // Nền xanh cyan rất nhạt.
@@ -20,13 +24,12 @@ export const theme = {
     // Màu tím cho chỉ số chất béo.
     indigo: "#6366F1",
     danger: "#E5484D",
-    danger2: "#C9343A",
     tint: "rgba(8, 145, 178, 0.10)",
     // Màu nền nhẹ cho vùng lớn như ô tìm kiếm và chip.
     tintSoft: "rgba(8, 145, 178, 0.06)",
     shadow: "rgba(22, 78, 99, 0.16)",
   },
-  // Soft UI Evolution: radius 12-18, depth via layered soft shadows (see shadow())
+  // Bo góc 12 tới 18, chiều sâu tạo bằng nhiều lớp bóng mềm, xem hàm shadow()
   radius: {
     card: 18,
     input: 14,
@@ -50,16 +53,6 @@ export const theme = {
     caption: { fontSize: 12, fontWeight: "600" as const },
   },
 } as const;
-
-export type Theme = typeof theme;
-
-export function macroGoals(calorieGoal: number) {
-  return {
-    protein: Math.round((calorieGoal * 0.3) / 4),
-    carbs: Math.round((calorieGoal * 0.45) / 4),
-    fat: Math.round((calorieGoal * 0.25) / 9),
-  };
-}
 
 export function shadow(level: 1 | 2 | 3 = 2) {
   // Soft, premium shadow that works on iOS + Android.
@@ -93,4 +86,3 @@ export function shadow(level: 1 | 2 | 3 = 2) {
     elevation: 6,
   } as const;
 }
-

@@ -1,3 +1,4 @@
+// Hàng tiêu đề có nút quay lại, dùng cho các màn mở chồng lên.
 import { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -23,7 +24,7 @@ export function ScreenHeader({
   return (
     <View style={styles.header}>
       {title ? (
-  // Có tiêu đề: biểu tượng quay lại và tiêu đề lớn.
+        // Có tiêu đề: biểu tượng quay lại và tiêu đề lớn.
         <>
           <Pressable
             onPress={goBack}
@@ -37,7 +38,7 @@ export function ScreenHeader({
           <AppText variant="h1" style={styles.title}>{title}</AppText>
         </>
       ) : (
-  // Không có tiêu đề: biểu tượng và chữ quay lại cùng cỡ h1.
+        // Không có tiêu đề: biểu tượng và chữ quay lại cùng cỡ h1.
         <Pressable
           onPress={goBack}
           hitSlop={12}

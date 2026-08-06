@@ -1,3 +1,4 @@
+// Nhãn nhỏ in hoa đứng trên mỗi nhóm nội dung.
 import { StyleSheet } from "react-native";
 import { AppText } from "./AppText";
 

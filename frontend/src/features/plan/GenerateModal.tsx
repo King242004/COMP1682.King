@@ -1,3 +1,6 @@
+// Hộp xác nhận trước khi gọi AI tạo kế hoạch.
+// Chọn nhớ thì khẩu vị được lưu vào hồ sơ, nên Coach và phần gợi ý món
+// cũng dùng chung ghi chú đó.
 // Hộp xác nhận tạo thực đơn AI cho cả tuần hoặc một ngày, kèm ghi chú khẩu vị.
 // Chọn ghi nhớ sẽ lưu khẩu vị vào hồ sơ để Suggest, Coach và lần tạo sau cùng dùng.
 import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
@@ -5,6 +8,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
+import { INPUT_LIMITS } from "@/config/inputLimits";
 
 export function GenerateModal({ visible, scope, note, onChangeNote, remember, onToggleRemember, onCancel, onStart }: {
   visible: boolean;
@@ -32,6 +36,7 @@ export function GenerateModal({ visible, scope, note, onChangeNote, remember, on
             placeholder={L.genNotePlaceholder}
             placeholderTextColor={theme.colors.subtle}
             multiline
+            maxLength={INPUT_LIMITS.PLAN_NOTE}
             style={styles.noteInput}
           />
           <Pressable onPress={onToggleRemember} hitSlop={6} style={styles.rememberRow}>

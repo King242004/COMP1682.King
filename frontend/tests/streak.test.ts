@@ -1,4 +1,18 @@
-import { longestMealStreak, mealStreak } from "@/utils/streak";
+import { longestMealStreak, mealStreak, streakEligibleDates } from "@/utils/mealStreak";
+
+describe("streakEligibleDates", () => {
+  test("keeps meals logged on their meal date", () => {
+    expect(streakEligibleDates([
+      { date: "2026-07-23", createdAt: "2026-07-23T12:00:00" },
+    ])).toEqual(["2026-07-23"]);
+  });
+
+  test("excludes meals entered later for a past date", () => {
+    expect(streakEligibleDates([
+      { date: "2026-07-22", createdAt: "2026-07-23T12:00:00" },
+    ])).toEqual([]);
+  });
+});
 
 describe("mealStreak", () => {
   beforeEach(() => {
@@ -10,6 +24,10 @@ describe("mealStreak", () => {
 
   test("counts consecutive logged days including today", () => {
     expect(mealStreak(["2026-07-23", "2026-07-22", "2026-07-21"])).toBe(3);
+  });
+
+  test("starts a streak at one on the first logged day", () => {
+    expect(mealStreak(["2026-07-23"])).toBe(1);
   });
 
   test("starts from yesterday when today has not been logged yet", () => {

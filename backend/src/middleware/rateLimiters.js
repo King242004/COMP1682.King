@@ -1,3 +1,7 @@
+// Bộ đếm số lần gọi, chặn trước khi vào controller. Cửa sổ đếm là 15 phút.
+// authLimiter chặn dò mật khẩu, gắn cho cả nhóm đăng nhập đăng ký.
+// registrationOtpLimiter và passwordOtpLimiter chặn spam gửi email mã xác minh.
+// aiLimiter đếm riêng theo từng người dùng nên bắt buộc phải đặt SAU cửa đăng nhập.
 const rateLimit = require("express-rate-limit");
 
 function createLimiter(limit, message, options = {}) {

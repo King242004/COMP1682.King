@@ -1,8 +1,24 @@
+// Màn Sửa hồ sơ. Đây là file BẮT ĐẦU của hai luồng.
+// LUỒNG LƯU HỒ SƠ
+// 1. Sửa các ô rồi bấm Lưu
+// 2. AuthContext.updateProfile
+// 3. accountApi.updateProfileRequest     (PUT /profile)
+// 4. backend kiểm từng số nằm trong khoảng cho phép, tính lại mục tiêu calo
+// 5. quay về màn Hồ sơ với dữ liệu mới
+// LUỒNG ĐỔI ẢNH ĐẠI DIỆN
+// 1. Chạm vào ảnh, chọn chụp mới hoặc lấy từ thư viện
+// 2. AuthContext.uploadAvatar
+// 3. accountApi.uploadAvatarRequest      (POST /user/avatar, gửi kèm file)
+// 4. backend đẩy ảnh lên kho ảnh, cắt vuông, rồi XÓA ảnh cũ
+// 5. hồ sơ nhận đường dẫn ảnh mới, ảnh đổi ngay trên màn hình
+// Đổi tên đi theo đường riêng là PUT /user/name, vì backend có
+// quy tắc kiểm tên riêng cho việc này.
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
+import { getUserErrorMessage } from "@/utils/errorUtils";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -10,8 +26,8 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
+import { INPUT_LIMITS, DIGIT_LIMITS } from "@/config/inputLimits";
 
-const GOAL_KEYS = ["lose_weight", "gain_muscle", "eat_healthy"] as const;
 const ACTIVITY_KEYS = ["sedentary", "moderate", "active"] as const;
 const CONDITION_KEYS = ["diabetes", "hypertension", "gout", "high_cholesterol", "gastritis", "none"] as const;
 
@@ -26,7 +42,6 @@ export default function EditProfileScreen() {
   const [weight, setWeight] = useState(user?.weight ? String(user.weight) : "");
   const [height, setHeight] = useState(user?.height ? String(user.height) : "");
   const [gender, setGender] = useState<"male" | "female" | "">((user?.gender as "male" | "female" | "") ?? "");
-  const [goal, setGoal] = useState(user?.goal ?? "eat_healthy");
   const [activityLevel, setActivityLevel] = useState(user?.activityLevel ?? "moderate");
   const [conditions, setConditions] = useState<string[]>(user?.conditions ?? []);
   const [taste, setTaste] = useState(user?.tastePreferences ?? "");
@@ -40,6 +55,7 @@ export default function EditProfileScreen() {
 
   const isConditionActive = (c: string) => (c === "none" ? conditions.length === 0 : conditions.includes(c));
 
+  // Nút Lưu của màn sửa hồ sơ.
   const handleSave = async () => {
     const trimmedName = name.trim();
     if (!trimmedName || trimmedName.length < 2) {
@@ -66,20 +82,27 @@ export default function EditProfileScreen() {
     setIsSaving(true);
     try {
       if (trimmedName !== user?.name) await changeName(trimmedName);
-      await updateProfile({
+      const result = await updateProfile({
         gender: gender || undefined,
         age: age ? Number(age) : undefined,
         weight: weight ? Number(weight) : undefined,
         height: height ? Number(height) : undefined,
-        goal: goal || undefined,
         activityLevel: activityLevel || undefined,
         conditions,
         // Chuỗi rỗng sẽ xóa sở thích ăn uống đã lưu trước đó.
         tastePreferences: taste.trim(),
       });
-      router.back();
-    } catch (e: any) {
-      Alert.alert(t.common.errorTitle, e.message || t.editProfile.updateFailed);
+      if (result?.adjustedGoal) {
+        Alert.alert(
+          t.weight.goalAdjustedTitle,
+          t.weight.goalAdjusted(t.labels.goal[result.adjustedGoal]),
+          [{ text: t.common.ok, onPress: () => router.back() }],
+        );
+      } else {
+        router.back();
+      }
+    } catch (error) {
+      Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.editProfile.updateFailed));
     } finally {
       setIsSaving(false);
     }
@@ -96,7 +119,7 @@ export default function EditProfileScreen() {
 
         <Card style={styles.card}>
           {/* Name */}
-          <TextField label={t.editProfile.nameLabel} placeholder={t.editProfile.namePlaceholder} value={name} onChangeText={setName} autoCapitalize="words" />
+          <TextField label={t.editProfile.nameLabel} placeholder={t.editProfile.namePlaceholder} value={name} onChangeText={setName} autoCapitalize="words" maxLength={INPUT_LIMITS.DISPLAY_NAME} />
 
           {/* Gender */}
           <View style={styles.field}>
@@ -117,23 +140,9 @@ export default function EditProfileScreen() {
             </View>
           </View>
 
-          <TextField label={t.profile.age} placeholder={t.editProfile.agePlaceholder} value={age} onChangeText={setAge} keyboardType="number-pad" />
-          <TextField label={t.editProfile.weightLabel} placeholder={t.editProfile.weightPlaceholder} value={weight} onChangeText={setWeight} keyboardType="number-pad" />
-          <TextField label={t.editProfile.heightLabel} placeholder={t.editProfile.heightPlaceholder} value={height} onChangeText={setHeight} keyboardType="number-pad" />
-
-          <View style={styles.field}>
-            <AppText variant="muted">{t.profile.goal}</AppText>
-            <View style={styles.stackList}>
-              {GOAL_KEYS.map((key) => {
-                const active = goal === key;
-                return (
-                  <Pressable key={key} onPress={() => setGoal(key)} style={[styles.stackBtn, active ? styles.optActive : styles.optIdle]}>
-                    <AppText style={[styles.optTextLeft, active && styles.optTextActive]}>{t.labels.goal[key]}</AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+          <TextField label={t.profile.age} placeholder={t.editProfile.agePlaceholder} value={age} onChangeText={setAge} keyboardType="number-pad" maxLength={DIGIT_LIMITS.AGE} />
+          <TextField label={t.editProfile.weightLabel} placeholder={t.editProfile.weightPlaceholder} value={weight} onChangeText={setWeight} keyboardType="number-pad" maxLength={DIGIT_LIMITS.WEIGHT} />
+          <TextField label={t.editProfile.heightLabel} placeholder={t.editProfile.heightPlaceholder} value={height} onChangeText={setHeight} keyboardType="number-pad" maxLength={DIGIT_LIMITS.HEIGHT} />
 
           {/* Activity Level */}
           <View style={styles.field}>
@@ -173,6 +182,8 @@ export default function EditProfileScreen() {
               value={taste}
               onChangeText={setTaste}
               textContentType="none"
+              maxLength={INPUT_LIMITS.TASTE_PREFERENCES}
+              showCounter
             />
             <AppText variant="subtle" style={styles.hint}>{t.editProfile.tasteHint}</AppText>
           </View>

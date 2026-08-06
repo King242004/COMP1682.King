@@ -1,13 +1,16 @@
+// Phần Hoạt động trong màn Tiến trình.
+// Gọi mạng riêng chứ không dùng chung với món ăn, vì hai nhóm dữ liệu
+// nằm ở hai bảng khác nhau trong database.
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
-import { getExerciseHistory, type Exercise } from "@/features/exercise/api";
-import { dateKey } from "@/utils/date";
+import { getExerciseHistory, type Exercise } from "@/features/exercise/exerciseApi";
+import { dateKey } from "@/utils/dateUtils";
 import { WeeklyBarChart, type Bar } from "./WeeklyBarChart";
 import { MonthHeatmap } from "./MonthHeatmap";
 
@@ -81,7 +84,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
   const start = mode === "year" ? `${year}-01-01` : dateKey(windowDays[0]);
   const end = mode === "year" ? `${year}-12-31` : dateKey(windowDays[windowDays.length - 1]);
 
-    // Dùng chuỗi ngày ổn định làm phụ thuộc thay vì dùng chính mảng.
+  // Dùng chuỗi ngày ổn định làm phụ thuộc thay vì dùng chính mảng.
   useEffect(() => {
     if (!token) return;
     let alive = true;

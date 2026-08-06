@@ -1,14 +1,25 @@
+// Màn Chi tiết món. Đây là file BẮT ĐẦU của luồng xóa món.
+// LUỒNG XÓA MÓN
+// 1. Bấm Xóa, hộp thoại hỏi xác nhận
+// 2. MealsContext.deleteMeal
+// 3. mealsApi.deleteMealRequest        (DELETE /meals/:id)
+// 4. backend kiểm đúng chủ món rồi xóa
+// 5. MealsContext bỏ món khỏi danh sách và trừ lại tổng calo
+// 6. router.back quay về, món biến mất khỏi Trang chủ
+// Ba nút trong màn này: Sửa mở màn Sửa món, Xóa như trên,
+// và Ghi lại mở màn Thêm món điền sẵn để ăn lại món quen.
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useAuth } from "@/context/AuthContext";
-import { useMeals } from "@/context/MealsContext";
+import { useAuth } from "@/features/auth/AuthContext";
+import { useMeals } from "@/features/meals/MealsContext";
 import { useT } from "@/i18n";
-import { theme, macroGoals } from "@/ui/theme";
+import { theme } from "@/ui/theme";
+import { macroTargets } from "@/config/nutritionCalculations";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { MEAL_TYPE_BY_KEY } from "@/ui/mealTypes";
-import { dateKey } from "@/utils/date";
-import { mealSlotByHour } from "@/utils/meals/mealSlot";
-import { resolveLanguage, localeTag } from "@/utils/language";
+import { MEAL_TYPE_BY_KEY } from "@/features/meals/mealTypeDisplay";
+import { dateKey } from "@/utils/dateUtils";
+import { mealSlotByHour } from "@/features/meals/mealHelpers";
+import { resolveLanguage, localeTag } from "@/utils/languageUtils";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
@@ -54,7 +65,10 @@ export default function MealDetailScreen() {
   const t = useT();
   // Tìm trong cả danh sách hôm nay và lịch sử vì món có thể được mở từ hai nơi.
   const meal = meals.find((m) => m.id === id) || historyMeals.find((m) => m.id === id);
-  const goal = user?.calorieGoal ?? 2000;
+  // Chưa có mục tiêu thì vòng tiến độ và thanh macro không có gì để so,
+  // nên chỉ hiện con số của món chứ không dựng ra một mục tiêu giả.
+  const goal = user?.calorieGoal ?? null;
+  const macros = macroTargets(goal, user?.weight);
 
   if (!meal) {
     return (
@@ -71,7 +85,9 @@ export default function MealDetailScreen() {
   const loggedSameDay = dateKey(new Date(meal.createdAt)) === meal.date;
   // Chỉ cho ghi lại món của ngày cũ. Món hôm nay mà ghi lại sẽ tạo bản trùng.
   const eatenToday = meal.date === dateKey(new Date());
+  const portionLabel = meal.portionText || [meal.portionAmount, meal.portionUnit].filter(Boolean).join(" ");
 
+  // Nút Xóa, điểm bắt đầu của luồng xóa món.
   const handleDelete = () => {
     Alert.alert(
       t.meals.deleteMealTitle,
@@ -83,7 +99,7 @@ export default function MealDetailScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteMeal(meal.id);
-    // Quay về Home hoặc Lịch sử. Cả hai nơi đều tự cập nhật dữ liệu mới.
+            // Quay về Home hoặc Lịch sử. Cả hai nơi đều tự cập nhật dữ liệu mới.
             router.back();
           },
         },
@@ -116,6 +132,11 @@ export default function MealDetailScreen() {
               </>
             )}
           </View>
+          {!!portionLabel && (
+            <AppText variant="muted" style={styles.portionText}>
+              {t.meals.portionConsumed}: {portionLabel}
+            </AppText>
+          )}
         </View>
 
           {/* Thẻ calo có vòng tiến độ. */}
@@ -128,23 +149,23 @@ export default function MealDetailScreen() {
                 <AppText variant="muted" style={styles.kcalUnit}>{t.common.kcal}</AppText>
               </View>
             </View>
-            <ProgressRing eaten={meal.calories} goal={goal} size={64} stroke={6} />
+            {goal != null && <ProgressRing eaten={meal.calories} goal={goal} size={64} stroke={6} />}
           </View>
         </Card>
 
           {/* Các chất dinh dưỡng chính. */}
         <Card style={styles.macroCard}>
           <AppText variant="h2">{t.meals.macros}</AppText>
-          {meal.protein || meal.carbs || meal.fat ? (
+          {macros && (meal.protein || meal.carbs || meal.fat) ? (
             <View style={styles.macroList}>
               {meal.protein ? (
-                <MacroRow label={t.labels.protein} value={meal.protein} total={macroGoals(goal).protein} color={theme.colors.accent2} />
+                <MacroRow label={t.labels.protein} value={meal.protein} total={macros.protein} color={theme.colors.accent2} />
               ) : null}
               {meal.carbs ? (
-                <MacroRow label={t.labels.carbs} value={meal.carbs} total={macroGoals(goal).carbs} color={theme.colors.accent} />
+                <MacroRow label={t.labels.carbs} value={meal.carbs} total={macros.carbs} color={theme.colors.accent} />
               ) : null}
               {meal.fat ? (
-                <MacroRow label={t.labels.fat} value={meal.fat} total={macroGoals(goal).fat} color={theme.colors.indigo} />
+                <MacroRow label={t.labels.fat} value={meal.fat} total={macros.fat} color={theme.colors.indigo} />
               ) : null}
             </View>
           ) : (
@@ -155,7 +176,7 @@ export default function MealDetailScreen() {
           {/* Chỉ hiện ghi chú khi món có nội dung. */}
         {!!meal.note?.trim() && (
           <Card style={styles.noteCard}>
-            <AppText variant="h2" style={styles.noteTitle}>{t.meals.noteHeading}</AppText>
+            <AppText variant="h2" style={styles.noteTitle}>{t.meals.ingredientsCooking}</AppText>
             <AppText variant="muted" style={styles.noteText}>{meal.note}</AppText>
           </Card>
         )}
@@ -176,6 +197,8 @@ export default function MealDetailScreen() {
                     prefillProtein: String(meal.protein ?? 0),
                     prefillCarbs: String(meal.carbs ?? 0),
                     prefillFat: String(meal.fat ?? 0),
+                    prefillPortion: meal.portionText || [meal.portionAmount, meal.portionUnit].filter(Boolean).join(" "),
+                    prefillNote: meal.note ?? "",
                     mealType: mealSlotByHour(new Date().getHours()),
                     source: "repeat",
                   },
@@ -213,6 +236,7 @@ const styles = StyleSheet.create({
   },
   titleBlock: { gap: 4, marginTop: -10 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  portionText: { fontSize: 13, marginTop: 2 },
   kcalCard: { padding: theme.space.xl },
   kcalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   kcalBlock: { gap: 4 },

@@ -1,11 +1,23 @@
+// Màn Thiết lập lần đầu. Đây là file BẮT ĐẦU của luồng thiết lập hồ sơ.
+// Bốn bước nằm trong CÙNG một màn, đổi bằng biến step chứ không chuyển màn.
+// LUỒNG THIẾT LẬP LẦN ĐẦU
+// 1. Đăng ký xong, RegisterScreen đá tới đây
+// 2. Người dùng đi qua bốn bước: giới thiệu, mục tiêu, cơ thể, sức khỏe
+// 3. Bấm Hoàn tất ở bước cuối, chạy finish
+// 4. AuthContext.updateProfile
+// 5. accountApi.updateProfileRequest   (PUT /profile)
+// 6. backend profileController.updateProfile tính lại mục tiêu calo rồi lưu
+// 7. router.replace sang /tabs
 // Thiết lập tài khoản mới đi từ giới thiệu, mục tiêu, cơ thể đến sức khỏe và khẩu vị.
 // Câu trả lời cung cấp dữ liệu cho Coach, gợi ý và kế hoạch tuần ngay từ đầu.
 // Mọi bước đều có thể bỏ qua và người dùng vẫn vào được Home.
+// Phần bệnh nền ở bước cuối là dữ liệu quan trọng nhất, vì nó nuôi
+// cả hai lớp lọc an toàn ở backend khi tạo kế hoạch và gợi ý món.
 import { useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -13,17 +25,15 @@ import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { TextField } from "@/ui/components/TextField";
+import { estimateTDEE, estimateCalorieGoal, type WeightGoal } from "@/config/nutritionCalculations";
+import { INPUT_LIMITS, DIGIT_LIMITS } from "@/config/inputLimits";
 
 type Step = "intro" | "goal" | "body" | "health";
 const STEPS: Step[] = ["intro", "goal", "body", "health"];
 
-// Mifflin-St Jeor chỉ dùng để hiện ước tính. Backend sẽ tính lại mục tiêu chính thức
-// từ cùng dữ liệu khi hồ sơ được lưu.
-function calcTDEE(w: number, h: number, age: number, gender: "male" | "female", activity: string) {
-  const bmr = 10 * w + 6.25 * h - 5 * age + (gender === "male" ? 5 : -161);
-  const factor = activity === "sedentary" ? 1.2 : activity === "active" ? 1.725 : 1.55;
-  return Math.round(bmr * factor);
-}
+// Công thức và hệ số nay nằm ở src/config/nutrition.ts, không gõ lại tại đây.
+// Hai con số này chỉ để xem trước trong lúc thiết lập, backend sẽ tính lại
+// mục tiêu chính thức từ cùng dữ liệu khi hồ sơ được lưu.
 
 export function OnboardingFlow() {
   const router = useRouter();
@@ -31,10 +41,10 @@ export function OnboardingFlow() {
   const t = useT();
   const L = t.onboarding;
 
-  const GOALS = [
+  const GOALS: { key: WeightGoal; icon: string; label: string }[] = [
     { key: "lose_weight", icon: "trending-down", label: t.labels.goal.lose_weight },
-    { key: "gain_muscle", icon: "barbell", label: t.labels.goal.gain_muscle },
-    { key: "eat_healthy", icon: "leaf", label: t.labels.goal.eat_healthy },
+    { key: "gain_weight", icon: "barbell", label: t.labels.goal.gain_weight },
+    { key: "maintain_weight", icon: "leaf", label: t.labels.goal.maintain_weight },
   ];
   const ACTIVITIES = [
     { key: "sedentary", label: t.labels.activity.sedentary },
@@ -50,7 +60,7 @@ export function OnboardingFlow() {
   ];
 
   const [step, setStep] = useState<Step>("intro");
-  const [goal, setGoal] = useState("eat_healthy");
+  const [goal, setGoal] = useState<WeightGoal>("maintain_weight");
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
@@ -64,16 +74,15 @@ export function OnboardingFlow() {
 
   // TDEE ước tính thay đổi ngay khi người dùng nhập dữ liệu.
   const w = Number(weight), h = Number(height), a = Number(age);
-  const tdee = gender && w > 0 && h > 0 && a > 0 ? calcTDEE(w, h, a, gender, activity) : null;
-  const goalCal = tdee === null ? null : goal === "lose_weight" ? tdee - 500 : goal === "gain_muscle" ? tdee + 300 : tdee;
+  const tdee = gender && w > 0 && h > 0 && a > 0 ? estimateTDEE(w, h, a, gender, activity) : null;
+  const goalCal = gender ? estimateCalorieGoal(tdee, gender, goal) : null;
 
   const toggleCondition = (c: string) =>
     setConditions((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
 
   const goHome = () => router.replace("/tabs");
 
-    // Lưu các câu đã trả lời. Backend tự tính calorieGoal từ TDEE khi đủ số đo.
-    // Nếu lưu lỗi vẫn không được giữ người dùng mắc kẹt ở màn này.
+  // Lưu các câu đã trả lời. Backend tự tính calorieGoal từ TDEE khi đủ số đo.
   const finish = async () => {
     if (saving) return;
     setSaving(true);
@@ -212,10 +221,10 @@ export function OnboardingFlow() {
             </View>
 
             <View style={styles.fieldRow}>
-              <TextField style={styles.flex1} label={L.age} placeholder="21" value={age} onChangeText={setAge} keyboardType="number-pad" />
-              <TextField style={styles.flex1} label={L.weight} placeholder="65" value={weight} onChangeText={setWeight} keyboardType="number-pad" />
+              <TextField style={styles.flex1} label={L.age} placeholder="21" value={age} onChangeText={setAge} keyboardType="number-pad" maxLength={DIGIT_LIMITS.AGE} />
+              <TextField style={styles.flex1} label={L.weight} placeholder="65" value={weight} onChangeText={setWeight} keyboardType="number-pad" maxLength={DIGIT_LIMITS.WEIGHT} />
             </View>
-            <TextField label={L.height} placeholder="170" value={height} onChangeText={setHeight} keyboardType="number-pad" />
+            <TextField label={L.height} placeholder="170" value={height} onChangeText={setHeight} keyboardType="number-pad" maxLength={DIGIT_LIMITS.HEIGHT} />
 
             <View style={styles.fieldBlock}>
               <AppText variant="muted">{L.activity}</AppText>
@@ -265,7 +274,7 @@ export function OnboardingFlow() {
             </View>
 
             <View style={styles.fieldBlock}>
-              <TextField label={L.taste} placeholder={L.tastePh} value={taste} onChangeText={setTaste} textContentType="none" />
+              <TextField label={L.taste} placeholder={L.tastePh} value={taste} onChangeText={setTaste} textContentType="none" maxLength={INPUT_LIMITS.TASTE_PREFERENCES} showCounter />
               <AppText variant="subtle" style={styles.tasteHint}>
                 {L.tasteHint}
               </AppText>

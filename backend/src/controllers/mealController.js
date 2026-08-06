@@ -1,41 +1,35 @@
+// File này lo toàn bộ vòng đời một món trong nhật ký: thêm, xem, sửa, xóa.
+// Mọi câu lệnh đều kèm mã người dùng nên không ai đọc hay sửa được món của người khác.
 const Meal = require("../models/Meal");
-const { todayKey } = require("../utils/date");
+const { requestTodayKey } = require("../utils/dateUtils");
+const { validateMealInput, validateMealName, validateNutritionValues } = require("../validators/mealInputValidator");
+const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
+
+const NUTRITION_SOURCES = ["manual", "ai_estimate", "ai_adjusted", "photo_scan", "barcode", "community", "repeat", "ai_suggestion"];
 
 exports.addMeal = async (req, res) => {
-  const { name, mealType, calories, protein, carbs, fat, image, note, date } = req.body;
+  const normalized = validateMealInput(req.body, req.user.id, requestTodayKey(req));
+  if (normalized.error) return res.status(400).json({ message: normalized.error });
 
-  // Validation
-  if (!name || !mealType || calories === undefined || !date)
-    return res.status(400).json({ message: "Name, mealType, calories and date are required." });
-
-  if (!["breakfast", "lunch", "dinner", "snack"].includes(mealType))
-    return res.status(400).json({ message: "mealType must be breakfast, lunch, dinner or snack." });
-
-  if (calories < 0)
-    return res.status(400).json({ message: "Calories must be a positive number." });
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
-    return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
-
-  if (date > todayKey())
-    return res.status(400).json({ message: "Cannot log a meal for a future date." });
-
-  const meal = await Meal.create({
-    user: req.user.id,
-    name: name.trim(),
-    mealType,
-    calories,
-    protein: protein || 0,
-    carbs: carbs || 0,
-    fat: fat || 0,
-    image: image || null,
-    note: note || "",
-    date,
-  });
+  const meal = await Meal.create(normalized.value);
 
   res.status(201).json({ message: "Meal added successfully.", meal });
 };
 
+exports.addMeals = async (req, res) => {
+  if (!Array.isArray(req.body.meals) || req.body.meals.length < 1 || req.body.meals.length > 8)
+    return res.status(400).json({ message: "Enter between 1 and 8 meals." });
+
+  const currentDate = requestTodayKey(req);
+  const normalized = req.body.meals.map((meal) => validateMealInput(meal, req.user.id, currentDate));
+  const invalid = normalized.find((meal) => meal.error);
+  if (invalid) return res.status(400).json({ message: invalid.error });
+
+  const meals = await Meal.insertMany(normalized.map((meal) => meal.value));
+  res.status(201).json({ message: "Meals added successfully.", meals });
+};
+
+// Tổng được cộng ở server để mọi màn hình đều thấy cùng một con số.
 exports.getMealsByDate = async (req, res) => {
   const { date } = req.query;
 
@@ -78,26 +72,53 @@ exports.updateMeal = async (req, res) => {
   if (meal.user.toString() !== req.user.id)
     return res.status(403).json({ message: "Not authorized to update this meal." });
 
-  const { name, mealType, calories, protein, carbs, fat, image, note, date } = req.body;
+  const {
+    name, mealType, calories, protein, carbs, fat, portionAmount, portionUnit, portionText,
+    nutritionSource, image, note, date,
+  } = req.body;
 
   if (mealType !== undefined && !["breakfast", "lunch", "dinner", "snack"].includes(mealType))
     return res.status(400).json({ message: "mealType must be breakfast, lunch, dinner or snack." });
 
-  if (calories !== undefined && calories < 0)
-    return res.status(400).json({ message: "Calories must be a positive number." });
+  const nutrition = validateNutritionValues({
+    calories: calories ?? meal.calories,
+    protein: protein ?? meal.protein,
+    carbs: carbs ?? meal.carbs,
+    fat: fat ?? meal.fat,
+  });
+  if (nutrition.error) return res.status(400).json({ message: nutrition.error });
+  const normalizedName = name === undefined ? null : validateMealName(name);
+  if (normalizedName?.error) return res.status(400).json({ message: normalizedName.error });
+
+  if (portionAmount !== undefined && (!Number.isFinite(portionAmount) || portionAmount <= 0))
+    return res.status(400).json({ message: "Portion amount must be a positive number." });
+
+  if (portionUnit !== undefined && (!String(portionUnit).trim() || String(portionUnit).trim().length > INPUT_LIMITS.PORTION_UNIT))
+    return res.status(400).json({ message: `Portion unit must be between 1 and ${INPUT_LIMITS.PORTION_UNIT} characters.` });
+
+  if (portionText !== undefined && String(portionText).trim().length > LEGACY_LIMITS.PORTION_TEXT)
+    return res.status(400).json({ message: `Consumed portion must not exceed ${LEGACY_LIMITS.PORTION_TEXT} characters.` });
+
+  if (nutritionSource !== undefined && !NUTRITION_SOURCES.includes(nutritionSource))
+    return res.status(400).json({ message: "Invalid nutrition source." });
 
   if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
 
-  if (date !== undefined && date > todayKey())
+  if (date !== undefined && date > requestTodayKey(req))
     return res.status(400).json({ message: "Cannot move a meal to a future date." });
 
-  if (name !== undefined) meal.name = name.trim();
+  // Chỉ đụng tới trường nào được gửi lên. Trường không gửi thì giữ nguyên giá trị cũ.
+  if (normalizedName) meal.name = normalizedName.value;
   if (mealType !== undefined) meal.mealType = mealType;
-  if (calories !== undefined) meal.calories = calories;
-  if (protein !== undefined) meal.protein = protein || 0;
-  if (carbs !== undefined) meal.carbs = carbs || 0;
-  if (fat !== undefined) meal.fat = fat || 0;
+  if (calories !== undefined) meal.calories = nutrition.value.calories;
+  if (protein !== undefined) meal.protein = nutrition.value.protein;
+  if (carbs !== undefined) meal.carbs = nutrition.value.carbs;
+  if (fat !== undefined) meal.fat = nutrition.value.fat;
+  if (portionAmount !== undefined) meal.portionAmount = portionAmount;
+  if (portionUnit !== undefined) meal.portionUnit = String(portionUnit).trim();
+  if (portionText !== undefined) meal.portionText = String(portionText).trim();
+  if (nutritionSource !== undefined) meal.nutritionSource = nutritionSource;
   if (image !== undefined) meal.image = image;
   if (note !== undefined) meal.note = note;
   if (date !== undefined) meal.date = date;

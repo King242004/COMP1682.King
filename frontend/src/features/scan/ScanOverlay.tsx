@@ -1,10 +1,11 @@
 // Lớp phủ camera gồm thanh đầu, chọn chế độ, khung ngắm và nút điều khiển dưới.
+// Tách riêng khỏi ScanScreen để màn đó chỉ lo phần gọi mạng và xử lý dữ liệu.
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
-import type { ScanMode } from "@/features/scan/api";
+import type { ScanMode } from "@/features/scan/scanApi";
 
 export function ScanOverlay({
   mode, onSwitchMode, onClose, onFlipCamera, onCapture, onLibrary, onManualBarcode, onToggleFlash, torchOn, isScanning, cameraGranted,
@@ -35,7 +36,7 @@ export function ScanOverlay({
   // Viền phải đủ dày để phủ kín phần còn lại của màn hình.
   const BIG = Math.max(width, height);
 
-// Nút biểu tượng tròn nhỏ dùng ở hàng dưới.
+  // Nút biểu tượng tròn nhỏ dùng ở hàng dưới.
   const IconBtn = ({ icon, onPress, active }: { icon: any; onPress: () => void; active?: boolean }) => (
     <Pressable
       onPress={onPress}
@@ -50,7 +51,7 @@ export function ScanOverlay({
     </Pressable>
   );
 
-// Nút biểu tượng không nền ở thanh đầu, dùng để quay lại hoặc đổi camera.
+  // Nút biểu tượng không nền ở thanh đầu, dùng để quay lại hoặc đổi camera.
   const TopBtn = ({ icon, onPress }: { icon: any; onPress: () => void }) => (
     <Pressable onPress={onPress} hitSlop={10} style={({ pressed }) => [styles.topBtn, pressed && styles.dim]}>
       <Ionicons name={icon} size={28} color="#fff" />
@@ -132,7 +133,7 @@ export function ScanOverlay({
               </Pressable>
             </View>
           ) : (
-                // marginBottom được tính khi chạy để lời nhắc nằm gần mép trên khung.
+            // marginBottom được tính khi chạy để lời nhắc nằm gần mép trên khung.
             <View style={[styles.hintPill, { marginBottom: frameH - 56 }]}>
               <AppText style={styles.hintText}>
                 {isBarcode ? t.scan.pointBarcode : t.scan.pointMeal}

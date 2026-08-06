@@ -1,3 +1,5 @@
+// Hook làm số chạy dần thay vì nhảy ngay sang giá trị mới.
+// Nơi dùng: vòng calo ở Trang chủ, để thêm một món thì số chạy mượt.
 import { useEffect, useRef, useState } from "react";
 
 // Chạy số đang hiển thị dần tới value trong khoảng 450 ms.
@@ -8,6 +10,8 @@ export function useAnimatedNumber(value: number, duration = 450): number {
   const displayRef = useRef(value);
   const rafRef = useRef<number | null>(null);
 
+  // Chạy lại mỗi khi số đích đổi. Dọn cả hiệu ứng lẫn bộ đếm chốt
+  // khi component biến mất, để không chạy nền.
   useEffect(() => {
     const from = displayRef.current;
     if (from === value) return;

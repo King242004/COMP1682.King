@@ -1,4 +1,4 @@
-import { dateKey } from "@/utils/date";
+import { dateKey } from "@/utils/dateUtils";
 
 describe("dateKey", () => {
   test("formats local dates without UTC shifting", () => {

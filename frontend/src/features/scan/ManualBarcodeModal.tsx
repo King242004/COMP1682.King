@@ -1,4 +1,5 @@
 // Hộp nhập mã vạch thủ công tự quản lý ô nhập và kiểm tra dữ liệu.
+// Dùng khi camera không đọc được mã vì mã mờ hoặc bao bì bị nhăn.
 import { useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
@@ -7,6 +8,7 @@ import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { TextField } from "@/ui/components/TextField";
+import { INPUT_LIMITS } from "@/config/inputLimits";
 
 export function ManualBarcodeModal({ visible, onClose, onSubmit }: {
   visible: boolean;
@@ -46,6 +48,7 @@ export function ManualBarcodeModal({ visible, onClose, onSubmit }: {
               value={code}
               onChangeText={setCode}
               keyboardType="number-pad"
+              maxLength={INPUT_LIMITS.BARCODE}
             />
             <View style={styles.actions}>
               <View style={styles.flex1}>

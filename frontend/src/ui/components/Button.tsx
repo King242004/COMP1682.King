@@ -1,3 +1,4 @@
+// Nút bấm dùng chung cho toàn app.
 import { ReactNode } from "react";
 import { Pressable, StyleSheet, View, type PressableProps, type TextStyle, type ViewStyle } from "react-native";
 import { theme } from "../theme";

@@ -1,4 +1,6 @@
+// Nơi mọi lỗi của backend đi về, đặt ở cuối app.js.
 function errorHandler(err, req, res, next) {
+  // Nếu đã lỡ trả lời rồi thì thôi, không ghi đè lên nữa.
   if (res.headersSent) return next(err);
 
   if (err.name === "MulterError") {

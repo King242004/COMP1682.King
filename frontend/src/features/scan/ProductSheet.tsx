@@ -1,11 +1,13 @@
-import { Image, Modal, Pressable, StyleSheet, View } from "react-native";
+// Bảng trượt hiển thị sản phẩm tìm được sau khi quét mã vạch.
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
-import type { Product } from "@/features/scan/api";
+import type { Product } from "@/features/scan/scanApi";
+import { ScanBottomSheet } from "./ScanBottomSheet";
 
 export function ProductSheet({ visible, product, onAdd, onAskCoach, onClose }: {
   visible: boolean;
@@ -17,16 +19,7 @@ export function ProductSheet({ visible, product, onAdd, onAskCoach, onClose }: {
 }) {
   const t = useT();
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <View style={styles.grabber} />
-          <View style={styles.headerRow}>
-            <AppText variant="h2">{t.scan.productFound}</AppText>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close-circle" size={28} color={theme.colors.subtle} />
-            </Pressable>
-          </View>
+    <ScanBottomSheet visible={visible} title={t.scan.productFound} onClose={onClose}>
           {product && (
             <>
               <Card style={styles.card}>
@@ -72,21 +65,11 @@ export function ProductSheet({ visible, product, onAdd, onAskCoach, onClose }: {
               </View>
             </>
           )}
-        </View>
-      </View>
-    </Modal>
+    </ScanBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  sheet: {
-    backgroundColor: theme.colors.bg,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40,
-  },
-  grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.border, alignSelf: "center", marginBottom: theme.space.md },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: theme.space.md },
   card: { padding: theme.space.lg, gap: theme.space.md },
   productRow: { flexDirection: "row", alignItems: "center", gap: theme.space.md },
   thumb: {

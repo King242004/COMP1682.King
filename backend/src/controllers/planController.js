@@ -3,14 +3,27 @@ const PlanWorkout = require("../models/PlanWorkout");
 const Meal = require("../models/Meal");
 const Exercise = require("../models/Exercise");
 const User = require("../models/User");
-const { insightModels } = require("../config/gemini");
-const { generateWithFallback } = require("../services/aiGenerate");
-const { CONDITION_GUIDE } = require("../services/coachContext");
-const { filterDishes } = require("../services/conditionFilter");
-const { todayKey } = require("../utils/date");
+const { insightModels } = require("../config/geminiModels");
+const { generateWithFallback } = require("../services/aiClient");
+const { CONDITION_GUIDE } = require("../services/coach/coachContext");
+const { filterDishes } = require("../services/nutrition/foodSafetyFilter");
+const { requestTodayKey } = require("../utils/dateUtils");
+const { validateMealName, validateNutritionValues } = require("../validators/mealInputValidator");
+const { replacePlanRange } = require("../services/planReplacement");
+const {
+  HOME_EXERCISE_CATEGORIES,
+  HOME_EXERCISE_DURATIONS,
+  isAllowedHomeExercise,
+} = require("../config/homeRoutineRules");
+const { getGuidedRoutine, buildExerciseSnapshot } = require("../config/exerciseCatalog");
+const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
+
+// File này lo kế hoạch tuần: món dự định ăn, tạo thực đơn bằng AI,
+// danh sách đi chợ, và nút chuyển món kế hoạch thành dữ liệu thật.
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
+// Khác với nhật ký món, ở đây ngày ở tương lai là hợp lệ vì đang lên kế hoạch.
 exports.addPlanMeal = async (req, res) => {
   const { name, mealType, calories, protein, carbs, fat, note, date } = req.body;
 
@@ -20,20 +33,19 @@ exports.addPlanMeal = async (req, res) => {
   if (!MEAL_TYPES.includes(mealType))
     return res.status(400).json({ message: "mealType must be breakfast, lunch, dinner or snack." });
 
-  if (calories < 0)
-    return res.status(400).json({ message: "Calories must be a positive number." });
+  const normalizedName = validateMealName(name);
+  if (normalizedName.error) return res.status(400).json({ message: normalizedName.error });
+  const nutrition = validateNutritionValues({ calories, protein, carbs, fat });
+  if (nutrition.error) return res.status(400).json({ message: nutrition.error });
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
 
   const planMeal = await PlanMeal.create({
     user: req.user.id,
-    name: name.trim(),
+    name: normalizedName.value,
     mealType,
-    calories,
-    protein: protein || 0,
-    carbs: carbs || 0,
-    fat: fat || 0,
+    ...nutrition.value,
     note: note || "",
     date,
   });
@@ -56,11 +68,16 @@ exports.getPlanMeals = async (req, res) => {
   res.json({ planMeals, planWorkouts });
 };
 
+// Đây là luồng AI phức tạp nhất của app, và là luồng cần nắm rõ nhất khi bảo vệ.
+// Vì sao cần hai lớp an toàn: câu lệnh gửi AI chỉ là lời dặn, AI vẫn có thể quên.
+// Lớp thứ hai chạy ở server nên người dùng không tắt được, đây là chỗ chặn cuối cùng.
+// Giới hạn của lớp hai: nó chỉ đọc TÊN món, không phân tích được nguyên liệu bên trong.
 exports.generatePlan = async (req, res) => {
   const { startDate, endDate, language, note } = req.body;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(endDate || ""))
     return res.status(400).json({ message: "startDate and endDate must be YYYY-MM-DD." });
 
+  // Bước 1. Chặn ở 14 ngày để một lần gọi AI không phình quá to.
   const dates = [];
   const cur = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
@@ -71,20 +88,33 @@ exports.generatePlan = async (req, res) => {
   if (dates.length === 0) return res.status(400).json({ message: "Invalid date range." });
 
   try {
-    const user = await User.findById(req.user.id).select("gender age weight height goal activityLevel conditions calorieGoal tastePreferences");
+    // Bước 2. Đọc hồ sơ để lấy bệnh nền, mục tiêu calo và sở thích ăn uống.
+    // Đây là nguồn dữ liệu cho cả hai lớp an toàn ở bước 3 và bước 5.
+    const user = await User.findById(req.user.id).select("gender age weight height goal activityLevel conditions calorieGoal tastePreferences weeklyWorkoutTarget");
     const conditions = user?.conditions?.length ? user.conditions.join(", ") : "none";
-    const goalCal = user?.calorieGoal || 2000;
+    // Kế hoạch tuần xoay quanh mục tiêu calo, nên chưa có mục tiêu thì dừng lại
+    // và mời hoàn tất hồ sơ, thay vì lặng lẽ lên kế hoạch theo một con số bịa.
+    const goalCal = user?.calorieGoal;
+    if (!goalCal)
+      return res.status(400).json({ message: "PROFILE_INCOMPLETE" });
     const langName = language === "vi" ? "Vietnamese (tiếng Việt)" : "English";
-    const prefs = [user?.tastePreferences, note]
-      .map((s) => String(s || "").trim())
+    // Cắt RIÊNG từng vế theo hạn mức của chính nó rồi mới nối.
+    // Bản cũ nối trước rồi mới cắt chung một lần, nên ghi chú dài sẽ đẩy mất
+    // khẩu vị đã lưu trong hồ sơ và AI dựng kế hoạch theo dữ liệu bị cụt.
+    const prefs = [
+      String(user?.tastePreferences || "").trim().slice(0, LEGACY_LIMITS.TASTE_PREFERENCES),
+      String(note || "").trim().slice(0, INPUT_LIMITS.PLAN_NOTE),
+    ]
       .filter(Boolean)
-      .join("; ")
-      .slice(0, 300);
+      .join("; ");
 
-    const prompt = `You are a nutrition and fitness coach creating a personalized weekly plan.
+    // Bước 3. LỚP AN TOÀN THỨ NHẤT.
+    // Nhét bệnh nền, mục tiêu calo và sở thích vào câu lệnh gửi cho AI.
+    // Đây mới chỉ là LỜI DẶN, AI vẫn có thể quên, nên còn lớp thứ hai ở bước 5.
+    const prompt = `You are a nutrition coach creating a personalized weekly meal and at-home activity plan.
 
 USER PROFILE:
-- Goal: ${user?.goal || "eat_healthy"} | Daily calorie target: ${goalCal} kcal
+- Goal: ${user?.goal || "maintain_weight"} | Daily calorie target: ${goalCal} kcal
 - Health conditions: ${conditions} (${CONDITION_GUIDE})
 - Weight: ${user?.weight ?? "unknown"} kg, Height: ${user?.height ?? "unknown"} cm, Age: ${user?.age ?? "unknown"}, Gender: ${user?.gender ?? "unknown"}, Activity: ${user?.activityLevel || "moderate"}
 
@@ -95,16 +125,19 @@ REQUIREMENTS:
 - Prefer common Vietnamese dishes that are easy to cook or buy. Vary dishes across the week — do not repeat the same dish two days in a row.
 - Adjust every dish choice to the health conditions above.
 - HARD CONSTRAINT: NO dish may contain ANY ingredient the health conditions forbid (per the guide above). Example: gout → absolutely no shrimp/tôm, crab, shellfish, organ meats, red meat. Before finalizing each dish, CHECK its ingredients against the conditions; when in doubt, pick a safer dish.
-- Also give ONE workout suggestion per day suited to the user's conditions and goal; a rest day is allowed. "workout" is an OBJECT: "text" = friendly one-liner (max ~15 words); "name" = short activity name only (max 4 words, e.g. "Đi bộ nhanh"); "met" = realistic MET value (2-12); "durationMin" = 10-90. On a REST day set "rest": true and give only "text".
+- For activity, choose at most one guided at-home session per day. Use ONLY these categories: ${HOME_EXERCISE_CATEGORIES.join(", ")}. Use ONLY these durations in minutes: ${HOME_EXERCISE_DURATIONS.join(", ")}.
+- A rest day must use {"rest":true}. A training day must use {"rest":false,"category":"allowed category","durationMin":allowed number}.
+${user?.weeklyWorkoutTarget ? `- Across a seven-day plan, schedule about ${user.weeklyWorkoutTarget} training days.` : "- Balance training and rest days based on the profile."}
+- Do not invent an exercise name, MET value, calorie burn or equipment. MealMate will link the category and duration to its own guided catalogue.
 - Never use the em dash character (—) in any text; use a comma instead.
-- Write dish names and workout text in ${langName}.${
+- Write dish names in ${langName}.${
       prefs
         ? `\n- USER FOOD PREFERENCES (MUST follow strictly — avoid disliked/allergy foods): ${prefs}`
         : ""
     }
 
 Return ONLY valid JSON:
-{"days":[{"date":"YYYY-MM-DD","workout":{"text":"...","name":"...","met":0,"durationMin":0,"rest":false},"meals":[{"name":"...","mealType":"breakfast|lunch|dinner|snack","calories":0,"protein":0,"carbs":0,"fat":0}]}]}`;
+{"days":[{"date":"YYYY-MM-DD","workout":{"rest":false,"category":"everyday|recovery|strength|cardio","durationMin":10},"meals":[{"name":"...","mealType":"breakfast|lunch|dinner|snack","calories":0,"protein":0,"carbs":0,"fat":0}]}]}`;
 
     const result = await generateWithFallback(insightModels, prompt);
     let parsed;
@@ -114,43 +147,45 @@ Return ONLY valid JSON:
       return res.status(500).json({ message: "AI returned an invalid plan. Please try again." });
     }
 
-    const num = (v) => Math.max(0, Math.round(Number(v) || 0));
+    // Bước 4. Không tin thẳng dữ liệu AI trả về. Ép mọi số về số nguyên không âm,
+    // cắt chữ quá dài, và bỏ qua ngày nào không nằm trong khoảng đã yêu cầu.
     const mealDocs = [];
     const workoutDocs = [];
     for (const day of Array.isArray(parsed.days) ? parsed.days : []) {
       if (!dates.includes(day?.date)) continue;
       for (const m of Array.isArray(day.meals) ? day.meals : []) {
         if (!m?.name || m.calories == null) continue;
+        const nutrition = validateNutritionValues(m);
+        if (nutrition.error) continue;
         mealDocs.push({
           user: req.user.id,
-          name: String(m.name).trim().slice(0, 100),
+          name: String(m.name).trim().slice(0, LEGACY_LIMITS.MEAL_NAME),
           mealType: MEAL_TYPES.includes(m.mealType) ? m.mealType : "snack",
-          calories: num(m.calories),
-          protein: num(m.protein),
-          carbs: num(m.carbs),
-          fat: num(m.fat),
+          calories: Math.round(nutrition.value.calories),
+          protein: Math.round(nutrition.value.protein),
+          carbs: Math.round(nutrition.value.carbs),
+          fat: Math.round(nutrition.value.fat),
           date: day.date,
         });
       }
-      const w = day.workout;
-      if (w) {
-        const text = String((typeof w === "object" ? w.text : w) || "").trim().slice(0, 200);
-        if (text) {
-          const met = Number(w.met);
-          const dur = Math.round(Number(w.durationMin));
-          const structured =
-            typeof w === "object" && !w.rest && w.name && met >= 1.5 && met <= 15 && dur >= 5 && dur <= 180;
-          workoutDocs.push({
-            user: req.user.id,
-            date: day.date,
-            text,
-            name: structured ? String(w.name).trim().slice(0, 60) : null,
-            met: structured ? Math.round(met * 10) / 10 : null,
-            durationMin: structured ? dur : null,
-          });
-        }
+
+      const workout = day?.workout;
+      const workoutDuration = Math.round(Number(workout?.durationMin));
+      if (
+        workout &&
+        !workout.rest &&
+        isAllowedHomeExercise(workout.category, workoutDuration)
+      ) {
+        workoutDocs.push({
+          user: req.user.id,
+          date: day.date,
+          category: workout.category,
+          durationMin: workoutDuration,
+          text: "",
+        });
       }
     }
+    // Bước 5. Lớp an toàn thứ hai, chạy ở server nên người dùng không bỏ qua được.
     const { kept: safeMealDocs, removed } = filterDishes(mealDocs, user?.conditions || []);
     if (removed.length)
       console.warn("Plan condition-filter removed:", removed.map((r) => `${r.name} (${r.condition})`).join(", "));
@@ -158,15 +193,15 @@ Return ONLY valid JSON:
     if (safeMealDocs.length === 0)
       return res.status(500).json({ message: "AI plan came back empty. Please try again." });
 
+    // Bước 6. Ghi bản mới thành công rồi mới xóa bản cũ trong đúng khoảng ngày.
+    // Nếu database lỗi giữa chừng, người dùng vẫn còn kế hoạch trước đó.
     const range = { user: req.user.id, date: { $gte: startDate, $lte: endDate } };
-    await PlanMeal.deleteMany(range);
-    await PlanWorkout.deleteMany(range);
-    await PlanMeal.insertMany(safeMealDocs);
-    if (workoutDocs.length) await PlanWorkout.insertMany(workoutDocs);
-
+    await replacePlanRange(range, safeMealDocs, workoutDocs);
     res.json({ message: "Plan generated.", meals: safeMealDocs.length, workouts: workoutDocs.length });
   } catch (err) {
     console.error("Plan generate error:", err.message);
+    // Tách riêng lỗi hết lượt gọi AI. App nhận chữ QUOTA sẽ hiện thông báo
+    // hết lượt kèm giờ được dùng lại, thay vì báo lỗi chung chung.
     const quota = /429|quota|rate limit|too many requests/i.test(String(err.message || ""));
     res.status(quota ? 429 : 500).json({ message: quota ? "QUOTA" : "Failed to generate the plan. Please try again." });
   }
@@ -208,6 +243,7 @@ Return ONLY valid JSON:
     } catch {
       return res.status(500).json({ message: "AI returned an invalid list. Please try again." });
     }
+    // Lọc lại kết quả AI, bỏ nhóm thiếu tên, và cắt bớt cho khỏi dài quá màn hình.
     const groups = (Array.isArray(parsed.groups) ? parsed.groups : [])
       .filter((g) => g && g.name && Array.isArray(g.items))
       .map((g) => ({ name: String(g.name).slice(0, 60), items: g.items.map((s) => String(s).slice(0, 120)).slice(0, 30) }));
@@ -234,18 +270,25 @@ exports.updatePlanMeal = async (req, res) => {
   if (mealType !== undefined && !MEAL_TYPES.includes(mealType))
     return res.status(400).json({ message: "mealType must be breakfast, lunch, dinner or snack." });
 
-  if (calories !== undefined && calories < 0)
-    return res.status(400).json({ message: "Calories must be a positive number." });
+  const nutrition = validateNutritionValues({
+    calories: calories ?? planMeal.calories,
+    protein: protein ?? planMeal.protein,
+    carbs: carbs ?? planMeal.carbs,
+    fat: fat ?? planMeal.fat,
+  });
+  if (nutrition.error) return res.status(400).json({ message: nutrition.error });
+  const normalizedName = name === undefined ? null : validateMealName(name);
+  if (normalizedName?.error) return res.status(400).json({ message: normalizedName.error });
 
   if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
 
-  if (name !== undefined) planMeal.name = name.trim();
+  if (normalizedName) planMeal.name = normalizedName.value;
   if (mealType !== undefined) planMeal.mealType = mealType;
-  if (calories !== undefined) planMeal.calories = calories;
-  if (protein !== undefined) planMeal.protein = protein || 0;
-  if (carbs !== undefined) planMeal.carbs = carbs || 0;
-  if (fat !== undefined) planMeal.fat = fat || 0;
+  if (calories !== undefined) planMeal.calories = nutrition.value.calories;
+  if (protein !== undefined) planMeal.protein = nutrition.value.protein;
+  if (carbs !== undefined) planMeal.carbs = nutrition.value.carbs;
+  if (fat !== undefined) planMeal.fat = nutrition.value.fat;
   if (note !== undefined) planMeal.note = note;
   if (date !== undefined) planMeal.date = date;
 
@@ -265,36 +308,62 @@ exports.deletePlanMeal = async (req, res) => {
   res.json({ message: "Planned meal deleted." });
 };
 
+// Nút "Xong" ở gợi ý tập trong kế hoạch tuần.
+// Đây là chỗ kế hoạch biến thành dữ liệu thật, nên phải chặn bấm hai lần
+// để không tạo trùng hai buổi tập cho cùng một gợi ý.
 exports.markWorkoutDone = async (req, res) => {
   const pw = await PlanWorkout.findById(req.params.id);
   if (!pw) return res.status(404).json({ message: "Planned workout not found." });
   if (pw.user.toString() !== req.user.id)
     return res.status(403).json({ message: "Not authorized." });
   if (pw.done) return res.status(400).json({ message: "Already marked as done." });
-  if (!pw.name || !pw.met || !pw.durationMin)
-    return res.status(400).json({ message: "This day has no loggable workout." });
-  if (pw.date > todayKey())
-    return res.status(400).json({ message: "Cannot complete a future workout." });
+  if (pw.date !== requestTodayKey(req))
+    return res.status(400).json({ message: "A planned workout can only be completed on its scheduled day." });
 
+  const suppliedName = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const routine = getGuidedRoutine(req.body?.routineKey);
+
+  if (!suppliedName || suppliedName.length > LEGACY_LIMITS.MEAL_NAME || !routine)
+    return res.status(400).json({ message: "Invalid guided workout details." });
+  if (
+    !isAllowedHomeExercise(pw.category, pw.durationMin) ||
+    routine.category !== pw.category ||
+    routine.durationMin !== pw.durationMin
+  )
+    return res.status(400).json({ message: "Workout duration does not match the plan." });
+
+  const name = suppliedName;
+  const met = routine.met;
+  const durationMin = routine.durationMin;
+
+  // Calo tiêu hao phụ thuộc thẳng vào cân nặng, nên thiếu cân nặng thì
+  // KHÔNG đoán một con số mặc định. Bản cũ dùng 60 kg cho mọi người,
+  // khiến buổi tập của người 45 kg và người 90 kg ra cùng một kết quả.
   const user = await User.findById(req.user.id).select("weight");
-  const w = user?.weight > 0 ? user.weight : 60;
-  const caloriesBurned = Math.round(pw.met * w * (pw.durationMin / 60));
+  if (!(user?.weight > 0))
+    return res.status(400).json({ message: "PROFILE_WEIGHT_REQUIRED" });
+  const caloriesBurned = Math.round(met * user.weight * (durationMin / 60));
+  const snapshot = buildExerciseSnapshot("guided", req.body.routineKey, routine, user.weight);
 
   const exercise = await Exercise.create({
     user: req.user.id,
-    name: pw.name,
-    met: pw.met,
-    durationMin: pw.durationMin,
+    name,
+    ...snapshot,
+    durationMin,
     caloriesBurned,
     date: pw.date,
   });
 
   pw.done = true;
+  pw.name = name;
+  pw.met = met;
   await pw.save();
 
   res.json({ message: "Workout logged.", planWorkout: pw, exercise });
 };
 
+// Nút "Đã ăn" ở món trong kế hoạch tuần.
+// Giống nút Xong ở trên, phải chặn bấm hai lần để không ghi trùng món vào nhật ký.
 exports.markEaten = async (req, res) => {
   const planMeal = await PlanMeal.findById(req.params.id);
 
@@ -306,7 +375,7 @@ exports.markEaten = async (req, res) => {
   if (planMeal.done)
     return res.status(400).json({ message: "This meal is already marked as eaten." });
 
-  if (planMeal.date > todayKey())
+  if (planMeal.date > requestTodayKey(req))
     return res.status(400).json({ message: "Cannot mark a future planned meal as eaten." });
 
   const meal = await Meal.create({

@@ -1,6 +1,6 @@
-import type { Meal } from "@/context/MealsContext";
-import { buildDaySummaries, getLastNDays } from "@/features/progress/summary";
-import { dateKey } from "@/utils/date";
+import type { Meal } from "@/features/meals/MealsContext";
+import { buildDaySummaries } from "@/features/progress/progressSummary";
+import { dateKey } from "@/utils/dateUtils";
 
 const meal = (date: string, calories: number): Meal => ({
   id: `${date}-${calories}`,
@@ -24,10 +24,18 @@ describe("buildDaySummaries", () => {
 
   test("groups meals by logged date and calculates goal progress", () => {
     const today = dateKey(new Date());
+    // Dựng cửa sổ hai ngày ngay tại đây. Trước kia test gọi getLastNDays trong
+    // source, nhưng hàm đó không còn màn nào dùng nên đã bị xóa khỏi source.
+    const startOfDay = (offsetDays: number) => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - offsetDays);
+      return d;
+    };
     const summaries = buildDaySummaries(
       [meal(today, 800), meal(today, 900)],
       2000,
-      getLastNDays(2)
+      [startOfDay(1), startOfDay(0)]
     );
     const summary = summaries.at(-1)!;
 

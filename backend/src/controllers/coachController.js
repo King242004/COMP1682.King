@@ -1,36 +1,24 @@
-const { insightModels, chatModels } = require("../config/gemini");
-const { generateWithFallback } = require("../services/aiGenerate");
-const { buildContext, contextToText, CONDITION_GUIDE } = require("../services/coachContext");
-const { filterDishes } = require("../services/conditionFilter");
-const { computeHealthScore } = require("../services/healthScore");
+const { insightModels, nutritionModels, chatModels } = require("../config/geminiModels");
+const { generateWithFallback } = require("../services/aiClient");
+const { buildContext, contextToText } = require("../services/coach/coachContext");
+const { filterDishes, forbiddenFor, forbiddenByTaste } = require("../services/nutrition/foodSafetyFilter");
+const { computeHealthScore } = require("../services/coach/dailyHealthScore");
+const { buildInsightPrompt, buildChatPrompt, buildMealSuggestionPrompt } = require("../services/coach/coachPrompt");
+const { parseCoachReply, finalizeCoachReply, avoidDuplicateCoachReply, photoNotFood } = require("../services/coach/coachResponse");
+const { getExternalActivity, computeBurned } = require("../config/exerciseCatalog");
+const { resolveCoachScope, SUPPORTED, OUT_OF_SCOPE } = require("../services/coach/coachScope");
 const ChatMessage = require("../models/ChatMessage");
 const Meal = require("../models/Meal");
-const PlanMeal = require("../models/PlanMeal");
 const cloudinary = require("../config/cloudinary");
-const { validateCoachChat } = require("../validators/coachChat");
-const { normalizeCoachText } = require("../services/coachLanguage");
-const { todayKey } = require("../utils/date");
+const { validateCoachChat } = require("../validators/coachChatValidator");
+const { normalizeCoachText, resolveRequestedLanguage, requestedLanguage, languageSwitchReply } = require("../services/coach/coachLanguage");
+const { requestTodayKey } = require("../utils/dateUtils");
 
-const SAFETY = `You are "Coach", a warm, easy-going health buddy inside an app — like a supportive friend who keeps the user on track, not a textbook or a customer-service bot.
+// File này lo AI Coach: chấm điểm ngày, trò chuyện, gợi ý món,
+// lưu và xóa lịch sử, ghi món từ tin nhắn vào nhật ký.
 
-SAFETY:
-- You are NOT a doctor. For real medical concerns, gently suggest seeing a professional.
-- Use ONLY the user data provided below. Never invent numbers the data does not contain.
-- Always consider the user's health conditions (${CONDITION_GUIDE}).
-
-STYLE (very important):
-- Be SHORT by default: 2 to 3 sentences. EXCEPTION — when the user asks how to cook a dish, for a recipe, a meal plan, or a workout routine, give clear, concise NUMBERED steps.
-- For a "can I eat X?" question, give a quick verdict, then ASK ONE friendly clarifying question to advise better — e.g. which type / what's in it (especially dishes with many variants like bánh mì, cơm, salad, sandwich), whether they'll cook it or buy it, or what they'll eat it with. One natural question, not an interrogation.
-- Be interactive: prefer asking a short follow-up to gather info, instead of dumping all advice at once. Talk like a friend who wants details before giving the best tip.
-- Do NOT greet or say the user's name every message. Greet only on the very first message of a conversation. After that, just continue naturally like a friend mid-chat.
-- Talk like a REAL person in an ongoing chat — read the conversation history. If the user repeats a question you already answered, DO NOT answer again the same way: acknowledge it naturally ("Bạn hỏi lại nè 😄", "Như mình nói lúc nãy...") and add a NEW angle or ask a follow-up question.
-- Be conversational and practical, not a script. When it helps, ask a short follow-up question back (like a friend would) instead of dumping all advice at once.
-- When the user says they ARE eating a dish, react warmly and you may ask a quick follow-up (homemade or bought, eaten with what) to personalize the tip. Do NOT assume "dặn quán"/eating out unless they said so.
-- Warm, casual, encouraging. Vary wording AND substance — never repeat the same canned advice.
-- Prefer Vietnamese dishes when suggesting food.
-- Plain text only: no markdown, no asterisks, no bold, no headings, no tables.
-- NEVER use the em dash character (—) in any reply; use a comma, colon or period instead.`;
-
+// Đoán bữa đang tới dựa trên giờ hiện tại. Bản giống hệt bên frontend
+// nằm ở utils/meals/mealSlot.ts, hai bên phải cho ra cùng kết quả.
 function mealTypeByHour(h) {
   if (h < 11) return "breakfast";
   if (h < 14) return "lunch";
@@ -39,6 +27,8 @@ function mealTypeByHour(h) {
   return "snack";
 }
 
+// Tìm bữa kế tiếp chưa ăn. Bắt đầu từ bữa hợp với giờ hiện tại rồi nhảy tiếp
+// nếu bữa đó đã ghi món rồi.
 function nextSlotToSuggest(hour, eatenTypes) {
   const order = ["breakfast", "lunch", "snack", "dinner"];
   let idx = order.indexOf(mealTypeByHour(hour));
@@ -47,51 +37,39 @@ function nextSlotToSuggest(hour, eatenTypes) {
   return idx < order.length ? order[idx] : "snack";
 }
 
-function langDirective(raw) {
-  const lang = raw === "vi" ? "vi" : "en";
-  const name = lang === "vi" ? "Vietnamese (tiếng Việt)" : "English";
-  const strictRule = lang === "vi"
-    ? "Translate any English context into Vietnamese and do not answer in English."
-    : "Translate any Vietnamese context, dish names and examples into English. Do not use Vietnamese words or diacritics.";
-  return `IMPORTANT: Write your ENTIRE response in ${name}. ${strictRule}`;
-}
-
-function chatExamples(language) {
-  if (language === "vi") {
-    return `EXAMPLES (chỉ làm theo cách tương tác, không sao chép nguyên văn):
-User: "Tôi ăn phở được không?" => {"reply":"Phở ổn đó! Bạn ăn phở bò hay gà, tự nấu hay ra quán?","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
-User: "Tôi đang ăn phở" => {"reply":"Ngon miệng nha! Thêm rau giá và dùng ít nước béo sẽ cân bằng hơn.","meal":{"name":"phở","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":true}`;
-  }
-  return `EXAMPLES (match the interactive behavior, not the exact wording):
-User: "Can I eat pho?" => {"reply":"Pho can work well. Are you having beef or chicken pho, and is it homemade or from a restaurant?","meal":{"name":"pho","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":false}
-User: "I am eating pho" => {"reply":"Enjoy your meal! Adding herbs and bean sprouts while going light on fatty broth will make it more balanced.","meal":{"name":"pho","calories":450,"protein":25,"carbs":60,"fat":12,"mealType":"lunch"},"eating":true}`;
-}
-
+// Điểm do code tính chứ không do AI chấm, để cùng dữ liệu thì luôn ra cùng điểm.
+// AI chỉ viết lời bình, nên AI hỏng cũng không làm mất điểm số.
 exports.getInsight = async (req, res) => {
-  const date = req.query.date || todayKey();
+  const date = req.query.date || requestTodayKey(req);
   const language = req.query.language === "vi" ? "vi" : "en";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
 
   try {
     const ctx = await buildContext(req.user.id, date);
-    const { score, breakdown } = computeHealthScore(ctx);
 
-    const prompt = `${SAFETY}
-${langDirective(language)}
+    // Ngày chưa có bữa nào thì chưa có gì để chấm. Bản cũ vẫn trả một điểm rất
+    // thấp, nên người mở app lúc sáng sớm thấy mình bị chấm kém dù chưa làm gì sai.
+    // Trả cờ pending để app mời ghi bữa đầu tiên, và bỏ luôn lượt gọi AI.
+    if (ctx.today.meals.length === 0)
+      return res.json({ date, pending: true });
 
-${contextToText(ctx)}
+    const scored = computeHealthScore(ctx);
+    // Chưa có mục tiêu calo thì không chấm điểm được. Báo cho app biết
+    // để màn hình mời người dùng hoàn tất hồ sơ, thay vì hiện một điểm số bịa.
+    if (!scored)
+      return res.status(422).json({ message: "PROFILE_INCOMPLETE" });
+    const { score, breakdown, weights } = scored;
+    const maxScore = weights.calorie + weights.protein + weights.activity + weights.consistency;
 
-The app already computed today's Health Score = ${score}/100
-(breakdown: calorie ${breakdown.calorie}/40, protein ${breakdown.protein}/20, activity ${breakdown.activity}/20, consistency ${breakdown.consistency}/20).
-
-Write a short daily analysis for this user. Return ONLY valid JSON:
-{
-  "summary": "1-2 sentence friendly overview of how today is going",
-  "tips": ["2-3 short, actionable tips tailored to their goal and remaining calories"],
-  "warnings": ["0-2 warnings ONLY if relevant to their health conditions or a clear imbalance; empty array if none"]
-}
-${langDirective(language)} Every string value in the JSON must be in that language, with no mixed-language text.`;
+    const prompt = buildInsightPrompt({
+      contextText: contextToText(ctx),
+      language,
+      score,
+      maxScore,
+      breakdown,
+      weights,
+    });
 
     let ai = { summary: "", tips: [], warnings: [] };
     try {
@@ -101,6 +79,7 @@ ${langDirective(language)} Every string value in the JSON must be in that langua
         generateWithFallback(insightModels, correctionPrompt)
       );
     } catch (e) {
+      // Nhánh dự phòng. AI hỏng thì vẫn phải trả điểm cho người dùng thấy.
       console.error("Coach insight AI error:", e.message);
       ai = {
         summary: language === "vi"
@@ -115,6 +94,10 @@ ${langDirective(language)} Every string value in the JSON must be in that langua
       date,
       score,
       breakdown,
+      // Gửi kèm điểm tối đa từng phần để app hiện được cách chia điểm,
+      // vì đây là chỉ số riêng của app chứ không phải thang đo có sẵn.
+      weights,
+      maxScore,
       summary: ai.summary || "",
       tips: Array.isArray(ai.tips) ? ai.tips : [],
       warnings: Array.isArray(ai.warnings) ? ai.warnings : [],
@@ -128,110 +111,142 @@ ${langDirective(language)} Every string value in the JSON must be in that langua
   }
 };
 
+// Cờ "đang ăn" chỉ bật khi người dùng nói họ ĐANG hoặc ĐÃ ăn, và AI cũng nhận ra món.
+// Chỉ khi đó app mới hiện nút Thêm để ghi món vào nhật ký.
 exports.chat = async (req, res) => {
+  // Bước 1. Kiểm dữ liệu gửi lên. Sai là dừng ngay, chưa tốn lượt gọi AI.
   const validated = validateCoachChat(req.body);
   if (validated.error) return res.status(400).json({ message: validated.error });
-  const { message: text, history, image, mimeType, source, language } = validated.value;
-
-  const userText = text || "Is this dish suitable for me?";
+  const { message: text, image, mimeType, source, language, localDate, localHour } = validated.value;
 
   try {
-    const ctx = await buildContext(req.user.id, todayKey());
+    // Bước 2. Gom dữ liệu thật của người dùng trong hôm nay.
+    // Nhờ nó mà Coach nói đúng số liệu của từng người thay vì nói chung chung.
+    const [ctx, recentDocs] = await Promise.all([
+      buildContext(req.user.id, localDate),
+      ChatMessage.find({ user: req.user.id, language }).sort({ createdAt: -1 }).limit(10),
+    ]);
+    // Ngôn ngữ trả lời do CODE quyết định, không nhờ Gemini đoán.
+    // Người dùng xin đổi thì đổi ngay lượt này, không xin thì giữ ngôn ngữ
+    // của lượt gần nhất, cuối cùng mới tới ngôn ngữ đang chọn trong app.
+    const explicitLanguage = requestedLanguage(text);
+    const responseLanguage = resolveRequestedLanguage(text, recentDocs[0]?.responseLanguage || language);
+    const userText = text || (responseLanguage === "vi"
+      ? "Món này có phù hợp với tôi không?"
+      : "Is this dish suitable for me?");
+    const history = recentDocs.reverse().map((item) => ({ role: item.role, text: item.text }));
+    const hour = localHour;
 
-    const historyText = history
-      .map((h) => `${h.role === "user" ? "User" : "Coach"}: ${h.text}`)
-      .join("\n");
+    // Bước 3. CỔNG CHUNG. Mọi tin nhắn phải qua đây trước khi được phép
+    // tốn một lượt Gemini để trả lời nội dung.
+    // Chỉ gửi ảnh mà không gõ chữ thì luôn là câu hỏi về món trong ảnh.
+    // Lượt xin đổi ngôn ngữ chỉ cần lớp từ khóa, vì backend tự trả lời câu xác nhận.
+    const photoOnly = !text && Boolean(image);
+    const scope = photoOnly
+      ? { scope: SUPPORTED, capability: "food_choice", reason: null }
+      : await resolveCoachScope(
+          {
+            message: userText,
+            history,
+            hasImage: Boolean(image),
+            deterministicOnly: Boolean(explicitLanguage),
+            capability: explicitLanguage ? "supported_small_talk" : null,
+          },
+          (scopePrompt) => generateWithFallback(nutritionModels, scopePrompt)
+        );
+    if (scope.scope === OUT_OF_SCOPE) console.warn("Coach gate blocked a message:", scope.reason);
 
-    const imageNote = image
-      ? "\nThe user sent a food PHOTO. Briefly name the dish and a short verdict on whether it suits them today. 2-3 sentences."
-      : "";
-
-    const communityRecipeNote = source === "community"
-      ? `\nCOMMUNITY RECIPE CONTEXT: The dish name came from another user's community post. You do not know the poster's exact recipe. When giving cooking steps, clearly say once that this is a common reference method which may differ from the post, invite the user to adjust ingredients and taste, and mention that calories and nutrition vary with ingredients and portion size. Never claim the poster used specific ingredients or steps.`
-      : "";
-
-    const hour = new Date().getHours();
-
-    const prompt = `${SAFETY}
-${langDirective(language)}${imageNote}${communityRecipeNote}
-
-${contextToText(ctx)}
-
-${historyText ? `CONVERSATION SO FAR:\n${historyText}\n` : ""}Current hour: ${hour}.
-
-YOU ARE A FULL HEALTH COMPANION. You can:
-- Cooking guide: for a specific dish, explain how to COOK it at home with simple Vietnamese-friendly ingredients, ADJUSTED to the user's conditions (${CONDITION_GUIDE}), OR how to ORDER it at a restaurant healthily. If the user has not said which and it's relevant, you may briefly ask whether they will cook it or eat out.
-- Exercise: when asked, suggest practical workouts suited to the user's condition and goal.
-- Status: the user may ask about their own situation — answer from the data above.
-
-The user just said: "${userText}"
-
-Respond with ONLY valid JSON:
-{ "reply": "<your short, friendly answer in the required language>", "meal": null, "eating": false }
-
-- "reply": 2-3 short sentences, like a friend. Do NOT greet or use the user's name unless this is the very first message. Do NOT mention logging or diaries; the app shows an "Add" button for that.
-- "meal": whenever a SPECIFIC dish is discussed (asking about it, planning it, OR eating it), fill it so the app can show cooking tips + nutrition. Use null only for general talk with no dish.
-  Shape: { "name": "<dish>", "calories": <kcal number>, "protein": <g>, "carbs": <g>, "fat": <g>, "mealType": "breakfast|lunch|dinner|snack" }.
-  For "name", use the dish EXACTLY as the user described it. Do NOT add a cooking method they did not mention (if they said "ức gà", name it "ức gà", not "ức gà nướng").
-- "eating": true ONLY if the user indicates they are eating or have already eaten this dish (e.g. "tôi ăn", "đang ăn", "vừa ăn", "có"). false if they are only ASKING or PLANNING.
-- CRITICAL: if eating is true, you MUST also fill "meal" with that dish (re-state it even if it was mentioned in an earlier turn). NEVER return eating=true with meal=null.
-  Pick mealType by current hour: under 11 breakfast, 11-14 lunch, 14-17 snack, 17-21 dinner, otherwise snack.
-
-${chatExamples(language)}
-
-Always read the history first so repeated or follow-up questions feel natural, not robotic.`;
-
-    const payload = image
-      ? [prompt, { inlineData: { data: image, mimeType: mimeType || "image/jpeg" } }]
-      : prompt;
-
-    const result = await generateWithFallback(chatModels, payload);
-
-    let parsed = { reply: "", meal: null };
-    try {
-      parsed = JSON.parse(result.response.text());
-    } catch {
-      parsed = { reply: result.response.text().trim(), meal: null };
-    }
-    const localizedText = await normalizeCoachText(
-      {
-        reply: String(parsed.reply || ""),
-        mealName: parsed.meal?.name ? String(parsed.meal.name) : "",
-      },
-      language,
-      (correctionPrompt) => generateWithFallback(insightModels, correctionPrompt)
-    );
-    parsed.reply = localizedText.reply;
-    if (parsed.meal?.name && localizedText.mealName) parsed.meal.name = localizedText.mealName;
-    const reply =
-      (parsed.reply || "").trim() ||
-      (language === "vi"
-        ? "Mình chưa nghĩ ra câu trả lời, bạn thử hỏi lại nhé."
-        : "I couldn't come up with a reply. Try asking again.");
-
-    let meal = null;
-    const m = parsed.meal;
-    if (m && m.name && m.calories != null) {
-      meal = {
-        name: String(m.name).trim(),
-        calories: Math.max(0, Math.round(Number(m.calories) || 0)),
-        protein: Math.max(0, Math.round(Number(m.protein) || 0)),
-        carbs: Math.max(0, Math.round(Number(m.carbs) || 0)),
-        fat: Math.max(0, Math.round(Number(m.fat) || 0)),
-      // Chọn loại bữa theo giờ hiện tại. Người dùng vẫn có thể đổi bằng chip.
-      mealType: mealTypeByHour(hour),
+    // Bước 4. Gọi AI, ép kết quả về JSON, rồi dịch lại nếu trả sai ngôn ngữ.
+    // Hai nhánh đầu KHÔNG gọi Gemini: ngoài phạm vi và đổi ngôn ngữ.
+    // Ngoài phạm vi được xét trước, nên câu vừa xin đổi ngôn ngữ vừa hỏi
+    // nội dung ngoài phạm vi sẽ nhận câu chuyển hướng bằng ngôn ngữ mới.
+    let parsed;
+    if (scope.scope === OUT_OF_SCOPE) {
+      parsed = { intent: "out_of_scope", reply: "", meal: null, eating: false, activity: null };
+    } else if (explicitLanguage) {
+      parsed = {
+        intent: "small_talk",
+        reply: languageSwitchReply(explicitLanguage),
+        meal: null,
+        eating: false,
+        activity: null,
       };
+    } else {
+      // Builder ghép chính sách, dữ liệu thật, lịch sử và schema phản hồi.
+      // Chỉ dựng câu lệnh ở nhánh này, vì hai nhánh trên không gửi gì cho Gemini.
+      const prompt = buildChatPrompt({
+        contextText: contextToText(ctx),
+        history,
+        userText,
+        language: responseLanguage,
+        hour,
+        hasImage: Boolean(image),
+        source,
+      });
+      const payload = image
+        ? [prompt, { inlineData: { data: image, mimeType: mimeType || "image/jpeg" } }]
+        : prompt;
+      const result = await generateWithFallback(chatModels, payload);
+      parsed = parseCoachReply(result.response.text());
+      const localizedText = await normalizeCoachText(
+        {
+          reply: String(parsed.reply || ""),
+          mealName: parsed.meal?.name ? String(parsed.meal.name) : "",
+        },
+        responseLanguage,
+        (correctionPrompt) => generateWithFallback(insightModels, correctionPrompt)
+      );
+      parsed.reply = localizedText.reply;
+      if (parsed.meal?.name && localizedText.mealName) parsed.meal.name = localizedText.mealName;
     }
-    // Chỉ hiện nút thêm khi người dùng thật sự đang ăn và AI đã trả về món hợp lệ.
-    const eating = !!parsed.eating && !!meal;
+    let { intent, reply, meal, eating, activity } = finalizeCoachReply(parsed, {
+      language: responseLanguage,
+      mealType: mealTypeByHour(hour),
+    });
 
+    // Câu hỏi đã qua cổng nhưng AI báo ngoài phạm vi VÀ lượt này có ảnh,
+    // nghĩa là chính tấm ảnh không có món ăn. Nói đúng lý do đó thay vì
+    // câu chuyển hướng chung, để người dùng biết cần gửi lại ảnh nào.
+    if (image && intent === "out_of_scope" && scope.scope === SUPPORTED) {
+      reply = photoNotFood(responseLanguage);
+    }
+
+    const blockedCondition = meal ? forbiddenFor(meal.name, ctx.profile.conditions) : null;
+    const blockedTaste = meal ? forbiddenByTaste(meal.name, ctx.profile.tastePreferences) : null;
+    if (blockedCondition || blockedTaste) {
+      meal = null;
+      eating = false;
+      reply = blockedTaste
+        ? (responseLanguage === "vi"
+          ? "Món này không phù hợp với khẩu vị hoặc thực phẩm cần tránh trong hồ sơ của bạn, nên mình không tạo thẻ dinh dưỡng cho món đó."
+          : "This dish conflicts with a food preference or avoidance saved in your profile, so I have not created a nutrition card for it.")
+        : (responseLanguage === "vi"
+          ? "Món này có thể không phù hợp với tình trạng sức khỏe bạn đã khai báo. Mình chưa tạo thẻ dinh dưỡng cho món này, bạn nên chọn lựa chọn an toàn hơn hoặc hỏi chuyên gia."
+          : "This dish may not suit a health condition you declared. I have not created a nutrition card for it; choose a safer option or ask a qualified professional.");
+    }
+
+    if (intent === "exercise" && activity) {
+      const reference = getExternalActivity(activity.key);
+      if (reference && ctx.profile.weight) {
+        const calories = computeBurned(reference.met, activity.durationMin, ctx.profile.weight);
+        reply += responseLanguage === "vi"
+          ? ` Với cân nặng hiện tại của bạn, ${activity.durationMin} phút được ước tính khoảng ${calories} kcal; con số thực tế thay đổi theo cường độ.`
+          : ` At your current weight, ${activity.durationMin} minutes is estimated at about ${calories} kcal; the actual value varies with intensity.`;
+      }
+    }
+    // Câu chuyển hướng phải giữ nguyên văn kể cả khi bị hỏi lại nhiều lần,
+    // nên chỉ đổi cách nói cho các câu trả lời nội dung.
+    if (intent !== "out_of_scope") reply = avoidDuplicateCoachReply(reply, history, responseLanguage);
+
+    // Bước 5. Có ảnh thì đẩy lên kho ảnh, để lần sau mở lại vẫn thấy ảnh trong hội thoại.
+    // Lượt bị từ chối thì KHÔNG lưu ảnh, vì app không giữ lại thứ nó không nhận xử lý.
     let imageUrl = null;
     let imagePublicId = null;
-    if (image) {
+    if (image && intent !== "out_of_scope") {
       try {
         const up = await cloudinary.uploader.upload(
           `data:${mimeType || "image/jpeg"};base64,${image}`,
-          { folder: "healthysnap/coach", transformation: [{ width: 800, crop: "limit" }] }
+          { folder: "mealmate/coach", transformation: [{ width: 800, crop: "limit" }] }
         );
         imageUrl = up.secure_url;
       // Lưu mã Cloudinary để có thể xóa ảnh khi người dùng xóa lịch sử.
@@ -241,9 +256,11 @@ Always read the history first so repeated or follow-up questions feel natural, n
       }
     }
 
+    // Bước 6. Lưu cả tin của người dùng và tin của Coach, kèm ngôn ngữ lúc trò chuyện.
+    // Nhờ trường ngôn ngữ này mà đổi sang tiếng Anh sẽ không kéo theo lịch sử tiếng Việt.
     const docs = await ChatMessage.create([
-      { user: req.user.id, role: "user", language, text: image ? `📷 ${userText}` : userText, image: imageUrl, imagePublicId },
-      { user: req.user.id, role: "coach", language, text: reply, meal: meal || null, mealEating: eating },
+      { user: req.user.id, role: "user", language, responseLanguage, text: imageUrl ? `📷 ${userText}` : userText, image: imageUrl, imagePublicId },
+      { user: req.user.id, role: "coach", language, responseLanguage, text: reply, meal: meal || null, mealEating: eating },
     ]);
 
     res.json({ reply, meal, eating, image: imageUrl, messageId: docs[1]._id });
@@ -254,17 +271,22 @@ Always read the history first so repeated or follow-up questions feel natural, n
   }
 };
 
+// Thẻ gợi ý món ở màn Trang chủ.
+// Số calo còn lại tính bằng mục tiêu trừ đã ăn cộng đã đốt,
+// nên tập nhiều thì được gợi ý món nhiều calo hơn.
+// Nếu kế hoạch tuần đã có món cho bữa này thì AI được dặn gợi ý món KHÁC để thay thế.
 exports.suggestMeal = async (req, res) => {
   try {
     const language = req.body.language === "vi" ? "vi" : "en";
-    const [ctx, planPending] = await Promise.all([
-      buildContext(req.user.id, todayKey()),
-      PlanMeal.find({ user: req.user.id, date: todayKey(), done: false }),
-    ]);
-    const hour = new Date().getHours();
+    const date = String(req.body.localDate || "");
+    const hour = Number(req.body.localHour);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(hour) || hour < 0 || hour > 23)
+      return res.status(400).json({ message: "Valid localDate and localHour are required." });
+    const ctx = await buildContext(req.user.id, date);
+    const planPending = ctx.today.planMeals.filter((meal) => !meal.done);
     const eatenTypes = new Set(ctx.today.meals.map((m) => m.mealType));
     const slot = nextSlotToSuggest(hour, eatenTypes);
-    const remaining = ctx.profile.calorieGoal - ctx.today.totals.calories + ctx.today.totalBurned;
+    const remaining = ctx.profile.calorieGoal - ctx.today.totals.calories;
 
     const planText = planPending.length
       ? `\nTODAY'S MEAL PLAN (planned, NOT eaten yet):\n${planPending
@@ -278,26 +300,15 @@ exports.suggestMeal = async (req, res) => {
       ? `- Do NOT suggest dishes already in today's plan above.`
       : "";
 
-    const prompt = `${SAFETY}
-${langDirective(language)}
-
-${contextToText(ctx)}
-${planText}
-Current hour: ${hour} → the NEXT meal slot is: ${slot}.
-Remaining calorie budget today (goal - eaten + burned): ${remaining} kcal.
-
-Suggest exactly 3 SPECIFIC dishes for this next ${slot}. Prefer Vietnamese dishes. Rules:
-${planRule ? planRule + "\n" : ""}
-- STRICTLY follow the taste preferences in the profile above — NEVER suggest a food the user is allergic to or dislikes.
-- Single serving each, sized to fit the remaining budget. If the budget is small (or negative), suggest light low-calorie options and say so in the reason.
-- Look at what today's meals are MISSING and balance it (e.g. little protein so far → protein-rich dishes).
-- Strictly respect the health conditions above (${CONDITION_GUIDE}).
-- The 3 dishes must be different in style (e.g. not three rice dishes).
-- "name": max 6 words, no notes or parentheses.
-- "reason": ONE short friendly sentence in the required language — why THIS dish fits right now (missing macro, remaining kcal, or their condition/goal).
-
-Return ONLY valid JSON:
-{ "suggestions": [ { "name": "<dish>", "calories": <kcal>, "protein": <g>, "carbs": <g>, "fat": <g>, "reason": "<1 sentence>" } ] }`;
+    const prompt = buildMealSuggestionPrompt({
+      contextText: contextToText(ctx),
+      planText,
+      language,
+      hour,
+      slot,
+      remaining,
+      planRule,
+    });
 
     const result = await generateWithFallback(insightModels, prompt);
     const parsed = JSON.parse(result.response.text());
@@ -321,6 +332,7 @@ Return ONLY valid JSON:
         fat: Math.max(0, Math.round(Number(s.fat) || 0)),
         reason: String(localized.suggestions?.[index]?.reason || s.reason || "").trim(),
       }));
+    // Lọc theo bệnh nền lần nữa ở server, giống bước lọc trong kế hoạch tuần.
     const { kept, removed } = filterDishes(mapped, ctx.profile.conditions);
     if (removed.length)
       console.warn("Suggest condition-filter removed:", removed.map((r) => `${r.name} (${r.condition})`).join(", "));
@@ -335,6 +347,7 @@ Return ONLY valid JSON:
   }
 };
 
+// Lọc theo ngôn ngữ để khi đổi ngôn ngữ, màn Coach không lẫn tin của ngôn ngữ kia.
 exports.getHistory = async (req, res) => {
   const language = req.query.language === "vi" ? "vi" : "en";
   const msgs = (
@@ -355,6 +368,9 @@ exports.getHistory = async (req, res) => {
   });
 };
 
+// Nút "Thêm" trên tin nhắn Coach có kèm món.
+// Ghi mã món vào tin nhắn để nút giữ đúng trạng thái sau khi thoát app mở lại,
+// và để nút hoàn tác biết cần xóa món nào.
 exports.logFromMessage = async (req, res) => {
   const { messageId, mealType } = req.body;
   const msg = await ChatMessage.findOne({ _id: messageId, user: req.user.id });
@@ -371,13 +387,14 @@ exports.logFromMessage = async (req, res) => {
     protein: m.protein,
     carbs: m.carbs,
     fat: m.fat,
-    date: todayKey(),
+    date: requestTodayKey(req),
   });
   msg.loggedMealId = meal._id;
   await msg.save();
   res.json({ logged: { id: meal._id, name: meal.name, mealType: meal.mealType, calories: meal.calories } });
 };
 
+// Nút hoàn tác món vừa thêm từ tin nhắn Coach.
 exports.unlogFromMessage = async (req, res) => {
   const { messageId } = req.body;
   const msg = await ChatMessage.findOne({ _id: messageId, user: req.user.id });
@@ -390,6 +407,10 @@ exports.unlogFromMessage = async (req, res) => {
   res.json({ message: "Removed." });
 };
 
+// Nút xóa lịch sử trò chuyện trong màn Coach.
+// Phải xóa ảnh TRƯỚC, vì xóa tin nhắn rồi thì không còn biết
+// đường dẫn ảnh nào cần dọn, ảnh sẽ nằm lại trên kho mãi mãi.
+// Xóa cả hai ngôn ngữ chứ không chỉ ngôn ngữ đang xem.
 exports.clearHistory = async (req, res) => {
   const withImages = await ChatMessage.find({ user: req.user.id, imagePublicId: { $ne: null } }).select("imagePublicId");
   await Promise.allSettled(withImages.map((m) => cloudinary.uploader.destroy(m.imagePublicId)));

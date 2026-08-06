@@ -1,3 +1,5 @@
+// Thẻ chữ dùng chung cho toàn app, thay cho Text của React Native.
+// Nhờ file này mà đổi kiểu chữ một chỗ là cả app đổi theo.
 import { StyleSheet, Text, type TextProps, type TextStyle } from "react-native";
 import { theme } from "../theme";
 

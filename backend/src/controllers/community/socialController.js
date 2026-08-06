@@ -2,8 +2,14 @@ const Follow = require("../../models/Follow");
 const Notification = require("../../models/Notification");
 const Post = require("../../models/Post");
 const User = require("../../models/User");
-const { addNotification } = require("./helpers");
+const { addNotification } = require("./communityHelpers");
+const { INPUT_LIMITS } = require("../../config/inputLimits");
 
+// File này lo quan hệ giữa người dùng: theo dõi, tìm người, gợi ý người,
+// danh sách người theo dõi, và trang cá nhân công khai.
+
+// Nút Theo dõi.
+// Dùng upsert nên bấm nhiều lần cũng chỉ có một quan hệ, không bị trùng.
 exports.followUser = async (req, res) => {
   const targetId = req.params.id;
   if (targetId === req.user.id) {
@@ -22,6 +28,7 @@ exports.followUser = async (req, res) => {
   res.json({ following: true });
 };
 
+// Nút Bỏ theo dõi.
 exports.unfollowUser = async (req, res) => {
   await Follow.deleteOne({ follower: req.user.id, following: req.params.id });
   await Notification.deleteOne({
@@ -33,10 +40,15 @@ exports.unfollowUser = async (req, res) => {
   res.json({ following: false });
 };
 
+// Ô tìm người trong màn Khám phá.
 exports.searchUsers = async (req, res) => {
-  const query = (req.query.q || "").trim();
+  // Cắt từ khóa trước khi ghép vào truy vấn. Dài hơn tên cho phép thì không thể
+  // khớp ai, nên đây chỉ là chặn chuỗi vô hạn bị ném thẳng vào $regex.
+  const query = (req.query.q || "").trim().slice(0, INPUT_LIMITS.USER_SEARCH);
   if (!query) return res.json({ users: [] });
 
+  // Vô hiệu hóa các ký tự đặc biệt trước khi ghép vào biểu thức tìm kiếm,
+  // để người dùng gõ dấu chấm hay dấu sao cũng không làm hỏng câu truy vấn.
   const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const users = await User.find({
     _id: { $ne: req.user.id },
@@ -62,6 +74,7 @@ exports.searchUsers = async (req, res) => {
   });
 };
 
+// Phần gợi ý người nên theo dõi trong màn Khám phá.
 exports.getSuggestions = async (req, res) => {
   const currentUser = await User.findById(req.user.id).select("goal");
   const followingIds = await Follow.find({ follower: req.user.id }).distinct("following");
@@ -100,6 +113,8 @@ exports.getSuggestions = async (req, res) => {
   });
 };
 
+// Gắn thêm cờ đang theo dõi vào một danh sách người.
+// Chỉ hỏi database MỘT lần cho cả danh sách, không hỏi từng người một.
 async function withFollowState(users, viewerId) {
   const userIds = users.map((user) => user._id);
   const followingIds = await Follow.find({
@@ -117,12 +132,15 @@ async function withFollowState(users, viewerId) {
   }));
 }
 
+// Kiểm tra có được xem danh sách theo dõi của một người không.
+// Xem của chính mình thì luôn được.
 async function graphHiddenFrom(targetId, viewerId) {
   if (targetId === viewerId) return false;
   const owner = await User.findById(targetId).select("isPrivate");
   return !!owner?.isPrivate;
 }
 
+// Danh sách người đang theo dõi một tài khoản.
 exports.getFollowers = async (req, res) => {
   if (await graphHiddenFrom(req.params.id, req.user.id)) {
     return res.json({ users: [], private: true });
@@ -135,6 +153,8 @@ exports.getFollowers = async (req, res) => {
   res.json({ users: await withFollowState(users, req.user.id) });
 };
 
+// Danh sách những người mà một tài khoản đang theo dõi.
+// Giống hàm trên nhưng đọc quan hệ theo chiều ngược lại.
 exports.getFollowing = async (req, res) => {
   if (await graphHiddenFrom(req.params.id, req.user.id)) {
     return res.json({ users: [], private: true });
@@ -147,6 +167,9 @@ exports.getFollowing = async (req, res) => {
   res.json({ users: await withFollowState(users, req.user.id) });
 };
 
+// Phần đầu trang cá nhân của một người.
+// Ba cờ để app biết hiện gì: isMe thì ẩn nút theo dõi,
+// isFollowing đổi chữ trên nút, postsHidden thì thay lưới bài bằng dòng riêng tư.
 exports.getPublicProfile = async (req, res) => {
   const user = await User.findById(req.params.id).select("name avatar goal createdAt isPrivate");
   if (!user) return res.status(404).json({ message: "User not found." });

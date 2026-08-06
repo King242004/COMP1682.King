@@ -2,7 +2,7 @@ const { afterEach, beforeEach, test } = require("node:test");
 const assert = require("node:assert/strict");
 const nodemailer = require("nodemailer");
 const handler = require("../api/send-email");
-const { createSignature } = require("../src/signature");
+const { createSignature } = require("../src/requestSignature");
 
 const originalCreateTransport = nodemailer.createTransport;
 const secret = "a-secure-relay-secret-with-at-least-32-characters";
@@ -10,6 +10,7 @@ const payload = {
   to: "person@example.com",
   otp: "123456",
   purpose: "registration",
+  language: "en",
 };
 
 const createResponse = () => ({

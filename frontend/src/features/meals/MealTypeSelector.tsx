@@ -5,7 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
-import { MEAL_TYPE_META, type MealTypeKey } from "@/ui/mealTypes";
+import { MEAL_TYPE_META, type MealTypeKey } from "@/features/meals/mealTypeDisplay";
 
 export function MealTypeSelector({ value, onChange }: {
   value: MealTypeKey;

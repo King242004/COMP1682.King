@@ -1,28 +1,32 @@
+// Một màn điều phối cả quét ảnh và barcode. Kết quả chỉ điền sẵn Add Meal;
+// người dùng vẫn phải kiểm tra và tự lưu món.
 import { useEffect, useState, useRef } from "react";
 import { Alert, Pressable, View, ActivityIndicator, Image, Linking, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { CameraView, CameraType, useCameraPermissions, scanFromURLAsync, type BarcodeScanningResult } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
-import { useAuth } from "@/context/AuthContext";
-import { compressImage, scanImage, lookupBarcode, BARCODE_TYPES, BARCODE_SETTINGS, type Candidate, type Product, type ScanMode } from "@/features/scan/api";
+import { useAuth } from "@/features/auth/AuthContext";
+import { compressImage, scanImage, lookupBarcode, BARCODE_TYPES, BARCODE_SETTINGS, type Candidate, type Product, type ScanMode } from "@/features/scan/scanApi";
 import { ScanOverlay } from "@/features/scan/ScanOverlay";
 import { CandidatesSheet } from "@/features/scan/CandidatesSheet";
 import { ProductSheet } from "@/features/scan/ProductSheet";
 import { ManualBarcodeModal } from "@/features/scan/ManualBarcodeModal";
-import { mealSlotByHour } from "@/utils/meals/mealSlot";
-import { resolveLanguage } from "@/utils/language";
+import { mealSlotByHour } from "@/features/meals/mealHelpers";
+import { resolveLanguage } from "@/utils/languageUtils";
+import { getUserErrorMessage } from "@/utils/errorUtils";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 
 export default function ScanScreen() {
   const router = useRouter();
+  const { mode: modeParam } = useLocalSearchParams<{ mode?: ScanMode }>();
   const { token, user } = useAuth();
   const t = useT();
   const language = resolveLanguage(user?.language);
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>("back");
-  const [mode, setMode] = useState<ScanMode>("photo");
+  const [mode, setMode] = useState<ScanMode>(modeParam === "barcode" ? "barcode" : "photo");
   const [isScanning, setIsScanning] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
@@ -34,16 +38,17 @@ export default function ScanScreen() {
   // Chặn máy quét mã vạch gọi lặp nhiều lần trên cùng một khung hình.
   const barcodeLockRef = useRef(false);
 
-  // Xin quyền camera một lần ngay khi mở màn hình để cả hai chế độ đều dùng được.
   const askedRef = useRef(false);
+  // Tự xin quyền camera một lần khi mở màn, để cả hai chế độ đều dùng được.
+  // askedRef chặn hỏi lại nhiều lần nếu người dùng từ chối.
   useEffect(() => {
     if (permission && !permission.granted && !askedRef.current) {
       askedRef.current = true;
-      requestPermission();
+      void requestPermission().catch(() => {});
     }
   }, [permission, requestPermission]);
 
-  // Luồng ảnh: tải lên rồi hiện các món dự đoán.
+  // AbortController cho phép người dùng hủy request AI mà không hiện lỗi giả.
   const processImage = async (uri: string) => {
     if (!token) {
       Alert.alert(t.scan.notLoggedIn, t.scan.loginAgain);
@@ -54,6 +59,8 @@ export default function ScanScreen() {
     setPreviewUri(uri);
     setIsScanning(true);
     try {
+      // Nén trước khi gửi. Ảnh gốc điện thoại nặng vài MB, gửi thẳng
+      // sẽ rất chậm trên mạng di động mà AI cũng không đoán chính xác hơn.
       const compressed = await compressImage(uri);
       const cs = await scanImage(compressed, token, language, controller.signal);
       if (cs.length === 0) {
@@ -62,9 +69,10 @@ export default function ScanScreen() {
         return;
       }
       setCandidates(cs);
-    } catch (e: any) {
-      if (e.name !== "AbortError") {
-        Alert.alert(t.scan.scanFailed, e.message || t.scan.scanFailedMsg);
+    } catch (error) {
+      // Người dùng tự bấm hủy thì không phải lỗi, không hiện thông báo.
+      if (!(error instanceof Error) || error.name !== "AbortError") {
+        Alert.alert(t.scan.scanFailed, getUserErrorMessage(error, t, t.scan.scanFailedMsg));
       }
       setPreviewUri(null);
     } finally {
@@ -79,34 +87,30 @@ export default function ScanScreen() {
     setPreviewUri(null);
   };
 
-  // Chọn ảnh trong thư viện cho chế độ ảnh.
-  const handlePickFromLibrary = async () => {
+  const pickImageFromLibrary = async (quality: number) => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert(t.profile.permissionNeeded, t.scan.pickImagePerm);
-      return;
+      return null;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
-      quality: 0.7,
+      quality,
       allowsEditing: false,
     });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
-    await processImage(result.assets[0].uri);
+    return result.canceled ? null : result.assets?.[0]?.uri || null;
   };
 
-  // Chọn ảnh trong thư viện và đọc mã vạch từ ảnh.
+  const handlePickFromLibrary = async () => {
+    const uri = await pickImageFromLibrary(0.7);
+    if (uri) await processImage(uri);
+  };
+
   const handleBarcodeFromLibrary = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert(t.profile.permissionNeeded, t.scan.pickImagePerm);
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({ quality: 1, allowsEditing: false });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
+    const uri = await pickImageFromLibrary(1);
+    if (!uri) return;
     try {
-      // CameraView có thể đọc mã vạch từ một file ảnh tĩnh.
-      const found = await scanFromURLAsync(result.assets[0].uri, [...BARCODE_TYPES]);
+      const found = await scanFromURLAsync(uri, [...BARCODE_TYPES]);
       if (found && found.length > 0) {
         doBarcodeLookup(found[0].data);
       } else {
@@ -117,7 +121,7 @@ export default function ScanScreen() {
     }
   };
 
-  // Chụp ảnh trong chế độ nhận diện món.
+  // Nếu camera bị từ chối, người dùng vẫn có thể chọn ảnh hoặc mở cài đặt.
   const handleCapture = async () => {
     if (isScanning) return;
     if (!permission?.granted) {
@@ -140,12 +144,11 @@ export default function ScanScreen() {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.7, base64: false });
       if (!photo?.uri) return;
       await processImage(photo.uri);
-    } catch (e: any) {
-      Alert.alert(t.common.errorTitle, e.message || t.scan.takePhotoError);
+    } catch (error) {
+      Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.scan.takePhotoError));
     }
   };
 
-  // Luồng xử lý mã vạch.
   const doBarcodeLookup = async (code: string) => {
     if (!token) {
       Alert.alert(t.scan.notLoggedIn, t.scan.loginAgain);
@@ -155,13 +158,13 @@ export default function ScanScreen() {
     try {
       const p = await lookupBarcode(code, token);
       setProduct(p);
-    } catch (e: any) {
+    } catch (error) {
       Alert.alert(
         t.scan.productNotFound,
-        e.message || t.scan.productNotFoundMsg,
+        getUserErrorMessage(error, t, t.scan.productNotFoundMsg),
         [
           { text: t.scan.enterManually, onPress: handleManual },
-          { text: "OK", style: "cancel" },
+          { text: t.common.ok, style: "cancel" },
         ]
       );
       // Cho phép quét lại khi lần quét trước không tìm thấy sản phẩm.
@@ -171,6 +174,7 @@ export default function ScanScreen() {
     }
   };
 
+  // Camera phát hiện liên tục nên khóa sau lần gọi đầu tiên.
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
     if (mode !== "barcode" || barcodeLockRef.current || isScanning || product) return;
     barcodeLockRef.current = true;
@@ -189,45 +193,60 @@ export default function ScanScreen() {
     router.replace({ pathname: "/meals/add", params: { mealType: mealSlotByHour(new Date().getHours()) } });
   };
 
-  const handlePick = (c: Candidate) => {
+  const openScannedMeal = ({ name, calories, protein, carbs, fat, unit, note, source }: {
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    unit: string;
+    note?: string;
+    source: "photo" | "barcode";
+  }) => {
     router.replace({
       pathname: "/meals/add",
       params: {
-        prefillName: c.name,
-        prefillCalories: String(c.calories),
-        prefillProtein: String(c.protein),
-        prefillCarbs: String(c.carbs),
-        prefillFat: String(c.fat),
+        prefillName: name,
+        prefillCalories: String(calories),
+        prefillProtein: String(protein),
+        prefillCarbs: String(carbs),
+        prefillFat: String(fat),
+        prefillAmount: "1",
+        prefillUnit: unit,
+        ...(note ? { prefillNote: note } : {}),
+        source,
         mealType: mealSlotByHour(new Date().getHours()),
       },
+    });
+  };
+
+  const handlePick = (candidate: Candidate) => {
+    openScannedMeal({
+      ...candidate,
+      unit: t.meals.visiblePortion,
+      note: candidate.portionDescription,
+      source: "photo",
     });
     setCandidates(null);
     setPreviewUri(null);
   };
 
-  const handleAddProduct = (p: Product) => {
-    router.replace({
-      pathname: "/meals/add",
-      params: {
-        prefillName: p.brand ? `${p.name} (${p.brand})` : p.name,
-        prefillCalories: String(p.calories),
-        prefillProtein: String(p.protein),
-        prefillCarbs: String(p.carbs),
-        prefillFat: String(p.fat),
-        mealType: mealSlotByHour(new Date().getHours()),
-      },
+  const handleAddProduct = (product: Product) => {
+    openScannedMeal({
+      ...product,
+      name: product.brand ? `${product.name} (${product.brand})` : product.name,
+      unit: product.servingSize || t.meals.servingUnit,
+      source: "barcode",
     });
     setProduct(null);
     barcodeLockRef.current = false;
   };
 
-  // Gửi thông tin sản phẩm sang Coach để đánh giá theo tình trạng sức khỏe đã lưu.
-  // Dùng replace để quay lại không rơi vào camera đang chạy.
   const handleAskCoach = (p: Product) => {
     setProduct(null);
     barcodeLockRef.current = false;
     router.replace({
-      pathname: "/tabs/coach" as any,
+      pathname: "/tabs/coach",
       params: {
         ask: t.scan.suitsMeQuestion(
           p.brand ? `${p.name} (${p.brand})` : p.name,

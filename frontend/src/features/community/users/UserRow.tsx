@@ -1,0 +1,86 @@
+// Một dòng người dùng, dùng lại ở màn Khám phá và màn danh sách người.
+import { Pressable, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
+import { useT } from "@/i18n";
+import { theme } from "@/ui/theme";
+import { AppText } from "@/ui/components/AppText";
+import { Card } from "@/ui/components/Card";
+import { initials } from "../communityDisplay";
+import type { DiscoverUser } from "../communityApi";
+
+// Một hàng người dùng trong Discover gồm ảnh, tên, mục tiêu và nút theo dõi.
+export function UserRow({
+  user,
+  following,
+  onPress,
+  onToggleFollow,
+}: {
+  user: DiscoverUser;
+  following: boolean;
+  onPress: () => void;
+  onToggleFollow: () => void;
+}) {
+  const t = useT();
+  return (
+    <Card style={styles.card}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={t.a11y.openProfile(user.name)}
+        style={styles.userArea}
+      >
+        <View style={styles.avatar}>
+          {user.avatar ? (
+            <Image source={{ uri: user.avatar }} style={styles.avatarImg} cachePolicy="memory-disk" accessible={false} />
+          ) : (
+            <AppText style={styles.avatarInitials}>{initials(user.name)}</AppText>
+          )}
+        </View>
+        <View style={styles.info}>
+          {/* Giới hạn một dòng vì tên lưu trước đợt chặn độ dài có thể rất dài,
+              và hàng danh sách sẽ vỡ theo. Ô nhập đã chặn, nhưng dữ liệu cũ thì chưa. */}
+          <AppText variant="body2" style={styles.name} numberOfLines={1}>{user.name}</AppText>
+          <AppText variant="subtle" style={styles.meta}>
+            {user.sameGoal ? t.community.sameGoal : ""}
+            {t.labels.goal[user.goal] ?? user.goal}
+            {typeof user.followers === "number" && user.followers > 0 ? ` · ${t.community.followersCount(user.followers)}` : ""}
+          </AppText>
+        </View>
+      </Pressable>
+      <Pressable
+        onPress={onToggleFollow}
+        style={({ pressed }) => [
+          styles.followBtn,
+          following && styles.followBtnActive,
+          pressed && styles.pressed,
+        ]}
+      >
+        <AppText style={[styles.followText, following && styles.followTextActive]}>
+          {following ? t.community.following : t.community.follow}
+        </AppText>
+      </Pressable>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: { padding: theme.space.md, flexDirection: "row", alignItems: "center", gap: 12 },
+  userArea: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  avatar: {
+    width: 46, height: 46, borderRadius: 16, overflow: "hidden",
+    backgroundColor: theme.colors.tint, alignItems: "center", justifyContent: "center",
+  },
+  avatarImg: { width: "100%", height: "100%" },
+  avatarInitials: { color: theme.colors.primary, fontWeight: "700" },
+  info: { flex: 1, gap: 2 },
+  name: { fontWeight: "700" },
+  meta: { fontSize: 11 },
+  followBtn: {
+    paddingHorizontal: 16, paddingVertical: 8, borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.primary,
+  },
+  followBtnActive: { backgroundColor: theme.colors.tint },
+  followText: { fontSize: 13, fontWeight: "700", color: "#fff" },
+  followTextActive: { color: theme.colors.primary },
+  pressed: { opacity: 0.7 },
+});

@@ -1,22 +1,32 @@
-import { useEffect, useState } from "react";
-import { StyleSheet, View, Alert } from "react-native";
+// Đặt lại mật khẩu gồm gửi OTP, xác minh và đặt mật khẩu mới.
+// Mã được gửi lại ở bước cuối vì mỗi request độc lập và chỉ dùng được một lần.
+import { useState } from "react";
+import { ScrollView, StyleSheet, View, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { ApiTimeoutError, apiRequest } from "@/utils/api";
+import { ApiTimeoutError, apiRequest } from "@/utils/apiClient";
+import { getUserErrorMessage } from "@/utils/errorUtils";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
+import { resolveLanguage } from "@/utils/languageUtils";
+import { isStrongPassword, isValidEmail, isValidOtp } from "@/features/auth/authValidation";
+import { useOtpCooldown } from "@/features/auth/useOtpCooldown";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Screen } from "@/ui/components/Screen";
 import { TextField } from "@/ui/components/TextField";
+import { INPUT_LIMITS } from "@/config/inputLimits";
 
 type Step = "email" | "otp" | "password";
 const STEPS: Step[] = ["email", "otp", "password"];
+// Chờ 60 giây thay vì 45 giây mặc định, vì backend còn phải gửi email thật.
 const OTP_REQUEST_TIMEOUT_MS = 60_000;
-const RESEND_SECONDS = 60;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const t = useT();
+  const { languagePreference, user } = useAuth();
+  const language = resolveLanguage(languagePreference ?? user?.language);
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -25,36 +35,36 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [resendSeconds, setResendSeconds] = useState(0);
+  const [notice, setNotice] = useState("");
+  const { seconds: resendSeconds, start: startOtpCooldown } = useOtpCooldown();
 
-  useEffect(() => {
-    if (resendSeconds <= 0) return;
-    const timer = setInterval(() => {
-      setResendSeconds((current) => Math.max(0, current - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [resendSeconds]);
+  const emailIsValid = isValidEmail(email);
+  const otpIsValid = isValidOtp(otp);
+  const passwordIsValid = isStrongPassword(newPassword) && newPassword === confirmPassword;
+  const canContinue = step === "email" ? emailIsValid : step === "otp" ? otpIsValid : passwordIsValid;
 
-  // ─── Step 1: Send OTP ───────────────────────────────────────────────────────
+  // Backend luôn trả câu chung chung, nên bước này thành công cả khi
+  // email chưa có tài khoản. Đó là cố ý, để không lộ email nào đã đăng ký.
   const handleSendOTP = async () => {
-    if (!email.trim() || !email.includes("@")) {
+    if (!emailIsValid) {
       setError(t.auth.invalidEmail);
       return;
     }
     setError("");
+    setNotice("");
     setIsLoading(true);
     try {
       await apiRequest(
         "/user/send-otp",
         "POST",
-        { email: email.trim() },
+        { email: email.trim(), language },
         undefined,
         { timeoutMs: OTP_REQUEST_TIMEOUT_MS }
       );
       setStep("otp");
-      setResendSeconds(RESEND_SECONDS);
-    } catch (e: any) {
-      setError(e instanceof ApiTimeoutError ? t.auth.otpTimeout : e.message || t.auth.failedSendOtp);
+      startOtpCooldown();
+    } catch (error) {
+      setError(error instanceof ApiTimeoutError ? t.auth.otpTimeout : getUserErrorMessage(error, t, t.auth.failedSendOtp));
     } finally {
       setIsLoading(false);
     }
@@ -64,26 +74,27 @@ export default function ForgotPasswordScreen() {
     if (resendSeconds > 0 || isLoading) return;
     setOtp("");
     setError("");
+    setNotice("");
     setIsLoading(true);
     try {
       await apiRequest(
         "/user/send-otp",
         "POST",
-        { email: email.trim() },
+        { email: email.trim(), language },
         undefined,
         { timeoutMs: OTP_REQUEST_TIMEOUT_MS }
       );
-      setResendSeconds(RESEND_SECONDS);
-      Alert.alert(t.auth.otpTitle, t.auth.otpResent);
-    } catch (e: any) {
-      setError(e instanceof ApiTimeoutError ? t.auth.otpTimeout : e.message || t.auth.failedSendOtp);
+      startOtpCooldown();
+      setNotice(t.auth.otpResent);
+    } catch (error) {
+      setError(error instanceof ApiTimeoutError ? t.auth.otpTimeout : getUserErrorMessage(error, t, t.auth.failedSendOtp));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleVerifyOTP = async () => {
-    if (otp.trim().length !== 6) {
+    if (!otpIsValid) {
       setError(t.auth.otpMustBe6);
       return;
     }
@@ -92,8 +103,8 @@ export default function ForgotPasswordScreen() {
     try {
       await apiRequest("/user/verify-otp", "POST", { email: email.trim(), otp: otp.trim() });
       setStep("password");
-    } catch (e: any) {
-      setError(e.message || t.auth.invalidOtp);
+    } catch (error) {
+      setError(getUserErrorMessage(error, t, t.auth.invalidOtp));
     } finally {
       setIsLoading(false);
     }
@@ -119,6 +130,7 @@ export default function ForgotPasswordScreen() {
     setError("");
     setIsLoading(true);
     try {
+      // Gửi lại mã lần nữa vì backend không nhớ bước 2, và đây là lúc mã bị xóa hẳn.
       await apiRequest("/user/reset-password", "POST", {
         email: email.trim(),
         otp: otp.trim(),
@@ -127,8 +139,8 @@ export default function ForgotPasswordScreen() {
       Alert.alert(t.auth.resetSuccessTitle, t.auth.resetSuccessMsg, [
         { text: t.auth.signIn, onPress: () => router.replace("/auth/login") },
       ]);
-    } catch (e: any) {
-      setError(e.message || t.auth.failedReset);
+    } catch (error) {
+      setError(getUserErrorMessage(error, t, t.auth.failedReset));
     } finally {
       setIsLoading(false);
     }
@@ -141,8 +153,12 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <Screen keyboard style={styles.screen}>
-      <View style={styles.wrap}>
+    <Screen>
+      <ScrollView
+        contentContainerStyle={styles.wrap}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
 
         {/* Step indicator */}
         <View style={styles.stepsRow}>
@@ -168,6 +184,7 @@ export default function ForgotPasswordScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               textContentType="emailAddress"
+              maxLength={INPUT_LIMITS.EMAIL}
               inputProps={{ autoFocus: true }}
             />
           )}
@@ -178,24 +195,30 @@ export default function ForgotPasswordScreen() {
               label={t.auth.otpLabel}
               placeholder={t.auth.otpPlaceholder}
               value={otp}
-              onChangeText={(v) => { setOtp(v); setError(""); }}
+              onChangeText={(v) => { setOtp(v); setError(""); setNotice(""); }}
               keyboardType="number-pad"
-              inputProps={{ autoFocus: true, maxLength: 6 }}
+              maxLength={INPUT_LIMITS.OTP_CODE}
+              inputProps={{ autoFocus: true }}
             />
           )}
 
           {/* Step 3 - New Password */}
           {step === "password" && (
             <>
-              <TextField
-                label={t.auth.newPassword}
-                placeholder="••••••••"
-                value={newPassword}
-                onChangeText={(v) => { setNewPassword(v); setError(""); }}
-                secureTextEntry
-                textContentType="newPassword"
-                inputProps={{ autoFocus: true }}
-              />
+              <View style={styles.fieldNote}>
+                <TextField
+                  label={t.auth.newPassword}
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChangeText={(v) => { setNewPassword(v); setError(""); }}
+                  secureTextEntry
+                  textContentType="newPassword"
+                  maxLength={INPUT_LIMITS.PASSWORD}
+                  inputProps={{ autoFocus: true }}
+                />
+                <AppText variant="subtle" style={styles.hint}>• {t.auth.passwordChecklistLength}</AppText>
+                <AppText variant="subtle" style={styles.hint}>• {t.auth.passwordChecklistUpperAndNumber}</AppText>
+              </View>
               <TextField
                 label={t.auth.confirmPassword}
                 placeholder="••••••••"
@@ -203,11 +226,13 @@ export default function ForgotPasswordScreen() {
                 onChangeText={(v) => { setConfirmPassword(v); setError(""); }}
                 secureTextEntry
                 textContentType="newPassword"
+                maxLength={INPUT_LIMITS.PASSWORD}
               />
             </>
           )}
 
           {error ? <AppText variant="subtle" style={styles.error}>{error}</AppText> : null}
+          {notice ? <AppText variant="subtle" style={styles.notice}>{notice}</AppText> : null}
 
           <Button
             title={
@@ -218,7 +243,7 @@ export default function ForgotPasswordScreen() {
               t.auth.changePassword
             }
             size="lg"
-            disabled={isLoading}
+            disabled={isLoading || !canContinue}
             onPress={
               step === "email" ? handleSendOTP :
               step === "otp" ? handleVerifyOTP :
@@ -242,18 +267,20 @@ export default function ForgotPasswordScreen() {
             onPress={() => router.replace("/auth/login")}
           />
         </View>
-      </View>
+      </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { justifyContent: "center" },
-  wrap: { gap: theme.space.xl },
+  wrap: { flexGrow: 1, paddingTop: 60, paddingBottom: 40, gap: theme.space.xl },
   stepsRow: { flexDirection: "row", gap: 8, justifyContent: "center" },
   stepSeg: { height: 4, flex: 1, borderRadius: 99, backgroundColor: "rgba(8,145,178,0.12)" },
   stepSegActive: { backgroundColor: theme.colors.primary },
   header: { gap: 8 },
   form: { gap: theme.space.md },
+  fieldNote: { gap: theme.space.xs },
+  hint: { fontSize: 12 },
   error: { color: theme.colors.danger, textAlign: "center" },
+  notice: { color: theme.colors.accent, textAlign: "center" },
 });

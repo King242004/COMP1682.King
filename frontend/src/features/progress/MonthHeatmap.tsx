@@ -1,3 +1,4 @@
+// Lưới ô vuông cả tháng, dùng cho chế độ xem Tháng.
 import { Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

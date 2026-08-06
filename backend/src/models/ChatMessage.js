@@ -1,10 +1,17 @@
 const mongoose = require("mongoose");
 
+// Bảng tin nhắn trò chuyện với Coach. Mỗi lượt hỏi đáp lưu HAI dòng,
+// một dòng của người dùng và một dòng của Coach.
+// Nơi ghi vào: coachController.chat.
+// Nơi đọc ra: màn Coach khi mở lại, và bị xóa hết khi bấm xóa lịch sử.
+// Trường language để lọc tin theo ngôn ngữ, nhờ vậy đổi sang tiếng Anh
+// thì màn hình không lẫn tin tiếng Việt cũ.
 const chatMessageSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     role: { type: String, enum: ["user", "coach"], required: true },
     language: { type: String, enum: ["vi", "en"], default: null },
+    responseLanguage: { type: String, enum: ["vi", "en"], default: null },
     text: { type: String, required: true },
     // Đường dẫn Cloudinary của ảnh được gửi trong cuộc trò chuyện.
     image: { type: String, default: null },

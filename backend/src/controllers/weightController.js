@@ -1,33 +1,49 @@
 const WeightLog = require("../models/WeightLog");
 const User = require("../models/User");
-const { autoGoal } = require("../services/calorieGoal");
-const { todayKey } = require("../utils/date");
+const { autoGoal, resolveWeightGoal } = require("../services/nutrition/calorieGoal");
+const { PROFILE_LIMITS } = require("../config/nutritionConstants");
+const { requestTodayKey } = require("../utils/dateUtils");
 
-async function syncUserWeight(userId, newWeight) {
-  const u = await User.findById(userId).select(
-    "customGoal height age gender activityLevel goal"
+// File này lo nhật ký cân nặng và giữ cho hồ sơ luôn khớp với lần cân mới nhất.
+
+// Đồng bộ cân nặng vào hồ sơ, và tính lại mục tiêu calo nếu người dùng
+// đang để app tự tính. Ai tự đặt mục tiêu riêng thì không đụng tới.
+async function syncUserWeight(userId, currentWeight) {
+  const user = await User.findById(userId).select(
+    "customGoal height age gender activityLevel goal targetWeight weeklyRateKg"
   );
-  if (!u) return;
-  const updates = { weight: newWeight };
-  if (!u.customGoal) {
-    const g = autoGoal({ ...u.toObject(), weight: newWeight });
-    if (g) updates.calorieGoal = g;
+  if (!user) return null;
+
+  const nextGoal = resolveWeightGoal({
+    goal: user.goal,
+    currentWeight,
+    targetWeight: user.targetWeight,
+  });
+  const updates = { weight: currentWeight, goal: nextGoal };
+
+  if (!user.customGoal) {
+    const calorieGoal = autoGoal({ ...user.toObject(), weight: currentWeight, goal: nextGoal });
+    if (calorieGoal != null) updates.calorieGoal = calorieGoal;
   }
   await User.updateOne({ _id: userId }, { $set: updates });
+  return nextGoal !== user.goal ? nextGoal : null;
 }
 
+// Chỉ đồng bộ khi đây là ngày mới nhất, để việc sửa lại một lần cân cũ
+// không làm sai cân nặng hiện tại trong hồ sơ.
 exports.logWeight = async (req, res) => {
   const { weightKg, date } = req.body;
 
   const kg = Number(weightKg);
-  if (!kg || isNaN(kg) || kg < 20 || kg > 300)
-    return res.status(400).json({ message: "Weight must be between 20 and 300 kg." });
+  const weightLimit = PROFILE_LIMITS.weightKg;
+  if (!kg || isNaN(kg) || kg < weightLimit.min || kg > weightLimit.max)
+    return res.status(400).json({ message: `Weight must be between ${weightLimit.min} and ${weightLimit.max} kg.` });
 
-  const day = date || todayKey();
+  const day = date || requestTodayKey(req);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day))
     return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
 
-  if (day > todayKey())
+  if (day > requestTodayKey(req))
     return res.status(400).json({ message: "Cannot log weight for a future date." });
 
     // Cân nặng chỉ cần chính xác đến một chữ số thập phân.
@@ -39,13 +55,18 @@ exports.logWeight = async (req, res) => {
   );
 
   const newest = await WeightLog.findOne({ user: req.user.id }).sort({ date: -1 }).select("date weightKg");
-  if (newest && newest.date === day) {
-    await syncUserWeight(req.user.id, rounded);
-  }
+  const adjustedGoal = newest && newest.date === day
+    ? await syncUserWeight(req.user.id, rounded)
+    : null;
 
-  res.status(201).json({ message: "Weight logged.", log });
+  res.status(201).json({
+    message: "Weight logged.",
+    log,
+    ...(adjustedGoal && { adjustedGoal }),
+  });
 };
 
+// Đảo lại thứ tự để biểu đồ vẽ được ngay từ trái sang phải theo thời gian.
 exports.getWeights = async (req, res) => {
   const limit = Math.min(365, parseInt(req.query.limit) || 90);
   const [logs, user] = await Promise.all([
@@ -59,6 +80,8 @@ exports.getWeights = async (req, res) => {
   });
 };
 
+// Phải đồng bộ lại vì nếu xóa đúng lần cân mới nhất thì hồ sơ đang giữ
+// một con số không còn tồn tại trong nhật ký nữa.
 exports.deleteWeight = async (req, res) => {
   const log = await WeightLog.findById(req.params.id);
   if (!log) return res.status(404).json({ message: "Entry not found." });
@@ -68,7 +91,7 @@ exports.deleteWeight = async (req, res) => {
   await log.deleteOne();
 
   const newest = await WeightLog.findOne({ user: req.user.id }).sort({ date: -1 }).select("weightKg");
-  if (newest) await syncUserWeight(req.user.id, newest.weightKg);
+  const adjustedGoal = newest ? await syncUserWeight(req.user.id, newest.weightKg) : null;
 
-  res.json({ message: "Entry deleted." });
+  res.json({ message: "Entry deleted.", ...(adjustedGoal && { adjustedGoal }) });
 };

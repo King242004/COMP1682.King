@@ -1,3 +1,4 @@
+// Thanh tab dưới cùng, gồm bốn tab và nút quét ở giữa.
 import { useState, type ComponentProps } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";

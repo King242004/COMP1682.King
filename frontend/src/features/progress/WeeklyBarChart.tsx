@@ -1,3 +1,4 @@
+// Biểu đồ cột lượng calo theo ngày, dùng cho chế độ xem Tuần.
 import { Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

@@ -1,3 +1,4 @@
+// Vòng tròn tiến độ, dùng cho vòng calo ở Trang chủ và điểm sức khỏe ở Coach.
 import { StyleSheet, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { theme } from "../theme";

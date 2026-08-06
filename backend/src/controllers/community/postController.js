@@ -1,22 +1,59 @@
+// File này lo một bài đăng Community: tạo, xem, sửa, xóa, bấm tim, bấm lưu.
+// Bốn file trong thư mục này chia việc: postController lo một bài,
+// feedController lo các danh sách bài, socialController lo quan hệ người dùng,
+// notificationController lo thông báo. Phần dùng chung nằm ở communityHelpers.
 const cloudinary = require("../../config/cloudinary");
 const Notification = require("../../models/Notification");
 const Post = require("../../models/Post");
-const { addNotification, postHiddenFrom, shapePost, uploadToCloudinary } = require("./helpers");
+const { addNotification, postHiddenFrom, shapePost, uploadToCloudinary } = require("./communityHelpers");
+const { INPUT_LIMITS, LEGACY_LIMITS } = require("../../config/inputLimits");
 
+const NUTRITION_SOURCES = new Set([
+  "manual", "ai_estimate", "ai_adjusted", "photo_scan", "barcode", "community", "repeat", "ai_suggestion",
+]);
+
+function mealSnapshot(body) {
+  const name = String(body.mealName || "").trim();
+  if (!name) return undefined;
+  const nonNegative = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? number : 0;
+  };
+  const amount = Number(body.portionAmount);
+  const source = String(body.nutritionSource || "");
+  return {
+    name,
+    calories: nonNegative(body.calories),
+    protein: nonNegative(body.protein),
+    carbs: nonNegative(body.carbs),
+    fat: nonNegative(body.fat),
+    portionAmount: body.portionAmount !== undefined && Number.isFinite(amount) && amount >= 0 ? amount : null,
+    portionUnit: String(body.portionUnit || "").trim().slice(0, INPUT_LIMITS.PORTION_UNIT),
+    portionText: String(body.portionText || "").trim().slice(0, LEGACY_LIMITS.PORTION_TEXT),
+    nutritionSource: NUTRITION_SOURCES.has(source) ? source : undefined,
+  };
+}
+
+// File này lo một bài đăng: tạo, xem, sửa, xóa, bấm tim, bấm lưu.
+
+// Bài có thể là bài thường, hoặc bài món ăn. Bài món ăn có thể chỉ có tên món
+// mà không có dinh dưỡng, nên tên món tách riêng khỏi phần dinh dưỡng.
 exports.createPost = async (req, res) => {
-  const { caption, dishName, mealName, calories, protein, carbs, fat } = req.body;
+  const { caption, dishName, mealName } = req.body;
   const files = req.files || [];
 
   if (files.length === 0) {
     return res.status(400).json({ message: "A post needs at least one photo." });
   }
-  if (caption && caption.length > 500) {
-    return res.status(400).json({ message: "Caption must be 500 characters or fewer." });
+  // Bài MỚI dùng giới hạn hiện hành. Đường sửa bài ở dưới nới rộng hơn,
+  // vì bài tạo trước đợt hạ giới hạn vẫn phải sửa và lưu lại được.
+  if (caption && caption.length > INPUT_LIMITS.POST_CAPTION) {
+    return res.status(400).json({ message: `Caption must be ${INPUT_LIMITS.POST_CAPTION} characters or fewer.` });
   }
 
   const normalizedDishName = String(dishName || mealName || "").trim();
-  if (normalizedDishName.length > 100) {
-    return res.status(400).json({ message: "Dish name must be 100 characters or fewer." });
+  if (normalizedDishName.length > LEGACY_LIMITS.MEAL_NAME) {
+    return res.status(400).json({ message: `Dish name must be ${LEGACY_LIMITS.MEAL_NAME} characters or fewer.` });
   }
 
   const images = [];
@@ -25,19 +62,12 @@ exports.createPost = async (req, res) => {
       images.push(await uploadToCloudinary(file.buffer));
     }
   } catch {
+    // Dọn sạch các ảnh đã đẩy lên trước khi báo lỗi, tránh để lại ảnh mồ côi.
     await Promise.allSettled(images.map((image) => cloudinary.uploader.destroy(image.publicId)));
     return res.status(500).json({ message: "Image upload failed. Please try again." });
   }
 
-  const meal = mealName
-    ? {
-        name: mealName.trim(),
-        calories: Number(calories) || 0,
-        protein: Number(protein) || 0,
-        carbs: Number(carbs) || 0,
-        fat: Number(fat) || 0,
-      }
-    : undefined;
+  const meal = mealSnapshot(req.body);
 
   const post = await Post.create({
     user: req.user.id,
@@ -54,6 +84,8 @@ exports.createPost = async (req, res) => {
   res.status(201).json({ message: "Posted.", post: shapePost(post, req.user.id) });
 };
 
+// Phải xóa thông báo liên quan, nếu không màn Thông báo sẽ còn dòng
+// trỏ tới một bài không còn tồn tại.
 exports.deletePost = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found." });
@@ -79,6 +111,8 @@ exports.getPost = async (req, res) => {
   res.json({ post: shapePost(post, req.user.id) });
 };
 
+// Nút lưu bài. Bấm lần nữa là bỏ lưu.
+// Lưu bài không tạo thông báo, khác với bấm tim.
 exports.toggleSave = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found." });
@@ -95,6 +129,8 @@ exports.toggleSave = async (req, res) => {
   res.json({ saved: index < 0 });
 };
 
+// Cách xử lý ảnh: app gửi lên keepUrls là danh sách ảnh cũ muốn giữ,
+// cộng thêm các file ảnh mới. Ảnh cũ nào không nằm trong keepUrls sẽ bị xóa khỏi kho.
 exports.updatePost = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found." });
@@ -102,13 +138,17 @@ exports.updatePost = async (req, res) => {
     return res.status(403).json({ message: "Not authorized to edit this post." });
   }
 
+  // Dùng TRẦN LỊCH SỬ chứ không dùng giới hạn hiện hành, vì bài đăng tạo trước
+  // đợt hạ giới hạn có thể đang dài hơn số mới. Chặn theo số mới ở đây sẽ khiến
+  // người dùng không sửa nổi bài của chính mình, kể cả khi họ không đụng chú thích.
   if (typeof req.body.caption === "string") {
-    if (req.body.caption.length > 500) {
-      return res.status(400).json({ message: "Caption must be 500 characters or fewer." });
+    if (req.body.caption.length > LEGACY_LIMITS.POST_CAPTION) {
+      return res.status(400).json({ message: `Caption must be ${LEGACY_LIMITS.POST_CAPTION} characters or fewer.` });
     }
     post.caption = req.body.caption.trim();
   }
 
+  // So cả kiểu boolean và kiểu chữ, vì gửi bằng file thì mọi thứ đều thành chữ.
   const removeDish = req.body.removeDish === true || req.body.removeDish === "true";
   const removeMeal = req.body.removeMeal === true || req.body.removeMeal === "true";
   if (removeDish) {
@@ -117,24 +157,18 @@ exports.updatePost = async (req, res) => {
   } else {
     if (typeof req.body.dishName === "string") {
       const normalizedDishName = req.body.dishName.trim();
-      if (normalizedDishName.length > 100) {
-        return res.status(400).json({ message: "Dish name must be 100 characters or fewer." });
+      if (normalizedDishName.length > LEGACY_LIMITS.MEAL_NAME) {
+        return res.status(400).json({ message: `Dish name must be ${LEGACY_LIMITS.MEAL_NAME} characters or fewer.` });
       }
       post.dishName = normalizedDishName || undefined;
     }
 
     if (typeof req.body.mealName === "string" && req.body.mealName.trim()) {
       const mealName = req.body.mealName.trim();
-      if (mealName.length > 100) {
-        return res.status(400).json({ message: "Dish name must be 100 characters or fewer." });
+      if (mealName.length > LEGACY_LIMITS.MEAL_NAME) {
+        return res.status(400).json({ message: `Dish name must be ${LEGACY_LIMITS.MEAL_NAME} characters or fewer.` });
       }
-      post.meal = {
-        name: mealName,
-        calories: Number(req.body.calories) || 0,
-        protein: Number(req.body.protein) || 0,
-        carbs: Number(req.body.carbs) || 0,
-        fat: Number(req.body.fat) || 0,
-      };
+      post.meal = mealSnapshot(req.body);
       post.dishName = post.dishName || mealName;
     } else if (removeMeal) {
       post.meal = undefined;
@@ -157,6 +191,7 @@ exports.updatePost = async (req, res) => {
         keepUrls = null;
       }
     }
+    // Không gửi keepUrls nghĩa là không đụng tới ảnh cũ, giữ nguyên tất cả.
     if (keepUrls === undefined) keepUrls = currentImages.map((image) => image.url);
     if (!Array.isArray(keepUrls)) {
       return res.status(400).json({ message: "keepUrls must be an array of image URLs." });
@@ -185,6 +220,7 @@ exports.updatePost = async (req, res) => {
       return res.status(500).json({ message: "Image upload failed. Please try again." });
     }
 
+    // Xóa khỏi kho những ảnh cũ người dùng đã bỏ ra.
     const keptIds = new Set(keptImages.map((image) => image.publicId).filter(Boolean));
     const droppedImages = currentImages.filter(
       (image) => image.publicId && !keptIds.has(image.publicId)
@@ -208,6 +244,9 @@ exports.updatePost = async (req, res) => {
   res.json({ message: "Post updated.", post: shapePost(post, req.user.id) });
 };
 
+// Nút tim. Bấm lần nữa là bỏ tim.
+// Bỏ tim thì gỡ luôn thông báo, để chủ bài không thấy thông báo về một lượt tim
+// đã bị rút lại.
 exports.toggleLike = async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).json({ message: "Post not found." });

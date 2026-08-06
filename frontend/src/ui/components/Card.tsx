@@ -1,3 +1,4 @@
+// Khung thẻ bo góc có đổ bóng nhẹ, dùng để nhóm nội dung.
 import { View, type StyleProp, type ViewProps, type ViewStyle } from "react-native";
 import { shadow, theme } from "../theme";
 
@@ -12,7 +13,7 @@ export function Card({
         {
           backgroundColor: theme.colors.surface,
           borderRadius: theme.radius.card,
-// Viền mặc định trong suốt, thẻ nhấn mạnh vẫn có thể truyền borderColor riêng.
+          // Viền mặc định trong suốt, thẻ nhấn mạnh vẫn có thể truyền borderColor riêng.
           borderWidth: 1,
           borderColor: "transparent",
           padding: theme.space.lg,

@@ -1,16 +1,27 @@
+// Màn Thông báo.
+// LUỒNG XEM THÔNG BÁO, tự chạy khi mở màn
+// 1. api.getNotifications          (GET /community/notifications)
+// 2. backend trả 50 thông báo mới nhất, bỏ qua thông báo mà người gây ra
+//    đã xóa tài khoản hoặc bài đã bị xóa
+// 3. api.markNotificationsRead     (POST /community/notifications/read)
+//    tự chạy ngay, không cần bấm nút, nên chấm đỏ tắt luôn
+// 4. danh sách hiện lên
+// Chỉ có hai loại thông báo: có người tim bài, và có người theo dõi mình.
+// Chạm vào thông báo tim thì mở bài, chạm vào thông báo theo dõi
+// thì mở trang cá nhân của người đó.
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
-import { resolveLanguage, localeTag } from "@/utils/language";
-import { getNotifications, markNotificationsRead, type Notification } from "@/features/community/api";
-import { initials, communityTime } from "@/features/community/helpers";
+import { useAuth } from "@/features/auth/AuthContext";
+import { resolveLanguage, localeTag } from "@/utils/languageUtils";
+import { getNotifications, markNotificationsRead, type Notification } from "@/features/community/communityApi";
+import { initials, communityTime } from "@/features/community/communityDisplay";
+import { CommunityStateCard } from "@/features/community/CommunityStateCard";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
-import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
@@ -36,7 +47,7 @@ export default function NotificationsScreen() {
       const data = await getNotifications(token);
       setItems(data);
       setLoadError(false);
-  // Xóa số thông báo khi danh sách đã xuất hiện trên màn hình.
+      // Xóa số thông báo khi danh sách đã xuất hiện trên màn hình.
       markNotificationsRead(token).catch(() => {});
     } catch {
       setLoadError(true);
@@ -45,11 +56,13 @@ export default function NotificationsScreen() {
     }
   }, [token]);
 
+  // Tự tải thông báo mỗi lần mở màn, rồi đánh dấu đã đọc ngay.
+  // Nhờ vậy chấm đỏ trên chuông tắt mà không cần bấm nút nào.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const openTarget = (n: Notification) => {
     if (n.type === "like" && n.postId) {
-      router.push({ pathname: "/community/post-detail" as any, params: { id: n.postId } });
+      router.push({ pathname: "/community/post-detail", params: { id: n.postId } });
     } else {
       router.push({ pathname: "/community/user-profile", params: { id: n.actor.id } });
     }
@@ -104,20 +117,18 @@ export default function NotificationsScreen() {
       <ActivityIndicator color={theme.colors.primary} />
     </View>
   ) : loadError ? (
-    <Card style={styles.emptyCard}>
-      <AppText style={styles.emptyEmoji}>📡</AppText>
-      <AppText variant="h2" style={styles.centerText}>{t.community.loadPostsError}</AppText>
-      <AppText variant="muted" style={styles.centerText}>{t.common.checkConnection}</AppText>
-      <Pressable onPress={() => load()} style={({ pressed }) => [styles.retryBtn, pressed && styles.pressed]}>
-        <AppText style={styles.retryText}>{t.common.retry}</AppText>
-      </Pressable>
-    </Card>
+    <CommunityStateCard
+      icon="cloud-offline-outline"
+      title={t.community.loadPostsError}
+      subtitle={t.common.checkConnection}
+      onRetry={() => load()}
+    />
   ) : (
-    <Card style={styles.emptyCard}>
-      <AppText style={styles.emptyEmoji}>🔔</AppText>
-      <AppText variant="h2" style={styles.centerText}>{t.community.notifEmptyTitle}</AppText>
-      <AppText variant="muted" style={styles.centerText}>{t.community.notifEmptySub}</AppText>
-    </Card>
+    <CommunityStateCard
+      icon="notifications-outline"
+      title={t.community.notifEmptyTitle}
+      subtitle={t.community.notifEmptySub}
+    />
   );
 
   return (
@@ -161,13 +172,5 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   loadingBox: { paddingVertical: theme.space.xl, alignItems: "center" },
-  emptyCard: { padding: theme.space.xl, alignItems: "center", gap: 10 },
-  emptyEmoji: { fontSize: 40 },
-  centerText: { textAlign: "center" },
-  retryBtn: {
-    marginTop: 4, paddingHorizontal: 20, paddingVertical: 9,
-    borderRadius: theme.radius.pill, backgroundColor: theme.colors.primary,
-  },
-  retryText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   pressed: { opacity: 0.7 },
 });

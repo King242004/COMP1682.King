@@ -1,14 +1,26 @@
+// Thẻ gợi ý món ở màn Trang chủ. Đây là file BẮT ĐẦU của luồng gợi ý món.
+// LUỒNG GỢI Ý MÓN
+// 1. Bấm nút xin gợi ý tại đây
+// 2. suggestNextMeal              (POST /coach/suggest-meal)
+// 3. backend coachController.suggestMeal xem giờ và các bữa đã ăn
+//    để đoán bữa kế tiếp, tính calo còn lại
+// 4. Gemini đề xuất 3 món
+// 5. conditionFilter lọc lại theo bệnh nền ở server
+// 6. thẻ hiện 3 món kèm lý do chọn
+// 7. Bấm một món, sang /meals/add điền sẵn tên và dinh dưỡng
+// Kết quả được lưu tạm theo ngày, bữa và ngôn ngữ, để mở lại
+// không tốn thêm một lượt gọi AI.
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAuth } from "@/context/AuthContext";
-import { useMeals } from "@/context/MealsContext";
-import { suggestNextMeal, getCachedSuggestions, cacheSuggestions, nextMealSlot, type MealSuggestions } from "@/features/plan/suggest";
-import type { PlanMeal } from "@/features/plan/api";
-import { todayKey } from "@/utils/date";
+import { useAuth } from "@/features/auth/AuthContext";
+import { useMeals } from "@/features/meals/MealsContext";
+import { suggestNextMeal, getCachedSuggestions, cacheSuggestions, nextMealSlot, type MealSuggestions } from "@/features/plan/mealSuggestions";
+import type { PlanMeal } from "@/features/plan/planApi";
+import { todayKey } from "@/utils/dateUtils";
 import { aiResetWhen } from "@/utils/aiQuota";
-import { resolveLanguage } from "@/utils/language";
+import { resolveLanguage } from "@/utils/languageUtils";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -29,8 +41,10 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
   const [error, setError] = useState<string | null>(null);
 
   const currentSlot = nextMealSlot(new Date().getHours(), new Set(meals.map((m) => m.mealType)));
+  // Tự đọc gợi ý đã lưu trong máy khi mở thẻ, để không phải chờ.
+  // Chưa có bản lưu thì để trống, chờ người dùng bấm xin gợi ý.
   useEffect(() => {
-    getCachedSuggestions(dateKey, currentSlot, lang).then(setSuggest);
+    void getCachedSuggestions(dateKey, currentSlot, lang).then(setSuggest).catch(() => {});
   }, [dateKey, currentSlot, lang]);
 
   const loadSuggestions = async (force = false) => {
@@ -54,7 +68,7 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
 
   const askCoachHow = (name: string) =>
     router.push({
-      pathname: "/tabs/coach" as any,
+      pathname: "/tabs/coach",
       params: {
         ask: t.community.cookQuestion(name),
         askId: String(Date.now()),

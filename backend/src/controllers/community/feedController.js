@@ -1,8 +1,13 @@
 const Post = require("../../models/Post");
 const User = require("../../models/User");
 const Follow = require("../../models/Follow");
-const { privateUserIds, shapePost } = require("./helpers");
+const { privateUserIds, shapePost } = require("./communityHelpers");
 
+// File này lo bốn danh sách bài: Đang theo dõi, Khám phá, bài của một người, bài đã lưu.
+// Cả bốn đều chia trang theo cùng một cách: xin thêm 1 bài so với số cần,
+// nếu lấy về dư thì biết là còn trang sau, rồi cắt bớt bài dư đi.
+
+// Tab Đang theo dõi.
 exports.getFeed = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);
@@ -27,6 +32,8 @@ exports.getFeed = async (req, res) => {
   });
 };
 
+// Tab Khám phá.
+// Bài của chính mình vẫn hiện dù mình để tài khoản riêng tư.
 exports.getExplore = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);
@@ -46,6 +53,7 @@ exports.getExplore = async (req, res) => {
   });
 };
 
+// Lưới bài trong trang cá nhân của một người.
 exports.getUserPosts = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);
@@ -71,6 +79,9 @@ exports.getUserPosts = async (req, res) => {
   });
 };
 
+// Tab bài đã lưu.
+// Vẫn lọc bỏ tài khoản riêng tư, vì người ta có thể chuyển sang riêng tư
+// sau khi mình đã lưu bài của họ.
 exports.getSavedPosts = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);

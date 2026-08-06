@@ -1,3 +1,5 @@
+// Khối xám nhấp nháy hiện trong lúc chờ dữ liệu về.
+// Dùng thay vòng xoay để bố cục không nhảy khi dữ liệu về.
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, type DimensionValue } from "react-native";
 
@@ -12,6 +14,7 @@ export function Skeleton({
   radius?: number;
 }) {
   const opacity = useRef(new Animated.Value(0.35)).current;
+  // Chạy hiệu ứng mờ tỏ lặp lại, và dừng khi component biến mất.
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([

@@ -1,11 +1,13 @@
 // Bảng trượt hiển thị tối đa ba món AI đoán sau khi quét ảnh.
-import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+// Đây là bước NGƯỜI DÙNG XÁC NHẬN. AI chỉ đề xuất, không tự ghi món.
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
-import type { Candidate } from "@/features/scan/api";
+import type { Candidate } from "@/features/scan/scanApi";
+import { ScanBottomSheet } from "./ScanBottomSheet";
 
 export function CandidatesSheet({ visible, candidates, previewUri, onPick, onManual, onClose }: {
   visible: boolean;
@@ -17,19 +19,12 @@ export function CandidatesSheet({ visible, candidates, previewUri, onPick, onMan
 }) {
   const t = useT();
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <View style={styles.grabber} />
-          <View style={styles.headerRow}>
-            <View>
-              <AppText variant="h2">{t.scan.whatDidAiSee}</AppText>
-              <AppText variant="muted" style={styles.subtitle}>{t.scan.pickClosest}</AppText>
-            </View>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close-circle" size={28} color={theme.colors.subtle} />
-            </Pressable>
-          </View>
+    <ScanBottomSheet
+      visible={visible}
+      title={t.scan.whatDidAiSee}
+      subtitle={t.scan.pickClosest}
+      onClose={onClose}
+    >
           {previewUri && (
             <Image source={{ uri: previewUri }} style={styles.preview} resizeMode="cover" />
           )}
@@ -75,23 +70,11 @@ export function CandidatesSheet({ visible, candidates, previewUri, onPick, onMan
               </Pressable>
             </View>
           </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    </ScanBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  sheet: {
-    backgroundColor: theme.colors.bg,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: theme.space.lg, paddingTop: theme.space.lg, paddingBottom: 40,
-    maxHeight: "85%",
-  },
-  grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.border, alignSelf: "center", marginBottom: theme.space.md },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: theme.space.md },
-  subtitle: { fontSize: 13 },
   preview: { width: "100%", height: 140, borderRadius: 12, marginBottom: theme.space.md },
   list: { gap: theme.space.sm },
   candidateCard: { padding: theme.space.lg, borderWidth: 1, borderColor: theme.colors.border },

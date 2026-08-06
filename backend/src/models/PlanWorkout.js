@@ -1,11 +1,23 @@
 const mongoose = require("mongoose");
 
+// Bảng gợi ý tập cho từng ngày trong kế hoạch tuần. Mỗi ngày tối đa một gợi ý.
+// Nơi ghi vào: AI tạo kế hoạch tuần.
+// Nơi đọc ra: màn Kế hoạch tuần.
+// Hai kiểu dòng:
+//   Có đủ name, met, durationMin thì bấm "Xong" được, và sẽ tạo một Exercise thật.
+//   Chỉ có text thì là ngày nghỉ hoặc dữ liệu AI trả thiếu, chỉ đọc cho biết.
 const planWorkoutSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     // Ngày theo định dạng YYYY-MM-DD.
     date: { type: String, required: true },
-    text: { type: String, required: true },
+    text: { type: String, default: "" },
+    // AI chỉ được chọn một nhóm mà màn bài tập tại nhà hỗ trợ.
+    category: {
+      type: String,
+      enum: ["everyday", "recovery", "strength", "cardio"],
+      default: null,
+    },
     // Tên ngắn của hoạt động, ví dụ "Đi bộ nhanh".
     name: { type: String, default: null },
     // Chỉ số MET dùng để ước tính lượng calo tiêu hao.
