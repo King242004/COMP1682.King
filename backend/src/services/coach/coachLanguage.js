@@ -1,3 +1,12 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lớp chắn ngôn ngữ cho Coach, chạy SAU khi AI đã trả lời.
+//
+// Ai gọi tới: coachController, sau mỗi lần Gemini trả kết quả
+// Nhận vào:   câu trả lời của AI, và ngôn ngữ app đang chọn
+// Trả ra:     câu trả lời đã đúng ngôn ngữ
+// Khi lỗi:    dịch lại thất bại thì giữ nguyên câu gốc,
+//             thà sai ngôn ngữ còn hơn màn hình trống
+//
 // File này là lớp chắn ngôn ngữ cho Coach.
 // Vấn đề: app để tiếng Anh nhưng AI vẫn có lúc trả lời tiếng Việt, và ngược lại.
 // Cách chặn: dò kết quả, nếu thấy lẫn ngôn ngữ thì gọi AI thêm một lượt để dịch lại.

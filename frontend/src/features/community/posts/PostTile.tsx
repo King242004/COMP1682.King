@@ -1,4 +1,11 @@
-// Một ô bài đăng trong feed hoặc trong lưới trang cá nhân.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Một ô bài đăng trong danh sách, hoặc một ô trong lưới trang cá nhân.
+//
+// Ai gọi tới: CommunityScreen, UserProfileScreen
+// Nhận vào:   dữ liệu một bài đăng
+// Trả ra:     ô bài kèm ảnh, tim và lượt lưu
+// Khi lỗi:    ảnh hỏng thì hiện khung xám, không làm vỡ cả danh sách
+
 import { Pressable, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";

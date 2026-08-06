@@ -1,4 +1,11 @@
-// File này gom món ăn thành số liệu cho các biểu đồ ở màn Tiến trình.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Gom món ăn thành số liệu cho các biểu đồ ở màn Tiến trình.
+//
+// Ai gọi tới: ProgressScreen
+// Nhận vào:   danh sách món trong khoảng ngày
+// Trả ra:     calo từng ngày, trung bình, và tổng ba chất
+// Khi lỗi:    không có món nào thì trả 0, không trả rỗng làm vỡ biểu đồ
+
 // Chỉ tính toán, KHÔNG gọi mạng và không giữ state.
 import { dateKey } from "@/utils/dateUtils";
 import type { Meal } from "@/features/meals/MealsContext";

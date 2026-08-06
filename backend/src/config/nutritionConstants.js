@@ -1,3 +1,17 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ MỌI con số dinh dưỡng mà backend dùng để tính toán, ở một chỗ duy nhất.
+// Đây là file quan trọng nhất khi giám khảo hỏi "số này ở đâu ra".
+//
+// Ai gọi tới: calorieGoal, dailyHealthScore, profileController, planController
+// Nhận vào:   không nhận gì, đây là bảng số khai sẵn
+// Trả ra:     các hằng số dinh dưỡng
+// Khi lỗi:    không có nhánh lỗi
+//
+// Quy tắc của file: mỗi hằng số phải đi kèm dòng nói rõ nó ở đâu ra, thuộc một
+// trong ba loại là tài liệu khoa học đã công bố, quyết định thiết kế của dự án,
+// hoặc giới hạn kỹ thuật của hệ thống. Số không truy được về một trong ba loại
+// thì không được đặt ở đây, và cũng không được rải trong controller.
+//
 // File này giữ MỌI con số dinh dưỡng mà backend dùng để tính toán.
 // Quy tắc của file: một hằng số phải đi kèm dòng nói rõ nó ở đâu ra, thuộc một
 // trong ba loại là tài liệu khoa học đã công bố, quyết định thiết kế của dự án,

@@ -1,3 +1,3 @@
-// Route mỏng cho /profile/goals; chuyển thẳng sang màn thuộc feature weight.
-// Route mỏng cho /profile/goals; chuyển thẳng sang màn thuộc feature weight.
+// ═══ FILE NÀY LÀM GÌ ═══ (route mỏng, không chứa logic nào)
+// Route mỏng cho /profile/goals. Ruột màn nằm ở src/features/weight/WeightGoalsScreen.
 export { default } from "@/features/weight/WeightGoalsScreen";

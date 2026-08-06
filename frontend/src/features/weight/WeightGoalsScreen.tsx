@@ -1,4 +1,16 @@
-// Màn Mục tiêu cân nặng. Đây là file BẮT ĐẦU của luồng đặt mục tiêu calo.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Mục tiêu cân nặng. File BẮT ĐẦU của luồng đặt mục tiêu calo.
+//
+// Ai gọi tới: ProfileScreen, qua địa chỉ /profile/goals
+// Nhận vào:   cân nặng mục tiêu và tốc độ muốn đổi mỗi tuần
+// Trả ra:     không trả gì, lưu xong thì mục tiêu calo được backend tính lại
+// Khi lỗi:    thiếu hồ sơ để tính thì mời hoàn tất hồ sơ trước.
+//             Tốc độ quá nhanh thì backend kẹp lại và app hiện con số thật.
+//
+// Điểm cần nói khi bảo vệ: mục tiêu calo có một mức SÀN, app không cho tụt
+// xuống dưới. Câu cảnh báo nói rõ phần mềm dừng ở đâu và vì sao, chứ không
+// tuyên bố gì về cơ thể người dùng.
+//
 // LUỒNG ĐẶT MỤC TIÊU
 // 1. Mở màn, useFocusEffect gọi lại hồ sơ để lấy số mới nhất
 // 2. Chọn hướng là giảm, giữ, hay tăng cân

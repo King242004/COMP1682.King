@@ -1,11 +1,18 @@
-// Thẻ gợi ý món ở màn Trang chủ. Đây là file BẮT ĐẦU của luồng gợi ý món.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Thẻ gợi ý món ở màn Trang chủ. File BẮT ĐẦU của luồng gợi ý món.
+//
+// Ai gọi tới: HomeScreen
+// Nhận vào:   ngày và bữa kế tiếp chưa ăn
+// Trả ra:     một món được gợi ý, kèm nút Thêm vào nhật ký
+// Khi lỗi:    AI hết lượt thì thẻ hiện lời nhắc thử lại sau, không biến mất
+
 // LUỒNG GỢI Ý MÓN
 // 1. Bấm nút xin gợi ý tại đây
 // 2. suggestNextMeal              (POST /coach/suggest-meal)
 // 3. backend coachController.suggestMeal xem giờ và các bữa đã ăn
 //    để đoán bữa kế tiếp, tính calo còn lại
 // 4. Gemini đề xuất 3 món
-// 5. conditionFilter lọc lại theo bệnh nền ở server
+// 5. foodSafetyFilter lọc lại theo bệnh nền ở server
 // 6. thẻ hiện 3 món kèm lý do chọn
 // 7. Bấm một món, sang /meals/add điền sẵn tên và dinh dưỡng
 // Kết quả được lưu tạm theo ngày, bữa và ngôn ngữ, để mở lại

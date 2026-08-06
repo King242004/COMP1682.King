@@ -1,4 +1,11 @@
-// File này là chặng giữa màn Coach và backend.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa màn Coach và backend.
+//
+// Ai gọi tới: CoachScreen, InsightCard
+// Nhận vào:   câu hỏi, ảnh, ngôn ngữ, và ngày cần chấm điểm
+// Trả ra:     câu trả lời của Coach, hoặc điểm sức khỏe
+// Khi lỗi:    AI hết lượt thì trả QUOTA, màn hiện lời nhắc thử lại sau
+
 // Ngoài gọi mạng, nó còn lo hai việc phụ:
 //   xóa ký hiệu Markdown khỏi câu trả lời AI, vì app hiện chữ thuần.
 //   lưu tạm điểm sức khỏe theo ngày và ngôn ngữ, để đỡ tốn lượt gọi AI.

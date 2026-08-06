@@ -1,4 +1,10 @@
-// Khung thẻ bo góc có đổ bóng nhẹ, dùng để nhóm nội dung.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khung thẻ bo góc có đổ bóng nhẹ, dùng để nhóm nội dung lại với nhau.
+//
+// Ai gọi tới: hầu hết các màn có chia khối nội dung
+// Nhận vào:   nội dung muốn bọc bên trong
+// Trả ra:     một khung thẻ đã đúng bo góc và bóng của app
+// Khi lỗi:    không có nhánh lỗi
 import { View, type StyleProp, type ViewProps, type ViewStyle } from "react-native";
 import { shadow, theme } from "../theme";
 

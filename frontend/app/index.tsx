@@ -1,9 +1,11 @@
-// Màn chia đường lúc mở app. Không hiện gì cả, chỉ quyết định đi đâu.
-// Nhận: user và isLoading lấy từ AuthContext.
-// Làm: chờ AuthContext đọc xong phiên cũ trong máy rồi mới chọn đường.
-// Ra: đá sang /tabs nếu đã đăng nhập, hoặc /auth/login nếu chưa.
-// Hỏng: không có nhánh lỗi. Đọc phiên thất bại thì AuthContext để user rỗng,
-//   nên rơi vào nhánh đi tới màn đăng nhập.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chốt chia đường lúc mở app. Không hiện gì cả, chỉ quyết định đi đâu.
+//
+// Ai gọi tới: expo-router, đây là màn đầu tiên ứng với địa chỉ gốc "/"
+// Nhận vào:   user và isLoading lấy từ AuthContext
+// Trả ra:     không vẽ gì, chỉ đá sang /tabs hoặc /auth/login
+// Khi lỗi:    không có nhánh lỗi. Đọc phiên thất bại thì AuthContext để user
+//             rỗng, nên tự rơi vào nhánh đi tới màn đăng nhập.
 import { Redirect } from "expo-router";
 import { useAuth } from "@/features/auth/AuthContext";
 

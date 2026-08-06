@@ -1,5 +1,15 @@
-// File này lo phần tài khoản: ảnh đại diện, đổi tên, đổi mật khẩu,
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo phần tài khoản: ảnh đại diện, đổi tên, đổi mật khẩu,
 // quên mật khẩu ba bước, và xóa tài khoản.
+//
+// Ai gọi tới: accountRoutes, tức màn Cài đặt và màn Quên mật khẩu
+// Nhận vào:   mật khẩu cũ và mới, tên mới, ảnh mới, hoặc mã 6 số
+// Trả ra:     kết quả thành công, và thẻ đăng nhập mới nếu đổi mật khẩu
+// Khi lỗi:    sai mật khẩu hiện tại thì từ chối. Mã sai hoặc hết hạn thì
+//             bảo xin mã mới.
+//
+// Xóa tài khoản là chỗ nặng nhất: phải dọn cả ảnh trên kho ảnh, vì nếu chỉ xóa
+// bản ghi thì không còn ai biết đường dẫn ảnh nào cần dọn, và ảnh nằm lại mãi mãi.
 const bcrypt = require("bcryptjs");
 const { INPUT_LIMITS } = require("../config/inputLimits");
 const cloudinary = require("../config/cloudinary");
@@ -127,7 +137,7 @@ exports.resetPassword = async (req, res) => {
   const { otp, newPassword } = req.body;
   const email = normalizeEmail(req.body.email);
 
-  if (!email || !otp || !newPassword)
+  if (!email || !otp || typeof newPassword !== "string" || !newPassword)
     return res.status(400).json({ message: "Email, OTP and new password are required." });
 
   if (newPassword.length < 6 || newPassword.length > INPUT_LIMITS.PASSWORD ||
@@ -158,7 +168,7 @@ exports.resetPassword = async (req, res) => {
 exports.changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
-  if (!currentPassword || !newPassword)
+  if (typeof currentPassword !== "string" || typeof newPassword !== "string" || !currentPassword || !newPassword)
     return res.status(400).json({ message: "Current and new password are required." });
 
   if (newPassword.length < 6 || newPassword.length > INPUT_LIMITS.PASSWORD ||
@@ -185,7 +195,8 @@ exports.changePassword = async (req, res) => {
 // biết đường dẫn ảnh nào cần dọn, ảnh sẽ nằm lại trên kho mãi mãi.
 exports.deleteAccount = async (req, res) => {
   const { password } = req.body;
-  if (!password) return res.status(400).json({ message: "Password is required." });
+  if (typeof password !== "string" || !password)
+    return res.status(400).json({ message: "Password is required." });
 
   const user = await User.findById(req.user.id).select("+password");
   if (!user) return res.status(404).json({ message: "User not found." });
@@ -232,7 +243,7 @@ exports.deleteAccount = async (req, res) => {
 exports.changeName = async (req, res) => {
   const { name } = req.body;
 
-  if (!name || name.trim().length < 2)
+  if (typeof name !== "string" || name.trim().length < 2)
     return res.status(400).json({ message: "Name must be at least 2 characters." });
 
   if (name.trim().length > INPUT_LIMITS.DISPLAY_NAME)

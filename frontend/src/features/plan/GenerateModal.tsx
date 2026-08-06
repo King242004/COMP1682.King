@@ -1,4 +1,11 @@
-// Hộp xác nhận trước khi gọi AI tạo kế hoạch.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Hộp xác nhận trước khi gọi AI tạo kế hoạch tuần.
+//
+// Ai gọi tới: WeeklyPlanScreen, khi bấm nút Tạo
+// Nhận vào:   phạm vi ngày và ghi chú khẩu vị
+// Trả ra:     lựa chọn của người dùng, để màn cha gọi AI
+// Khi lỗi:    chọn quá 14 ngày thì bị chặn ngay tại đây
+
 // Chọn nhớ thì khẩu vị được lưu vào hồ sơ, nên Coach và phần gợi ý món
 // cũng dùng chung ghi chú đó.
 // Hộp xác nhận tạo thực đơn AI cho cả tuần hoặc một ngày, kèm ghi chú khẩu vị.

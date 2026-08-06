@@ -1,4 +1,15 @@
-// Cửa kiểm tra đăng nhập, chạy trước controller của mọi API riêng tư.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Cửa kiểm tra đăng nhập. Chạy TRƯỚC controller của mọi API riêng tư.
+//
+// Ai gọi tới: gần như mọi file route, dưới tên protect
+// Nhận vào:   thẻ đăng nhập gửi kèm trong tiêu đề request
+// Trả ra:     không trả gì, chỉ gắn req.user rồi cho đi tiếp
+// Khi lỗi:    không có thẻ, thẻ hỏng, thẻ hết hạn, hoặc thẻ thuộc phiên cũ
+//             thì trả 401 và controller không bao giờ chạy
+//
+// Vì sao có tokenVersion: mỗi lần đổi mật khẩu thì số này trong User tăng lên,
+// nên mọi thẻ phát trước đó thành vô giá trị. Đây là cách đăng xuất
+// mọi thiết bị khác khi nghi ngờ mật khẩu bị lộ.
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 

@@ -1,12 +1,20 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo riêng một việc: cất và lấy thẻ đăng nhập trong bộ nhớ máy.
+//
+// Ai gọi tới: authSession, là file lo cả phiên đăng nhập
+// Nhận vào:   chuỗi thẻ đăng nhập cần cất
+// Trả ra:     thẻ đã cất trước đó, hoặc rỗng nếu chưa từng đăng nhập
+// Khi lỗi:    đọc kho mã hóa thất bại thì coi như chưa đăng nhập,
+//             app đưa về màn Đăng nhập thay vì treo
+//
+// Vì sao tách riêng thành một file: thẻ đăng nhập là thứ nhạy cảm nhất trong app,
+// ai lấy được là vào thẳng tài khoản mà không cần mật khẩu. Gom về một chỗ
+// thì chỉ phải canh một chỗ.
+// Trên điện thoại cất vào kho mã hóa của hệ điều hành, gọi là SecureStore.
+// Trên web không có kho đó nên đành cất vào kho thường.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
-
-// File này lo riêng việc cất giữ thẻ đăng nhập.
-// Trên điện thoại thì cất vào kho mã hóa của hệ điều hành, gọi là SecureStore.
-// Trên web không có kho đó nên đành cất vào kho thường.
-// Vì sao tách riêng: thẻ đăng nhập là thứ nhạy cảm nhất trong app,
-// ai lấy được là vào thẳng tài khoản mà không cần mật khẩu.
 const SECURE_TOKEN_KEY = "mealmate.auth.token";
 const LEGACY_TOKEN_KEY = "token";
 

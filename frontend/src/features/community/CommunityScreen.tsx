@@ -1,4 +1,11 @@
-// Màn Community, tab thứ hai. Đây là file BẮT ĐẦU của luồng xem bài đăng.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Cộng đồng, tab thứ hai. File BẮT ĐẦU của luồng xem bài đăng.
+//
+// Ai gọi tới: app/tabs/community
+// Nhận vào:   tab đang chọn: Đang theo dõi hay Khám phá
+// Trả ra:     danh sách bài, chia trang, cuộn tới đâu tải tới đó
+// Khi lỗi:    chưa theo dõi ai thì mời sang Khám phá, không hiện màn trống
+
 // LUỒNG XEM FEED, tự chạy khi vào tab
 // 1. useFocusEffect gọi hàm tải theo tab đang chọn
 // 2. getFeed hoặc getExplore hoặc getSavedPosts   (GET /community/posts/...)

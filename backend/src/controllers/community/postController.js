@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo MỘT bài đăng Community: tạo, xem, sửa, xóa, bấm tim, bấm lưu.
+//
+// Ai gọi tới: communityRoutes, tức màn Tạo bài, Sửa bài, Chi tiết bài
+// Nhận vào:   ảnh, lời chú thích, và tên món nếu là bài món ăn
+// Trả ra:     bài đã lưu, đã dọn gọn cho app
+// Khi lỗi:    bài không có ảnh nào thì từ chối. Sửa hoặc xóa bài của người khác
+//             thì bị chặn vì có kiểm chủ sở hữu.
+//
+// Bài có hai loại, phân biệt bằng trường dishName: bài thường, và bài món ăn.
+// Bài món ăn mới có nút "Xem cách làm" và "Thêm vào nhật ký".
+//
 // File này lo một bài đăng Community: tạo, xem, sửa, xóa, bấm tim, bấm lưu.
 // Bốn file trong thư mục này chia việc: postController lo một bài,
 // feedController lo các danh sách bài, socialController lo quan hệ người dùng,
@@ -44,6 +56,9 @@ exports.createPost = async (req, res) => {
 
   if (files.length === 0) {
     return res.status(400).json({ message: "A post needs at least one photo." });
+  }
+  if (caption !== undefined && caption !== null && typeof caption !== "string") {
+    return res.status(400).json({ message: "Caption must be text." });
   }
   // Bài MỚI dùng giới hạn hiện hành. Đường sửa bài ở dưới nới rộng hơn,
   // vì bài tạo trước đợt hạ giới hạn vẫn phải sửa và lưu lại được.

@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Màn Sửa bài đăng. Chỉ chủ bài mới vào được.
+//
+// Ai gọi tới: PostDetailScreen
+// Nhận vào:   bài cần sửa, ảnh giữ lại và ảnh thêm mới
+// Trả ra:     không trả gì, lưu xong thì quay lại chi tiết bài
+// Khi lỗi:    backend kiểm lại chủ sở hữu, nên sửa bài người khác vẫn bị chặn
+
 // LUỒNG SỬA BÀI
 // 1. Tải lại bài cần sửa, điền sẵn vào các ô
 // 2. Sửa chú thích, đổi loại bài, thêm hoặc bớt ảnh

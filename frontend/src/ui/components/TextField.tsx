@@ -1,4 +1,10 @@
-// Ô nhập dùng chung cho toàn app.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Ô nhập chữ dùng chung cho toàn app, kèm nhãn, bộ đếm ký tự và dòng báo lỗi.
+//
+// Ai gọi tới: mọi màn có ô nhập
+// Nhận vào:   giá trị đang gõ, nhãn, giới hạn ký tự
+// Trả ra:     một ô nhập đã đúng kiểu của app
+// Khi lỗi:    vượt giới hạn thì bộ đếm đổi màu và hiện dòng báo lỗi
 // Bộ đếm nằm CÙNG HÀNG với nhãn chứ không nằm dưới ô, để bật hay tắt nó
 // đều không làm ô cao lên, tức là không màn nào bị xô lệch bố cục.
 import { useState } from "react";

@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Dựng câu lệnh gửi cho AI của Coach. KHÔNG gọi mạng, không đụng database.
+//
+// Ai gọi tới: coachController, trước mỗi lần gọi Gemini
+// Nhận vào:   ngữ cảnh người dùng đã gom sẵn, và ngôn ngữ đang chọn
+// Trả ra:     một chuỗi câu lệnh dài, đã gắn sẵn phần vai trò và phần an toàn
+// Khi lỗi:    không có nhánh lỗi, đây là hàm ghép chữ thuần
+//
+// Điểm an toàn quan trọng: khối ROLE_AND_SAFETY nói rõ với AI rằng tin nhắn
+// người dùng và chữ nằm trong ảnh là NỘI DUNG ĐỂ ĐỌC, không phải mệnh lệnh.
+// Đó là lớp chắn việc người dùng gõ câu ra lệnh để chiếm quyền điều khiển AI.
+//
 // File này dựng câu lệnh gửi cho AI của Coach. KHÔNG gọi mạng, không đụng database.
 // Ba loại câu lệnh, dùng chung phần vai trò và phần an toàn:
 //   buildChatPrompt           cho tin nhắn trò chuyện

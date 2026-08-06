@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lưu và xóa cả phiên đăng nhập trong bộ nhớ máy, để mở lại app
+// không phải đăng nhập lại từ đầu.
+//
+// Ai gọi tới: AuthContext, lúc mở app, lúc đăng nhập, và lúc đăng xuất
+// Nhận vào:   thẻ đăng nhập và hồ sơ người dùng
+// Trả ra:     phiên cũ đọc được từ máy, hoặc rỗng nếu chưa từng đăng nhập
+// Khi lỗi:    thiếu thẻ hoặc thiếu hồ sơ thì trả rỗng, coi như chưa đăng nhập
+//
+// Thẻ đăng nhập cất ở kho mã hóa qua authStorage, còn hồ sơ cất ở kho thường.
+// Lúc đăng xuất phải dọn cả các bản nhớ tạm của tài khoản cũ, xem
+// USER_CACHE_PREFIXES ở dưới, để tài khoản sau không thấy dữ liệu tài khoản trước.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { AuthSession, User } from "./authTypes";
 import type { Lang } from "../../utils/languageUtils";

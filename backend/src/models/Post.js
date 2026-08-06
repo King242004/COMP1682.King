@@ -1,15 +1,22 @@
-const mongoose = require("mongoose");
-const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
-
-// Bảng bài đăng Community.
-// Nơi ghi vào: màn Tạo bài và màn Sửa bài.
-// Nơi đọc ra: bốn danh sách bài, màn Chi tiết bài, và lưới bài trong trang cá nhân.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng của một bài đăng trong Community.
+// Bài có hai loại: bài thường, và bài món ăn. Phân biệt bằng trường dishName.
+//
+// Ai gọi tới: postController (tạo, sửa, xóa bài), feedController (bốn danh
+//             sách bài), socialController (thích và lưu bài)
+// Nhận vào:   object bài đăng kèm ảnh đã tải lên Cloudinary
+// Trả ra:     một dòng Post đã kiểm hợp lệ
+// Khi lỗi:    thiếu người đăng hoặc ảnh sai hình dạng thì Mongoose chặn lại
+//
 // Ba trường dễ nhầm:
 //   dishName là TÊN món, có thể có mà không kèm dinh dưỡng.
 //   meal là phần dinh dưỡng, chỉ có khi người dùng chọn món từ nhật ký.
 //   image và imagePublicId là ảnh đầu tiên, giữ lại cho các bài cũ chỉ có một ảnh.
 // likes và saves lưu thẳng danh sách mã người dùng, nên đếm số tim
 // chỉ là đếm độ dài mảng, không cần truy vấn thêm bảng khác.
+const mongoose = require("mongoose");
+const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
+
 const postSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

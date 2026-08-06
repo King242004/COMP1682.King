@@ -1,4 +1,14 @@
-// File này lo hồ sơ cá nhân và các chỉ số tính ra từ hồ sơ: BMI, BMR và TDEE.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo hồ sơ cá nhân và các chỉ số tính ra từ hồ sơ: BMI, BMR và TDEE.
+//
+// Ai gọi tới: profileRoutes, tức màn Hồ sơ, màn Mục tiêu, và bước thiết lập lần đầu
+// Nhận vào:   giới tính, tuổi, cân nặng, chiều cao, mức vận động, bệnh nền
+// Trả ra:     hồ sơ đã lưu kèm mục tiêu calo tính ra được
+// Khi lỗi:    thiếu dữ liệu để tính thì để mục tiêu calo RỖNG, không bịa số.
+//             App thấy rỗng thì mời người dùng hoàn tất hồ sơ.
+//
+// Bệnh nền lưu ở đây chính là thứ mà cả hai lớp an toàn của kế hoạch tuần
+// và của Coach đều dựa vào.
 const User = require("../models/User");
 const {
   calculateBMR, calculateTDEE, autoGoal, resolveRate, resolveWeightDirection,
@@ -97,6 +107,9 @@ exports.updateProfile = async (req, res) => {
   if (tastePreferences !== undefined && tastePreferences !== null &&
       String(tastePreferences).trim().length > LEGACY_LIMITS.TASTE_PREFERENCES)
     return res.status(400).json({ message: `Taste preferences must be ${LEGACY_LIMITS.TASTE_PREFERENCES} characters or fewer.` });
+
+  if (name !== undefined && name !== null && typeof name !== "string")
+    return res.status(400).json({ message: "Name must be text." });
 
   if (name !== undefined && name !== null && String(name).trim().length > INPUT_LIMITS.DISPLAY_NAME)
     return res.status(400).json({ message: `Name must be ${INPUT_LIMITS.DISPLAY_NAME} characters or fewer.` });

@@ -1,4 +1,11 @@
-// Bảng trượt hiển thị sản phẩm tìm được sau khi quét mã vạch.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bảng trượt hiện sản phẩm tìm được sau khi quét mã vạch.
+//
+// Ai gọi tới: ScanScreen
+// Nhận vào:   thông tin sản phẩm từ Open Food Facts
+// Trả ra:     bảng cho xem và bấm Thêm vào nhật ký
+// Khi lỗi:    không tìm thấy sản phẩm thì ScanScreen mời gõ tên món thay vì mở bảng này
+
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";

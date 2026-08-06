@@ -1,4 +1,11 @@
-// Khối chọn món để đính vào bài đăng, dùng chung cho màn Tạo bài và màn Sửa bài.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khối chọn món để đính vào bài đăng, dùng chung cho màn Tạo bài và Sửa bài.
+//
+// Ai gọi tới: PostCreateScreen, PostEditScreen
+// Nhận vào:   món chọn từ nhật ký, hoặc tên món gõ tay
+// Trả ra:     tên món và số dinh dưỡng nếu có
+// Khi lỗi:    chỉ gõ tên mà không chọn từ nhật ký thì bài chỉ có tên, không có số
+
 // legacyDishName là để đọc lại các bài đăng ĐỜI CŨ, loại chỉ lưu tên món mà
 // không kèm số dinh dưỡng. Bài mới luôn đính cả bản ghi món.
 import { useState } from "react";

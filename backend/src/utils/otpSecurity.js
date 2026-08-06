@@ -1,6 +1,19 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chứa các quy tắc an toàn cho mã xác minh 6 số, và các con số cấu hình.
+//
+// Ai gọi tới: otpService, authController, accountController
+// Nhận vào:   mã người dùng gõ, và mã đã băm lưu trong database
+// Trả ra:     mã mới sinh ra, mã đã băm, hoặc kết quả so khớp đúng sai
+// Khi lỗi:    không có nhánh lỗi, đây chỉ là các hàm tính toán thuần
+//
+// Ba điểm an toàn hay bị hỏi khi bảo vệ:
+//   randomInt sinh số ngẫu nhiên an toàn, không dùng Math.random.
+//   Mã lưu xuống database ở dạng đã băm, không lưu số gốc.
+//   timingSafeEqual so khớp mất thời gian như nhau dù đúng hay sai,
+//     nên kẻ tấn công không đoán được mã qua tốc độ trả lời.
 const { createHmac, randomInt, timingSafeEqual } = require("crypto");
 
-// File này chứa các quy tắc an toàn cho mã xác minh 6 số.
+// Bốn con số cấu hình cho mã xác minh:
 // Bốn con số cấu hình: mã sống 10 phút, sai tối đa 5 lần,
 // chờ 1 phút giữa hai lần gửi, và mọi phản hồi mất ít nhất 1.2 giây.
 const OTP_PURPOSE = Object.freeze({

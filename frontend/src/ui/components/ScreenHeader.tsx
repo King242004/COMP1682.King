@@ -1,4 +1,10 @@
-// Hàng tiêu đề có nút quay lại, dùng cho các màn mở chồng lên.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Hàng tiêu đề có nút quay lại, dùng cho các màn mở chồng lên màn khác.
+//
+// Ai gọi tới: mọi màn không nằm trong bốn tab
+// Nhận vào:   tiêu đề, và nút phụ bên phải nếu có
+// Trả ra:     hàng tiêu đề kèm nút quay lại
+// Khi lỗi:    không có nhánh lỗi
 import { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";

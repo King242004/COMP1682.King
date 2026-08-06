@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Màn Đổi mật khẩu, dùng khi ĐANG đăng nhập.
+//
+// Ai gọi tới: SettingsScreen
+// Nhận vào:   mật khẩu hiện tại và mật khẩu mới
+// Trả ra:     không trả gì, đổi xong thì quay lại và nhận thẻ đăng nhập mới
+// Khi lỗi:    sai mật khẩu hiện tại thì báo lỗi. Khác màn Quên mật khẩu, ở đây không cần mã email
+
 // Khác hẳn màn Quên mật khẩu, ở đây không cần mã 6 số qua email.
 // LUỒNG ĐỔI MẬT KHẨU
 // 1. Nhập mật khẩu hiện tại và mật khẩu mới, bấm Lưu

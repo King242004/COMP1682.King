@@ -1,3 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng một thông báo trong Community.
+//
+// Ai gọi tới: socialController (khi có người theo dõi), postController (khi có
+//             người tim bài), notificationController (đọc và đánh dấu đã đọc)
+// Nhận vào:   người nhận, người gây ra, và loại thông báo
+// Trả ra:     một dòng Notification đã kiểm hợp lệ
+// Khi lỗi:    thiếu người nhận hoặc thiếu loại thì Mongoose chặn lại
 const mongoose = require("mongoose");
 
 // Bảng thông báo. Chỉ có hai loại: có người tim bài, và có người theo dõi mình.

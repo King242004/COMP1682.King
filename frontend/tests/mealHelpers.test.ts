@@ -40,6 +40,19 @@ describe("similarRecentMealName", () => {
 });
 
 describe("nutrition completeness", () => {
+  test("ignores non-nutrition fields on an Add Meal draft", () => {
+    const draft = {
+      calories: "450",
+      protein: "20",
+      carbs: "60",
+      fat: "10",
+      showNutritionFields: false,
+    };
+
+    expect(hasCompleteNutrition(draft)).toBe(true);
+    expect(hasAnyNutrition(draft)).toBe(true);
+  });
+
   test("requires positive calories and all three non-negative macros", () => {
     expect(hasCompleteNutrition({ calories: "450", protein: "20", carbs: "60", fat: "10" })).toBe(true);
     expect(hasCompleteNutrition({ calories: "0", protein: "20", carbs: "60", fat: "10" })).toBe(false);

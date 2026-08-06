@@ -1,4 +1,18 @@
-// File này tính mục tiêu calo mỗi ngày từ hồ sơ người dùng.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Tính mục tiêu calo mỗi ngày từ hồ sơ người dùng.
+//
+// Ai gọi tới: profileController (khi lưu hồ sơ), coachContext (đưa cho AI),
+//             planController (dựng thực đơn theo mục tiêu)
+// Nhận vào:   giới tính, tuổi, cân nặng, chiều cao, mức vận động, mục tiêu cân
+// Trả ra:     số calo mục tiêu mỗi ngày
+// Khi lỗi:    thiếu dữ liệu hồ sơ thì trả rỗng, KHÔNG bịa một con số mặc định.
+//             Bịa số sẽ khiến người dùng tưởng app đã tính cho mình.
+//
+// Ba chặng tính: công thức Mifflin St Jeor ra năng lượng nghỉ, nhân hệ số vận động
+// ra TDEE, rồi cộng trừ theo tốc độ muốn đổi cân nặng.
+// Có một mức SÀN không cho tụt xuống dưới, để app không đề xuất ăn quá ít.
+//
+// Mọi con số dùng ở đây đều lấy từ config/nutritionConstants, không gõ thẳng vào file này.
 // Mọi con số dùng ở đây đều lấy từ config/nutritionConstants, không gõ thẳng vào file này.
 const {
   MIFFLIN_ST_JEOR, ACTIVITY_MULTIPLIERS, DEFAULT_ACTIVITY_LEVEL, CALORIE_FLOOR,

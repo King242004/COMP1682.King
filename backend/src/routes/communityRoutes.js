@@ -1,3 +1,14 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào, chia cho bốn controller.
+//
+// Ai gọi tới: app.js, gắn cả file này vào /api/community
+// Nhận vào:   request từ tab Cộng đồng
+// Trả ra:     không tự trả gì, chuyển cho post, feed, social hoặc notification
+// Khi lỗi:    thiếu thẻ đăng nhập thì chặn ngay, cả file đều cần thẻ
+//
+// Lưu ý thứ tự khai báo: /posts/:id phải khai SAU /posts/feed và /posts/explore,
+// nếu không thì chữ "feed" sẽ bị hiểu nhầm là một mã bài đăng.
+//
 // Bảng chia việc cho Community, địa chỉ bắt đầu bằng /api/community.
 // Bài đăng, xử lý ở postController:
 //   POST   /posts             đăng bài mới, kèm tối đa 10 ảnh

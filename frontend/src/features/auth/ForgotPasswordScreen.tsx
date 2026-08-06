@@ -1,4 +1,11 @@
-// Đặt lại mật khẩu gồm gửi OTP, xác minh và đặt mật khẩu mới.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Quên mật khẩu. Ba bước nằm trong cùng một màn: gửi mã, nhập mã, đặt mật khẩu mới.
+//
+// Ai gọi tới: LoginScreen, qua liên kết Quên mật khẩu
+// Nhận vào:   email, mã 6 số, và mật khẩu mới
+// Trả ra:     không trả gì, đặt xong thì quay về màn Đăng nhập
+// Khi lỗi:    mã sai hoặc hết hạn thì hiện lỗi ngay tại bước đó, không mất dữ liệu đã gõ
+
 // Mã được gửi lại ở bước cuối vì mỗi request độc lập và chỉ dùng được một lần.
 import { useState } from "react";
 import { ScrollView, StyleSheet, View, Alert } from "react-native";

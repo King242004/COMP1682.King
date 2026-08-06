@@ -1,3 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Gom dữ liệu thật của một người dùng lại thành một bản tóm tắt để đưa cho AI.
+// Nhờ nó mà Coach nói đúng số của từng người thay vì nói chung chung.
+//
+// Ai gọi tới: coachController (trò chuyện, chấm điểm, gợi ý món),
+//             planController (lấy hướng dẫn về bệnh nền)
+// Nhận vào:   mã người dùng và ngày cần xem
+// Trả ra:     hồ sơ, món đã ăn, buổi tập, cân nặng, kế hoạch, gói thành một khối chữ
+// Khi lỗi:    thiếu dữ liệu nào thì bỏ trống phần đó, không dựng số giả,
+//             vì Coach thà nói không biết còn hơn nói một con số bịa
 const User = require("../../models/User");
 const Meal = require("../../models/Meal");
 const Exercise = require("../../models/Exercise");
@@ -207,7 +217,7 @@ LAST 7 DAYS
 
 // Bảng dặn AI về năm bệnh nền app hỗ trợ. Được dán vào câu lệnh của
 // Coach, gợi ý món và kế hoạch tuần. Đây là LỚP AN TOÀN THỨ NHẤT,
-// lớp thứ hai là services/conditionFilter chạy sau khi AI trả lời.
+// lớp thứ hai là services/nutrition/foodSafetyFilter chạy sau khi AI trả lời.
 const CONDITION_GUIDE =
   "diabetes: low sugar/refined carbs; " +
   "hypertension: low sodium/salty food; " +

@@ -1,3 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+//
+// Ai gọi tới: app.js, gắn cả file này vào /api/plan
+// Nhận vào:   request từ màn Kế hoạch tuần
+// Trả ra:     không tự trả gì, chuyển thẳng cho planController
+// Khi lỗi:    thiếu thẻ đăng nhập thì chặn ngay, cả file đều cần thẻ
+//
 // Bảng chia việc cho kế hoạch tuần, địa chỉ bắt đầu bằng /api/plan.
 // POST   /                 thêm một món vào kế hoạch
 // GET    /?startDate&endDate  lấy cả tuần, màn Kế hoạch tuần dùng

@@ -1,3 +1,14 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng một buổi tập đã hoàn thành trong nhật ký.
+//
+// Ai gọi tới: exerciseController (ghi và xóa buổi tập),
+//             planController (nút "Xong" ở gợi ý tập), coachContext (đọc để đưa cho AI)
+// Nhận vào:   tên bài tập, thời lượng, và ngày
+// Trả ra:     một dòng Exercise đã kiểm hợp lệ
+// Khi lỗi:    thiếu tên hoặc thiếu ngày thì Mongoose chặn lại
+//
+// caloriesBurned do SERVER tính rồi mới lưu, app không được gửi con số này lên.
+// Nếu tin con số app gửi thì người dùng sửa được lượng calo đã đốt.
 const mongoose = require("mongoose");
 
 // Bảng nhật ký buổi tập.

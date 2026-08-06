@@ -1,13 +1,21 @@
-const mongoose = require("mongoose");
-const { WEIGHT_GOALS, WEIGHT_GOAL_VALUES } = require("../config/nutritionConstants");
-
-// Bảng tài khoản, là gốc của mọi bảng khác trong app.
-// Mọi bảng dữ liệu khác đều có một trường user trỏ về đây.
-// Nơi dùng: authController tạo, profileController sửa, accountController xóa.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng của một tài khoản trong database.
+// Đây là gốc của mọi bảng khác: bảng nào cũng có một trường user trỏ về đây.
+//
+// Ai gọi tới: authController (tạo), profileController (sửa hồ sơ),
+//             accountController (đổi mật khẩu, xóa tài khoản),
+//             planController và coachController (đọc bệnh nền, mục tiêu calo)
+// Nhận vào:   object tài khoản do controller dựng sẵn
+// Trả ra:     một dòng User đã kiểm hợp lệ, có sẵn mã _id và thời gian tạo
+// Khi lỗi:    thiếu trường bắt buộc hoặc sai kiểu thì Mongoose chặn lại,
+//             controller bắt lỗi và trả thông báo cho app
+//
 // Hai trường cần chú ý:
 //   password có select false nên mặc định KHÔNG bị đọc ra.
 //     Muốn lấy phải xin thêm bằng .select("+password"), chỉ lúc đăng nhập mới cần.
 //   conditions là danh sách bệnh nền, chính là thứ mà lớp lọc an toàn dựa vào.
+const mongoose = require("mongoose");
+const { WEIGHT_GOALS, WEIGHT_GOAL_VALUES } = require("../config/nutritionConstants");
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },

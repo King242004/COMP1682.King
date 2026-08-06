@@ -1,3 +1,18 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Cửa vào của MỌI request từ app điện thoại. Dựng cả bộ khung Express
+// rồi gắn từng bảng chia việc vào đúng địa chỉ.
+//
+// Ai gọi tới: server.js, sau khi đã nối được database
+// Nhận vào:   không nhận gì, tự dựng từ cấu hình trong .env
+// Trả ra:     một app Express đã gắn đủ 10 nhóm địa chỉ
+// Khi lỗi:    mọi lỗi rơi xuống errorHandler ở cuối file, xem middleware/errorHandler
+//
+// Thứ tự gắn ở đây quan trọng. Request đi từ trên xuống:
+//   1. helmet và cors, chặn các lời gọi từ nơi không được phép
+//   2. đọc phần thân request thành dữ liệu dùng được
+//   3. các bảng chia việc /api/...
+//   4. errorHandler, gắn CUỐI CÙNG nên nó hứng được mọi lỗi phía trên
+//
 // File này là cửa vào của mọi request từ app điện thoại.
 const express = require("express");
 const cors = require("cors");

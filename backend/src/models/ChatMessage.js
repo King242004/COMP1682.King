@@ -1,3 +1,10 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng một tin nhắn trong cuộc trò chuyện với Coach.
+//
+// Ai gọi tới: coachController, cả lúc lưu tin mới lẫn lúc tải lịch sử
+// Nhận vào:   nội dung tin, ai gửi, và ngôn ngữ lúc gửi
+// Trả ra:     một dòng ChatMessage đã kiểm hợp lệ
+// Khi lỗi:    thiếu nội dung hoặc thiếu người gửi thì Mongoose chặn lại
 const mongoose = require("mongoose");
 
 // Bảng tin nhắn trò chuyện với Coach. Mỗi lượt hỏi đáp lưu HAI dòng,

@@ -1,3 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo toàn bộ kế hoạch tuần: món dự định ăn, nhờ AI dựng thực đơn,
+// gợi ý bài tập tại nhà, danh sách đi chợ, và hai nút biến kế hoạch
+// thành dữ liệu thật là "Đã ăn" và "Xong".
+//
+// Ai gọi tới: planRoutes, tức mọi thao tác trên màn Kế hoạch tuần
+// Nhận vào:   khoảng ngày, hồ sơ người dùng, và món do người dùng tự thêm
+// Trả ra:     danh sách món và buổi tập đã lên lịch, hoặc danh sách đi chợ
+// Khi lỗi:    chưa có mục tiêu calo thì trả PROFILE_INCOMPLETE và app mời
+//             hoàn tất hồ sơ. AI hết lượt thì trả QUOTA và app bảo thử lại sau.
 const PlanMeal = require("../models/PlanMeal");
 const PlanWorkout = require("../models/PlanWorkout");
 const Meal = require("../models/Meal");
@@ -24,6 +34,7 @@ const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
 // Khác với nhật ký món, ở đây ngày ở tương lai là hợp lệ vì đang lên kế hoạch.
+// Người dùng tự thêm một món vào kế hoạch, không qua AI.
 exports.addPlanMeal = async (req, res) => {
   const { name, mealType, calories, protein, carbs, fat, note, date } = req.body;
 
@@ -53,6 +64,8 @@ exports.addPlanMeal = async (req, res) => {
   res.status(201).json({ message: "Planned meal added.", planMeal });
 };
 
+// Lấy mọi thứ đã lên lịch trong một khoảng ngày, cả món ăn lẫn buổi tập.
+// Hai lệnh đọc chạy song song vì không cái nào cần kết quả của cái kia.
 exports.getPlanMeals = async (req, res) => {
   const { startDate, endDate } = req.query;
 
@@ -207,6 +220,9 @@ Return ONLY valid JSON:
   }
 };
 
+// Gom món đã lên lịch rồi nhờ AI viết danh sách đi chợ.
+// AI được dặn cộng dồn nguyên liệu trùng nhau, để mua một lần thay vì mua lẻ.
+// Kết quả AI trả về vẫn bị lọc và cắt bớt ở dưới, không hiện thẳng lên màn hình.
 exports.groceryList = async (req, res) => {
   const { startDate, endDate, language } = req.body;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(endDate || ""))
@@ -257,6 +273,9 @@ Return ONLY valid JSON:
   }
 };
 
+// Sửa một món đã lên lịch. Chỉ đổi những trường người dùng thật sự gửi lên,
+// trường nào không gửi thì giữ nguyên giá trị cũ.
+// Kiểm chủ sở hữu trước mọi thứ, để người này không sửa được kế hoạch người kia.
 exports.updatePlanMeal = async (req, res) => {
   const planMeal = await PlanMeal.findById(req.params.id);
 
@@ -296,6 +315,7 @@ exports.updatePlanMeal = async (req, res) => {
   res.json({ message: "Planned meal updated.", planMeal });
 };
 
+// Xóa một món đã lên lịch. Cũng phải kiểm chủ sở hữu trước khi xóa.
 exports.deletePlanMeal = async (req, res) => {
   const planMeal = await PlanMeal.findById(req.params.id);
 

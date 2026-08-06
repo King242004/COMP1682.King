@@ -1,4 +1,12 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Thẻ chữ dùng chung cho toàn app, thay cho Text của React Native.
+//
+// Ai gọi tới: mọi màn hình và mọi component có chữ
+// Nhận vào:   nội dung chữ và kiểu muốn dùng
+// Trả ra:     một dòng chữ đã đúng font Be Vietnam Pro và đúng màu
+// Khi lỗi:    không có nhánh lỗi
+//
+// Nhờ file này mà đổi kiểu chữ một chỗ là cả app đổi theo.
 // Nhờ file này mà đổi kiểu chữ một chỗ là cả app đổi theo.
 import { StyleSheet, Text, type TextProps, type TextStyle } from "react-native";
 import { theme } from "../theme";

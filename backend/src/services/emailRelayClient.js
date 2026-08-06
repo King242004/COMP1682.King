@@ -1,4 +1,15 @@
-// File này lo việc gửi mã xác minh 6 số qua email.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Gửi mã xác minh 6 số qua email, bằng cách nhờ một dịch vụ chuyển tiếp riêng.
+//
+// Ai gọi tới: authController (đăng ký), accountController (quên mật khẩu)
+// Nhận vào:   email nhận, mã 6 số, loại việc, và ngôn ngữ
+// Trả ra:     kết quả gửi thành công hay không
+// Khi lỗi:    thiếu cấu hình relay hoặc relay không trả lời thì báo lỗi,
+//             controller nói người dùng thử lại sau
+//
+// Vì sao không gửi thẳng bằng SMTP: máy chủ Render chặn cổng SMTP,
+// nên phải đi qua một dịch vụ trung gian gọi bằng HTTPS.
+// Mỗi lần gọi đều ký bằng khóa bí mật để relay biết đúng là app mình gọi.
 const crypto = require("crypto");
 
 const ALLOWED_PURPOSES = new Set(["registration", "password_reset"]);

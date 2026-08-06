@@ -1,3 +1,16 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ tài khoản và thẻ đăng nhập cho TOÀN app, ở một chỗ duy nhất.
+// Mọi màn hình lấy user và token từ đây bằng useAuth, không màn nào tự giữ.
+//
+// Ai gọi tới: app/_layout bọc nó ra ngoài cùng, rồi gần như mọi màn hình
+//             đều gọi useAuth để biết đang là ai và có thẻ gì
+// Nhận vào:   email và mật khẩu lúc đăng nhập, hoặc phiên cũ đọc từ máy
+// Trả ra:     user, token, và các hàm login, register, logout, cập nhật hồ sơ
+// Khi lỗi:    đọc phiên cũ thất bại thì để user rỗng, app tự đưa về màn Đăng nhập.
+//             Thẻ hết hạn giữa chừng thì tự đăng xuất và báo cho người dùng.
+//
+// Vì sao phải bọc ngoài cùng: hai Provider còn lại đều cần token để gọi mạng,
+// nên chúng phải nằm bên trong cái này.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Alert, InteractionManager } from "react-native";
 import { router } from "expo-router";

@@ -1,4 +1,10 @@
-// File này là nơi app bắt đầu chạy, mọi màn hình đều nằm bên trong nó.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Nơi app bắt đầu chạy. Mọi màn hình đều nằm bên trong file này.
+//
+// Ai gọi tới: expo-router chạy file này đầu tiên, trước mọi màn hình
+// Nhận vào:   không nhận gì
+// Trả ra:     bộ khung có ba Provider bọc ngoài và danh sách màn hình
+// Khi lỗi:    font tải hỏng thì màn hình chờ giữ nguyên, không lóe màn trắng
 //
 // LUỒNG MỞ APP
 // 1. Chạy file này đầu tiên

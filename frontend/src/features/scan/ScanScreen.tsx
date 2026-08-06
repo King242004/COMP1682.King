@@ -1,5 +1,17 @@
-// Một màn điều phối cả quét ảnh và barcode. Kết quả chỉ điền sẵn Add Meal;
-// người dùng vẫn phải kiểm tra và tự lưu món.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Quét. File BẮT ĐẦU của luồng quét ảnh và luồng quét mã vạch,
+// hai trong bốn luồng defend. Một màn điều phối cả hai chế độ.
+//
+// Ai gọi tới: nút quét ở giữa thanh tab dưới
+// Nhận vào:   ảnh chụp từ camera, hoặc mã vạch camera đọc được
+// Trả ra:     không trả gì, chọn xong món thì chuyển sang màn Thêm món
+//             với dữ liệu đã điền sẵn
+// Khi lỗi:    chưa có quyền camera thì hiện khối báo thiếu quyền kèm nút mở
+//             Cài đặt và nút chọn ảnh từ thư viện. AI không nhận ra món thì
+//             mời nhập tay. Mã vạch không có trong kho thì mời gõ tên món.
+//
+// Điểm cần nói khi bảo vệ: kết quả AI chỉ ĐIỀN SẴN vào màn Thêm món.
+// Người dùng vẫn phải tự kiểm tra và tự bấm Lưu. AI không tự ghi gì vào nhật ký.
 import { useEffect, useState, useRef } from "react";
 import { Alert, Pressable, View, ActivityIndicator, Image, Linking, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -190,7 +202,7 @@ export default function ScanScreen() {
     setCandidates(null);
     setProduct(null);
     setPreviewUri(null);
-    router.replace({ pathname: "/meals/add", params: { mealType: mealSlotByHour(new Date().getHours()) } });
+    router.replace("/meals/add");
   };
 
   const openScannedMeal = ({ name, calories, protein, carbs, fat, unit, note, source }: {
@@ -294,20 +306,19 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.screen}>
-      {cameraGranted ? (
+      {/* CameraView không nhận component con. Lớp phủ phải là anh em nằm cạnh
+          nó trong cùng một View, khai báo sau nên được vẽ chồng lên trên. */}
+      {cameraGranted && (
         <CameraView
           ref={cameraRef}
-          style={styles.flex1}
+          style={StyleSheet.absoluteFill}
           facing={facing}
           enableTorch={torchOn}
           barcodeScannerSettings={BARCODE_SETTINGS}
           onBarcodeScanned={handleBarcodeScanned}
-        >
-          {overlay}
-        </CameraView>
-      ) : (
-        <View style={styles.screen}>{overlay}</View>
+        />
       )}
+      {overlay}
 
       {isScanning && (
         <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
@@ -353,7 +364,6 @@ export default function ScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex1: { flex: 1 },
   dim: { opacity: 0.6 },
   screen: { flex: 1, backgroundColor: "#000" },
   loadingScreen: { flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" },

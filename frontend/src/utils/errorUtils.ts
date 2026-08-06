@@ -1,5 +1,14 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Đổi câu lỗi kỹ thuật của backend thành câu người dùng đọc hiểu được.
+//
+// Ai gọi tới: gần như mọi màn hình, ở chỗ bắt lỗi khi gọi mạng
+// Nhận vào:   lỗi bắt được, danh mục ngôn ngữ, và câu dự phòng của màn hình
+// Trả ra:     một câu tiếng Việt hoặc tiếng Anh để hiện lên màn hình
+// Khi lỗi:    lỗi lạ không có trong danh sách thì dùng câu dự phòng,
+//             nhờ vậy chi tiết kỹ thuật không bao giờ lọt ra giao diện
 import type { Strings } from "@/i18n";
 
+// Moi câu chữ ra khỏi lỗi. Lỗi không phải kiểu Error thì ép về chuỗi.
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error ?? "");
 }

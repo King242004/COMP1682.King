@@ -1,5 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Màn Kế hoạch tuần. Đây là file BẮT ĐẦU của luồng tạo kế hoạch an toàn,
 // một trong bốn luồng quan trọng nhất của app.
+//
+// Ai gọi tới: người dùng bấm vào từ Trang chủ
+// Nhận vào:   phạm vi ngày và ghi chú khẩu vị người dùng gõ
+// Trả ra:     thực đơn từng ngày kèm gợi ý bài tập, hiện lên màn hình
+// Khi lỗi:    chưa có mục tiêu calo thì mời hoàn tất hồ sơ.
+//             AI hết lượt thì báo thử lại sau, kế hoạch cũ vẫn còn nguyên.
+//
 // LUỒNG TẠO KẾ HOẠCH AN TOÀN
 // 1. Bấm nút Tạo, GenerateModal mở ra cho chọn phạm vi và ghi chú khẩu vị
 // 2. Bấm xác nhận, chạy runGenerate ở file này
@@ -7,7 +15,7 @@
 // 4. backend planController.generatePlan đọc hồ sơ và BỆNH NỀN
 // 5. LỚP AN TOÀN 1, đưa bệnh nền vào câu lệnh gửi cho Gemini
 // 6. Gemini trả các món cho từng ngày
-// 7. LỚP AN TOÀN 2, conditionFilter lọc lại theo tên món ở server
+// 7. LỚP AN TOÀN 2, foodSafetyFilter lọc lại theo tên món ở server
 // 8. backend ghi kế hoạch mới thành công rồi mới thay kế hoạch cũ trong khoảng ngày
 // 9. màn này tải lại và hiện kế hoạch
 // Vì sao cần hai lớp: lớp 1 chỉ là lời dặn, AI có thể quên.

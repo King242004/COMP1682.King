@@ -1,3 +1,16 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// LỚP AN TOÀN THỨ HAI. Lọc bỏ món không hợp với bệnh nền của người dùng.
+//
+// Ai gọi tới: planController (lọc thực đơn AI vừa dựng),
+//             coachController (lọc món Coach định gợi ý)
+// Nhận vào:   danh sách tên món, và danh sách bệnh nền của người dùng
+// Trả ra:     danh sách đã bỏ những món có tên chạm từ khóa cần tránh
+// Khi lỗi:    không có bệnh nền thì trả nguyên danh sách, không lọc gì
+//
+// GIỚI HẠN cần nói rõ khi bảo vệ: nó chỉ đọc TÊN món, không phân tích được
+// nguyên liệu bên trong. Món tên vô hại mà chứa thành phần cần tránh thì lọt lưới.
+// Đây là lưới chắn thêm, KHÔNG phải bảo đảm y khoa.
+//
 // File này là LỚP AN TOÀN THỨ HAI, chạy SAU khi AI đã trả lời.
 // Lớp thứ nhất chỉ là lời dặn trong câu lệnh, AI vẫn có thể quên.
 // Lớp này chạy ở server nên người dùng không tắt được.

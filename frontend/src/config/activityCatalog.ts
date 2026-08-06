@@ -1,3 +1,10 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Danh mục hoạt động mà app cho người dùng chọn khi ghi buổi tập.
+//
+// Ai gọi tới: LogActivityScreen, khi hiện danh sách hoạt động
+// Nhận vào:   không nhận gì, đây là bảng khai sẵn
+// Trả ra:     danh sách hoạt động kèm mã và chỉ số MET
+// Khi lỗi:    không có nhánh lỗi. Calo đốt vẫn do SERVER tính, đây chỉ để hiện danh sách
 // Danh mục chỉ số MET của các hoạt động mà app cho người dùng chọn.
 // MET là mức tiêu hao năng lượng của một hoạt động so với lúc ngồi nghỉ.
 // Đi bộ 3.8 nghĩa là đốt gấp 3.8 lần lúc ngồi yên.

@@ -1,3 +1,14 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Trả lời một câu hỏi: hôm nay là ngày nào, theo múi giờ của MÁY người dùng.
+//
+// Ai gọi tới: mealController, planController, coachController, exerciseController
+// Nhận vào:   độ lệch múi giờ mà app gửi kèm trong tiêu đề request
+// Trả ra:     chuỗi ngày dạng YYYY-MM-DD
+// Khi lỗi:    thiếu hoặc sai độ lệch thì dùng giờ quốc tế UTC
+//
+// Vì sao không dùng thẳng giờ máy chủ: máy chủ đặt ở Singapore. Người dùng
+// ghi món lúc 23h ở Việt Nam mà tính theo giờ máy chủ có thể nhảy sang ngày mai.
+//
 // Tạo chuỗi ngày hôm nay dạng YYYY-MM-DD theo múi giờ thiết bị.
 // Offset lấy từ thiết bị qua header chung; thiếu hoặc sai thì dùng UTC.
 // Nơi dùng: chặn ghi dữ liệu cho ngày tương lai và lấy mặc định hôm nay.

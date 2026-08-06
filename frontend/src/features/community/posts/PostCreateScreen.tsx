@@ -1,4 +1,11 @@
-// Màn Tạo bài đăng. Đây là file BẮT ĐẦU của luồng đăng bài.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Tạo bài đăng. File BẮT ĐẦU của luồng đăng bài.
+//
+// Ai gọi tới: CommunityScreen
+// Nhận vào:   ảnh, lời chú thích, và món ăn nếu chọn loại bài món ăn
+// Trả ra:     không trả gì, đăng xong thì quay lại danh sách bài
+// Khi lỗi:    bài không có ảnh nào thì nút Đăng bị khóa
+
 // LUỒNG ĐĂNG BÀI
 // 1. Chọn ảnh, tối đa 10 tấm, qua PhotoPickerModal
 // 2. Viết chú thích, có thể gắn thêm một món ăn

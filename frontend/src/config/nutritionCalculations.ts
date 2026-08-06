@@ -1,4 +1,10 @@
-// File này giữ các hằng số dinh dưỡng mà GIAO DIỆN cần để hiện số.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ các hằng số dinh dưỡng mà GIAO DIỆN cần để vẽ số lên màn hình.
+//
+// Ai gọi tới: Trang chủ, Tiến trình, Hồ sơ, màn Mục tiêu
+// Nhận vào:   không nhận gì, đây là bảng số khai sẵn
+// Trả ra:     các hằng số và hàm tính phụ
+// Khi lỗi:    không có nhánh lỗi. Backend là nơi tính chính thức, đây chỉ để vẽ
 // Quy tắc giống bản backend: một hằng số phải đi kèm một dòng nói rõ nguồn.
 // Bản gốc của các hằng số này nằm ở backend/src/config/nutritionConstants.js.
 // Backend là nơi tính toán chính thức, file này chỉ để màn hình vẽ được mục tiêu

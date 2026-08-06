@@ -1,4 +1,10 @@
-// File này tạo khóa ngày dạng YYYY-MM-DD dùng khắp app.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Tạo khóa ngày dạng YYYY-MM-DD, dùng khắp app.
+//
+// Ai gọi tới: Trang chủ, Thêm món, Tiến trình, Kế hoạch tuần
+// Nhận vào:   một mốc thời gian, mặc định là bây giờ
+// Trả ra:     chuỗi ngày theo giờ MÁY người dùng
+// Khi lỗi:    không có nhánh lỗi
 // Tạo khóa ngày YYYY-MM-DD theo giờ địa phương.
 // Không dùng toISOString vì múi giờ UTC có thể làm lệch ngày.
 export function dateKey(d: Date): string {

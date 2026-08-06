@@ -1,4 +1,11 @@
-// Màn Nhắc nhở. Đây là file BẮT ĐẦU của luồng đặt lời nhắc.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Nhắc nhở. File BẮT ĐẦU của luồng đặt lời nhắc ghi món.
+//
+// Ai gọi tới: ProfileScreen
+// Nhận vào:   bật hay tắt từng bữa, và giờ muốn nhắc
+// Trả ra:     không trả gì, lời nhắc đặt thẳng trên MÁY chứ không lưu server
+// Khi lỗi:    chưa cho phép thông báo thì công tắc tự tắt lại, không để bật giả
+
 // LUỒNG ĐẶT LỜI NHẮC
 // 1. Bật công tắc của một bữa, hoặc đổi giờ nhắc
 // 2. reminders.applyReminder

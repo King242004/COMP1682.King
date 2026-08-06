@@ -1,4 +1,11 @@
-// Màn Sửa món. Đây là file BẮT ĐẦU của luồng sửa một bản ghi món đã có.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Sửa món. File BẮT ĐẦU của luồng sửa một bản ghi món đã có.
+//
+// Ai gọi tới: MealDetailScreen
+// Nhận vào:   món cần sửa, truyền qua tham số route
+// Trả ra:     không trả gì, lưu xong thì quay lại màn trước
+// Khi lỗi:    sửa tên hoặc khẩu phần thì số dinh dưỡng cũ bị xóa, buộc ước tính lại
+
 // LUỒNG SỬA MÓN
 // 1. Mở từ màn Chi tiết món, mã món đi theo tham số route
 // 2. Tìm món đó trong MealsContext, KHÔNG gọi mạng để tải lại

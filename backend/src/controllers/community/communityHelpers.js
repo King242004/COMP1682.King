@@ -1,8 +1,17 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chứa các việc dùng chung cho cả bốn controller của Community.
+//
+// Ai gọi tới: postController, feedController, socialController, notificationController
+// Nhận vào:   bài đăng thô từ database, hoặc yêu cầu tạo thông báo
+// Trả ra:     bài đã dọn gọn cho app, hoặc thông báo đã tạo
+// Khi lỗi:    tạo thông báo hỏng thì bỏ qua, không làm hỏng hành động chính.
+//             Bấm tim mà thông báo không gửi được thì tim vẫn phải tính.
+//
+// Vì sao tách ra: bốn controller đều cần dọn bài và tạo thông báo giống nhau.
+// Viết một chỗ thì không lo bốn nơi làm bốn kiểu.
 const cloudinary = require("../../config/cloudinary");
 const Notification = require("../../models/Notification");
 const User = require("../../models/User");
-
-// File này chứa các việc dùng chung cho cả bốn controller của Community.
 
 // Tạo một thông báo. Bấm tim rồi bỏ tim rồi bấm lại cũng chỉ có MỘT thông báo,
 // nhờ upsert cộng với chỉ mục duy nhất trong model Notification.

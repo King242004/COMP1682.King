@@ -1,4 +1,10 @@
-// Nút bấm dùng chung cho toàn app.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Nút bấm dùng chung cho toàn app, có sẵn ba cỡ và các kiểu màu.
+//
+// Ai gọi tới: gần như mọi màn hình
+// Nhận vào:   chữ trên nút, kiểu, cỡ, và hàm chạy khi bấm
+// Trả ra:     một nút đã đúng màu và đúng bo góc của app
+// Khi lỗi:    đang ở trạng thái chờ thì nút tự khóa, chặn bấm hai lần
 import { ReactNode } from "react";
 import { Pressable, StyleSheet, View, type PressableProps, type TextStyle, type ViewStyle } from "react-native";
 import { theme } from "../theme";

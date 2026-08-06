@@ -1,4 +1,11 @@
-// Màn Hồ sơ, tab thứ tư. Đây là màn cửa ngõ dẫn sang nhiều màn khác.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Hồ sơ, tab thứ tư. Cửa ngõ dẫn sang nhiều màn khác.
+//
+// Ai gọi tới: app/tabs/profile
+// Nhận vào:   hồ sơ người dùng và vài số liệu tóm tắt
+// Trả ra:     thẻ thông tin cá nhân và danh sách lối vào các màn con
+// Khi lỗi:    tải hồ sơ hỏng thì hiện lời nhắc, các lối vào vẫn bấm được
+
 // LUỒNG MỞ HỒ SƠ, tự chạy khi vào tab
 // 1. useFocusEffect gọi AuthContext.fetchProfile
 // 2. accountApi.fetchProfileRequest      (GET /profile)

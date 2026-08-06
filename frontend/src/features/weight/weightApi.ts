@@ -1,4 +1,11 @@
-// File này là chặng giữa phần Cân nặng và backend.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa phần Cân nặng và backend. Chỉ lo gọi mạng.
+//
+// Ai gọi tới: WeightSection, WeightGoalsScreen, ProgressScreen
+// Nhận vào:   số cân nặng và ngày
+// Trả ra:     bản ghi đã lưu, kèm mục tiêu calo đã tính lại
+// Khi lỗi:    ném lỗi lên cho màn hình tự hiện thông báo
+
 // Chỉ lo gọi mạng, không giữ state.
 import { apiRequest } from "@/utils/apiClient";
 import type { WeightGoal } from "@/config/nutritionCalculations";

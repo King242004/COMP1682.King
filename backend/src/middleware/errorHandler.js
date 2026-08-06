@@ -1,4 +1,14 @@
-// Nơi mọi lỗi của backend đi về, đặt ở cuối app.js.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Nơi mọi lỗi của backend đi về. Đặt ở CUỐI app.js nên nó bắt được
+// mọi thứ mà các chặng trước ném ra.
+//
+// Ai gọi tới: app.js, gắn cuối cùng sau tất cả route
+// Nhận vào:   lỗi do bất kỳ controller hay middleware nào ném ra
+// Trả ra:     một câu báo lỗi gọn cho app, kèm mã trạng thái hợp lý
+// Khi lỗi:    nếu đã lỡ trả lời rồi thì bỏ qua, không ghi đè lên câu đã gửi
+//
+// Vì sao cần: không có file này thì lỗi lạ sẽ lộ nguyên dấu vết kỹ thuật
+// ra ngoài, gồm cả đường dẫn file trên máy chủ.
 function errorHandler(err, req, res, next) {
   // Nếu đã lỡ trả lời rồi thì thôi, không ghi đè lên nữa.
   if (res.headersSent) return next(err);

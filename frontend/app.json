@@ -34,7 +34,13 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MealMate uses the camera to photograph your meals and scan product barcodes."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

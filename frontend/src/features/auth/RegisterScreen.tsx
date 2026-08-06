@@ -1,4 +1,11 @@
-// Đăng ký gồm bước nhập thông tin và bước xác minh OTP.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Đăng ký. Hai bước trong cùng một màn: nhập thông tin, rồi xác minh mã 6 số.
+//
+// Ai gọi tới: LoginScreen, qua liên kết Đăng ký
+// Nhận vào:   tên, email, mật khẩu, và mã 6 số
+// Trả ra:     không trả gì, tạo xong thì đi thẳng sang bước Thiết lập lần đầu
+// Khi lỗi:    email đã có tài khoản thì báo chung chung, không nói rõ để tránh lộ tài khoản
+
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";

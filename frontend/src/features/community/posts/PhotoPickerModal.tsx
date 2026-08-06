@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Bộ chọn ảnh cho bài đăng, cho chọn nhiều ảnh cùng lúc.
+//
+// Ai gọi tới: PostCreateScreen, PostEditScreen
+// Nhận vào:   số ảnh tối đa còn được chọn
+// Trả ra:     danh sách ảnh đã nén sẵn
+// Khi lỗi:    chưa cấp quyền thư viện ảnh thì báo và không mở bộ chọn
+
 // Dùng bộ chọn có sẵn của hệ điều hành chứ không tự viết giao diện thư viện,
 // nên không có phần kéo và cắt ảnh riêng trong app.
 import { useEffect, useRef } from "react";

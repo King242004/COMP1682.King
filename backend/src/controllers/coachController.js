@@ -1,3 +1,16 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo toàn bộ AI Coach: chấm điểm sức khỏe trong ngày, trò chuyện,
+// gợi ý món kế tiếp, lưu và xóa lịch sử chat, ghi món từ tin nhắn vào nhật ký.
+//
+// Ai gọi tới: coachRoutes, tức tab Coach và thẻ điểm sức khỏe ở Trang chủ
+// Nhận vào:   câu hỏi của người dùng, kèm ảnh nếu có, và ngôn ngữ đang chọn
+// Trả ra:     câu trả lời của Coach, hoặc điểm sức khỏe kèm lời bình
+// Khi lỗi:    AI hết lượt thì trả QUOTA và app hiện lời nhắc thử lại sau.
+//             Câu hỏi ngoài phạm vi dinh dưỡng thì Coach từ chối lịch sự.
+//
+// Điều quan trọng nhất của file này: ĐIỂM DO CODE TÍNH, không do AI chấm.
+// AI chỉ viết lời bình. Nhờ vậy AI hỏng thì vẫn còn điểm, và cùng dữ liệu
+// thì luôn ra cùng một điểm chứ không đổi mỗi lần mở.
 const { insightModels, nutritionModels, chatModels } = require("../config/geminiModels");
 const { generateWithFallback } = require("../services/aiClient");
 const { buildContext, contextToText } = require("../services/coach/coachContext");
@@ -18,7 +31,7 @@ const { requestTodayKey } = require("../utils/dateUtils");
 // lưu và xóa lịch sử, ghi món từ tin nhắn vào nhật ký.
 
 // Đoán bữa đang tới dựa trên giờ hiện tại. Bản giống hệt bên frontend
-// nằm ở utils/meals/mealSlot.ts, hai bên phải cho ra cùng kết quả.
+// nằm ở features/meals/mealHelpers.ts, hai bên phải cho ra cùng kết quả.
 function mealTypeByHour(h) {
   if (h < 11) return "breakfast";
   if (h < 14) return "lunch";

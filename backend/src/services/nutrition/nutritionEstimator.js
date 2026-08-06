@@ -1,4 +1,16 @@
-// File này lo phần ước tính dinh dưỡng bằng AI, dùng cho màn Thêm món và Sửa món.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Dựng câu lệnh hỏi AI về dinh dưỡng, và dọn lại con số AI trả về.
+//
+// Ai gọi tới: scanController, ở hàm estimateNutrition
+// Nhận vào:   tên món, khẩu phần, nguyên liệu, và ngôn ngữ
+// Trả ra:     câu lệnh để hỏi AI, khóa nhớ tạm, và kết quả đã ép về số hợp lệ
+// Khi lỗi:    AI trả số âm hoặc chữ thay vì số thì ép về 0, không để lọt ra
+//
+// Cách dựng khóa nhớ tạm: chuẩn hóa chữ rồi băm SHA-256. Chuẩn hóa gồm bỏ
+// dấu cách thừa và hạ chữ thường, nên "Phở Bò" và "phở  bò" ra cùng một khóa
+// và chỉ tốn một lượt AI.
+// CACHE_VERSION nằm trong khóa: đổi cách dựng câu lệnh thì tăng số này để mọi
+// kết quả cũ bị bỏ, thay vì trả về số tính theo luật cũ.
 // Khóa nhớ tạm dựng bằng cách chuẩn hóa chữ rồi băm SHA-256. Chuẩn hóa gồm bỏ
 // dấu cách thừa và hạ chữ thường, nên "Phở Bò" và "phở  bò" ra cùng một khóa và
 // chỉ tốn một lượt AI. CACHE_VERSION nằm trong khóa: đổi cách dựng câu lệnh thì

@@ -1,3 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng một kết quả ước tính của AI được nhớ tạm lại.
+//
+// Ai gọi tới: scanController, đọc TRƯỚC khi gọi Gemini và ghi SAU khi Gemini trả lời
+// Nhận vào:   khóa dựng từ tên món, khẩu phần, nguyên liệu và ngôn ngữ
+// Trả ra:     kết quả cũ nếu còn hạn, để trả lời ngay mà không tốn lượt AI
+// Khi lỗi:    ghi nhớ tạm thất bại thì bỏ qua, không làm hỏng câu trả lời chính
+//
+// Bản nhớ sống 30 ngày. Mục đích là không hỏi AI hai lần cho cùng một món
+// của cùng một người.
 const mongoose = require("mongoose");
 
 // Bảng nhớ tạm kết quả ước tính dinh dưỡng của AI.

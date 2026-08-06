@@ -1,4 +1,11 @@
-// File này khai báo hình dạng dữ liệu tài khoản dùng khắp app.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng dữ liệu tài khoản dùng khắp app. Chỉ có kiểu, không có code chạy.
+//
+// Ai gọi tới: AuthContext, authApi, authSession, và các màn đọc hồ sơ
+// Nhận vào:   không nhận gì
+// Trả ra:     các kiểu dữ liệu cho TypeScript kiểm lúc build
+// Khi lỗi:    gán sai kiểu thì TypeScript báo lỗi ngay lúc build, không đợi tới lúc chạy
+
 // Chỉ có kiểu, không có code chạy.
 // User phải khớp với hàm publicUser trong backend authController,
 // lệch một trường là app đọc thiếu dữ liệu.

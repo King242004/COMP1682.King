@@ -1,4 +1,11 @@
-// File này là chặng giữa thẻ gợi ý món và backend.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa thẻ gợi ý món và backend, có lưu tạm kết quả.
+//
+// Ai gọi tới: SuggestMealCard
+// Nhận vào:   ngày, bữa, và ngôn ngữ
+// Trả ra:     món được gợi ý
+// Khi lỗi:    AI hết lượt thì trả QUOTA, thẻ hiện lời nhắc thử lại sau
+
 // Ngoài gọi mạng, nó lưu tạm kết quả theo ngày, bữa và ngôn ngữ,
 // vì mỗi lần gợi ý tốn một lượt gọi AI.
 import AsyncStorage from "@react-native-async-storage/async-storage";

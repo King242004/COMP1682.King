@@ -1,3 +1,16 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Cổng gác của Coach. Quyết định một câu hỏi có thuộc phạm vi app hay không.
+//
+// Ai gọi tới: coachController, ngay trước khi định gọi Gemini
+// Nhận vào:   tin nhắn người dùng gõ
+// Trả ra:     supported nếu được phép trả lời, out_of_scope nếu không
+// Khi lỗi:    không chắc thì coi là ngoài phạm vi, tức là TỪ CHỐI
+//
+// Nguyên tắc chốt, và đây là câu nên nói khi bảo vệ: MẶC ĐỊNH TỪ CHỐI.
+// Không chứng minh được câu hỏi thuộc năng lực được hỗ trợ thì coi như
+// ngoài phạm vi. Tên món ăn hay tên bệnh nằm trong câu KHÔNG tự động
+// làm cho một yêu cầu khác trở thành hợp lệ.
+//
 // File này là CỔNG CHUNG của Coach. Mọi tin nhắn phải đi qua đây
 // trước khi được phép tốn một lượt gọi Gemini để trả lời nội dung.
 // Nguyên tắc chốt: MẶC ĐỊNH TỪ CHỐI. Không chứng minh được câu hỏi thuộc

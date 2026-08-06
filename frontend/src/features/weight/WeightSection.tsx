@@ -1,4 +1,11 @@
-// Phần Cân nặng trong màn Tiến trình. Đây là file BẮT ĐẦU của luồng ghi cân nặng.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Phần Cân nặng trong màn Tiến trình. File BẮT ĐẦU của luồng ghi cân nặng.
+//
+// Ai gọi tới: ProgressScreen
+// Nhận vào:   số cân nặng người dùng gõ
+// Trả ra:     không trả gì, ghi xong thì biểu đồ và mục tiêu calo tự cập nhật
+// Khi lỗi:    số ngoài khoảng hợp lý thì backend từ chối và màn hiện lỗi
+
 // LUỒNG GHI CÂN NẶNG
 // 1. Bấm nút Ghi cân nặng, hộp nhập mở ra
 // 2. Nhập số rồi bấm lưu, chạy onLog

@@ -1,3 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ MỌI giới hạn độ dài của các ô người dùng nhập, ở một chỗ duy nhất.
+//
+// Ai gọi tới: mọi controller và model có nhận chữ từ người dùng
+// Nhận vào:   không nhận gì, đây là bảng số khai sẵn
+// Trả ra:     các con số giới hạn
+// Khi lỗi:    không có nhánh lỗi, việc chặn do nơi gọi làm
+//
+// Quy tắc của file: một giới hạn chỉ được khai ở ĐÂY, không nơi nào gõ lại số.
+//
 // File này giữ MỌI giới hạn độ dài của các ô người dùng nhập.
 // Quy tắc của file: một giới hạn chỉ được khai ở đây, không nơi nào gõ lại số.
 // Có hai loại số trong file:

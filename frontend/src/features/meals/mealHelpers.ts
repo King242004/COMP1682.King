@@ -1,4 +1,11 @@
-// File này chứa hai việc nhỏ dùng chung cho phần món ăn.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Hai việc nhỏ dùng chung cho phần món ăn: đoán bữa theo giờ, và cộng dinh dưỡng.
+//
+// Ai gọi tới: AddMealScreen, ScanScreen, HomeScreen
+// Nhận vào:   giờ hiện tại, hoặc danh sách món
+// Trả ra:     tên buổi ăn, hoặc tổng calo và ba chất
+// Khi lỗi:    không có nhánh lỗi
+
 //   mealSlotByHour đoán bữa theo giờ hiện tại. Backend có bản giống hệt
 //     trong coachController, hai bên phải cho ra cùng kết quả.
 //   recentUniqueMeals lấy các món gần đây, mỗi tên chỉ hiện một lần,
@@ -12,11 +19,11 @@ export type MealSlot = "breakfast" | "lunch" | "snack" | "dinner";
 export type NutritionFields = Record<"calories" | "protein" | "carbs" | "fat", string>;
 
 export function hasAnyNutrition(values: NutritionFields): boolean {
-  return Object.values(values).some((value) => value.trim());
+  return [values.calories, values.protein, values.carbs, values.fat].some((value) => value.trim());
 }
 
 export function hasCompleteNutrition(values: NutritionFields): boolean {
-  if (!Object.values(values).every((value) => value.trim())) return false;
+  if (![values.calories, values.protein, values.carbs, values.fat].every((value) => value.trim())) return false;
   const calories = parseDecimal(values.calories);
   const macros = [values.protein, values.carbs, values.fat].map(parseDecimal);
   return Number.isFinite(calories) && calories > 0 && calories <= 9999

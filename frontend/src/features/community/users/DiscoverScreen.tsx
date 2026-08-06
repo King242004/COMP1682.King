@@ -1,4 +1,11 @@
-// Tìm người hoặc gợi ý tài khoản phù hợp để theo dõi.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Khám phá người dùng: tìm theo tên, hoặc xem gợi ý nên theo dõi ai.
+//
+// Ai gọi tới: CommunityScreen
+// Nhận vào:   từ khóa tìm kiếm
+// Trả ra:     danh sách người tìm được, hoặc danh sách gợi ý
+// Khi lỗi:    không tìm thấy ai thì hiện thẻ trạng thái
+
 import { useState, useRef, useCallback } from "react";
 import { Pressable, StyleSheet, TextInput, View, ActivityIndicator } from "react-native";
 import { useFocusEffect } from "expo-router";

@@ -1,3 +1,16 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ bảng chỉ số MET, là con số dùng để tính calo đã đốt của từng hoạt động.
+//
+// Ai gọi tới: exerciseController (ghi buổi tập), planController (nút "Xong"),
+//             coachController (tính calo đốt khi trả lời)
+// Nhận vào:   mã hoạt động và thời lượng
+// Trả ra:     chỉ số MET và số calo đã đốt
+// Khi lỗi:    mã hoạt động không có trong bảng thì trả rỗng, không đoán bừa
+//
+// Vì sao đặt Ở SERVER chứ không ở app: app chỉ gửi lên MÃ hoạt động, còn con số
+// nằm ở đây. Nhờ vậy một app đã bị sửa cũng không tự đặt được MET để khai khống
+// lượng calo đã đốt.
+//
 // Danh mục chỉ số MET, đặt Ở SERVER. App chỉ gửi lên mã hoạt động, còn con số
 // dùng để tính calo nằm ở đây, nên một app đã bị sửa cũng không tự đặt được MET.
 // Nguồn: Herrmann và cộng sự (2024), 2024 Adult Compendium of Physical Activities.

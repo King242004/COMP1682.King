@@ -1,4 +1,13 @@
-// Thay kế hoạch trong một khoảng ngày mà không xóa bản cũ trước.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Thay kế hoạch của một khoảng ngày, theo thứ tự GHI TRƯỚC XÓA SAU.
+//
+// Ai gọi tới: planController, ở bước 6 của hàm tạo kế hoạch
+// Nhận vào:   khoảng ngày, danh sách món mới, danh sách buổi tập mới
+// Trả ra:     các dòng đã ghi thành công
+// Khi lỗi:    ghi bản mới hỏng thì dừng luôn, kế hoạch CŨ vẫn còn nguyên
+//
+// Vì sao phải ghi trước xóa sau: nếu xóa trước rồi ghi mới mà ghi hỏng,
+// người dùng mất sạch kế hoạch cũ và không có gì thay thế.
 // planController gọi sau khi AI trả dữ liệu hợp lệ; lỗi khi ghi bản mới sẽ giữ kế hoạch cũ.
 const PlanMeal = require("../models/PlanMeal");
 const PlanWorkout = require("../models/PlanWorkout");

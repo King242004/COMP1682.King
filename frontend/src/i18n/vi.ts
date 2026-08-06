@@ -1,3 +1,10 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bộ chữ tiếng Việt của toàn app, phải khớp TỪNG khóa với en.ts.
+//
+// Ai gọi tới: i18n/index, rồi tới mọi màn hình qua hook useT
+// Nhận vào:   không nhận gì, đây là bảng chữ khai sẵn
+// Trả ra:     toàn bộ chữ tiếng Việt, gom theo nhóm màn hình
+// Khi lỗi:    thiếu khóa so với en.ts thì TypeScript báo lỗi ngay lúc build
 // Bộ chữ tiếng Việt của toàn app, phải khớp từng khóa với en.ts.
 // Chọn bộ nào là do ngôn ngữ trong Cài đặt, chưa chọn thì theo ngôn ngữ điện thoại.
 import type { Strings } from "./en";

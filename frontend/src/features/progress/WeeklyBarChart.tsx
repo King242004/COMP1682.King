@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Biểu đồ cột lượng calo theo ngày, dùng cho chế độ xem Tuần.
+//
+// Ai gọi tới: ProgressScreen
+// Nhận vào:   calo từng ngày và mục tiêu calo
+// Trả ra:     bảy cột, kèm vạch ngang đánh dấu mục tiêu
+// Khi lỗi:    ngày chưa ghi món thì cột cao 0, không bỏ trống chỗ
+
 import { Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

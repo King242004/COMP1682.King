@@ -1,4 +1,11 @@
-// File này là cửa duy nhất để app gọi backend. Mọi request đều đi qua đây.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Cửa DUY NHẤT để app gọi backend. Mọi request đều đi qua đây.
+//
+// Ai gọi tới: mọi file api của từng feature
+// Nhận vào:   địa chỉ cần gọi, dữ liệu gửi đi, và thẻ đăng nhập
+// Trả ra:     dữ liệu backend trả về, đã đọc sẵn thành object
+// Khi lỗi:    thẻ hết hạn thì gọi hàm đăng xuất chung, app tự về màn Đăng nhập.
+//             Mạng hỏng thì ném lỗi lên cho màn hình tự báo
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 

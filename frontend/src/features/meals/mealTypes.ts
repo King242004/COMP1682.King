@@ -1,4 +1,11 @@
-// File này khai báo hình dạng dữ liệu món ăn dùng khắp app.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng dữ liệu món ăn dùng khắp app. Chỉ có kiểu, không có code chạy.
+//
+// Ai gọi tới: MealsContext, mealsApi, và các màn về món
+// Nhận vào:   không nhận gì
+// Trả ra:     các kiểu dữ liệu cho TypeScript kiểm lúc build
+// Khi lỗi:    gán sai kiểu thì TypeScript báo lỗi ngay lúc build
+
 // Chỉ có kiểu, không có code chạy.
 // RawMeal là dạng backend trả về, còn dùng _id.
 // Meal là dạng app dùng, đã đổi sang id. Việc đổi nằm ở utils/meals/mealsApi.

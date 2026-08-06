@@ -1,4 +1,11 @@
-// Màn Ghi hoạt động. Đây là file BẮT ĐẦU của luồng ghi buổi tập.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Ghi hoạt động. File BẮT ĐẦU của luồng ghi buổi tập.
+//
+// Ai gọi tới: Trang chủ và màn Tiến trình
+// Nhận vào:   hoạt động đã chọn và thời lượng
+// Trả ra:     không trả gì, ghi xong thì quay lại màn trước
+// Khi lỗi:    chưa chọn hoạt động thì nút Lưu bị khóa
+
 // Màn có HAI lối, chọn ở đầu màn:
 // LỐI A, tập theo bài hướng dẫn trong app
 // 1. Chọn nhóm bài và độ dài buổi tập

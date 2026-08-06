@@ -1,4 +1,10 @@
-// File này quản lý bốn lời nhắc ghi món, mỗi bữa một lời nhắc.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Quản lý bốn lời nhắc ghi món, mỗi bữa một lời nhắc.
+//
+// Ai gọi tới: RemindersScreen, và authSession lúc đăng xuất để dọn lời nhắc
+// Nhận vào:   bữa nào, bật hay tắt, và giờ muốn nhắc
+// Trả ra:     trạng thái bốn lời nhắc
+// Khi lỗi:    chưa được cấp quyền thông báo thì tắt công tắc lại, không để bật giả
 // Trạng thái lưu trong bộ nhớ máy, KHÔNG lưu trên server.
 // LUỒNG BẬT MỘT LỜI NHẮC
 // 1. màn Nhắc nhở gọi applyReminder

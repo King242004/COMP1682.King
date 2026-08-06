@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Cửa DUY NHẤT để gọi AI. Mọi tính năng AI của app đều đi qua đây.
+//
+// Ai gọi tới: scanController, coachController, planController
+// Nhận vào:   một bộ model đã dựng sẵn, và câu lệnh cần hỏi
+// Trả ra:     câu trả lời của model đầu tiên chạy được
+// Khi lỗi:    thử hết mọi cách gọi mà vẫn hỏng thì ném AI_QUOTA_EXHAUSTED,
+//             controller bắt và trả QUOTA cho app
+//
+// Hai mốc thời gian: mỗi lần thử chờ tối đa 12 giây, cả lượt chờ tối đa 40 giây.
+// Có hạn để một câu hỏi hỏng không treo người dùng mãi.
+//
 // File này là cửa duy nhất để gọi AI. Mọi tính năng AI đều đi qua đây.
 // Vì sao cần thử nhiều model: Gemini bản miễn phí giới hạn lượt gọi mỗi ngày.
 // Có nhiều khóa và nhiều model thì hết cái này còn cái kia.

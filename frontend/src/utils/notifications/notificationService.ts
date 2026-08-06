@@ -1,4 +1,10 @@
-// File này là lớp bọc quanh thư viện thông báo của Expo.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lớp bọc quanh thư viện thông báo của Expo.
+//
+// Ai gọi tới: reminderSettings, khi bật hoặc tắt lời nhắc ghi món
+// Nhận vào:   nội dung và giờ muốn nhắc
+// Trả ra:     mã của lời nhắc đã đặt
+// Khi lỗi:    người dùng chưa cho phép thông báo thì trả rỗng, không báo lỗi ầm ĩ
 // Bản web không có thông báo nên mọi hàm ở đây trả rỗng.
 // Nạp thư viện theo kiểu chờ khi cần, để bản web không phải tải thư viện thừa.
 import { Platform } from "react-native";

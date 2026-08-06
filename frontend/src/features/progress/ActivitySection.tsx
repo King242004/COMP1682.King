@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Phần Hoạt động trong màn Tiến trình.
+//
+// Ai gọi tới: ProgressScreen
+// Nhận vào:   khoảng ngày đang xem
+// Trả ra:     tổng thời gian tập, calo đốt, và danh sách buổi tập
+// Khi lỗi:    gọi mạng riêng nên hỏng thì chỉ phần này báo lỗi, phần món ăn vẫn chạy
+
 // Gọi mạng riêng chứ không dùng chung với món ăn, vì hai nhóm dữ liệu
 // nằm ở hai bảng khác nhau trong database.
 import { useEffect, useState } from "react";

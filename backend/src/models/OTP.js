@@ -1,3 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng một mã xác minh 6 số đang chờ được dùng.
+//
+// Ai gọi tới: otpService, authController, accountController
+// Nhận vào:   email, loại việc, mã đã băm, và hạn dùng
+// Trả ra:     một dòng OTP đã kiểm hợp lệ
+// Khi lỗi:    xin mã mới khi mã cũ chưa hết thời gian chờ thì bị chặn
+//
+// Điểm quan trọng khi bảo vệ: database chỉ giữ bản BĂM của mã,
+// KHÔNG bao giờ giữ 6 số thật. Ai đọc trộm database cũng không dùng được.
 const mongoose = require("mongoose");
 
 // Bảng mã xác minh 6 số, dùng cho cả đăng ký lẫn quên mật khẩu.

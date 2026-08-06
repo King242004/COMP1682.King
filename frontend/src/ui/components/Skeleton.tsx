@@ -1,4 +1,10 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Khối xám nhấp nháy hiện trong lúc chờ dữ liệu về.
+//
+// Ai gọi tới: Trang chủ, Tiến trình, Cộng đồng, Kế hoạch tuần
+// Nhận vào:   kích thước khối cần chiếm chỗ
+// Trả ra:     một khối xám nhấp nháy
+// Khi lỗi:    không có nhánh lỗi
 // Dùng thay vòng xoay để bố cục không nhảy khi dữ liệu về.
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, type DimensionValue } from "react-native";

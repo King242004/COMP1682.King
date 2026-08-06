@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo nhật ký cân nặng: ghi cân nặng, đọc danh sách để vẽ biểu đồ, xóa.
+//
+// Ai gọi tới: weightRoutes, tức màn Cân nặng và mục tiêu, và biểu đồ ở Tiến trình
+// Nhận vào:   số cân nặng và ngày
+// Trả ra:     bản ghi đã lưu, và mục tiêu calo đã tính lại theo cân nặng mới
+// Khi lỗi:    cân nặng ngoài khoảng hợp lý thì từ chối.
+//             Ghi cho ngày tương lai thì bị chặn.
+//
+// Điểm nối quan trọng: ghi cân nặng mới sẽ đồng bộ ngược vào trường weight
+// của User, rồi tính LẠI mục tiêu calo. Vì mục tiêu calo phụ thuộc cân nặng,
+// nên không cập nhật thì mục tiêu sẽ đứng yên theo số cân cũ.
 const WeightLog = require("../models/WeightLog");
 const User = require("../models/User");
 const { autoGoal, resolveWeightGoal } = require("../services/nutrition/calorieGoal");

@@ -1,9 +1,18 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo bốn danh sách bài: Đang theo dõi, Khám phá, bài của một người, bài đã lưu.
+//
+// Ai gọi tới: communityRoutes, tức tab Cộng đồng và trang cá nhân
+// Nhận vào:   trang cần lấy, và mã người dùng nếu xem trang của ai đó
+// Trả ra:     danh sách bài đã dọn gọn, chia trang
+// Khi lỗi:    không có bài nào thì trả danh sách rỗng, màn hình tự hiện
+//             lời nhắc thay vì báo lỗi
+//
+// Điểm riêng tư: bài của tài khoản để chế độ riêng tư bị lọc bỏ khỏi
+// Khám phá, xem privateUserIds trong communityHelpers.
 const Post = require("../../models/Post");
 const User = require("../../models/User");
 const Follow = require("../../models/Follow");
 const { privateUserIds, shapePost } = require("./communityHelpers");
-
-// File này lo bốn danh sách bài: Đang theo dõi, Khám phá, bài của một người, bài đã lưu.
 // Cả bốn đều chia trang theo cùng một cách: xin thêm 1 bài so với số cần,
 // nếu lấy về dư thì biết là còn trang sau, rồi cắt bớt bài dư đi.
 

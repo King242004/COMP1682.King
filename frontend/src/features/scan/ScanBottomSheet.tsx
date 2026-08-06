@@ -1,4 +1,11 @@
-// Khung bottom sheet dùng chung cho kết quả barcode và danh sách món nhận diện.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khung bảng trượt dùng chung cho cả kết quả mã vạch lẫn danh sách món nhận diện.
+//
+// Ai gọi tới: CandidatesSheet, ProductSheet
+// Nhận vào:   nội dung muốn hiện bên trong
+// Trả ra:     một bảng trượt lên từ đáy màn
+// Khi lỗi:    đóng bảng thì trả quyền điều khiển về ScanScreen
+
 // CandidatesSheet và ProductSheet truyền nội dung vào; đóng sheet trả quyền điều khiển về ScanScreen.
 import type { ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";

@@ -1,4 +1,12 @@
-// Bộ đếm số lần gọi, chặn trước khi vào controller. Cửa sổ đếm là 15 phút.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bộ đếm số lần gọi. Ai gọi quá dày thì chặn lại trước khi vào controller.
+//
+// Ai gọi tới: authRoutes, accountRoutes, coachRoutes
+// Nhận vào:   request đi vào
+// Trả ra:     không trả gì nếu còn lượt, cho đi tiếp
+// Khi lỗi:    hết lượt thì trả 429 và bảo thử lại sau
+//
+// Cửa sổ đếm là 15 phút.
 // authLimiter chặn dò mật khẩu, gắn cho cả nhóm đăng nhập đăng ký.
 // registrationOtpLimiter và passwordOtpLimiter chặn spam gửi email mã xác minh.
 // aiLimiter đếm riêng theo từng người dùng nên bắt buộc phải đặt SAU cửa đăng nhập.

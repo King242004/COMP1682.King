@@ -1,3 +1,10 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bộ chữ tiếng Anh của toàn app. Đây là BẢN GỐC về hình dạng khóa.
+//
+// Ai gọi tới: i18n/index, rồi tới mọi màn hình qua hook useT
+// Nhận vào:   không nhận gì, đây là bảng chữ khai sẵn
+// Trả ra:     toàn bộ chữ tiếng Anh, gom theo nhóm màn hình
+// Khi lỗi:    vi.ts thiếu một khóa nào thì TypeScript báo lỗi ngay lúc build
 // Bộ chữ tiếng Anh của toàn app. Đây là bản gốc, file vi.ts phải có
 // đúng các khóa như file này, nếu thiếu khóa thì TypeScript sẽ báo lỗi.
 // Mọi chữ người dùng nhìn thấy đều phải lấy từ đây, không viết thẳng trong màn hình.
@@ -209,7 +216,7 @@ export const en = {
     scoreCalorie: "Calories",
     scoreProtein: "Protein",
     scoreActivity: "Activity",
-    scoreConsistency: "Consistency, 7 days",
+    scoreConsistency: "7-day habit",
     scoreNote: "An app-defined daily guide, not a medical score.",
     completeProfile: "Complete profile",
     profileNeeded: "Add your body information and calorie goal to calculate this score.",

@@ -1,4 +1,11 @@
-// File này khai báo bốn loại bữa cùng biểu tượng và màu của từng loại.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai bốn buổi ăn cùng biểu tượng và màu của từng buổi.
+//
+// Ai gọi tới: mọi màn có nhắc tới buổi ăn
+// Nhận vào:   mã buổi ăn
+// Trả ra:     tên hiển thị, biểu tượng, và màu
+// Khi lỗi:    không có nhánh lỗi
+
 // Mọi màn có nhắc tới bữa đều lấy từ đây, nên sáng, trưa, tối và bữa phụ
 // luôn cùng màu và cùng biểu tượng ở khắp app.
 export type MealTypeKey = "breakfast" | "lunch" | "dinner" | "snack";

@@ -1,4 +1,11 @@
-// Màn Cài đặt. Đây là file BẮT ĐẦU của nhiều luồng nhỏ.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Cài đặt. File BẮT ĐẦU của nhiều luồng nhỏ, gồm cả xóa tài khoản.
+//
+// Ai gọi tới: ProfileScreen
+// Nhận vào:   lựa chọn ngôn ngữ, quyền riêng tư, và các lệnh về tài khoản
+// Trả ra:     không trả gì, mỗi lựa chọn tự lưu ngay
+// Khi lỗi:    xóa tài khoản phải nhập mật khẩu và xác nhận, vì việc này KHÔNG lùi được
+
 // BỐN NHÓM CÀI ĐẶT
 //   Ngôn ngữ, chọn Tiếng Việt hoặc English. Lưu qua PUT /profile.
 //     Đổi ngôn ngữ làm Coach tải lại lịch sử của ngôn ngữ mới,

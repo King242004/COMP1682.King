@@ -1,4 +1,11 @@
-// Bảng trượt hiển thị tối đa ba món AI đoán sau khi quét ảnh.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bảng trượt hiện tối đa ba món mà AI đoán sau khi quét ảnh.
+//
+// Ai gọi tới: ScanScreen
+// Nhận vào:   danh sách món AI đoán, kèm độ tin cậy
+// Trả ra:     bảng cho người dùng chọn một món
+// Khi lỗi:    đây là bước NGƯỜI DÙNG XÁC NHẬN. AI chỉ đề xuất, không tự ghi món
+
 // Đây là bước NGƯỜI DÙNG XÁC NHẬN. AI chỉ đề xuất, không tự ghi món.
 import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";

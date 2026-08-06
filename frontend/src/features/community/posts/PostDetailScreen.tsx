@@ -1,4 +1,11 @@
-// Màn Chi tiết bài đăng.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Chi tiết bài đăng, xem đầy đủ ảnh và các hành động trên bài.
+//
+// Ai gọi tới: CommunityScreen, PostTile, UserProfileScreen
+// Nhận vào:   mã bài cần xem
+// Trả ra:     nội dung bài, kèm nút tim, lưu, và hai nút riêng của bài món ăn
+// Khi lỗi:    bài đã bị xóa thì hiện thẻ trạng thái thay vì màn trắng
+
 // LUỒNG MỞ CHI TIẾT
 // 1. Chạm một bài ở feed, mở màn này kèm mã bài
 // 2. api.getPost                    (GET /community/posts/:id)

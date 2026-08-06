@@ -1,4 +1,10 @@
-// File này tính giờ Gemini cấp lại lượt gọi miễn phí.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Tính xem mấy giờ thì Gemini cấp lại lượt gọi miễn phí.
+//
+// Ai gọi tới: ScanScreen, CoachScreen, WeeklyPlanScreen, khi backend trả chữ QUOTA
+// Nhận vào:   thời điểm hiện tại
+// Trả ra:     một câu nói rõ khi nào dùng lại được
+// Khi lỗi:    không có nhánh lỗi
 // Nơi dùng: khi backend trả chữ QUOTA, các màn AI hiện câu này
 // để người dùng biết khi nào dùng lại được.
 import type { Strings } from "@/i18n";

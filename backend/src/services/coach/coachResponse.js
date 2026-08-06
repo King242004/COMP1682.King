@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Dọn lại câu trả lời thô của AI trước khi đưa ra màn hình.
+// AI được dặn trả về khuôn JSON, nhưng đôi khi nó trả chữ thường, trả thiếu
+// trường, hoặc trả số âm. File này chịu trách nhiệm không để thứ đó lọt ra.
+//
+// Ai gọi tới: coachController, ngay sau mỗi lần gọi AI
+// Nhận vào:   chuỗi chữ thô mà AI trả về
+// Trả ra:     một object đã chuẩn, luôn có đủ trường và số luôn hợp lệ
+// Khi lỗi:    AI trả chữ thường không phải JSON thì vẫn giữ lại phần lời nói,
+//             chỉ mất phần hành động kèm theo. Thà thiếu nút còn hơn màn trắng.
+
+// Đọc câu trả lời AI. Không phải JSON thì coi cả chuỗi là lời nói.
 function parseCoachReply(rawText) {
   const text = String(rawText || "").trim();
   try {

@@ -1,4 +1,11 @@
-// Màn AI Coach. Đây là file BẮT ĐẦU của luồng trò chuyện.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn AI Coach. File BẮT ĐẦU của luồng trò chuyện.
+//
+// Ai gọi tới: app/tabs/coach
+// Nhận vào:   câu hỏi người dùng gõ, và ảnh nếu có
+// Trả ra:     câu trả lời của Coach, và thẻ điểm sức khỏe ở đầu màn
+// Khi lỗi:    AI hết lượt thì hiện lời nhắc thử lại sau. Câu ngoài phạm vi thì Coach từ chối lịch sự
+
 // Màn này có hai phần: thẻ điểm sức khỏe ở trên, và khung chat ở dưới.
 // LUỒNG GỬI TIN NHẮN
 // 1. Bấm nút gửi, chạy send ở file này

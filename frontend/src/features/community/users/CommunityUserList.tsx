@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Danh sách tài khoản dùng chung cho màn Khám phá và danh sách theo dõi.
+//
+// Ai gọi tới: DiscoverScreen, UserListScreen, UserProfileScreen
+// Nhận vào:   danh sách người và trạng thái theo dõi
+// Trả ra:     danh sách dòng người dùng, mỗi dòng giao cho UserRow
+// Khi lỗi:    danh sách rỗng thì hiện thẻ trạng thái
+
 // Nhận dữ liệu cùng trạng thái follow từ màn cha, rồi giao từng dòng cho UserRow.
 import type { ReactElement } from "react";
 import { FlatList } from "react-native";

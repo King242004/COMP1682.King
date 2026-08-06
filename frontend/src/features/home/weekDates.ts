@@ -1,4 +1,11 @@
-// JavaScript đánh số Chủ nhật là 0, nên phải chuyển đổi để tuần bắt đầu từ Thứ hai.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Tính bảy ngày của tuần đang xem, bắt đầu từ Thứ hai.
+//
+// Ai gọi tới: HomeScreen và ProgressScreen, ở hàng chọn ngày
+// Nhận vào:   một ngày bất kỳ trong tuần
+// Trả ra:     bảy chuỗi ngày dạng YYYY-MM-DD
+// Khi lỗi:    không có nhánh lỗi
+
 
 export function getCurrentWeekDays(weekOffset = 0) {
   const days = [];

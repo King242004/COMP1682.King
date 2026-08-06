@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Ba chấm chuyển động báo Coach đang soạn câu trả lời.
+//
+// Ai gọi tới: CoachScreen
+// Nhận vào:   không nhận gì
+// Trả ra:     hoạt ảnh ba chấm
+// Khi lỗi:    không có nhánh lỗi
+
 // Hiện ngay khi bấm gửi, thay bằng câu trả lời thật khi AI trả về.
 // Các chấm chuyển động báo rằng Coach đang soạn câu trả lời.
 import { useEffect, useRef } from "react";

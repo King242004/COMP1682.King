@@ -1,4 +1,11 @@
-// Một dòng người dùng, dùng lại ở màn Khám phá và màn danh sách người.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Một dòng người dùng trong danh sách, kèm ảnh đại diện và nút theo dõi.
+//
+// Ai gọi tới: CommunityUserList
+// Nhận vào:   thông tin một người và trạng thái theo dõi
+// Trả ra:     một dòng bấm được để mở trang cá nhân
+// Khi lỗi:    chưa có ảnh đại diện thì hiện chữ cái đầu của tên
+
 import { Pressable, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { useT } from "@/i18n";

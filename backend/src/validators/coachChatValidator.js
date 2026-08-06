@@ -1,4 +1,11 @@
-// File này kiểm dữ liệu gửi lên cho Coach, chạy trước khi controller làm gì.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm dữ liệu gửi lên cho Coach, chạy TRƯỚC khi controller làm bất cứ gì.
+//
+// Ai gọi tới: coachController, ngay dòng đầu của hàm chat
+// Nhận vào:   tin nhắn và ảnh người dùng gửi
+// Trả ra:     dữ liệu đã sạch, hoặc một câu báo lỗi
+// Khi lỗi:    tin quá dài hoặc ảnh quá nặng thì chặn ngay,
+//             không gọi AI, nên không tốn lượt Gemini vô ích
 // Tách ra file riêng để controller chỉ lo phần gọi AI,
 // và để viết bài kiểm thử cho phần kiểm dữ liệu mà không cần chạy cả server.
 const { LEGACY_LIMITS } = require("../config/inputLimits");

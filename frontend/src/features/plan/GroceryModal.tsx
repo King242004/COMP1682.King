@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Bảng danh sách đi chợ do AI gộp từ các món trong kế hoạch.
+//
+// Ai gọi tới: WeeklyPlanScreen
+// Nhận vào:   danh sách nguyên liệu đã gom nhóm
+// Trả ra:     bảng đi chợ, cho tick từng món đã mua
+// Khi lỗi:    chưa có món nào trong kế hoạch thì báo và không gọi AI
+
 // Bảng danh sách mua sắm AI cho phép đánh dấu từng món.
 // Trạng thái được lưu theo tuần cùng danh sách trong cacheGrocery.
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";

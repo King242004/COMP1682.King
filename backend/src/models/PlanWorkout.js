@@ -1,3 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng một gợi ý tập trong kế hoạch tuần. Mỗi ngày tối đa một gợi ý.
+//
+// Ai gọi tới: planController, cả lúc AI dựng kế hoạch lẫn lúc bấm nút "Xong"
+// Nhận vào:   tên bài tập, thời lượng, và ngày
+// Trả ra:     một dòng PlanWorkout đã kiểm hợp lệ
+// Khi lỗi:    thiếu ngày thì Mongoose chặn lại
+//
+// Trường done chuyển sang true khi bấm "Xong", và lúc đó một Exercise thật
+// được tạo ra, giống hệt cách PlanMeal biến thành Meal.
 const mongoose = require("mongoose");
 
 // Bảng gợi ý tập cho từng ngày trong kế hoạch tuần. Mỗi ngày tối đa một gợi ý.

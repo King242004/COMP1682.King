@@ -1,8 +1,12 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa MealsContext và backend. Chỉ lo gọi mạng, không giữ state nào cả.
+//
+// Ai gọi tới: MealsContext, không màn hình nào gọi thẳng vào đây
+// Nhận vào:   món cần gửi đi, và thẻ đăng nhập
+// Trả ra:     món backend đã lưu, đã đổi tên trường cho hợp với app
+// Khi lỗi:    ném lỗi lên cho MealsContext, rồi màn hình mới hiện thông báo
 import type { DailyTotals, Meal, NewMeal, RawMeal, UpdateMeal } from "@/features/meals/mealTypes";
 import { apiRequest } from "../../utils/apiClient";
-
-// File này là chặng giữa MealsContext và backend. Chỉ lo gọi mạng,
-// không giữ state nào cả.
 
 // Backend gọi mã là _id còn app gọi là id, nên phải đổi tên trường ở đây.
 // Đổi ở một chỗ duy nhất để các màn hình không phải biết tới _id.

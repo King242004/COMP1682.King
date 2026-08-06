@@ -1,4 +1,11 @@
-// Thanh tab dùng chung trong Community và hồ sơ người dùng.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Thanh tab dùng chung trong Cộng đồng và trang cá nhân.
+//
+// Ai gọi tới: CommunityScreen, UserProfileScreen
+// Nhận vào:   danh sách tab và tab đang chọn
+// Trả ra:     hàng tab, báo ngược lên màn cha khi bấm
+// Khi lỗi:    không có nhánh lỗi, màn cha mới là nơi giữ state
+
 // Màn cha giữ state tab; component này chỉ hiển thị lựa chọn và báo tab vừa bấm ngược lên.
 import { Pressable, StyleSheet, View } from "react-native";
 import { theme } from "@/ui/theme";

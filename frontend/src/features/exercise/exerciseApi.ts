@@ -1,4 +1,11 @@
-// File này là chặng giữa các màn tập luyện và backend.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa các màn tập luyện và backend. Chỉ lo gọi mạng.
+//
+// Ai gọi tới: LogActivityScreen, GuidedRoutineScreen, ProgressScreen
+// Nhận vào:   mã hoạt động và thời lượng
+// Trả ra:     buổi tập đã lưu kèm calo đốt do server tính
+// Khi lỗi:    ném lỗi lên cho màn hình tự hiện thông báo
+
 // Frontend chỉ gửi mã hoạt động hoặc mã bài hướng dẫn. Backend tự tra MET từ
 // danh mục Compendium của server và tự tính calo từ cân nặng trong hồ sơ.
 import { apiRequest } from "@/utils/apiClient";

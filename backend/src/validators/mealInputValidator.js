@@ -1,4 +1,14 @@
-// Kiểm tra dữ liệu món tại ranh giới API trước khi controller ghi vào MongoDB.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm dữ liệu món TRƯỚC khi controller ghi xuống database.
+//
+// Ai gọi tới: mealController (thêm sửa món), planController (món trong kế hoạch)
+// Nhận vào:   tên món, buổi ăn, calo và ba chất, ngày, nguồn số liệu
+// Trả ra:     dữ liệu đã sạch và đã ép về đúng kiểu, hoặc một câu báo lỗi
+// Khi lỗi:    trả về error kèm tên trường sai, controller dừng luôn
+//
+// Vì sao tách thành file riêng: hai controller khác nhau cùng gọi vào đây,
+// nên luồng thêm món và luồng kế hoạch luôn dùng chung một bộ giới hạn.
+// Nếu mỗi bên tự kiểm thì rất dễ lệch nhau.
 // mealController và planController cùng gọi file này để luồng tạo và sửa món
 // luôn dùng chung giới hạn calo, protein, carb và fat.
 const { INPUT_LIMITS, LEGACY_LIMITS, DIGIT_LIMITS } = require("../config/inputLimits");

@@ -1,5 +1,14 @@
-// File này lo toàn bộ vòng đời một món trong nhật ký: thêm, xem, sửa, xóa.
-// Mọi câu lệnh đều kèm mã người dùng nên không ai đọc hay sửa được món của người khác.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo toàn bộ vòng đời một món trong nhật ký: thêm, xem, sửa, xóa.
+//
+// Ai gọi tới: mealRoutes, tức màn Thêm món, Sửa món, Chi tiết món, Lịch sử món
+// Nhận vào:   tên món, buổi ăn, calo và ba chất, ngày, kèm nguồn số liệu
+// Trả ra:     món đã lưu, hoặc danh sách món theo ngày
+// Khi lỗi:    thiếu trường bắt buộc hoặc số âm thì validator chặn và báo rõ
+//             trường nào sai. Sửa món của người khác thì bị từ chối.
+//
+// Mọi câu lệnh đọc và ghi đều kèm mã người dùng, nên không ai chạm được
+// vào món của người khác dù có đoán đúng mã món.
 const Meal = require("../models/Meal");
 const { requestTodayKey } = require("../utils/dateUtils");
 const { validateMealInput, validateMealName, validateNutritionValues } = require("../validators/mealInputValidator");

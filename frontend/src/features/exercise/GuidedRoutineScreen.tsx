@@ -1,4 +1,11 @@
-// Màn Bài tập có hướng dẫn. Đây là file BẮT ĐẦU của luồng tập theo bước.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Bài tập có hướng dẫn. File BẮT ĐẦU của luồng tập theo bước.
+//
+// Ai gọi tới: LogActivityScreen và Kế hoạch tuần
+// Nhận vào:   mã bài tập và thời lượng đã chọn
+// Trả ra:     không trả gì, tập xong thì tự ghi một buổi tập vào nhật ký
+// Khi lỗi:    thoát giữa chừng thì KHÔNG ghi gì, chỉ tập hết mới tính
+
 // LUỒNG TẬP THEO HƯỚNG DẪN
 // 1. Chọn một bài từ màn Ghi buổi tập, mở màn này
 // 2. Bấm Bắt đầu, đồng hồ chạy theo từng bước

@@ -1,4 +1,11 @@
-// Màn Chi tiết món. Đây là file BẮT ĐẦU của luồng xóa món.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Chi tiết món. File BẮT ĐẦU của luồng xóa món.
+//
+// Ai gọi tới: HomeScreen và MealHistoryScreen
+// Nhận vào:   mã món cần xem
+// Trả ra:     chi tiết món, kèm nút Sửa và nút Xóa
+// Khi lỗi:    xóa thì hỏi xác nhận trước, tránh bấm nhầm mất dữ liệu
+
 // LUỒNG XÓA MÓN
 // 1. Bấm Xóa, hộp thoại hỏi xác nhận
 // 2. MealsContext.deleteMeal

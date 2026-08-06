@@ -1,5 +1,13 @@
-// File này là chặng giữa phần Quét và backend. Chỉ lo gọi mạng và nén ảnh,
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa phần Quét và backend. Chỉ lo gọi mạng và nén ảnh,
 // không giữ state và không vẽ gì.
+//
+// Ai gọi tới: ScanScreen (quét ảnh, quét mã vạch),
+//             AddMealScreen (nút Ước tính khi gõ tay tên món)
+// Nhận vào:   đường dẫn ảnh trong máy, hoặc dãy số mã vạch, hoặc tên món
+// Trả ra:     danh sách món kèm calo và ba chất
+// Khi lỗi:    ném lỗi lên cho màn hình tự hiện thông báo
+//
 // Ba việc, ba địa chỉ:
 //   scanPhoto          POST /scan/photo     ảnh món, AI trả tối đa ba ứng viên
 //   scanBarcode        POST /scan/barcode   mã vạch, backend tra Open Food Facts

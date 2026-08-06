@@ -1,4 +1,11 @@
-// File này chứa các hàm nhỏ dùng chung cho các màn Community.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Các hàm nhỏ dùng chung cho màn Cộng đồng, chính là đổi thời gian đăng thành chữ dễ đọc.
+//
+// Ai gọi tới: PostTile, PostDetailScreen, NotificationsScreen
+// Nhận vào:   mốc thời gian đăng bài
+// Trả ra:     chữ kiểu 3 phút trước, 2 giờ trước
+// Khi lỗi:    không có nhánh lỗi
+
 // Việc chính là đổi thời gian đăng bài thành chữ dễ đọc.
 import type { Strings } from "@/i18n";
 import { dateKey } from "@/utils/dateUtils";

@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Hàng chấm tròn báo những ngày nào đã ghi món trong khoảng đang xem.
+//
+// Ai gọi tới: ProgressScreen
+// Nhận vào:   danh sách ngày có ghi món
+// Trả ra:     một hàng chấm, ngày có món thì tô đậm
+// Khi lỗi:    không có nhánh lỗi
+
 import { StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

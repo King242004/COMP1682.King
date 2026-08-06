@@ -1,4 +1,11 @@
-// Thẻ trạng thái dùng chung cho danh sách Community: đang trống, lỗi mạng hoặc cần thử lại.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Thẻ trạng thái dùng chung cho các danh sách Community: đang trống, lỗi mạng, cần thử lại.
+//
+// Ai gọi tới: CommunityScreen, NotificationsScreen, PostDetailScreen, UserProfileScreen
+// Nhận vào:   nội dung và hành động muốn hiện
+// Trả ra:     một thẻ trạng thái kèm nút thử lại nếu có
+// Khi lỗi:    không có nhánh lỗi, đây chính là component lo phần báo lỗi
+
 // Các màn feed, thông báo, bài chi tiết và hồ sơ truyền nội dung cùng hành động vào đây.
 import { Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";

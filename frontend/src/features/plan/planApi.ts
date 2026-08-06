@@ -1,4 +1,11 @@
-// File này là chặng giữa màn Kế hoạch tuần và backend.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa màn Kế hoạch tuần và backend, có lưu tạm kế hoạch và danh sách đi chợ.
+//
+// Ai gọi tới: WeeklyPlanScreen
+// Nhận vào:   phạm vi ngày, ghi chú khẩu vị, và các thao tác trên món kế hoạch
+// Trả ra:     kế hoạch của cả tuần, hoặc danh sách đi chợ
+// Khi lỗi:    AI hết lượt thì trả QUOTA. Chưa đủ hồ sơ thì trả PROFILE_INCOMPLETE
+
 // Ngoài gọi mạng, nó còn lo lưu tạm kế hoạch tuần và danh sách đi chợ
 // trong bộ nhớ máy, để mở lại không phải chờ và không tốn lượt gọi AI.
 import AsyncStorage from "@react-native-async-storage/async-storage";

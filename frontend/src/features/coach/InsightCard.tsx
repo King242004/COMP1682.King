@@ -1,4 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Thẻ điểm sức khỏe ở đầu màn Coach.
+//
+// Ai gọi tới: CoachScreen
+// Nhận vào:   điểm tổng và bốn phần điểm thành phần
+// Trả ra:     thẻ điểm, luôn hiện đủ bốn phần chứ không chỉ con số tổng
+// Khi lỗi:    chưa đủ hồ sơ thì mời hoàn tất, không hiện điểm bịa
+
 // Điểm này do backend TÍNH bằng công thức cố định, không phải AI chấm.
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -83,7 +90,7 @@ export function InsightCard({ insight, loading, sending, failText, profileIncomp
       <View style={styles.breakdown}>
         {scoreRows.map(([label, value, max]) => (
           <View key={label} style={styles.scorePart}>
-            <AppText variant="subtle" style={styles.scorePartLabel}>{label}</AppText>
+            <AppText variant="subtle" style={styles.scorePartLabel} numberOfLines={1}>{label}</AppText>
             <AppText style={styles.scorePartValue}>{value}/{max}</AppText>
           </View>
         ))}

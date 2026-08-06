@@ -1,4 +1,11 @@
-// File này là chặng giữa các màn Community và backend.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa các màn Cộng đồng và backend. Chỉ lo gọi mạng.
+//
+// Ai gọi tới: mọi màn trong thư mục community
+// Nhận vào:   bài đăng, ảnh, mã người dùng, từ khóa tìm
+// Trả ra:     danh sách bài, danh sách người, hoặc thông báo
+// Khi lỗi:    ném lỗi lên cho màn hình tự hiện thẻ trạng thái
+
 // Chỉ lo gọi mạng, không giữ state.
 // Gồm bốn nhóm hàm khớp với bốn controller ở backend:
 //   bài đăng, danh sách bài, quan hệ theo dõi, và thông báo.

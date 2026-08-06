@@ -1,4 +1,11 @@
-// Lưới ô vuông cả tháng, dùng cho chế độ xem Tháng.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lưới ô vuông cả tháng, ô càng đậm là ngày đó ăn càng nhiều calo.
+//
+// Ai gọi tới: ProgressScreen, ở chế độ xem Tháng
+// Nhận vào:   calo từng ngày trong tháng
+// Trả ra:     một lưới ô vuông đã tô màu theo mức calo
+// Khi lỗi:    ngày chưa ghi món thì để ô trống, không tô màu 0
+
 import { Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";

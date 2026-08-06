@@ -1,4 +1,10 @@
-// Vòng tròn tiến độ, dùng cho vòng calo ở Trang chủ và điểm sức khỏe ở Coach.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Vẽ vòng tròn tiến độ.
+//
+// Ai gọi tới: Trang chủ (vòng calo), Coach (vòng điểm sức khỏe)
+// Nhận vào:   giá trị hiện tại và giá trị đích
+// Trả ra:     một vòng tròn đã tô theo đúng tỷ lệ
+// Khi lỗi:    vượt quá đích thì vòng dừng ở đầy, không vẽ tràn
 import { StyleSheet, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { theme } from "../theme";

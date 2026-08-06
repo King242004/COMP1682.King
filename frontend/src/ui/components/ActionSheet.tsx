@@ -1,4 +1,10 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Bảng lựa chọn trượt lên từ đáy màn hình.
+//
+// Ai gọi tới: TabBar, ở menu nút quét giữa thanh tab
+// Nhận vào:   danh sách lựa chọn và hàm chạy khi chọn
+// Trả ra:     một bảng trượt lên, tự đóng sau khi chọn
+// Khi lỗi:    không có nhánh lỗi
 // Nơi dùng: menu nút quét ở thanh tab dưới.
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";

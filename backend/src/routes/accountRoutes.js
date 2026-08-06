@@ -1,3 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+//
+// Ai gọi tới: app.js, gắn cả file này vào /api/user
+// Nhận vào:   request từ app điện thoại
+// Trả ra:     không tự trả gì, chuyển thẳng cho accountController
+// Khi lỗi:    địa chỉ cần thẻ mà thiếu thẻ thì bị chặn ngay tại đây
+//
 // Bảng chia việc cho tài khoản, địa chỉ bắt đầu bằng /api/user.
 // Ở đây thẻ đăng nhập gắn cho TỪNG địa chỉ, không gắn chung cả file,
 // vì ba địa chỉ quên mật khẩu phải chạy được khi chưa đăng nhập.

@@ -1,4 +1,11 @@
-// Màn Tiến trình. Đây là file BẮT ĐẦU của luồng xem thống kê.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Tiến trình. File BẮT ĐẦU của luồng xem thống kê.
+//
+// Ai gọi tới: ProfileScreen
+// Nhận vào:   khoảng ngày người dùng chọn, theo tuần hoặc tháng
+// Trả ra:     biểu đồ calo, chuỗi ngày ghi món, hoạt động, và cân nặng
+// Khi lỗi:    một phần hỏng thì phần đó báo lỗi riêng, các phần khác vẫn hiện
+
 // LUỒNG XEM TIẾN TRÌNH, tự chạy khi mở màn
 // 1. useEffect gọi MealsContext.fetchMealHistory
 // 2. mealsApi.fetchMealHistoryRequest    (GET /meals/history)

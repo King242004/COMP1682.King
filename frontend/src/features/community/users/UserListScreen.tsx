@@ -1,4 +1,11 @@
-// Một màn dùng cho cả danh sách người theo dõi và đang theo dõi.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Một màn dùng cho CẢ hai danh sách: người theo dõi mình, và người mình theo dõi.
+//
+// Ai gọi tới: UserProfileScreen
+// Nhận vào:   mã người dùng và loại danh sách cần xem
+// Trả ra:     danh sách người kèm nút theo dõi
+// Khi lỗi:    danh sách rỗng thì hiện thẻ trạng thái
+
 import { useState, useCallback } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";

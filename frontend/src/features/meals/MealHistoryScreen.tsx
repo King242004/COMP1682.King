@@ -1,4 +1,11 @@
-// Màn Lịch sử món.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Lịch sử món, xem lại các món đã ghi theo ngày.
+//
+// Ai gọi tới: ProfileScreen
+// Nhận vào:   không nhận gì, tự tải khi mở màn
+// Trả ra:     danh sách món gom theo ngày
+// Khi lỗi:    chưa ghi món nào thì hiện lời nhắc, không hiện màn trống
+
 // LUỒNG XEM LỊCH SỬ, tự chạy khi mở màn
 // 1. useEffect gọi MealsContext.fetchMealHistory
 // 2. mealsApi.fetchMealHistoryRequest    (GET /meals/history)

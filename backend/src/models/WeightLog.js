@@ -1,3 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng một lần ghi cân nặng.
+//
+// Ai gọi tới: weightController (ghi và đọc), coachContext (đọc để đưa cho AI)
+// Nhận vào:   số cân nặng và ngày
+// Trả ra:     một dòng WeightLog đã kiểm hợp lệ
+// Khi lỗi:    thiếu cân nặng hoặc thiếu ngày thì Mongoose chặn lại
+//
+// Cân nặng mới nhất ở đây luôn được đồng bộ ngược vào trường weight của User,
+// để chỗ nào cần cân nặng hiện tại thì đọc một chỗ là đủ.
 const mongoose = require("mongoose");
 
 // Bảng nhật ký cân nặng.

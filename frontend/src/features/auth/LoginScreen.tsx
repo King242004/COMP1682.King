@@ -1,4 +1,12 @@
+// ═══ FILE NÀY LÀM GÌ ═══
 // Màn Đăng nhập. Đây là file BẮT ĐẦU của luồng đăng nhập.
+//
+// Ai gọi tới: app/index đá tới đây khi máy chưa có phiên đăng nhập nào
+// Nhận vào:   email và mật khẩu người dùng gõ
+// Trả ra:     không trả gì, chỉ chuyển màn sang /tabs khi đăng nhập được
+// Khi lỗi:    sai email hoặc mật khẩu thì hiện một câu chung chung,
+//             không nói rõ sai cái nào, để người lạ không dò được tài khoản
+//
 // LUỒNG ĐĂNG NHẬP
 // 1. Bấm nút Đăng nhập tại đây, chạy handleLogin
 // 2. AuthContext.login

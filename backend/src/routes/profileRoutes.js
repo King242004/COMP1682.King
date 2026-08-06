@@ -1,3 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+//
+// Ai gọi tới: app.js, gắn cả file này vào /api/profile
+// Nhận vào:   request từ màn Hồ sơ, màn Mục tiêu, và bước thiết lập lần đầu
+// Trả ra:     không tự trả gì, chuyển thẳng cho profileController
+// Khi lỗi:    thiếu thẻ đăng nhập thì chặn ngay, cả file đều cần thẻ
+//
 // Bảng chia việc cho hồ sơ cá nhân, địa chỉ bắt đầu bằng /api/profile.
 // GET /  lấy hồ sơ kèm chỉ số BMI và TDEE
 // PUT /  lưu hồ sơ sau khi sửa, hoặc lưu bước thiết lập lần đầu

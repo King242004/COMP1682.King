@@ -1,13 +1,22 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng của một món ĐÃ ăn trong nhật ký.
+// Đây là bảng trung tâm của app: gần như mọi con số trên Trang chủ
+// và Tiến trình đều cộng từ bảng này ra.
+//
+// Ai gọi tới: mealController (thêm sửa xóa), planController (nút "Đã ăn"),
+//             coachContext (gom món đã ăn để đưa cho AI Coach)
+// Nhận vào:   object món do controller dựng, đã qua validator
+// Trả ra:     một dòng Meal đã kiểm hợp lệ
+// Khi lỗi:    thiếu tên, buổi ăn hoặc ngày thì Mongoose chặn lại
+//
+// Năm lối ghi vào bảng này: nhập tay, quét ảnh, quét mã vạch,
+// bấm "Đã ăn" ở kế hoạch tuần, và bấm "Thêm" trên tin nhắn Coach.
+//
+// Ngày lưu dạng chuỗi "2026-08-03" chứ không lưu kiểu ngày tháng,
+// để so sánh và lọc theo ngày địa phương mà không lo lệch múi giờ.
 const mongoose = require("mongoose");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
 const nutritionFields = require("./nutritionFields");
-
-// Bảng nhật ký món đã ăn.
-// Nơi ghi vào: màn Thêm món, sau khi quét ảnh hoặc mã vạch,
-//   bấm "Đã ăn" ở kế hoạch tuần, và bấm "Thêm" trên tin nhắn Coach.
-// Nơi đọc ra: màn Trang chủ, màn Tiến trình, và phần dữ liệu đưa cho Coach.
-// Ngày lưu dạng chuỗi "2026-08-03" chứ không lưu kiểu ngày tháng,
-// để so sánh và lọc theo ngày địa phương mà không lo lệch múi giờ.
 const mealSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

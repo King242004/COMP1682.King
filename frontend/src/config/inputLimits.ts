@@ -1,4 +1,10 @@
-// File này giữ giới hạn độ dài của mọi ô người dùng nhập trong app.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ giới hạn độ dài của mọi ô người dùng nhập trong app.
+//
+// Ai gọi tới: mọi màn có ô nhập chữ
+// Nhận vào:   không nhận gì, đây là bảng số khai sẵn
+// Trả ra:     các con số giới hạn
+// Khi lỗi:    không có nhánh lỗi. Backend vẫn là nơi kiểm cuối cùng, đây chỉ chặn sớm
 // Bản gốc nằm ở backend/src/config/inputLimits.js. Backend vẫn là nơi kiểm
 // cuối cùng, file này chỉ để ô nhập dừng sớm ngay trên máy người dùng,
 // nhờ vậy không ai phải gửi request lên rồi mới biết mình gõ quá dài.

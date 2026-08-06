@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ đúng MỘT con số đếm, gọi là revision, làm tín hiệu báo "dữ liệu đã đổi".
+//
+// Ai gọi tới: MealsContext tăng số này sau mỗi lần thêm sửa xóa món.
+//             Trang chủ, Tiến trình và Coach theo dõi số này để tự tải lại.
+// Nhận vào:   không nhận gì, chỉ có lệnh markHealthDataChanged
+// Trả ra:     con số hiện tại, và hàm để tăng nó lên
+// Khi lỗi:    không có nhánh lỗi, đây chỉ là một con số trong bộ nhớ
+//
+// Vì sao cần: thêm một món ở màn Thêm món thì ba màn khác phải đổi theo.
+// Để các màn tự gọi nhau thì rối như mạng nhện, nên dùng chung một con số
+// làm tín hiệu. Màn nào quan tâm thì đặt nó vào useEffect là xong.
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 type HealthDataRefreshContextValue = {

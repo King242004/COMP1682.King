@@ -1,4 +1,11 @@
-// Bộ chọn loại bữa dùng chung cho cả màn thêm và sửa món.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bộ chọn buổi ăn, dùng chung cho cả màn Thêm món và Sửa món.
+//
+// Ai gọi tới: AddMealScreen, EditMealScreen
+// Nhận vào:   buổi đang chọn
+// Trả ra:     bốn nút sáng, trưa, tối, bữa phụ
+// Khi lỗi:    không có nhánh lỗi
+
 // Nhờ đó cùng một thao tác luôn có cùng thiết kế.
 import { Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -8,7 +15,7 @@ import { AppText } from "@/ui/components/AppText";
 import { MEAL_TYPE_META, type MealTypeKey } from "@/features/meals/mealTypeDisplay";
 
 export function MealTypeSelector({ value, onChange }: {
-  value: MealTypeKey;
+  value: MealTypeKey | null;
   onChange: (t: MealTypeKey) => void;
 }) {
   const t = useT();

@@ -1,4 +1,13 @@
-// File này lo nhật ký tập luyện: ghi buổi tập, xem theo ngày, xem lịch sử, xóa.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo nhật ký tập luyện: ghi buổi tập, xem theo ngày, xem lịch sử, xóa.
+//
+// Ai gọi tới: exerciseRoutes, tức màn Ghi buổi tập và Bài tập có hướng dẫn
+// Nhận vào:   mã hoạt động và thời lượng
+// Trả ra:     buổi tập đã lưu, kèm số calo đã đốt
+// Khi lỗi:    mã hoạt động lạ thì từ chối. Ghi cho ngày tương lai thì bị chặn.
+//
+// Điểm quan trọng: calo đã đốt do SERVER tính từ bảng MET, app KHÔNG được gửi
+// con số đó lên. Tin con số app gửi thì người dùng khai khống được.
 const Exercise = require("../models/Exercise");
 const User = require("../models/User");
 const { requestTodayKey } = require("../utils/dateUtils");

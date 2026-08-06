@@ -1,3 +1,16 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo vòng đời của mã xác minh 6 số, dùng chung cho cả đăng ký lẫn quên mật khẩu.
+//
+// Ai gọi tới: authController (đăng ký), accountController (quên mật khẩu)
+// Nhận vào:   email, loại việc, và mã người dùng gõ vào
+// Trả ra:     mã mới đã lưu, hoặc kết quả kiểm mã đúng hay sai
+// Khi lỗi:    xin mã quá sớm thì bị chặn, gõ sai quá số lần cho phép
+//             hoặc mã hết hạn thì báo phải xin mã mới
+//
+// Ba lớp bảo vệ của mã, đây là phần hay bị hỏi khi bảo vệ:
+//   1. Chặn spam. Chưa hết thời gian chờ thì không xin được mã mới.
+//   2. Giới hạn số lần sai, hết lượt là mã chết luôn.
+//   3. Mã chỉ dùng được MỘT lần, dùng xong là xóa.
 const OTP = require("../models/OTP");
 const { OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_MS, isOTPMatch } = require("../utils/otpSecurity");
 

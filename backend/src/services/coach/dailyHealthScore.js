@@ -1,6 +1,14 @@
-// File này chấm điểm sức khỏe trong ngày, thang 100.
-// Điểm do code tính chứ KHÔNG do AI chấm, nên cùng dữ liệu luôn ra cùng điểm.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chấm điểm sức khỏe trong ngày, thang 100.
+//
+// Ai gọi tới: coachController, khi app xin điểm cho thẻ ở Trang chủ
+// Nhận vào:   món đã ăn, buổi tập, mục tiêu calo của ngày đó
+// Trả ra:     điểm tổng, kèm breakdown chia bốn phần
+// Khi lỗi:    thiếu dữ liệu phần nào thì phần đó 0 điểm, không bịa số
+//
+// Điểm do CODE tính chứ không do AI chấm, nên cùng dữ liệu luôn ra cùng điểm.
 // AI chỉ nhận điểm này rồi viết lời bình.
+//
 // CẦN NÓI RÕ KHI BẢO VỆ: đây là chỉ số tổng hợp do người làm dự án tự thiết kế,
 // không phải thang đo y khoa có sẵn. Bốn trọng số là lựa chọn thiết kế.
 // Vì vậy hàm luôn trả về breakdown, và giao diện phải hiện đủ bốn phần điểm

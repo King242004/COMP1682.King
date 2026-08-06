@@ -1,4 +1,14 @@
-// Màn Thêm bữa ăn. Đây là file BẮT ĐẦU của luồng thêm món.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Thêm bữa ăn. File BẮT ĐẦU của luồng thêm món, một trong bốn luồng defend.
+//
+// Ai gọi tới: Trang chủ, màn Quét, thẻ gợi ý món, bài Community, và nút ghi
+//             lại món cũ. Tổng cộng NĂM lối vào cùng dùng chung màn này.
+// Nhận vào:   tên món và khẩu phần người dùng gõ, hoặc dữ liệu điền sẵn từ
+//             lối vào tương ứng, truyền qua tham số route
+// Trả ra:     không trả gì, lưu xong thì quay lại đúng màn trước đó
+// Khi lỗi:    AI hết lượt thì báo và vẫn cho gõ tay số dinh dưỡng.
+//             Chưa chọn buổi ăn hoặc chưa có đủ số thì nút Lưu bị khóa.
+//
 // LUỒNG THÊM MÓN
 // 1. Gõ tên món và khẩu phần, nguyên liệu là tuỳ chọn
 // 2. Bấm Ước tính, chạy handleEstimate
@@ -7,7 +17,7 @@
 // 5. Số hiện ra kèm nhãn nguồn, người dùng sửa tay được
 // 6. Bấm Lưu, chạy handleSave
 // 7. MealsContext.addMeals            (POST /meals)
-// 8. router.back, Trang chủ thấy dữ liệu đổi nên tự tải lại
+// 8. Quay lại màn trước đó, màn đó thấy dữ liệu đổi nên tự tải lại
 // Màn này còn được DÙNG LẠI cho bốn lối vào khác: quét ảnh, quét mã vạch,
 // bài Community, và ghi lại món cũ. Các lối đó truyền sẵn dữ liệu qua tham số
 // route, và nutritionSourceFromParam quyết định nhãn nguồn hiện lên là gì.
@@ -96,7 +106,7 @@ export default function AddMealScreen() {
     prefillNote,
     source,
   } = useLocalSearchParams<{
-    mealType: MealTypeKey;
+    mealType?: MealTypeKey;
     date?: string;
     prefillName?: string;
     prefillCalories?: string;
@@ -143,7 +153,7 @@ export default function AddMealScreen() {
   });
 
   const [items, setItems] = useState<DraftMeal[]>(() => [initialItem()]);
-  const [mealType, setMealType] = useState<MealTypeKey>(defaultType ?? "breakfast");
+  const [mealType, setMealType] = useState<MealTypeKey | null>(defaultType ?? null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [estimateError, setEstimateError] = useState<{ id: number; message: string } | null>(null);
@@ -157,7 +167,7 @@ export default function AddMealScreen() {
   useEffect(() => {
     nextItemId.current = 2;
     setItems([initialItem()]);
-    setMealType(defaultType ?? "breakfast");
+    setMealType(defaultType ?? null);
     setErrors({});
     setTouched({});
     setEstimateError(null);
@@ -331,7 +341,7 @@ export default function AddMealScreen() {
 
   // BƯỚC 6 CỦA LUỒNG. Người dùng bấm Lưu.
   const handleSave = async () => {
-    if (isSaving) return;
+    if (isSaving || !mealType) return;
     touchFields(["name", "portion", "calories", "protein", "carbs", "fat"]);
     const allErrors = collectErrors(true);
     setErrors(allErrors);
@@ -352,6 +362,9 @@ export default function AddMealScreen() {
         date: logDate,
         note: item.details.trim() || undefined,
       })));
+      // Quay lại đúng màn người dùng đang đứng trước khi vào đây.
+      // Màn quét dùng router.replace nên nó đã bị thay thế khỏi ngăn xếp,
+      // back sẽ về thẳng màn trước đó chứ không rơi ngược lại vào camera.
       router.back();
     } catch (error) {
       setSaveError(getUserErrorMessage(error, t, t.meals.saveFailed));
@@ -626,7 +639,7 @@ export default function AddMealScreen() {
             title={isSaving ? t.common.saving : t.meals.saveMeal}
             size="lg"
             left={<Ionicons name="checkmark" size={19} color="#fff" />}
-            disabled={!allItemsHaveNutrition || isSaving}
+            disabled={!mealType || !allItemsHaveNutrition || isSaving}
             onPress={handleSave}
           />
           <Button

@@ -1,4 +1,10 @@
-// Hook làm số chạy dần thay vì nhảy ngay sang giá trị mới.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Làm một con số chạy dần lên thay vì nhảy ngay sang giá trị mới.
+//
+// Ai gọi tới: Trang chủ, ở vòng calo
+// Nhận vào:   giá trị đích
+// Trả ra:     giá trị trung gian, đổi dần theo từng khung hình
+// Khi lỗi:    rời màn giữa chừng thì hoạt ảnh tự dừng, không rò bộ nhớ
 // Nơi dùng: vòng calo ở Trang chủ, để thêm một món thì số chạy mượt.
 import { useEffect, useRef, useState } from "react";
 

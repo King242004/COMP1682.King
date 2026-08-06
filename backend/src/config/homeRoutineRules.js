@@ -1,3 +1,14 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai những lựa chọn mà màn Bài tập tại nhà THỰC SỰ có.
+//
+// Ai gọi tới: planController, khi lọc gợi ý tập mà AI vừa dựng
+// Nhận vào:   nhóm bài tập và thời lượng mà AI đề xuất
+// Trả ra:     đúng hoặc sai, là app có làm được đề xuất đó không
+// Khi lỗi:    không khớp thì bỏ đề xuất đó đi
+//
+// Vì sao cần: AI có thể gợi ý "bơi 45 phút", nhưng app không có mục bơi
+// và cũng không có mốc 45 phút. Gợi ý như vậy thì người dùng bấm vào không được.
+//
 // Những lựa chọn mà màn Bài tập tại nhà thực sự hỗ trợ.
 // Coach dùng danh sách này để không gợi ý môn bên ngoài app.
 const HOME_EXERCISE_CATEGORIES = ["everyday", "recovery", "strength", "cardio"];

@@ -1,4 +1,11 @@
-// Một bong bóng tin nhắn trong màn Coach. Chỉ vẽ, không gọi mạng, không giữ state.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Vẽ một bong bóng tin nhắn trong màn Coach. Chỉ vẽ, không gọi mạng.
+//
+// Ai gọi tới: CoachScreen
+// Nhận vào:   nội dung tin, ai gửi, và món kèm theo nếu có
+// Trả ra:     một bong bóng, kèm nút Thêm vào nhật ký nếu tin có món
+// Khi lỗi:    không có nhánh lỗi
+
 // Tin nhắn của Coach có thể kèm một món ăn AI gợi ý. Lúc đó bong bóng hiện thêm
 // thẻ dinh dưỡng cùng nút mở màn Thêm món, và đổi thành nhãn đã ghi sau khi lưu.
 import { Image, Pressable, StyleSheet, View } from "react-native";

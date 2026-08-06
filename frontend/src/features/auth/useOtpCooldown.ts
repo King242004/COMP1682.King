@@ -1,4 +1,11 @@
-// Hook đếm thời gian chờ gửi lại OTP cho màn Đăng ký và Quên mật khẩu.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Đếm ngược thời gian chờ trước khi được gửi lại mã.
+//
+// Ai gọi tới: RegisterScreen, ForgotPasswordScreen
+// Nhận vào:   lệnh bắt đầu đếm, gọi sau khi gửi mã thành công
+// Trả ra:     số giây còn lại, để màn hình khóa nút gửi lại
+// Khi lỗi:    rời màn giữa chừng thì đồng hồ tự dừng, không rò bộ nhớ
+
 // Màn gọi start sau khi API gửi mã thành công; hook trả số giây còn lại để khóa nút gửi lại.
 import { useEffect, useState } from "react";
 

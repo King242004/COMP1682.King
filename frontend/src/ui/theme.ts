@@ -1,3 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ toàn bộ màu, khoảng cách, bo góc và cỡ chữ của app, ở một chỗ duy nhất.
+//
+// Ai gọi tới: gần như mọi file có vẽ giao diện
+// Nhận vào:   không nhận gì, đây là bảng giá trị khai sẵn
+// Trả ra:     màu, khoảng cách, bo góc, cỡ chữ
+// Khi lỗi:    không có nhánh lỗi
+//
 // File này giữ toàn bộ màu, khoảng cách, bo góc và cỡ chữ của app.
 // Mọi màn đều lấy giá trị từ đây thay vì tự ghi số, nên đổi một chỗ
 // là cả app đổi theo.

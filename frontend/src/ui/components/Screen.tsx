@@ -1,4 +1,10 @@
-// Khung nền chung của mọi màn hình.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khung nền chung của mọi màn hình, lo màu nền, lề an toàn và tránh bàn phím.
+//
+// Ai gọi tới: gần như mọi màn hình
+// Nhận vào:   nội dung màn hình
+// Trả ra:     màn đã có nền, đã tránh tai thỏ và tránh bàn phím che ô nhập
+// Khi lỗi:    không có nhánh lỗi
 import { ReactNode } from "react";
 import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, StatusBar, TouchableWithoutFeedback, View, type ViewStyle } from "react-native";
 import { theme } from "../theme";

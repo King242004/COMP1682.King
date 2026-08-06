@@ -1,3 +1,14 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Ba cách trả lời cùng một câu hỏi "món này bao nhiêu calo":
+// nhìn ảnh đoán món, tra mã vạch sản phẩm, và ước tính từ tên món gõ tay.
+//
+// Ai gọi tới: scanRoutes, tức màn Quét và nút Ước tính ở màn Thêm món
+// Nhận vào:   ảnh chụp, hoặc dãy số mã vạch, hoặc tên món kèm khẩu phần
+// Trả ra:     món kèm calo và ba chất, để app điền sẵn vào màn Thêm món
+// Khi lỗi:    AI hết lượt thì trả QUOTA, không nhận ra món thì mời nhập tay,
+//             mã vạch không có trong kho thì mời gõ tên món
+//
+// Ảnh CHỈ dùng trong lúc gọi rồi bỏ, không lưu lại ở đâu cả.
 const { visionModels, nutritionModels } = require("../config/geminiModels");
 const { generateWithFallback } = require("../services/aiClient");
 const { hasLanguageMismatch, buildLanguageCorrectionPrompt, mergeLocalizedText } = require("../services/scanTranslation");
@@ -97,6 +108,9 @@ Return ONLY valid JSON in this exact format:
   }
 };
 
+// Ước tính calo từ tên món và khẩu phần người dùng gõ tay, tối đa 8 món một lượt.
+// Có bộ nhớ đệm 30 ngày: hỏi lại đúng câu cũ thì lấy kết quả cũ ra dùng,
+// vừa trả lời tức thì vừa đỡ tốn lượt gọi AI.
 exports.estimateNutrition = async (req, res) => {
   const items = Array.isArray(req.body.items)
     ? req.body.items.map((item) => ({

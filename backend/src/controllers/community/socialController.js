@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo quan hệ giữa người với người: theo dõi, bỏ theo dõi, tìm người,
+// gợi ý người nên theo dõi, và xem trang cá nhân của người khác.
+//
+// Ai gọi tới: communityRoutes, tức màn Khám phá người dùng và trang cá nhân
+// Nhận vào:   mã người muốn theo dõi, hoặc từ khóa tìm kiếm
+// Trả ra:     kết quả theo dõi, hoặc danh sách người dùng
+// Khi lỗi:    tự theo dõi chính mình thì bị chặn. Xem trang riêng tư của người
+//             chưa cho phép thì chỉ thấy thông tin cơ bản, không thấy bài.
+//
+// Từ khóa tìm kiếm bị cắt ngắn trước khi ghép vào truy vấn, để một chuỗi
+// dài vô hạn không bị ném thẳng vào bộ tìm kiếm của database.
 const Follow = require("../../models/Follow");
 const Notification = require("../../models/Notification");
 const Post = require("../../models/Post");
@@ -44,6 +56,8 @@ exports.unfollowUser = async (req, res) => {
 exports.searchUsers = async (req, res) => {
   // Cắt từ khóa trước khi ghép vào truy vấn. Dài hơn tên cho phép thì không thể
   // khớp ai, nên đây chỉ là chặn chuỗi vô hạn bị ném thẳng vào $regex.
+  if (req.query.q !== undefined && typeof req.query.q !== "string")
+    return res.status(400).json({ message: "Search query must be text." });
   const query = (req.query.q || "").trim().slice(0, INPUT_LIMITS.USER_SEARCH);
   if (!query) return res.json({ users: [] });
 

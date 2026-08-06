@@ -1,5 +1,6 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
+const Meal = require("../../src/models/Meal");
 const OTP = require("../../src/models/OTP");
 const Post = require("../../src/models/Post");
 const { autoGoal } = require("../../src/services/nutrition/calorieGoal");
@@ -101,6 +102,7 @@ const shift = (days) => {
   check("register with wrong OTP 400", wrongCode.status === 400, `got ${wrongCode.status}`);
   const reg = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1, otp: registrationCode });
   check("register 201", reg.status === 201, `got ${reg.status}`);
+  const userId = reg.data.user._id;
   let token = reg.data.token;
   const existingRequest = await api("/auth/register/send-otp", "POST", { email });
   check("registration OTP request hides existing account with generic 200", existingRequest.status === 200);
@@ -317,8 +319,8 @@ const shift = (days) => {
   check("delete account 200", delOk.status === 200);
   const ghostLogin = await api("/auth/login", "POST", { email, password: PW2 });
   check("login after delete fails 400", ghostLogin.status === 400);
-  const ghostData = await api("/meals/history", "GET", undefined, token);
-  check("all meal data erased after delete", ghostData.status === 200 && ghostData.data.meals.length === 0, `got ${ghostData.status}/${ghostData.data?.meals?.length}`);
+  const remainingMeals = await Meal.countDocuments({ user: userId });
+  check("all meal data erased after delete", remainingMeals === 0, `got ${remainingMeals}`);
 
   console.log(`\n${pass}/${pass + fail} PASS${fail ? ` - ${fail} FAIL` : ""}`);
   await mongoose.disconnect();

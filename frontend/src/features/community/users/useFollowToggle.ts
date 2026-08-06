@@ -1,4 +1,11 @@
-// Hook dùng chung cho nút theo dõi ở các danh sách người dùng.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Hook dùng chung cho nút theo dõi ở mọi danh sách người dùng.
+//
+// Ai gọi tới: CommunityUserList, UserProfileScreen, DiscoverScreen
+// Nhận vào:   mã người muốn theo dõi
+// Trả ra:     trạng thái theo dõi mới
+// Khi lỗi:    đổi giao diện TRƯỚC cho mượt, backend báo lỗi thì hoàn tác lại như cũ
+
 // Nó cập nhật giao diện trước, gọi communityApi và hoàn tác nếu backend báo lỗi.
 import { useCallback, useState } from "react";
 import { followUser, unfollowUser, type DiscoverUser } from "../communityApi";

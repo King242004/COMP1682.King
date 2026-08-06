@@ -1,3 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Giữ danh sách món ăn cho toàn app. Mọi màn lấy món bằng useMeals.
+//
+// Ai gọi tới: Trang chủ, Thêm món, Sửa món, Lịch sử món, Tiến trình
+// Nhận vào:   món cần thêm, sửa hoặc xóa, kèm ngày cần xem
+// Trả ra:     danh sách món theo ngày, kèm tổng calo và ba chất
+// Khi lỗi:    gọi mạng hỏng thì ném lỗi lên cho màn hình tự hiện thông báo,
+//             file này không tự hiện gì cả
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { useHealthDataRefresh } from "../../context/HealthDataRefreshContext";

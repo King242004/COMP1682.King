@@ -1,4 +1,11 @@
-// Hộp nhập mã vạch thủ công tự quản lý ô nhập và kiểm tra dữ liệu.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Hộp gõ tay mã vạch, dùng khi camera không đọc được mã.
+//
+// Ai gọi tới: ScanScreen
+// Nhận vào:   dãy số người dùng gõ
+// Trả ra:     mã vạch đã kiểm hợp lệ
+// Khi lỗi:    mã không đủ 8 tới 14 chữ số thì nút xác nhận bị khóa
+
 // Dùng khi camera không đọc được mã vì mã mờ hoặc bao bì bị nhăn.
 import { useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, View } from "react-native";

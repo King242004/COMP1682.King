@@ -1,4 +1,11 @@
-// Màn Thiết lập lần đầu. Đây là file BẮT ĐẦU của luồng thiết lập hồ sơ.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Thiết lập lần đầu. File BẮT ĐẦU của luồng dựng hồ sơ.
+//
+// Ai gọi tới: app/onboarding, mở ngay sau khi đăng ký xong
+// Nhận vào:   giới tính, tuổi, chiều cao, cân nặng, mục tiêu, bệnh nền, mức vận động
+// Trả ra:     không trả gì, lưu xong thì đi thẳng vào /tabs
+// Khi lỗi:    thiếu trường bắt buộc thì nút Tiếp bị khóa, không cho bỏ qua
+
 // Bốn bước nằm trong CÙNG một màn, đổi bằng biến step chứ không chuyển màn.
 // LUỒNG THIẾT LẬP LẦN ĐẦU
 // 1. Đăng ký xong, RegisterScreen đá tới đây

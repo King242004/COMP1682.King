@@ -1,3 +1,12 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+//
+// Ai gọi tới: app.js, gắn cả file này vào /api/coach
+// Nhận vào:   request từ tab Coach và thẻ điểm sức khỏe ở Trang chủ
+// Trả ra:     không tự trả gì, chuyển thẳng cho coachController
+// Khi lỗi:    thiếu thẻ đăng nhập thì chặn ngay. Gọi AI quá dày thì
+//             aiLimiter chặn để không đốt hết lượt Gemini
+//
 // Bảng chia việc cho AI Coach, địa chỉ bắt đầu bằng /api/coach.
 // Ba địa chỉ dưới tốn lượt gọi AI nên có thêm aiLimiter:
 // GET  /insight      mở tab Coach, lấy điểm sức khỏe và nhận xét trong ngày

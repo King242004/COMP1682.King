@@ -1,6 +1,12 @@
-// Thanh đầu màu xanh, chỉ dùng ở tab Trang chủ.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Thanh đầu màu xanh của tab Trang chủ, gồm lời chào và chuỗi ngày ghi món.
+//
+// Ai gọi tới: app/tabs/_layout, chỉ gắn cho riêng tab Trang chủ
+// Nhận vào:   tên người dùng và danh sách món để đếm chuỗi ngày
+// Trả ra:     thanh đầu đã vẽ xong
+// Khi lỗi:    chưa có tên thì hiện lời chào chung, không để trống
 import { useCallback, useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Image, Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -43,7 +49,11 @@ export function AppHeader() {
       <View style={styles.header}>
         <View style={styles.left}>
           <View style={styles.avatar}>
-            <AppText style={styles.avatarText}>{(user?.name ?? "U")[0].toUpperCase()}</AppText>
+            {user?.avatar ? (
+              <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+            ) : (
+              <AppText style={styles.avatarText}>{(user?.name ?? "U")[0].toUpperCase()}</AppText>
+            )}
           </View>
           <View>
             <AppText style={styles.greeting}>{greetingForHour(new Date().getHours(), t)}</AppText>
@@ -150,8 +160,9 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.15)",
     borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
-    alignItems: "center", justifyContent: "center",
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
   },
+  avatarImage: { width: "100%", height: "100%" },
   avatarText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
   greeting: { fontSize: 11, color: "rgba(255,255,255,0.6)" },
   name: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },

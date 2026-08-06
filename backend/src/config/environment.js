@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm cấu hình trong .env TRƯỚC khi backend nhận request đầu tiên.
+//
+// Ai gọi tới: server.js, ngay lúc khởi động
+// Nhận vào:   toàn bộ biến môi trường
+// Trả ra:     danh sách cảnh báo, nếu có
+// Khi lỗi:    thiếu biến BẮT BUỘC thì ném lỗi và server không khởi động.
+//             Thiếu biến không bắt buộc thì chỉ ghi cảnh báo rồi chạy tiếp.
+//
+// Vì sao chia hai mức: thiếu chuỗi kết nối database thì chạy cũng vô nghĩa,
+// nhưng thiếu khóa AI thì app vẫn dùng được phần nhật ký món và cân nặng.
+//
 // Kiểm tra biến môi trường trước khi backend nhận request.
 // server.js gọi file này; lỗi bắt buộc sẽ dừng khởi động, cảnh báo chỉ được ghi log.
 const REQUIRED_ENV = [
@@ -40,7 +52,7 @@ function validateEnvironment(env = process.env) {
     warnings.push("OTP_SECRET should be at least 32 characters; it currently falls back to JWT_SECRET.");
   }
 
-  const geminiKeys = [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4]
+  const geminiKeys = [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3]
     .filter((value) => String(value || "").trim());
   // Không có khóa AI thì vẫn chạy được, nhưng Quét ảnh, Coach và Kế hoạch tuần sẽ báo lỗi.
   if (geminiKeys.length === 0) warnings.push("No Gemini API key is configured; AI features will be unavailable.");

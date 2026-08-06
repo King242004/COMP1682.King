@@ -1,4 +1,11 @@
-// Thư viện routine tập tại nhà. Mỗi routine gốc là một vòng 10 phút.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Thư viện bài tập tại nhà, kèm từng động tác và số giây của mỗi động tác.
+//
+// Ai gọi tới: GuidedRoutineScreen
+// Nhận vào:   mã bài tập và thời lượng muốn tập
+// Trả ra:     danh sách động tác đã nhân đủ số vòng
+// Khi lỗi:    mã lạ thì trả rỗng, màn hình hiện lời nhắc thay vì màn trắng
+
 // Phiên bản 20 và 30 phút lặp lại vòng tập, nên thời gian trên card luôn khớp bộ đếm.
 export type GuidedStep = {
   vi: string;

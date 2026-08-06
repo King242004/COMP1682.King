@@ -1,4 +1,11 @@
-// Biểu đồ đường cân nặng theo thời gian.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Vẽ biểu đồ đường cân nặng theo thời gian.
+//
+// Ai gọi tới: WeightSection và ProgressScreen
+// Nhận vào:   danh sách lần ghi cân nặng
+// Trả ra:     một biểu đồ đường
+// Khi lỗi:    dưới hai điểm thì không vẽ đường, chỉ hiện lời nhắc ghi thêm
+
 // Vẽ bằng View thường chứ không dùng thư viện biểu đồ, để không thêm phụ thuộc.
 import { useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";

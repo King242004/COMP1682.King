@@ -1,4 +1,11 @@
-// Màn Sửa hồ sơ. Đây là file BẮT ĐẦU của hai luồng.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Sửa hồ sơ. File BẮT ĐẦU của hai luồng: lưu hồ sơ, và đổi ảnh đại diện.
+//
+// Ai gọi tới: ProfileScreen
+// Nhận vào:   thông tin cá nhân và ảnh mới
+// Trả ra:     không trả gì, lưu xong thì quay lại và mục tiêu calo được tính lại
+// Khi lỗi:    ảnh quá nặng thì backend từ chối, màn hiện thông báo
+
 // LUỒNG LƯU HỒ SƠ
 // 1. Sửa các ô rồi bấm Lưu
 // 2. AuthContext.updateProfile

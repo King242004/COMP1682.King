@@ -1,4 +1,11 @@
-// Lớp phủ camera gồm thanh đầu, chọn chế độ, khung ngắm và nút điều khiển dưới.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lớp phủ nằm trên camera: thanh đầu, chọn chế độ, khung ngắm, nút chụp.
+//
+// Ai gọi tới: ScanScreen
+// Nhận vào:   chế độ đang chọn, và trạng thái quyền camera
+// Trả ra:     toàn bộ giao diện phủ lên camera
+// Khi lỗi:    chưa có quyền camera thì hiện khối báo thiếu quyền kèm nút mở Cài đặt
+
 // Tách riêng khỏi ScanScreen để màn đó chỉ lo phần gọi mạng và xử lý dữ liệu.
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";

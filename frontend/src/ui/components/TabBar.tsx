@@ -1,4 +1,10 @@
-// Thanh tab dưới cùng, gồm bốn tab và nút quét ở giữa.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Thanh tab dưới cùng, gồm bốn tab và nút quét nổi ở giữa.
+//
+// Ai gọi tới: app/tabs/_layout
+// Nhận vào:   tab nào đang được chọn
+// Trả ra:     thanh tab đã vẽ, kèm menu quét khi bấm nút giữa
+// Khi lỗi:    không có nhánh lỗi
 import { useState, type ComponentProps } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";

@@ -1,4 +1,11 @@
-// File này là chặng giữa AuthContext và backend cho phần tài khoản.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chặng giữa AuthContext và backend cho phần tài khoản. Chỉ lo gọi mạng.
+//
+// Ai gọi tới: AuthContext, không màn nào gọi thẳng vào đây
+// Nhận vào:   email, mật khẩu, hồ sơ cần cập nhật
+// Trả ra:     dữ liệu backend trả về
+// Khi lỗi:    ném lỗi lên cho AuthContext, rồi màn hình mới hiện thông báo
+
 // Chỉ lo gọi mạng, không giữ state và không lưu gì vào máy.
 import type { AuthSession, ProfileResponse, ProfileUpdate, UserResponse } from "./authTypes";
 import { apiFetch, apiRequest } from "../../utils/apiClient";

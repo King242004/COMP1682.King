@@ -1,4 +1,11 @@
-// Màn Trang chủ, màn người dùng thấy đầu tiên sau khi đăng nhập.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Trang chủ. Màn gom nhiều nguồn dữ liệu nhất trong app.
+//
+// Ai gọi tới: app/tabs/index, là tab đầu tiên sau khi đăng nhập
+// Nhận vào:   món đã ăn, buổi tập, cân nặng, mục tiêu calo, gợi ý món
+// Trả ra:     vòng calo, danh sách món theo bữa, và các thẻ tóm tắt
+// Khi lỗi:    một nguồn hỏng thì phần đó hiện lời nhắc, các phần khác vẫn chạy
+
 // Đây là màn gom nhiều nguồn dữ liệu nhất trong app.
 // LUỒNG MỞ TRANG CHỦ, tự chạy chứ không do ai bấm
 // 1. useFocusEffect chạy mỗi lần màn được nhìn thấy

@@ -1,4 +1,10 @@
-// File này quyết định app hiện tiếng gì.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Quyết định app hiện tiếng Việt hay tiếng Anh.
+//
+// Ai gọi tới: i18n/index, ScanScreen, CoachScreen, WeeklyPlanScreen
+// Nhận vào:   ngôn ngữ đã lưu trong hồ sơ, nếu có
+// Trả ra:     vi hoặc en
+// Khi lỗi:    chưa chọn thì lấy theo ngôn ngữ điện thoại, không mặc định cứng
 // Thứ tự ưu tiên: ngôn ngữ người dùng chọn trong Cài đặt,
 // chưa chọn thì lấy theo ngôn ngữ điện thoại.
 // Ngôn ngữ này đi theo mọi lệnh gọi AI, để Coach và Quét ảnh trả đúng tiếng.

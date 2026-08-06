@@ -1,5 +1,17 @@
-// File này lo ba việc: gửi mã đăng ký, tạo tài khoản, và đăng nhập.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Ba việc của cửa vào app: gửi mã đăng ký, tạo tài khoản, và đăng nhập.
 // Đây là chặng cuối của luồng, ngay trước database.
+//
+// Ai gọi tới: authRoutes, tức màn Đăng nhập và màn Đăng ký
+// Nhận vào:   email, mật khẩu, tên, và mã 6 số khi đăng ký
+// Trả ra:     thẻ đăng nhập JWT kèm hồ sơ đã lọc bỏ mật khẩu
+// Khi lỗi:    sai email hoặc mật khẩu thì trả cùng một câu chung chung,
+//             để người lạ không dò được email nào đã có tài khoản
+//
+// Hai chỗ đáng chú ý khi bảo vệ:
+//   publicUser lọc hồ sơ trước khi gửi đi, mật khẩu đã mã hóa cũng không lọt ra.
+//   Câu trả lời lúc gửi mã luôn giống nhau và chờ đủ một khoảng thời gian,
+//     để kẻ dò không đoán được email có tồn tại hay không qua tốc độ trả lời.
 const bcrypt = require("bcryptjs");
 const { sendOTP } = require("../services/emailRelayClient");
 const OTP = require("../models/OTP");
@@ -40,11 +52,11 @@ const isValidEmail = (email) =>
 // Trần mật khẩu là 64 vì bcrypt chỉ băm 72 byte đầu và bỏ im lặng phần dư,
 // nghĩa là mật khẩu dài hơn sẽ có một phần đuôi không hề có tác dụng.
 const isValidPassword = (pw) =>
-  pw.length >= 6 && pw.length <= INPUT_LIMITS.PASSWORD && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
+  typeof pw === "string" && pw.length >= 6 && pw.length <= INPUT_LIMITS.PASSWORD && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
 const resolveEmailLanguage = (value) => value === "vi" ? "vi" : "en";
 // \p{L} = any Unicode letter (supports Vietnamese diacritics, Chinese, etc.)
 const isValidName = (name) =>
-  name.trim().length >= 2 && name.trim().length <= INPUT_LIMITS.DISPLAY_NAME && /^[\p{L}\s]+$/u.test(name.trim());
+  typeof name === "string" && name.trim().length >= 2 && name.trim().length <= INPUT_LIMITS.DISPLAY_NAME && /^[\p{L}\s]+$/u.test(name.trim());
 
 // ─── Send registration OTP ───────────────────────────────────────────────────
 // Vì sao câu trả lời luôn giống nhau và có chờ thêm cho đủ thời gian:
@@ -154,7 +166,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password)
+  if (typeof email !== "string" || typeof password !== "string" || !email || !password)
     return res.status(400).json({ message: "Email and password are required." });
 
   if (!isValidEmail(email))

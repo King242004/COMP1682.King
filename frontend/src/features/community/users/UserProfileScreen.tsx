@@ -1,4 +1,11 @@
-// Màn Trang cá nhân của một người trong Community.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Trang cá nhân của một người khác trong Cộng đồng.
+//
+// Ai gọi tới: PostTile, CommunityUserList, NotificationsScreen
+// Nhận vào:   mã người cần xem
+// Trả ra:     thông tin người đó, lưới bài đăng, và nút theo dõi
+// Khi lỗi:    tài khoản để riêng tư thì chỉ thấy thông tin cơ bản, không thấy bài
+
 // LUỒNG MỞ TRANG CÁ NHÂN
 // 1. Chạm tên hoặc ảnh của ai đó, mở màn này kèm mã người đó
 // 2. api.getPublicProfile         (GET /community/users/:id)

@@ -1,4 +1,11 @@
-// Hai khối giao diện dinh dưỡng dùng chung cho màn Thêm món và màn Sửa món.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Hai khối ô nhập dinh dưỡng, dùng chung cho màn Thêm món và Sửa món.
+//
+// Ai gọi tới: AddMealScreen, EditMealScreen
+// Nhận vào:   calo và ba chất đang có
+// Trả ra:     các ô nhập kèm nhãn nguồn số liệu
+// Khi lỗi:    gõ chữ vào ô số thì hiện lỗi ngay tại ô đó
+
 // Vì sao tách ra: hai màn trước đây chép nguyên phần này của nhau, gồm cả khối
 // hiển thị lẫn hơn hai chục dòng style giống hệt. Sửa màu hay cỡ chữ ở một bên
 // mà quên bên kia là hai màn lệch nhau ngay.

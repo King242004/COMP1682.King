@@ -1,4 +1,11 @@
-// Màn Thông báo.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Màn Thông báo, hiện ai đã tim bài hoặc theo dõi mình.
+//
+// Ai gọi tới: CommunityScreen, qua biểu tượng chuông
+// Nhận vào:   không nhận gì, tự tải khi mở màn
+// Trả ra:     danh sách thông báo, mở màn là đánh dấu đã đọc
+// Khi lỗi:    chưa có thông báo nào thì hiện lời nhắc, không hiện màn trống
+
 // LUỒNG XEM THÔNG BÁO, tự chạy khi mở màn
 // 1. api.getNotifications          (GET /community/notifications)
 // 2. backend trả 50 thông báo mới nhất, bỏ qua thông báo mà người gây ra

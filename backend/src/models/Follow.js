@@ -1,3 +1,11 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khai hình dạng một quan hệ theo dõi giữa hai người dùng.
+//
+// Ai gọi tới: socialController (theo dõi, bỏ theo dõi, đếm người theo dõi),
+//             feedController (lấy bài của những người mình theo dõi)
+// Nhận vào:   mã người theo dõi và mã người được theo dõi
+// Trả ra:     một dòng Follow đã kiểm hợp lệ
+// Khi lỗi:    theo dõi trùng thì bị chỉ mục duy nhất chặn lại
 const mongoose = require("mongoose");
 
 // Bảng quan hệ theo dõi. Mỗi dòng là một chiều: follower theo dõi following.

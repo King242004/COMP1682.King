@@ -1,4 +1,10 @@
-// File này đếm chuỗi ngày ghi món liên tiếp, dùng ở hai chỗ khác nhau.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Đếm chuỗi ngày ghi món liên tiếp.
+//
+// Ai gọi tới: AppHeader (chuỗi đang chạy), ProgressScreen (chuỗi dài nhất)
+// Nhận vào:   danh sách món kèm ngày
+// Trả ra:     số ngày liên tiếp
+// Khi lỗi:    không có món nào thì trả 0, không trả rỗng
 //   mealStreak đếm chuỗi ĐANG chạy tính lùi từ hôm nay, hiện ở thanh đầu Trang chủ.
 //   longestMealStreak tìm chuỗi DÀI NHẤT trong khoảng đang xem, hiện ở màn Tiến trình.
 import { dateKey } from "./dateUtils";

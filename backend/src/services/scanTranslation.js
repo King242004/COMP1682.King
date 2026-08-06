@@ -1,3 +1,15 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lớp chắn ngôn ngữ cho Quét ảnh, chạy SAU khi AI đã nhận diện xong.
+//
+// Ai gọi tới: scanController, sau khi Gemini trả danh sách món
+// Nhận vào:   danh sách món AI đoán được, và ngôn ngữ app đang chọn
+// Trả ra:     danh sách đã đúng ngôn ngữ
+// Khi lỗi:    dịch lại thất bại thì giữ nguyên kết quả gốc
+//
+// Điểm quan trọng: lượt dịch lại CHỈ đổi tên món và mô tả khẩu phần,
+// giữ nguyên toàn bộ con số dinh dưỡng và độ tin cậy của lượt đầu.
+// Nếu để nó tính lại số thì hai lượt sẽ cho hai kết quả khác nhau.
+//
 // File này là lớp chắn ngôn ngữ cho Quét ảnh, làm cùng việc như coachLanguage
 // nhưng dò theo từ về món ăn và khẩu phần thay vì từ hội thoại.
 

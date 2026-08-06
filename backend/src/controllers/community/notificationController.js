@@ -1,6 +1,14 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Lo màn Thông báo và chấm đỏ báo có thông báo mới trên biểu tượng chuông.
+//
+// Ai gọi tới: communityRoutes, tức màn Thông báo và thanh tab
+// Nhận vào:   mã người dùng đang đăng nhập
+// Trả ra:     danh sách thông báo, hoặc số thông báo chưa đọc
+// Khi lỗi:    không có thông báo nào thì trả danh sách rỗng
+//
+// Có lọc bỏ thông báo đã mồ côi: người gây ra đã xóa tài khoản, hoặc thông báo
+// tim mà bài đã bị xóa. Không lọc thì màn hình hiện dòng trống bấm vào không ra gì.
 const Notification = require("../../models/Notification");
-
-// File này lo màn Thông báo và chấm đỏ báo có thông báo mới.
 
 // Bỏ qua thông báo mà người gây ra đã xóa tài khoản, hoặc thông báo tim
 // mà bài đã bị xóa, để màn hình không hiện dòng trống bấm vào không ra gì.
