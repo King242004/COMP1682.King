@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra cửa phạm vi Coach nhận câu sức khỏe/dinh dưỡng và từ chối câu ngoài app.
+// Bộ câu cố định ngăn thay prompt làm mở hoặc khóa phạm vi ngoài ý muốn.
 const {
   buildScopePrompt,
   parseScope,

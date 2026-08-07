@@ -6,10 +6,6 @@
 // Trả ra:     màu, khoảng cách, bo góc, cỡ chữ
 // Khi lỗi:    không có nhánh lỗi
 //
-// File này giữ toàn bộ màu, khoảng cách, bo góc và cỡ chữ của app.
-// Mọi màn đều lấy giá trị từ đây thay vì tự ghi số, nên đổi một chỗ
-// là cả app đổi theo.
-// App khóa tông màu sáng, không có chế độ tối.
 export const theme = {
   colors: {
     // Nền xanh cyan rất nhạt.

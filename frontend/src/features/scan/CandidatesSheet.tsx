@@ -6,7 +6,6 @@
 // Trả ra:     bảng cho người dùng chọn một món
 // Khi lỗi:    đây là bước NGƯỜI DÙNG XÁC NHẬN. AI chỉ đề xuất, không tự ghi món
 
-// Đây là bước NGƯỜI DÙNG XÁC NHẬN. AI chỉ đề xuất, không tự ghi món.
 import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";

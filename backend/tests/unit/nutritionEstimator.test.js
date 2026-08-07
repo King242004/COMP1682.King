@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra ước tính dinh dưỡng, cache và chuẩn hóa kết quả AI theo khẩu phần.
+// Gemini/model được mock để khóa phép biến đổi và nhánh lỗi mà không gọi mạng.
 const {
   buildNutritionEstimatePrompt,
   normalizeEstimatedNutrition,

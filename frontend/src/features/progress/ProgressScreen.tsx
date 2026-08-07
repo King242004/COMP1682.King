@@ -9,7 +9,8 @@
 // LUỒNG XEM TIẾN TRÌNH, tự chạy khi mở màn
 // 1. useEffect gọi MealsContext.fetchMealHistory
 // 2. mealsApi.fetchMealHistoryRequest    (GET /meals/history)
-// 3. backend mealController.getMealHistory trả toàn bộ lịch sử món
+// 3. Route gọi hàm getMealHistory trong backend/src/controllers/mealController.js;
+//    hàm này trả toàn bộ lịch sử món
 // 4. progress/summary.ts gom món theo ngày, theo tháng, tính tổng và tỷ lệ
 // 5. các thành phần con vẽ biểu đồ cột, lưới nhiệt và hàng đều đặn
 // Ba chế độ xem: Tuần, Tháng, Năm. Đổi chế độ chỉ tính lại từ dữ liệu

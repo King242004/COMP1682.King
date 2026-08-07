@@ -1,12 +1,12 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Cửa nhận file ảnh. Chạy SAU kiểm tra đăng nhập và TRƯỚC controller.
+// Cửa nhận file ảnh; route đặt nó sau protect và trước hàm controller nhận ảnh.
 //
 // Ai gọi tới: accountRoutes (ảnh đại diện), communityRoutes (ảnh bài đăng),
 //             scanRoutes (ảnh món cần quét)
 // Nhận vào:   file ảnh người dùng gửi lên
 // Trả ra:     không trả gì, chỉ đặt ảnh vào req.file rồi cho đi tiếp
 // Khi lỗi:    file quá nặng hoặc không phải ảnh thì chặn ngay tại đây,
-//             controller không bao giờ nhìn thấy file đó
+//             multer ném lỗi trước khi scanController/postController/accountController chạy
 //
 // imageUploadLimiter đếm số lần tải lên trong 15 phút để chặn spam.
 const multer = require("multer");

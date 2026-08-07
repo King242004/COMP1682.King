@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+// Ánh xạ /api/user/* tới hàm trong controllers/accountController.js.
 //
 // Ai gọi tới: app.js, gắn cả file này vào /api/user
 // Nhận vào:   request từ app điện thoại

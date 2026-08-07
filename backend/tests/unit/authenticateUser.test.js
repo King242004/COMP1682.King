@@ -1,3 +1,9 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra middleware xác thực đọc Bearer token và gắn đúng user vào request.
+// Test khóa nhánh thiếu, sai, hết hạn và tài khoản không còn tồn tại.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra middleware xác thực đọc Bearer token và gắn đúng user vào request.
+// Test khóa nhánh thiếu, sai, hết hạn và tài khoản không còn tồn tại.
 jest.mock("../../src/models/User", () => ({ findById: jest.fn() }));
 
 const jwt = require("jsonwebtoken");

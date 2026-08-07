@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khóa danh mục bài tập và MET có nguồn ở server, gồm cả bài hướng dẫn.
+// Test giữ snapshot, MET và công thức calo không bị frontend tự quyết định.
 const {
   EXTERNAL_ACTIVITIES,
   GUIDED_ROUTINES,
@@ -7,15 +10,22 @@ const {
 } = require("../../src/config/exerciseCatalog");
 
 describe("server-authoritative exercise MET catalogue", () => {
-  test("every entry has a traceable Compendium code and positive MET", () => {
+  test("every entry has a traceable academic source and positive MET", () => {
     for (const entry of [...Object.values(EXTERNAL_ACTIVITIES), ...Object.values(GUIDED_ROUTINES)]) {
       expect(entry.met).toBeGreaterThan(0);
-      expect(entry.code).toMatch(/^\d{5}$/);
+      if (entry.source) {
+        expect(entry.source).toContain("10.3390/su17010263");
+        expect(entry.code).toBeNull();
+      } else {
+        expect(entry.code).toMatch(/^\d{5}$/);
+      }
     }
   });
 
   test("resolves only known external activities and guided sessions", () => {
     expect(getExternalActivity("jogging")).toEqual({ met: 7.5, code: "12020" });
+    expect(getExternalActivity("shuttlecock")).toMatchObject({ met: 6.0, code: null });
+    expect(getExternalActivity("table_tennis")).toEqual({ met: 4.0, code: "15660" });
     expect(getExternalActivity("made-up")).toBeNull();
     expect(getExternalActivity("__proto__")).toBeNull();
     expect(getGuidedRoutine("fullBodyStrength20")).toMatchObject({
@@ -33,6 +43,12 @@ describe("server-authoritative exercise MET catalogue", () => {
         metCode: "12020",
         metSource: "Herrmann et al. (2024), Adult Compendium of Physical Activities",
         weightKgAtLog: 70,
+      });
+    expect(buildExerciseSnapshot("external", "shuttlecock", getExternalActivity("shuttlecock"), 70))
+      .toMatchObject({
+        met: 6.0,
+        metCode: null,
+        metSource: "Shen et al. (2025), Sustainability, DOI 10.3390/su17010263",
       });
   });
 });

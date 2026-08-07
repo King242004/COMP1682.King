@@ -4,13 +4,14 @@
 // Ai gọi tới: ProgressScreen
 // Nhận vào:   số cân nặng người dùng gõ
 // Trả ra:     không trả gì, ghi xong thì biểu đồ và mục tiêu calo tự cập nhật
-// Khi lỗi:    số ngoài khoảng hợp lý thì backend từ chối và màn hiện lỗi
+// Khi lỗi:    parseKg chặn sớm; weightController.logWeight kiểm lại request
 
 // LUỒNG GHI CÂN NẶNG
 // 1. Bấm nút Ghi cân nặng, hộp nhập mở ra
 // 2. Nhập số rồi bấm lưu, chạy onLog
 // 3. logWeight                    (POST /weight)
-// 4. backend weightController.logWeight lưu, mỗi ngày chỉ giữ MỘT lần cân
+// 4. Route gọi hàm logWeight trong backend/src/controllers/weightController.js;
+//    hàm này lưu một lần cân cho mỗi ngày
 // 5. nếu là lần cân mới nhất thì cập nhật luôn cân nặng trong hồ sơ,
 //    và tính lại mục tiêu calo nếu người dùng để app tự tính
 // 6. tải lại danh sách, biểu đồ vẽ lại
@@ -134,7 +135,7 @@ export function WeightSection() {
   };
 
   // Xóa một lần cân.
-  // Backend sẽ tự lấy lần cân còn lại mới nhất để cập nhật lại hồ sơ,
+  // weightController.deleteWeight lấy lần cân còn lại mới nhất để cập nhật lại hồ sơ,
   // vì nếu xóa đúng lần mới nhất thì hồ sơ đang giữ một số không còn tồn tại.
   const onDelete = (id: string, date: string) => {
     Alert.alert(t.weight.deleteTitle, t.weight.deleteMsg(dLabel(date)), [

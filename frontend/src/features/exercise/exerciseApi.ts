@@ -1,13 +1,13 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Chặng giữa các màn tập luyện và backend. Chỉ lo gọi mạng.
+// Adapter HTTP giữa các màn tập luyện và exerciseRoutes/exerciseController.
 //
 // Ai gọi tới: LogActivityScreen, GuidedRoutineScreen, ProgressScreen
 // Nhận vào:   mã hoạt động và thời lượng
-// Trả ra:     buổi tập đã lưu kèm calo đốt do server tính
+// Trả ra:     Exercise do exerciseController tạo, gồm caloriesBurned đã tính
 // Khi lỗi:    ném lỗi lên cho màn hình tự hiện thông báo
 
-// Frontend chỉ gửi mã hoạt động hoặc mã bài hướng dẫn. Backend tự tra MET từ
-// danh mục Compendium của server và tự tính calo từ cân nặng trong hồ sơ.
+// Frontend chỉ gửi mã hoạt động hoặc mã bài hướng dẫn. exerciseController.addExercise
+// tra MET từ backend/src/config/exerciseMet.js rồi gọi computeBurned.
 import { apiRequest } from "@/utils/apiClient";
 
 export type Exercise = {
@@ -33,7 +33,7 @@ function mapExercise(e: RawExercise): Exercise {
 }
 
 // Lấy buổi tập của một ngày. Gọi GET /exercise kèm ngày.
-// Trả kèm tổng calo đốt mà backend đã cộng sẵn.
+// exerciseController.getExercisesByDate trả kèm totalBurned đã cộng sẵn.
 export async function getExercisesByDate(
   token: string,
   date: string
@@ -43,7 +43,7 @@ export async function getExercisesByDate(
 }
 
 // Ghi một buổi tập. Gọi POST /exercise.
-// KHÔNG gửi calo lên, backend tự tính từ cân nặng thật trong hồ sơ.
+// Không gửi caloriesBurned; exerciseController.addExercise gọi computeBurned với cân nặng hồ sơ.
 export async function addExercise(
   token: string,
   input: { name: string; durationMin: number; date: string } & (

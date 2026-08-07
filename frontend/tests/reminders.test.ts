@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra tải, đổi giờ, bật/tắt, migrate và dọn toàn bộ lời nhắc.
+// Bộ nhớ cùng notification service được mock để khóa đúng thứ tự thao tác.
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),

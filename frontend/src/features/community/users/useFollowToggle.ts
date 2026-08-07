@@ -4,9 +4,9 @@
 // Ai gọi tới: CommunityUserList, UserProfileScreen, DiscoverScreen
 // Nhận vào:   mã người muốn theo dõi
 // Trả ra:     trạng thái theo dõi mới
-// Khi lỗi:    đổi giao diện TRƯỚC cho mượt, backend báo lỗi thì hoàn tác lại như cũ
+// Khi lỗi:    đổi giao diện TRƯỚC; followUser/unfollowUser ném lỗi thì hoàn tác
 
-// Nó cập nhật giao diện trước, gọi communityApi và hoàn tác nếu backend báo lỗi.
+// Nó cập nhật giao diện trước, gọi communityApi.followUser/unfollowUser và hoàn tác nếu request lỗi.
 import { useCallback, useState } from "react";
 import { followUser, unfollowUser, type DiscoverUser } from "../communityApi";
 import { resolvedFollowState } from "../communityDisplay";

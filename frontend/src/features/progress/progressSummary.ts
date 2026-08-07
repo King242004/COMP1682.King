@@ -32,17 +32,6 @@ export type DaySummary = {
   ratio: number;
 };
 
-export function getMonthDays(year: number, month: number) {
-  const lastDate = new Date(year, month + 1, 0).getDate();
-  const days: Date[] = [];
-  for (let day = 1; day <= lastDate; day++) {
-    const d = new Date(year, month, day);
-    d.setHours(0, 0, 0, 0);
-    days.push(d);
-  }
-  return days;
-}
-
 export type MonthTotal = {
   // Khóa tháng theo định dạng "2026-07".
   key: string;
@@ -55,6 +44,17 @@ export type MonthTotal = {
   // Cho biết tháng này nằm sau tháng hiện tại trong cùng năm.
   isFuture: boolean;
 };
+
+export function getMonthDays(year: number, month: number) {
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const days: Date[] = [];
+  for (let day = 1; day <= lastDate; day++) {
+    const d = new Date(year, month, day);
+    d.setHours(0, 0, 0, 0);
+    days.push(d);
+  }
+  return days;
+}
 
 export function getYearMonthTotals(historyMeals: Meal[], year: number, locale?: string): MonthTotal[] {
   const now = new Date();

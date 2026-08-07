@@ -9,10 +9,11 @@
 // LUỒNG GỢI Ý MÓN
 // 1. Bấm nút xin gợi ý tại đây
 // 2. suggestNextMeal              (POST /coach/suggest-meal)
-// 3. backend coachController.suggestMeal xem giờ và các bữa đã ăn
+// 3. Route gọi hàm suggestMeal trong backend/src/controllers/coachController.js;
+//    hàm này xem giờ và các bữa đã ăn
 //    để đoán bữa kế tiếp, tính calo còn lại
 // 4. Gemini đề xuất 3 món
-// 5. foodSafetyFilter lọc lại theo bệnh nền ở server
+// 5. backend/src/services/nutrition/foodSafetyFilter.js lọc lại theo bệnh nền
 // 6. thẻ hiện 3 món kèm lý do chọn
 // 7. Bấm một món, sang /meals/add điền sẵn tên và dinh dưỡng
 // Kết quả được lưu tạm theo ngày, bữa và ngôn ngữ, để mở lại
@@ -54,6 +55,8 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
     void getCachedSuggestions(dateKey, currentSlot, lang).then(setSuggest).catch(() => {});
   }, [dateKey, currentSlot, lang]);
 
+  // GỢI Ý MÓN BƯỚC 1. Bấm xin gợi ý, hoặc bấm nút làm mới.
+  // force bật khi bấm làm mới, để bỏ qua bản nhớ tạm và hỏi AI lại từ đầu.
   const loadSuggestions = async (force = false) => {
     if (!token || loading) return;
     setError(null);
@@ -73,6 +76,7 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
     }
   };
 
+  // Bấm biểu tượng chat trên một món thì sang tab Coach hỏi cách nấu món đó.
   const askCoachHow = (name: string) =>
     router.push({
       pathname: "/tabs/coach",

@@ -1,3 +1,9 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chạy thử trực tiếp bộ phân loại phạm vi Coach bằng các câu hỏi thật qua Gemini.
+// Chạy thủ công; in nhãn mong đợi và nhãn AI trả để kiểm prompt trước khi phát hành.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chạy thử trực tiếp bộ phân loại phạm vi Coach bằng các câu hỏi thật qua Gemini.
+// Chạy thủ công; in nhãn mong đợi và nhãn AI trả để kiểm prompt trước khi phát hành.
 require("dotenv").config();
 const { nutritionModels } = require("../src/config/geminiModels");
 const { generateWithFallback } = require("../src/services/aiClient");

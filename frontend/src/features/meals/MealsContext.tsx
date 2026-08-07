@@ -14,18 +14,7 @@ import { addMealRequest, addMealsRequest, deleteMealRequest, fetchMealHistoryReq
 
 export type { Meal } from "./mealTypes";
 
-// File này giữ danh sách món cho toàn app. Mọi màn lấy món bằng useMeals.
-// LUỒNG THÊM MÓN, xem cả chuỗi ở đây
-// 1. AddMealScreen bấm Lưu
-// 2. addMeal trong file này
-// 3. mealsApi.addMealRequest   (POST /meals)
-// 4. backend mealController.addMeal, lưu xuống MongoDB
-// 5. fetchMealsByDate tải lại đúng ngày vừa thêm
-// 6. markHealthDataChanged tăng số đếm
-// 7. Trang chủ, Tiến trình và Coach thấy số đếm đổi nên tự tải lại
-// Vì sao thêm xong phải tải lại cả ngày: backend tính sẵn tổng calo và ba chất,
-// tự cộng ở app dễ lệch với con số backend đưa cho Coach.
-// Sửa và xóa thì KHÔNG tải lại, mà tự trừ cộng tại chỗ cho nhanh.
+// Thân file chia làm ba khối theo luồng. Mỗi khối tự nói đến từ đâu, đi tiếp đâu.
 const MealsContext = createContext<MealsContextType | null>(null);
 
 export function MealsProvider({ children }: { children: React.ReactNode }) {
@@ -36,6 +25,17 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
   const [dailyTotals, setDailyTotals] = useState<DailyTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [isLoading, setIsLoading] = useState(false);
 
+  // ══════════════════════════════════════════════════════════
+  // ĐỌC MÓN
+  //
+  // Hai hàm đọc thuần, chưa thuộc luồng nào cả.
+  // Nhớ: chúng buộc phải nằm trên cùng, vì các hàm ở khối dưới có nhắc tới
+  // fetchMealsByDate trong mảng phụ thuộc.
+
+  // Tải danh sách món của một ngày, kèm tổng calo với ba chất.
+  // Trang chủ gọi mỗi khi đổi ngày đang xem. Khối B cũng gọi lại sau khi thêm món.
+  // Vì sao lấy tổng từ response thay vì tự cộng: mealController.readDay
+  // cộng sẵn rồi, và Coach cũng lấy số từ đó. Tự cộng ở app là dễ lệch với nó.
   const fetchMealsByDate = useCallback(async (date: string) => {
     if (!token) return;
     setIsLoading(true);
@@ -61,19 +61,45 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token]);
 
+  // ══════════════════════════════════════════════════════════
+  // LƯU MÓN
+  //
+  // Đến từ AddMealScreen.tsx, lúc bấm nút Lưu.
+  // Bốn bước, đọc từ trên xuống là đúng thứ tự.
+  // Xong thì Trang chủ, Tiến trình và Coach thấy số đếm đổi nên tự tải lại.
+  // ══════════════════════════════════════════════════════════
+
+  // LƯU MÓN BƯỚC 1. AddMealScreen bấm Lưu là gọi vào đây, cho một món.
   const addMeal = useCallback(async (meal: NewMeal) => {
     if (!token) return;
-    await addMealRequest(meal, token);
-    await fetchMealsByDate(meal.date);
+    // LƯU MÓN BƯỚC 2. mealsApi.addMealRequest → POST /meals
+    // → mealController.addMeal ghi MongoDB rồi gọi readDay để trả cả ngày.
+    // Nhờ vậy chỉ tốn một lượt mạng, không phải gọi thêm lượt GET để lấy tổng.
+    const day = await addMealRequest(meal, token);
+    // LƯU MÓN BƯỚC 3. Đặt thẳng cả ngày vào state, không gọi mạng nữa.
+    setMeals(day.meals);
+    setDailyTotals(day.totals);
+    // LƯU MÓN BƯỚC 4. Tăng số đếm để Trang chủ, Tiến trình và Coach biết mà tải lại.
     markHealthDataChanged();
-  }, [fetchMealsByDate, markHealthDataChanged, token]);
+  }, [markHealthDataChanged, token]);
 
+  // Bản nhiều món của addMeal. Một lần lưu ghi được tối đa 8 món.
+  // Cả 8 món cùng ngày nên mealController.addMeals chỉ gọi readDay cho ngày đó.
   const addMeals = useCallback(async (newMeals: NewMeal[]) => {
     if (!token || newMeals.length === 0) return;
-    await addMealsRequest(newMeals, token);
-    await fetchMealsByDate(newMeals[0].date);
+    const day = await addMealsRequest(newMeals, token);
+    setMeals(day.meals);
+    setDailyTotals(day.totals);
     markHealthDataChanged();
-  }, [fetchMealsByDate, markHealthDataChanged, token]);
+  }, [markHealthDataChanged, token]);
+
+  // ══════════════════════════════════════════════════════════
+  // SỬA VÀ XÓA
+  //
+  // Đến từ EditMealScreen.tsx và MealDetailScreen.tsx.
+  // Khác khối B ở chỗ: sửa với xóa KHÔNG tải lại cả ngày, mà tự trừ cộng tại chỗ.
+  // Làm vậy cho nhanh, vì sửa một món thì mình đã biết đúng số cũ và số mới.
+  // ══════════════════════════════════════════════════════════
 
   const updateMeal = useCallback(async (id: string, updates: UpdateMeal) => {
     if (!token) return;
@@ -95,6 +121,7 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     markHealthDataChanged();
   }, [markHealthDataChanged, meals, token]);
 
+  // Xóa món. Cũng tự trừ tại chỗ như sửa món, không tải lại cả ngày.
   const deleteMeal = useCallback(async (id: string) => {
     if (!token) return;
     await deleteMealRequest(id, token);

@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+// Ánh xạ /api/coach/* tới hàm trong controllers/coachController.js.
 //
 // Ai gọi tới: app.js, gắn cả file này vào /api/coach
 // Nhận vào:   request từ tab Coach và thẻ điểm sức khỏe ở Trang chủ

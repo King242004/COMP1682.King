@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Chặng giữa màn Kế hoạch tuần và backend, có lưu tạm kế hoạch và danh sách đi chợ.
+// Adapter giữa WeeklyPlanScreen và planRoutes/planController; đồng thời quản lý cache kế hoạch.
 //
 // Ai gọi tới: WeeklyPlanScreen
 // Nhận vào:   phạm vi ngày, ghi chú khẩu vị, và các thao tác trên món kế hoạch
@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/apiClient";
 import { ROUTINE_CATEGORIES, type RoutineCategory } from "@/features/exercise/guidedRoutines";
 
+// Chờ tối đa 2 phút. Tạo kế hoạch cả tuần là lượt gọi AI nặng nhất app.
 const AI_TIMEOUT_MS = 120_000;
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -45,7 +46,16 @@ type RawPlanWorkout = {
   done?: boolean;
 };
 
-// Đổi dữ liệu backend dùng `_id` sang dạng frontend dùng `id`.
+export type GroceryGroup = { name: string; items: string[] };
+
+export type PlanWeekCache = {
+  meals: PlanMeal[];
+  workouts: Record<string, PlanDayWorkout>;
+};
+
+export type GroceryCache = { groups: GroceryGroup[]; checked: Record<string, boolean>; sig: string };
+
+// Đổi JSON PlanMeal do planController trả với _id sang PlanMeal frontend dùng id.
 function mapPlan(p: RawPlanMeal): PlanMeal {
   return {
     id: p._id,
@@ -61,6 +71,8 @@ function mapPlan(p: RawPlanMeal): PlanMeal {
   };
 }
 
+// Đổi JSON PlanWorkout do planController trả sang PlanDayWorkout.
+// Trả null khi dữ liệu không đủ để bấm nút Xong, ví dụ thiếu thời lượng.
 function mapWorkout(workout: RawPlanWorkout): PlanDayWorkout | null {
   if (
     !ROUTINE_CATEGORIES.includes(workout.category as RoutineCategory) ||
@@ -75,6 +87,8 @@ function mapWorkout(workout: RawPlanWorkout): PlanDayWorkout | null {
   };
 }
 
+// ─── ĐỌC VÀ TẠO KẾ HOẠCH ───
+
 // Lấy kế hoạch của một khoảng ngày. Gọi GET /plan.
 // Trả về các món dự định trong khoảng ngày.
 export async function getPlanMeals(
@@ -88,6 +102,7 @@ export async function getPlanMeals(
     undefined,
     token
   );
+  // Bỏ những buổi tập không đổi được sang dạng app dùng, tức mapWorkout trả null.
   const workoutList = (data.planWorkouts || [])
     .map(mapWorkout)
     .filter((workout): workout is PlanDayWorkout => workout !== null);
@@ -115,8 +130,6 @@ export async function generateWeekPlan(
   );
 }
 
-export type GroceryGroup = { name: string; items: string[] };
-
 // Danh sách mua sắm do AI tạo từ các món trong khoảng kế hoạch.
 export async function getGroceryList(
   token: string,
@@ -134,13 +147,11 @@ export async function getGroceryList(
   return data.groups || [];
 }
 
+// ─── BỘ NHỚ ĐỆM KẾ HOẠCH VÀ DANH SÁCH ĐI CHỢ ───
+
 // Bộ nhớ tạm kế hoạch tuần trong AsyncStorage.
 // Màn tuần hiện dữ liệu cũ ngay, sau đó âm thầm tải dữ liệu mới từ mạng.
-export type PlanWeekCache = {
-  meals: PlanMeal[];
-  workouts: Record<string, PlanDayWorkout>;
-};
-
+// Khóa nhớ tạm kế hoạch, theo ngày đầu tuần.
 const planWeekKey = (weekStart: string) => `plan_week_${weekStart}`;
 
 // Đọc kế hoạch tuần đã lưu trong máy, để hiện ngay khi mở màn.
@@ -168,8 +179,7 @@ export async function cachePlanWeek(weekStart: string, cache: PlanWeekCache): Pr
 // Mỗi danh sách tốn một lượt gọi Gemini nên được lưu theo tuần và ngôn ngữ,
 // kèm trạng thái đã đánh dấu của người dùng. `sig` là dấu nhận diện kế hoạch.
 // Khi kế hoạch đổi, dấu này không còn khớp nên dữ liệu cũ sẽ bị bỏ qua.
-export type GroceryCache = { groups: GroceryGroup[]; checked: Record<string, boolean>; sig: string };
-
+// Khóa nhớ tạm danh sách đi chợ, gồm cả ngôn ngữ vì danh sách in ra theo tiếng.
 const groceryCacheKey = (weekStart: string, language: string) => `grocery_${weekStart}_${language}`;
 
 // Đọc danh sách đi chợ đã lưu, kèm các dòng đã tích.
@@ -193,12 +203,14 @@ export async function cacheGrocery(weekStart: string, language: string, cache: G
   }
 }
 
+// ─── BIẾN KẾ HOẠCH THÀNH DỮ LIỆU THẬT ───
+
 // Xóa một món khỏi kế hoạch. Gọi DELETE /plan/:id.
 export async function deletePlanMeal(token: string, id: string): Promise<void> {
   await apiRequest(`/plan/${id}`, "DELETE", undefined, token);
 }
 
-// Đánh dấu món trong kế hoạch là đã ăn, backend đồng thời ghi món vào nhật ký thật.
+// POST /plan/:id/eaten gọi planController.markEaten, tạo Meal và đánh dấu PlanMeal.done.
 export async function markPlanEaten(token: string, id: string): Promise<PlanMeal> {
   const data = await apiRequest(`/plan/${id}/eaten`, "POST", undefined, token);
   return mapPlan(data.planMeal);

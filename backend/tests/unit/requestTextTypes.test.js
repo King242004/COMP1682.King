@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra biên HTTP từ chối object/array ở trường chỉ được nhận text.
+// Controller và validator dùng request giả để khóa lỗi type trước khi ghi.
 jest.mock("bcryptjs", () => ({ compare: jest.fn(), hash: jest.fn() }));
 jest.mock("../../src/config/cloudinary", () => ({ uploader: {} }));
 jest.mock("../../src/services/emailRelayClient", () => ({ sendOTP: jest.fn() }));

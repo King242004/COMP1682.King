@@ -341,8 +341,8 @@ export const en = {
     quit: "Stop",
     finishedTitle: "Done! 🎉",
     finishedMsg: (minutes: number) => `${minutes} active minutes have been added to your progress.`,
-    safety: "Listen to your body, stop right away if you feel dizzy or in pain.",
-    // Localized labels for the activity picker; server-side config is authoritative for MET.
+    safety: "This is a general routine, not tailored to you. Listen to your body and stop right away if you feel dizzy or in pain. If you have a health condition or an injury, check with a professional first.",
+    // Localized picker labels; backend/src/config/exerciseMet.js is authoritative for MET.
     groups: {
       cardio: "Cardio",
       strength: "Strength/Gym",
@@ -373,6 +373,9 @@ export const en = {
       badminton: "Badminton",
       tennis: "Tennis",
       volleyball: "Volleyball",
+      shuttlecock: "Shuttlecock kicking",
+      martial_arts: "Martial arts",
+      table_tennis: "Table tennis",
       pickleball: "Pickleball",
       dancing: "Dancing",
       hiking: "Hiking",
@@ -558,11 +561,11 @@ export const en = {
     nameMin: "Name must be at least 2 characters.",
     nameLettersOnly: "Name must contain only letters and spaces.",
     invalidAge: "Invalid age",
-    ageRange: "Age must be between 10 and 120.",
+    ageRange: (min: number, max: number) => `Age must be between ${min} and ${max}.`,
     invalidWeight: "Invalid weight",
-    weightRange: "Weight must be between 20 and 300 kg.",
+    weightRange: (min: number, max: number) => `Weight must be between ${min} and ${max} kg.`,
     invalidHeight: "Invalid height",
-    heightRange: "Height must be between 50 and 250 cm.",
+    heightRange: (min: number, max: number) => `Height must be between ${min} and ${max} cm.`,
     updateFailed: "Couldn't update your profile. Please try again.",
   },
 
@@ -753,6 +756,9 @@ export const en = {
     customLabel: "Custom goal (kcal)",
     tdee: "TDEE",
     dailyGoal: "Calorie goal",
+    workoutSection: "Weekly workouts",
+    workoutHint: "Set how many sessions you want each week. You can leave it unset and MealMate will still count the sessions you log.",
+    workoutNone: "Not set",
     save: "Save goal",
     adjust: "Adjust goal",
   },
@@ -805,7 +811,7 @@ export const en = {
     actActiveMonths: "Active months",
     actConsistency: "Workout consistency",
     actDaysTrainedOf7: (n: number) => `${n}/7 days trained`,
-    actWeekTarget: (n: number) => `Suggested: ${n}/week`,
+    actWeekTarget: (n: number) => `Your goal: ${n}/week`,
   },
 
   community: {

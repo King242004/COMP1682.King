@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra validator món chuẩn hóa tên, khẩu phần, dinh dưỡng và nguồn.
+// Input sai bị chặn trước model; input đúng giữ đủ trường cần lưu.
 const { validateMealInput, validateMealName, validateNutritionValues } = require("../../src/validators/mealInputValidator");
 
 describe("validateMealInput", () => {

@@ -10,23 +10,22 @@
 // Bài có hai loại, phân biệt bằng trường dishName: bài thường, và bài món ăn.
 // Bài món ăn mới có nút "Xem cách làm" và "Thêm vào nhật ký".
 //
-// File này lo một bài đăng Community: tạo, xem, sửa, xóa, bấm tim, bấm lưu.
-// Bốn file trong thư mục này chia việc: postController lo một bài,
-// feedController lo các danh sách bài, socialController lo quan hệ người dùng,
-// notificationController lo thông báo. Phần dùng chung nằm ở communityHelpers.
 const cloudinary = require("../../config/cloudinary");
 const Notification = require("../../models/Notification");
 const Post = require("../../models/Post");
 const { addNotification, postHiddenFrom, shapePost, uploadToCloudinary } = require("./communityHelpers");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../../config/inputLimits");
+const { NUTRITION_SOURCES: SOURCE_LIST } = require("../../config/mealEnums");
 
-const NUTRITION_SOURCES = new Set([
-  "manual", "ai_estimate", "ai_adjusted", "photo_scan", "barcode", "community", "repeat", "ai_suggestion",
-]);
+// Bọc thành Set để tra nhanh. Danh sách gốc nằm ở config/mealEnums.
+const NUTRITION_SOURCES = new Set(SOURCE_LIST);
 
+// Gói phần dinh dưỡng của bài món ăn thành một object.
+// Không có tên món thì trả rỗng, tức bài này là bài thường.
 function mealSnapshot(body) {
   const name = String(body.mealName || "").trim();
   if (!name) return undefined;
+  // Ép về số không âm. App có thể gửi lên chuỗi rỗng hoặc số âm.
   const nonNegative = (value) => {
     const number = Number(value);
     return Number.isFinite(number) && number >= 0 ? number : 0;
@@ -45,8 +44,6 @@ function mealSnapshot(body) {
     nutritionSource: NUTRITION_SOURCES.has(source) ? source : undefined,
   };
 }
-
-// File này lo một bài đăng: tạo, xem, sửa, xóa, bấm tim, bấm lưu.
 
 // Bài có thể là bài thường, hoặc bài món ăn. Bài món ăn có thể chỉ có tên món
 // mà không có dinh dưỡng, nên tên món tách riêng khỏi phần dinh dưỡng.
@@ -71,6 +68,7 @@ exports.createPost = async (req, res) => {
     return res.status(400).json({ message: `Dish name must be ${LEGACY_LIMITS.MEAL_NAME} characters or fewer.` });
   }
 
+  // Tải từng ảnh lên Cloudinary. Hỏng giữa chừng thì dọn sạch ảnh đã lên.
   const images = [];
   try {
     for (const file of files.slice(0, 10)) {
@@ -99,24 +97,7 @@ exports.createPost = async (req, res) => {
   res.status(201).json({ message: "Posted.", post: shapePost(post, req.user.id) });
 };
 
-// Phải xóa thông báo liên quan, nếu không màn Thông báo sẽ còn dòng
-// trỏ tới một bài không còn tồn tại.
-exports.deletePost = async (req, res) => {
-  const post = await Post.findById(req.params.id);
-  if (!post) return res.status(404).json({ message: "Post not found." });
-  if (post.user.toString() !== req.user.id) {
-    return res.status(403).json({ message: "Not authorized to delete this post." });
-  }
-
-  const publicIds = new Set(
-    [...(post.images || []).map((image) => image.publicId), post.imagePublicId].filter(Boolean)
-  );
-  await Promise.allSettled([...publicIds].map((id) => cloudinary.uploader.destroy(id)));
-  await Notification.deleteMany({ post: post._id });
-  await post.deleteOne();
-  res.json({ message: "Post deleted." });
-};
-
+// Mở chi tiết một bài. Bài của tài khoản riêng tư thì chỉ chủ bài xem được.
 exports.getPost = async (req, res) => {
   const post = await Post.findById(req.params.id).populate("user", "name avatar isPrivate");
   if (!post) return res.status(404).json({ message: "Post not found." });
@@ -124,24 +105,6 @@ exports.getPost = async (req, res) => {
     return res.status(403).json({ message: "This post is private." });
   }
   res.json({ post: shapePost(post, req.user.id) });
-};
-
-// Nút lưu bài. Bấm lần nữa là bỏ lưu.
-// Lưu bài không tạo thông báo, khác với bấm tim.
-exports.toggleSave = async (req, res) => {
-  const post = await Post.findById(req.params.id);
-  if (!post) return res.status(404).json({ message: "Post not found." });
-  if (await postHiddenFrom(post, req.user.id)) {
-    return res.status(403).json({ message: "This post is private." });
-  }
-
-  if (!post.saves) post.saves = [];
-  const index = post.saves.findIndex((id) => id.toString() === req.user.id);
-  if (index >= 0) post.saves.splice(index, 1);
-  else post.saves.push(req.user.id);
-  await post.save();
-
-  res.json({ saved: index < 0 });
 };
 
 // Cách xử lý ảnh: app gửi lên keepUrls là danh sách ảnh cũ muốn giữ,
@@ -192,6 +155,8 @@ exports.updatePost = async (req, res) => {
 
   const files = req.files || [];
   if (req.body.keepUrls !== undefined || files.length > 0) {
+    // Bài đời cũ chỉ có một ảnh ở trường image, bài mới có mảng images.
+    // Gộp cả hai kiểu về một danh sách để xử lý chung.
     const currentImages = (post.images || []).length
       ? post.images
       : post.image
@@ -223,6 +188,7 @@ exports.updatePost = async (req, res) => {
       return res.status(400).json({ message: "A post can carry at most 10 photos." });
     }
 
+    // Ảnh mới thêm trong lần sửa này. Giữ riêng để hỏng thì dọn lại đúng chúng.
     const addedImages = [];
     try {
       for (const file of files) {
@@ -259,6 +225,25 @@ exports.updatePost = async (req, res) => {
   res.json({ message: "Post updated.", post: shapePost(post, req.user.id) });
 };
 
+// Phải xóa thông báo liên quan, nếu không màn Thông báo sẽ còn dòng
+// trỏ tới một bài không còn tồn tại. Đặt sau update để luồng CRUD đọc là
+// tạo → đọc → sửa → xóa.
+exports.deletePost = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found." });
+  if (post.user.toString() !== req.user.id) {
+    return res.status(403).json({ message: "Not authorized to delete this post." });
+  }
+
+  const publicIds = new Set(
+    [...(post.images || []).map((image) => image.publicId), post.imagePublicId].filter(Boolean)
+  );
+  await Promise.allSettled([...publicIds].map((id) => cloudinary.uploader.destroy(id)));
+  await Notification.deleteMany({ post: post._id });
+  await post.deleteOne();
+  res.json({ message: "Post deleted." });
+};
+
 // Nút tim. Bấm lần nữa là bỏ tim.
 // Bỏ tim thì gỡ luôn thông báo, để chủ bài không thấy thông báo về một lượt tim
 // đã bị rút lại.
@@ -292,4 +277,22 @@ exports.toggleLike = async (req, res) => {
   }
 
   res.json({ liked, likeCount: post.likes.length });
+};
+
+// Nút lưu bài. Bấm lần nữa là bỏ lưu.
+// Lưu bài không tạo thông báo, khác với bấm tim.
+exports.toggleSave = async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: "Post not found." });
+  if (await postHiddenFrom(post, req.user.id)) {
+    return res.status(403).json({ message: "This post is private." });
+  }
+
+  if (!post.saves) post.saves = [];
+  const index = post.saves.findIndex((id) => id.toString() === req.user.id);
+  if (index >= 0) post.saves.splice(index, 1);
+  else post.saves.push(req.user.id);
+  await post.save();
+
+  res.json({ saved: index < 0 });
 };

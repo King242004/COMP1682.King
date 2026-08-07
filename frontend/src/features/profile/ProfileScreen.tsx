@@ -9,7 +9,9 @@
 // LUỒNG MỞ HỒ SƠ, tự chạy khi vào tab
 // 1. useFocusEffect gọi AuthContext.fetchProfile
 // 2. accountApi.fetchProfileRequest      (GET /profile)
-// 3. backend profileController.getProfile tính BMI và TDEE rồi trả về
+// 3. Route gọi hàm getProfile trong backend/src/controllers/profileController.js;
+//    hàm này gọi buildStats
+//    để tính BMI và TDEE rồi trả về
 // 4. màn hiện tên, ảnh đại diện, và ba chỉ số
 // Các lối đi từ màn này: Sửa hồ sơ, Cài đặt, Tiến trình, Nhắc nhở,
 // Đổi mật khẩu, và nút Đăng xuất.
@@ -90,7 +92,7 @@ export default function ProfileScreen() {
   // Nút Đăng xuất.
   // Hỏi xác nhận rồi gọi AuthContext.logout, hàm đó xóa phiên,
   // hủy mọi lời nhắc và dọn dữ liệu tạm của tài khoản.
-  // Sau đó app tự quay về màn Đăng nhập.
+  // handleLogout chuyển sang /auth/login trước, rồi đợi animation xong mới dọn phiên.
   const handleLogout = () => {
     Alert.alert(t.profile.logout, t.profile.logoutMsg, [
       { text: t.common.cancel, style: "cancel" },
@@ -99,7 +101,9 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: () => {
           router.replace("/auth/login");
-          InteractionManager.runAfterInteractions(() => { logout(); });
+          InteractionManager.runAfterInteractions(() => {
+            void logout().catch((error) => console.error("Could not clear auth session:", error));
+          });
         },
       },
     ]);

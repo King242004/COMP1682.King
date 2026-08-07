@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra lớp lọc tên món theo bệnh nền và khẩu vị sau khi AI trả.
+// Test khóa danh sách giữ/loại và bảo đảm bệnh lạ không làm sập luồng.
 const { forbiddenFor, filterDishes, forbiddenByTaste } = require("../../src/services/nutrition/foodSafetyFilter");
 
 describe("forbiddenFor (per-condition ingredient blocklist)", () => {
@@ -78,5 +81,28 @@ describe("forbiddenByTaste", () => {
     expect(forbiddenByTaste("Chicken rice", "không ăn thịt gà")).toBe("chicken");
     expect(forbiddenByTaste("Cơm bò", "no chicken")).toBeNull();
     expect(forbiddenByTaste("Cơm gà", "love chicken")).toBeNull();
+  });
+});
+
+// `conditions` đến từ User.healthConditions; profileController.updateProfile không kiểm từng giá trị,
+// nên `RULES[c]` có thể tra trúng thuộc tính mà mọi object JavaScript thừa kế.
+// `RULES["constructor"]` trả về hàm tạo chứ không phải undefined, lọt qua phép
+// kiểm truthy rồi chết ở `re.test`. Cùng lỗi này `exerciseCatalog.js` đã tránh
+// được bằng `Object.hasOwn`, chỉ file này bị sót.
+describe("khoá bệnh lạ không được làm sập bộ lọc", () => {
+  test.each(["constructor", "toString", "hasOwnProperty", "__proto__"])(
+    "khoá kế thừa %s bị bỏ qua thay vì ném lỗi",
+    (key) => {
+      expect(() => forbiddenFor("Cơm trắng", [key])).not.toThrow();
+      expect(forbiddenFor("Cơm trắng", [key])).toBeNull();
+    },
+  );
+
+  test("khoá không có thật thì bỏ qua, bệnh thật đứng cạnh vẫn lọc đúng", () => {
+    expect(forbiddenFor("Canh chua", ["banana", "gastritis"])).toBe("gastritis");
+    const dishes = [{ name: "Canh chua" }, { name: "Cơm trắng" }];
+    const { kept, removed } = filterDishes(dishes, ["constructor", "gastritis"]);
+    expect(kept).toEqual([{ name: "Cơm trắng" }]);
+    expect(removed).toEqual([{ name: "Canh chua", condition: "gastritis" }]);
   });
 });

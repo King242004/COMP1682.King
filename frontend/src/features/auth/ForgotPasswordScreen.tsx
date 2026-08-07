@@ -26,7 +26,8 @@ import { INPUT_LIMITS } from "@/config/inputLimits";
 
 type Step = "email" | "otp" | "password";
 const STEPS: Step[] = ["email", "otp", "password"];
-// Chờ 60 giây thay vì 45 giây mặc định, vì backend còn phải gửi email thật.
+// Chờ 60 giây thay vì 45 giây mặc định vì accountController.sendPasswordOTP
+// còn gọi backend/src/services/emailRelayClient.js để gửi email thật.
 const OTP_REQUEST_TIMEOUT_MS = 60_000;
 
 export default function ForgotPasswordScreen() {
@@ -50,7 +51,7 @@ export default function ForgotPasswordScreen() {
   const passwordIsValid = isStrongPassword(newPassword) && newPassword === confirmPassword;
   const canContinue = step === "email" ? emailIsValid : step === "otp" ? otpIsValid : passwordIsValid;
 
-  // Backend luôn trả câu chung chung, nên bước này thành công cả khi
+  // accountController.sendPasswordOTP luôn trả câu chung chung, nên bước này thành công cả khi
   // email chưa có tài khoản. Đó là cố ý, để không lộ email nào đã đăng ký.
   const handleSendOTP = async () => {
     if (!emailIsValid) {
@@ -137,7 +138,8 @@ export default function ForgotPasswordScreen() {
     setError("");
     setIsLoading(true);
     try {
-      // Gửi lại mã lần nữa vì backend không nhớ bước 2, và đây là lúc mã bị xóa hẳn.
+      // Gửi lại mã vì accountController.verifyOTP không tạo reset token;
+      // accountController.resetPassword kiểm OTP lần nữa rồi mới xóa mã.
       await apiRequest("/user/reset-password", "POST", {
         email: email.trim(),
         otp: otp.trim(),

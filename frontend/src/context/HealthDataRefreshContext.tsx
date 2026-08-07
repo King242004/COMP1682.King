@@ -17,18 +17,17 @@ type HealthDataRefreshContextValue = {
   markHealthDataChanged: () => void;
 };
 
-// File này chỉ giữ MỘT con số đếm, gọi là revision.
-// Vì sao cần: thêm một món ở màn Thêm món thì Trang chủ, Tiến trình và Coach
-// đều phải đổi theo. Nếu để các màn tự gọi nhau thì rối, nên dùng chung
-// một con số làm tín hiệu. Màn nào quan tâm thì đặt nó vào useEffect.
 const HealthDataRefreshContext = createContext<HealthDataRefreshContextValue | null>(null);
 
 export function HealthDataRefreshProvider({ children }: { children: React.ReactNode }) {
   const [revision, setRevision] = useState(0);
+  // Tăng số đếm lên một. Đó là toàn bộ việc của file này.
   const markHealthDataChanged = useCallback(() => {
     setRevision((current) => current + 1);
   }, []);
 
+  // Gói lại để Provider vẽ lại không tạo object mới, tránh làm các màn
+  // đang dùng nó vẽ lại một cách vô ích.
   const value = useMemo(
     () => ({ revision, markHealthDataChanged }),
     [markHealthDataChanged, revision]

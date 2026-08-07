@@ -8,7 +8,7 @@
 
 // LUỒNG XEM THÔNG BÁO, tự chạy khi mở màn
 // 1. api.getNotifications          (GET /community/notifications)
-// 2. backend trả 50 thông báo mới nhất, bỏ qua thông báo mà người gây ra
+// 2. notificationController.getNotifications trả tối đa 50 thông báo và bỏ mục có actor
 //    đã xóa tài khoản hoặc bài đã bị xóa
 // 3. api.markNotificationsRead     (POST /community/notifications/read)
 //    tự chạy ngay, không cần bấm nút, nên chấm đỏ tắt luôn

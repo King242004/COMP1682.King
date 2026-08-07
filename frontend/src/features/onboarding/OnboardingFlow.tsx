@@ -13,13 +13,14 @@
 // 3. Bấm Hoàn tất ở bước cuối, chạy finish
 // 4. AuthContext.updateProfile
 // 5. accountApi.updateProfileRequest   (PUT /profile)
-// 6. backend profileController.updateProfile tính lại mục tiêu calo rồi lưu
+// 6. Route gọi hàm updateProfile trong backend/src/controllers/profileController.js;
+//    hàm này gọi calorieGoal.autoGoal rồi lưu
 // 7. router.replace sang /tabs
 // Thiết lập tài khoản mới đi từ giới thiệu, mục tiêu, cơ thể đến sức khỏe và khẩu vị.
 // Câu trả lời cung cấp dữ liệu cho Coach, gợi ý và kế hoạch tuần ngay từ đầu.
 // Mọi bước đều có thể bỏ qua và người dùng vẫn vào được Home.
 // Phần bệnh nền ở bước cuối là dữ liệu quan trọng nhất, vì nó nuôi
-// cả hai lớp lọc an toàn ở backend khi tạo kế hoạch và gợi ý món.
+// foodSafetyFilter trong planController.generatePlan và coachController.suggestMeal.
 import { useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -32,14 +33,14 @@ import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { TextField } from "@/ui/components/TextField";
-import { estimateTDEE, estimateCalorieGoal, type WeightGoal } from "@/config/nutritionCalculations";
+import { estimateTDEE, estimateCalorieGoal, PROFILE_LIMITS, type WeightGoal } from "@/config/nutritionCalculations";
 import { INPUT_LIMITS, DIGIT_LIMITS } from "@/config/inputLimits";
 
 type Step = "intro" | "goal" | "body" | "health";
 const STEPS: Step[] = ["intro", "goal", "body", "health"];
 
 // Công thức và hệ số nay nằm ở src/config/nutrition.ts, không gõ lại tại đây.
-// Hai con số này chỉ để xem trước trong lúc thiết lập, backend sẽ tính lại
+// Hai con số này chỉ để xem trước; profileController.updateProfile sẽ tính lại
 // mục tiêu chính thức từ cùng dữ liệu khi hồ sơ được lưu.
 
 export function OnboardingFlow() {
@@ -89,7 +90,8 @@ export function OnboardingFlow() {
 
   const goHome = () => router.replace("/tabs");
 
-  // Lưu các câu đã trả lời. Backend tự tính calorieGoal từ TDEE khi đủ số đo.
+  // Lưu câu trả lời qua AuthContext.updateProfile; profileController.updateProfile
+  // gọi calorieGoal.autoGoal khi đủ số đo.
   const finish = async () => {
     if (saving) return;
     setSaving(true);
@@ -98,9 +100,11 @@ export function OnboardingFlow() {
         goal,
         activityLevel: activity,
         ...(gender ? { gender } : {}),
-        ...(a >= 10 && a <= 120 ? { age: a } : {}),
-        ...(w >= 20 && w <= 300 ? { weight: w } : {}),
-        ...(h >= 50 && h <= 250 ? { height: h } : {}),
+        // Chỉ gửi số đo nằm trong PROFILE_LIMITS; profileController.updateProfile kiểm lại
+        // chứ không gõ tay, để hai bên không lệch nhau.
+        ...(a >= PROFILE_LIMITS.age.min && a <= PROFILE_LIMITS.age.max ? { age: a } : {}),
+        ...(w >= PROFILE_LIMITS.weightKg.min && w <= PROFILE_LIMITS.weightKg.max ? { weight: w } : {}),
+        ...(h >= PROFILE_LIMITS.heightCm.min && h <= PROFILE_LIMITS.heightCm.max ? { height: h } : {}),
         conditions,
         tastePreferences: taste.trim(),
       });

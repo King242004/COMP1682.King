@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra prompt Coach chứa đủ bối cảnh và parser đọc đúng JSON AI trả.
+// Không gọi mạng; test khóa chuỗi đầu vào và object đầu ra của các service.
 const { buildInsightPrompt, buildChatPrompt, buildMealSuggestionPrompt } = require("../../src/services/coach/coachPrompt");
 const { parseCoachReply, finalizeCoachReply, avoidDuplicateCoachReply, genericOutOfScope } = require("../../src/services/coach/coachResponse");
 

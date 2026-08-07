@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra ngày địa phương được chốt từ timezone offset của thiết bị.
+// Các mốc sát nửa đêm khóa lỗi controller ghi dữ liệu sang nhầm ngày.
 const { requestTodayKey, todayKey } = require("../../src/utils/dateUtils");
 
 describe("date utilities", () => {

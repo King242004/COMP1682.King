@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra thay kế hoạch chỉ xóa bản cũ sau khi ghi bản mới thành công.
+// Model được mock để khóa thứ tự ghi/xóa và nhánh rollback an toàn.
 jest.mock("../../src/models/PlanMeal", () => ({ insertMany: jest.fn(), deleteMany: jest.fn() }));
 jest.mock("../../src/models/PlanWorkout", () => ({ insertMany: jest.fn(), deleteMany: jest.fn() }));
 

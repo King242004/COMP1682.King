@@ -5,10 +5,10 @@
 // Ai gọi tới: authController (tạo), profileController (sửa hồ sơ),
 //             accountController (đổi mật khẩu, xóa tài khoản),
 //             planController và coachController (đọc bệnh nền, mục tiêu calo)
-// Nhận vào:   object tài khoản do controller dựng sẵn
+// Nhận vào:   object tài khoản do authController/profileController/accountController dựng
 // Trả ra:     một dòng User đã kiểm hợp lệ, có sẵn mã _id và thời gian tạo
 // Khi lỗi:    thiếu trường bắt buộc hoặc sai kiểu thì Mongoose chặn lại,
-//             controller bắt lỗi và trả thông báo cho app
+//             hàm controller gọi User.save/Create bắt lỗi và trả response
 //
 // Hai trường cần chú ý:
 //   password có select false nên mặc định KHÔNG bị đọc ra.

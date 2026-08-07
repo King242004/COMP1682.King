@@ -1,5 +1,6 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào, chia cho bốn controller.
+// Ánh xạ /api/community/* tới postController, feedController,
+// socialController hoặc notificationController trong controllers/community.
 //
 // Ai gọi tới: app.js, gắn cả file này vào /api/community
 // Nhận vào:   request từ tab Cộng đồng

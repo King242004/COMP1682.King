@@ -10,16 +10,16 @@
 // LUỒNG GỬI TIN NHẮN
 // 1. Bấm nút gửi, chạy send ở file này
 // 2. hiện ngay tin của mình cộng ba chấm đang gõ, chưa chờ mạng
-// 3. chatWithCoach gửi tin cộng 16 tin gần nhất  (POST /coach/chat)
-// 4. backend coachController.chat gom dữ liệu thật của người dùng
+// 3. chatWithCoach gửi tin hiện tại (POST /coach/chat)
+// 4. coachController.chat đọc 10 ChatMessage và gọi coachContext.buildContext
 // 5. gửi cho Gemini kèm dữ liệu đó, nhận câu trả lời
-// 6. backend lưu hai tin nhắn vào database rồi trả về
+// 6. coachController.chat tạo hai ChatMessage rồi trả response
 // 7. thay ba chấm bằng câu trả lời thật
 // LUỒNG GHI MÓN TỪ TIN NHẮN
 // 1. Coach nhận ra người dùng đang ăn một món, tin nhắn có nút Thêm
-// 2. Bấm Thêm, gọi POST /coach/log
-// 3. backend tạo một món thật trong nhật ký
-// 4. nút đổi thành đã thêm, bấm lần nữa là hoàn tác
+// 2. Bấm Thêm để mở màn Add Meal với dữ liệu AI điền sẵn
+// 3. Người dùng kiểm tra hoặc chỉnh lại rồi tự bấm Lưu
+// 4. món được ghi qua API Meal thông thường
 // LUỒNG XEM ĐIỂM SỨC KHỎE, tự chạy khi mở màn
 // 1. loadInsight hiện bản lưu trong máy ngay
 // 2. nếu bản lưu quá 10 phút thì gọi GET /coach/insight lấy bản mới
@@ -54,10 +54,12 @@ export default function CoachScreen() {
   const lang = resolveLanguage(user?.language);
   const t = useT();
   const suggestions = t.coach.suggestions;
+  // Viết tắt cho cụm chữ của màn Coach, vì file này dùng nó rất nhiều lần.
   const L = t.coach;
 
   // Bù chiều cao AppHeader để bàn phím không che ô nhập.
   const headerHeight = useHeaderHeight();
+  // Tay cầm của danh sách chat, cần để tự cuộn xuống tin mới nhất.
   const scrollRef = useRef<FlatList<ChatMessage>>(null);
   const [insight, setInsight] = useState<CoachInsight | null>(null);
   const [loadingInsight, setLoadingInsight] = useState(true);
@@ -72,9 +74,12 @@ export default function CoachScreen() {
 
   // Các ref này bỏ kết quả cũ, tránh xử lý lặp và chặn hai lần chạm.
   const insightRequestIdRef = useRef(0);
+  // Số đếm dữ liệu sức khỏe đã xử lý. Chặn tải lại điểm nhiều lần cho cùng một lần đổi.
   const handledRevisionRef = useRef(0);
+  // Mã câu hỏi đến từ màn khác đã xử lý. Chặn gửi lại câu cũ khi quay về tab này.
   const consumedAskRef = useRef<string | null>(null);
 
+  // Cuộn xuống tin mới nhất. Gom thành một hàm vì có bốn chỗ gọi tới.
   const scrollToLatest = useCallback((animated = true) => {
     scrollRef.current?.scrollToEnd({ animated });
   }, []);
@@ -107,6 +112,7 @@ export default function CoachScreen() {
     else Alert.alert(L.imgErrTitle, L.imgErrMsg);
   };
 
+  // Bấm nút kẹp ảnh. Hỏi chụp mới hay chọn từ thư viện, rồi giao cho pickImage.
   const attachImage = () => {
     Alert.alert(L.photoTitle, L.photoMsg, [
       { text: L.camera, onPress: () => pickImage("camera") },
@@ -170,7 +176,8 @@ export default function CoachScreen() {
 
   // Tự động làm mới điểm khi quay lại tab này, không do ai bấm.
   // Chỉ gọi AI lại khi dữ liệu sức khỏe thật sự đổi, để đỡ tốn lượt gọi.
-  // Chờ 350 mili giây khi có thay đổi, để backend kịp ghi xong món vừa thêm.
+  // Chờ 350 mili giây để POST /meals hoặc POST /exercises đang chuyển màn kịp hoàn tất;
+  // sau đó coachApi.getInsight gọi GET /coach/insight để đọc lại Meal và Exercise.
   useFocusEffect(
     useCallback(() => {
       const changed = revision !== handledRevisionRef.current;
@@ -181,7 +188,7 @@ export default function CoachScreen() {
   );
 
   // Nút gửi tin nhắn, điểm bắt đầu của luồng trò chuyện.
-  // Hiện tin của mình trước khi gọi mạng; backend tự đọc lịch sử từ database.
+  // Hiện tin người dùng trước; coachController.chat tự đọc lịch sử ChatMessage.
   const send = useCallback(async (text: string, displayText?: string, source?: "community") => {
     const msg = text.trim();
     const img = pendingImage;
@@ -214,6 +221,8 @@ export default function CoachScreen() {
     }
   }, [lang, messages, pendingImage, scrollToLatest, sending, t, token]);
 
+  // Bấm vào một gợi ý trong thẻ điểm thì hỏi Coach luôn về gợi ý đó,
+  // người dùng khỏi phải gõ lại câu hỏi.
   const askAboutTip = (tip: string) =>
     send(t.coach.askTip(tip));
 
@@ -254,11 +263,6 @@ export default function CoachScreen() {
     });
   };
 
-  // Nút "Thêm" trên tin nhắn Coach có kèm món.
-  // loggingRef chặn bấm hai lần, tránh ghi trùng món.
-
-  // Nút hoàn tác món vừa thêm.
-
   const dayLabelFor = (iso?: string) => {
     const d = iso ? dateKey(new Date(iso)) : todayKey();
     const now = new Date();
@@ -268,6 +272,7 @@ export default function CoachScreen() {
     if (d === dateKey(yesterday)) return t.meals.yesterday;
     return new Date(d + "T00:00:00").toLocaleDateString(localeTag(lang), { month: "short", day: "numeric" });
   };
+  // Lấy ngày của một tin nhắn, dùng để chèn dòng phân cách ngày giữa các tin.
   const msgDay = (m: ChatMessage) => (m.createdAt ? dateKey(new Date(m.createdAt)) : todayKey());
 
   // Hiện nút tới tin mới nhất khi người dùng cuộn lên đọc tin cũ.

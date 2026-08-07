@@ -1,4 +1,5 @@
-// File này là nơi backend bắt đầu chạy.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Entry point của API: validateEnvironment → connectDB → createApp → app.listen.
 // Nhận: các biến cấu hình trong file .env.
 // Làm: kiểm tra cấu hình, nối database, dựng app, mở cổng nghe request.
 // Ra: một server đang chạy, sẵn sàng nhận request từ app điện thoại.

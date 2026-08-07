@@ -1,11 +1,12 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Khai hình dạng của một món ĐÃ ăn trong nhật ký.
+// Đây là điểm CUỐI của LUỒNG LƯU MÓN, nơi dữ liệu thật sự chạm vào MongoDB.
 // Đây là bảng trung tâm của app: gần như mọi con số trên Trang chủ
 // và Tiến trình đều cộng từ bảng này ra.
 //
 // Ai gọi tới: mealController (thêm sửa xóa), planController (nút "Đã ăn"),
 //             coachContext (gom món đã ăn để đưa cho AI Coach)
-// Nhận vào:   object món do controller dựng, đã qua validator
+// Nhận vào:   object món do mealController/planController dựng, đã qua mealInputValidator
 // Trả ra:     một dòng Meal đã kiểm hợp lệ
 // Khi lỗi:    thiếu tên, buổi ăn hoặc ngày thì Mongoose chặn lại
 //
@@ -17,6 +18,10 @@
 const mongoose = require("mongoose");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
 const nutritionFields = require("./nutritionFields");
+const { MEAL_TYPES, NUTRITION_SOURCES } = require("../config/mealEnums");
+// Đến từ mealController, đã qua mealInputValidator rồi.
+// Mongoose vẫn kiểm lần NỮA theo khuôn dưới đây, vì có thể ai đó gọi thẳng
+// model từ chỗ khác mà không đi qua validator.
 const mealSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -26,7 +31,7 @@ const mealSchema = new mongoose.Schema(
     name: { type: String, required: true, maxlength: LEGACY_LIMITS.MEAL_NAME },
     mealType: {
       type: String,
-      enum: ["breakfast", "lunch", "dinner", "snack"],
+      enum: MEAL_TYPES,
       required: true,
     },
     ...nutritionFields,
@@ -35,7 +40,7 @@ const mealSchema = new mongoose.Schema(
     portionText: { type: String, default: "", trim: true, maxlength: LEGACY_LIMITS.PORTION_TEXT },
     nutritionSource: {
       type: String,
-      enum: ["manual", "ai_estimate", "ai_adjusted", "photo_scan", "barcode", "community", "repeat", "ai_suggestion"],
+      enum: NUTRITION_SOURCES,
       default: "manual",
     },
     image: { type: String, default: null },

@@ -1,3 +1,9 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra hồi quy toàn tuyến HTTP trên server và MongoDB thử nghiệm.
+// Chạy bởi npm run test:api; tạo dữ liệu tạm, gọi route thật, rồi dọn dữ liệu đã tạo.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra hồi quy toàn tuyến HTTP trên server và MongoDB thử nghiệm.
+// Chạy bởi npm run test:api; tạo dữ liệu tạm, gọi route thật, rồi dọn dữ liệu đã tạo.
 require("dotenv").config();
 const mongoose = require("mongoose");
 const Meal = require("../../src/models/Meal");
@@ -122,6 +128,8 @@ const shift = (days) => {
   console.log("- MEALS (time rules + macro zero) -");
   const mToday = await api("/meals", "POST", { name: "Cơm test", mealType: "lunch", calories: 500, protein: 20, carbs: 60, fat: 15, date: todayKey() }, token);
   check("add meal today 201", mToday.status === 201);
+  // Lệnh thêm phải trả luôn cả ngày kèm tổng, để app không phải gọi thêm lượt GET.
+  check("add meal returns day + totals", mToday.data.day?.totals?.calories === 500 && mToday.data.day.meals.length === 1);
   const mealId = mToday.data.meal._id;
   const mPast = await api("/meals", "POST", { name: "Phở hôm qua", mealType: "breakfast", calories: 400, date: shift(-1) }, token);
   check("back-log past meal 201", mPast.status === 201);

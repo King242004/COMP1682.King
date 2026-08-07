@@ -40,7 +40,8 @@ export default function RegisterScreen() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  // Kiểm dữ liệu bước 1. Sáu quy tắc này phải khớp với backend authController,
+  // Kiểm dữ liệu bước 1. Sáu quy tắc này phải khớp với
+  // hàm register trong backend/src/controllers/authController.js;
   // nếu lỏng hơn thì người dùng chờ gửi mã xong mới bị báo lỗi.
   const validateDetails = (): string | null => {
     if (name.trim().length < 2) return t.auth.nameTooShort;

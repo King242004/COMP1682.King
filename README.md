@@ -2,6 +2,8 @@
 
 MealMate is split into three runnable applications plus one design reference folder.
 
+See [CODE_FLOW.md](CODE_FLOW.md) for the end-to-end execution order of every runtime layer.
+
 ## Project structure
 
 ```text

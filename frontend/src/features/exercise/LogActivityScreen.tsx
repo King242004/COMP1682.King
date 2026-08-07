@@ -13,13 +13,15 @@
 // 3. Bấm một bài, sang màn GuidedRoutineScreen, màn đó mới là nơi ghi lại
 // LỐI B, ghi một hoạt động làm ngoài app
 // 1. Bấm mở hộp Ghi hoạt động khác
-// 2. Chọn hoạt động, số phút, và ngày trong bảy ngày gần nhất
+// 2. Chọn hoạt động, số phút, và ngày hoàn thành trên lịch
 // 3. Bấm Lưu, chạy saveExternalActivity
 // 4. exerciseApi.addExercise          (POST /exercise)
-// 5. backend nhân chỉ số MET với cân nặng để ra calo đã đốt
+// 5. Route gọi hàm addExercise trong backend/src/controllers/exerciseController.js;
+//    hàm này gọi computeBurned
+//    để nhân MET với cân nặng và thời lượng
 // 6. markHealthDataChanged, nên Trang chủ và Tiến trình tự tải lại
 // Vì sao lối B bắt buộc phải có cân nặng: calo đốt tính từ MET và cân nặng thật.
-// Thiếu cân nặng thì backend trả PROFILE_WEIGHT_REQUIRED và màn mời hoàn tất hồ sơ,
+// Thiếu cân nặng thì exerciseController.addExercise trả PROFILE_WEIGHT_REQUIRED,
 // thay vì đoán một con số rồi ghi vào nhật ký.
 import { useMemo, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -28,6 +30,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useHealthDataRefresh } from "@/context/HealthDataRefreshContext";
 import { addExercise } from "@/features/exercise/exerciseApi";
+import { calendarMonthDays, shiftCalendarMonth } from "@/features/exercise/calendarUtils";
 import {
   GUIDED_ROUTINES,
   ROUTINE_CATEGORIES,
@@ -66,6 +69,8 @@ export default function LogActivityScreen() {
   const [externalActivityKey, setExternalActivityKey] = useState(POPULAR_ACTIVITIES[0].key);
   const [externalDuration, setExternalDuration] = useState(30);
   const [externalDate, setExternalDate] = useState(todayKey());
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [externalSaving, setExternalSaving] = useState(false);
   const [externalError, setExternalError] = useState("");
 
@@ -76,24 +81,31 @@ export default function LogActivityScreen() {
     [category, duration],
   );
 
-  const recentDates = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - index);
-    return dateKey(date);
+  const externalDateLabel = new Date(`${externalDate}T00:00:00`).toLocaleDateString(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
+  const calendarLabel = calendarMonth.toLocaleDateString(locale, { month: "long", year: "numeric" });
+  const calendarDays = calendarMonthDays(calendarMonth);
+  const weekdayLabels = Array.from({ length: 7 }, (_, index) =>
+    new Date(2024, 0, 1 + index).toLocaleDateString(locale, { weekday: "short" }),
+  );
+  const now = new Date();
+  const canGoNextMonth = calendarMonth.getFullYear() < now.getFullYear() ||
+    (calendarMonth.getFullYear() === now.getFullYear() && calendarMonth.getMonth() < now.getMonth());
 
-  const formatExternalDate = (value: string, index: number) => {
-    if (index === 0) return t.exercise.today;
-    if (index === 1) return t.exercise.yesterday;
-    return new Date(`${value}T00:00:00`).toLocaleDateString(locale, {
-      weekday: "short",
-      day: "numeric",
-      month: "numeric",
-    });
+  const toggleCalendar = () => {
+    if (!datePickerVisible) {
+      const selected = new Date(`${externalDate}T00:00:00`);
+      setCalendarMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+    }
+    setDatePickerVisible((visible) => !visible);
   };
 
   // BƯỚC 3 CỦA LỐI B. Người dùng bấm Lưu trong hộp Ghi hoạt động khác.
-  // Chỉ gửi mã hoạt động chứ KHÔNG gửi chỉ số MET. Backend tự tra MET từ danh mục
+  // Chỉ gửi mã hoạt động, không gửi MET. exerciseController.addExercise tra MET từ
   // của nó, nên app không thể gửi lên một chỉ số sai hay đã lỗi thời.
   const saveExternalActivity = async () => {
     const activity = POPULAR_ACTIVITIES.find((item) => item.key === externalActivityKey);
@@ -140,6 +152,7 @@ export default function LogActivityScreen() {
           accessibilityLabel={t.exercise.externalLogTitle}
           onPress={() => {
             setExternalError("");
+            setDatePickerVisible(false);
             setExternalVisible(true);
           }}
           style={({ pressed }) => [styles.externalLogCard, pressed && styles.pressed]}
@@ -273,9 +286,15 @@ export default function LogActivityScreen() {
         visible={externalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setExternalVisible(false)}
+        onRequestClose={() => {
+          setDatePickerVisible(false);
+          setExternalVisible(false);
+        }}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setExternalVisible(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => {
+          setDatePickerVisible(false);
+          setExternalVisible(false);
+        }}>
           <Pressable style={styles.externalSheet} onPress={() => {}}>
             <View style={styles.sheetGrabber} />
             <View style={styles.sheetHeader}>
@@ -287,7 +306,10 @@ export default function LogActivityScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t.common.cancel}
                 hitSlop={10}
-                onPress={() => setExternalVisible(false)}
+                onPress={() => {
+                  setDatePickerVisible(false);
+                  setExternalVisible(false);
+                }}
               >
                 <Ionicons name="close" size={22} color={theme.colors.text} />
               </Pressable>
@@ -348,28 +370,103 @@ export default function LogActivityScreen() {
 
               <View style={styles.sheetSection}>
                 <AppText variant="caption">{t.exercise.chooseDate}</AppText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sheetChipRow}>
-                  {recentDates.map((value, index) => {
-                    const active = value === externalDate;
-                    return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t.exercise.chooseDate}
+                  onPress={toggleCalendar}
+                  style={({ pressed }) => [styles.dateField, pressed && styles.pressed]}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={theme.colors.primary} />
+                  <AppText style={styles.dateFieldText}>{externalDateLabel}</AppText>
+                  <Ionicons
+                    name={datePickerVisible ? "chevron-up" : "chevron-down"}
+                    size={18}
+                    color={theme.colors.subtle}
+                  />
+                </Pressable>
+                {datePickerVisible ? (
+                  <View style={styles.calendarCard}>
+                    <View style={styles.calendarHeader}>
                       <Pressable
-                        key={value}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: active }}
-                        onPress={() => setExternalDate(value)}
+                        accessibilityRole="button"
+                        accessibilityLabel={shiftCalendarMonth(calendarMonth, -1).toLocaleDateString(locale, {
+                          month: "long", year: "numeric",
+                        })}
+                        onPress={() => setCalendarMonth((month) => shiftCalendarMonth(month, -1))}
+                        style={({ pressed }) => [styles.calendarNav, pressed && styles.pressed]}
+                      >
+                        <Ionicons name="chevron-back" size={19} color={theme.colors.primary} />
+                      </Pressable>
+                      <AppText style={styles.calendarTitle}>{calendarLabel}</AppText>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={shiftCalendarMonth(calendarMonth, 1).toLocaleDateString(locale, {
+                          month: "long", year: "numeric",
+                        })}
+                        disabled={!canGoNextMonth}
+                        onPress={() => setCalendarMonth((month) => shiftCalendarMonth(month, 1))}
                         style={({ pressed }) => [
-                          styles.sheetChip,
-                          active && styles.sheetChipActive,
+                          styles.calendarNav,
+                          !canGoNextMonth && styles.calendarNavDisabled,
                           pressed && styles.pressed,
                         ]}
                       >
-                        <AppText style={[styles.sheetChipText, active && styles.sheetChipTextActive]}>
-                          {formatExternalDate(value, index)}
-                        </AppText>
+                        <Ionicons name="chevron-forward" size={19} color={theme.colors.primary} />
                       </Pressable>
-                    );
-                  })}
-                </ScrollView>
+                    </View>
+                    <View style={styles.calendarWeekRow}>
+                      {weekdayLabels.map((label) => (
+                        <AppText key={label} style={styles.calendarWeekday}>{label}</AppText>
+                      ))}
+                    </View>
+                    <View style={styles.calendarGrid}>
+                      {calendarDays.map((day, index) => {
+                        if (!day) return <View key={`blank-${index}`} style={styles.calendarDaySlot} />;
+                        const value = dateKey(new Date(
+                          calendarMonth.getFullYear(),
+                          calendarMonth.getMonth(),
+                          day,
+                        ));
+                        const selected = value === externalDate;
+                        const disabled = value > todayKey();
+                        const isToday = value === todayKey();
+                        const accessibilityLabel = new Date(`${value}T00:00:00`).toLocaleDateString(locale, {
+                          weekday: "long", day: "numeric", month: "long", year: "numeric",
+                        });
+
+                        return (
+                          <View key={value} style={styles.calendarDaySlot}>
+                            <Pressable
+                              accessibilityRole="radio"
+                              accessibilityLabel={accessibilityLabel}
+                              accessibilityState={{ selected, disabled }}
+                              disabled={disabled}
+                              onPress={() => {
+                                setExternalDate(value);
+                                setDatePickerVisible(false);
+                              }}
+                              style={({ pressed }) => [
+                                styles.calendarDay,
+                                isToday && styles.calendarDayToday,
+                                selected && styles.calendarDaySelected,
+                                disabled && styles.calendarDayDisabled,
+                                pressed && styles.pressed,
+                              ]}
+                            >
+                              <AppText style={[
+                                styles.calendarDayText,
+                                selected && styles.calendarDayTextSelected,
+                                disabled && styles.calendarDayTextDisabled,
+                              ]}>
+                                {day}
+                              </AppText>
+                            </Pressable>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ) : null}
               </View>
 
               <View style={[styles.estimateNote, (!user?.weight || user.weight <= 0) && styles.estimateNoteWarn]}>
@@ -507,6 +604,46 @@ const styles = StyleSheet.create({
   sheetChipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary },
   sheetChipText: { fontSize: 12, fontWeight: "700", color: theme.colors.text },
   sheetChipTextActive: { color: "#FFFFFF" },
+  dateField: {
+    minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 14, borderRadius: 12, borderWidth: 1.5,
+    borderColor: theme.colors.border, backgroundColor: theme.colors.bg,
+  },
+  dateFieldText: { flex: 1, fontSize: 13, fontWeight: "700", color: theme.colors.text },
+  calendarCard: {
+    overflow: "hidden", borderRadius: 16, borderWidth: 1,
+    borderColor: theme.colors.border, backgroundColor: theme.colors.bg,
+  },
+  calendarHeader: {
+    minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 10,
+  },
+  calendarTitle: { fontSize: 15, fontWeight: "800", color: theme.colors.text, textTransform: "capitalize" },
+  calendarNav: {
+    width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
+    backgroundColor: theme.colors.tint,
+  },
+  calendarNavDisabled: { opacity: 0.3 },
+  calendarWeekRow: {
+    flexDirection: "row", paddingVertical: 9,
+    borderTopWidth: 1, borderBottomWidth: 1, borderColor: theme.colors.border,
+  },
+  calendarWeekday: {
+    width: "14.2857%", textAlign: "center", fontSize: 11,
+    fontWeight: "800", color: theme.colors.subtle,
+  },
+  calendarGrid: { flexDirection: "row", flexWrap: "wrap", paddingVertical: 8 },
+  calendarDaySlot: { width: "14.2857%", alignItems: "center", paddingVertical: 2 },
+  calendarDay: {
+    width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "transparent",
+  },
+  calendarDayToday: { borderColor: theme.colors.primary },
+  calendarDaySelected: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary },
+  calendarDayDisabled: { opacity: 0.28 },
+  calendarDayText: { fontSize: 13, fontWeight: "700", color: theme.colors.text },
+  calendarDayTextSelected: { color: "#FFFFFF" },
+  calendarDayTextDisabled: { color: theme.colors.subtle },
   estimateNote: {
     flexDirection: "row", alignItems: "flex-start", gap: 8,
     padding: theme.space.md, borderRadius: 12, backgroundColor: "rgba(5,150,105,0.08)",

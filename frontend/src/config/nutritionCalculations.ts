@@ -4,12 +4,13 @@
 // Ai gọi tới: Trang chủ, Tiến trình, Hồ sơ, màn Mục tiêu
 // Nhận vào:   không nhận gì, đây là bảng số khai sẵn
 // Trả ra:     các hằng số và hàm tính phụ
-// Khi lỗi:    không có nhánh lỗi. Backend là nơi tính chính thức, đây chỉ để vẽ
-// Quy tắc giống bản backend: một hằng số phải đi kèm một dòng nói rõ nguồn.
+// Khi lỗi:    không có nhánh lỗi; calorieGoal.autoGoal là phép tính lưu chính thức
+// Quy tắc giống backend/src/config/nutritionConstants.js: một hằng số phải có nguồn.
 // Bản gốc của các hằng số này nằm ở backend/src/config/nutritionConstants.js.
-// Backend là nơi tính toán chính thức, file này chỉ để màn hình vẽ được mục tiêu
+// backend/src/services/nutrition/calorieGoal.js tính giá trị lưu chính thức;
+// file này chỉ để màn hình vẽ được mục tiêu
 // ngay khi vừa mở app, trước lúc hồ sơ kịp tải về. Sửa một bên thì phải sửa bên kia.
-// Hướng phát triển tiếp là để backend trả sẵn mọi mục tiêu và bỏ hẳn file này.
+// Khi profileController trả sẵn mọi mục tiêu xem trước, có thể bỏ bản tính song song ở file này.
 
 // Số kcal mà một gam mỗi chất sinh năng lượng tạo ra.
 // Nguồn: hệ số Atwater tổng quát, FAO (2003), Food and Nutrition Paper 77.
@@ -20,7 +21,14 @@ export const ATWATER_KCAL_PER_GRAM = { protein: 4, carbs: 4, fat: 9 };
 export const PROTEIN_G_PER_KG = 1.6;
 
 // Tỷ lệ calo đến từ chất béo.
-// Nguồn: AMDR trong bộ Dietary Reference Intakes, khoảng cho chất béo là 20 tới 35%.
+// Nguồn chính: Quyết định 2615/QĐ-BYT ngày 16/6/2016 của Bộ Y tế, "Nhu cầu dinh
+// dưỡng khuyến nghị cho người Việt Nam", Viện Dinh dưỡng, mục 2.3: năng lượng từ
+// lipid của người trưởng thành TỐI ĐA KHÔNG QUÁ 25 phần trăm tổng năng lượng.
+// ĐỌC CHO ĐÚNG: theo nguồn Việt Nam thì 25 là TRẦN chứ không phải mức giữa, nên
+// app đang đứng đúng ở mức trần. Vẫn hợp lệ vì tài liệu nói không quá 25, nhưng
+// đừng mô tả đây là "chọn mức giữa cho an toàn".
+// Nguồn phụ: AMDR trong bộ Dietary Reference Intakes cho khoảng 20 tới 35%,
+// và 25 nằm giữa khoảng đó. Dùng nguồn Việt Nam làm chính vì app nhắm người Việt.
 export const FAT_RATIO_OF_CALORIES = 0.25;
 
 // Trần tỷ lệ calo đến từ đạm, theo cùng bộ AMDR, khoảng cho đạm là 10 tới 35%.
@@ -65,26 +73,15 @@ export const WEIGHT_GOAL_BY_DIRECTION = {
 } as const;
 export type WeightGoal = (typeof WEIGHT_GOAL_BY_DIRECTION)[WeightDirection];
 
-// Chỉ dùng để xem trước trên giao diện. Backend vẫn là nơi quyết định chính thức.
-// Nếu response cũ chưa có ngưỡng giữ cân, giao diện vẫn phân biệt được tăng/giảm
-// thay vì chặn mọi cân mục tiêu.
-export function resolveDraftWeightDirection(
-  currentWeight: number | null,
-  targetWeight: number | null,
-  maintainThresholdKg?: number,
-): WeightDirection | null {
-  if (currentWeight == null || targetWeight == null || !Number.isFinite(targetWeight)) return null;
-  const differenceKg = targetWeight - currentWeight;
-  if (differenceKg === 0 || (maintainThresholdKg != null && Math.abs(differenceKg) < maintainThresholdKg)) {
-    return "maintain";
-  }
-  return differenceKg < 0 ? "lose" : "gain";
-}
-
-// Bản chính thức nằm ở backend. Frontend chỉ dùng các giới hạn này để báo lỗi
-// trước khi gửi, còn backend vẫn là nơi quyết định dữ liệu có hợp lệ hay không.
+// Bản chính thức nằm ở backend/src/config/nutritionConstants.js. Frontend dùng các
+// giới hạn này để báo lỗi sớm; profileController.updateProfile vẫn kiểm request.
+// Phải khai đủ bốn trường như file nguồn. Màn nào cần kiểm khoảng giá trị thì đọc
+// ở đây, đừng gõ tay lại con số để tránh hai bản lệch nhau.
+// Có tests/profileLimits.test.ts khoá hai bên khớp nhau.
 export const PROFILE_LIMITS = {
+  age: { min: 10, max: 120 },
   weightKg: { min: 20, max: 300 },
+  heightCm: { min: 50, max: 250 },
   calorieGoal: { min: 800, max: 10000 },
 } as const;
 
@@ -100,7 +97,34 @@ export const CALORIE_FLOOR = { male: 1500, female: 1200 };
 // và tính lại mỗi lần người dùng ghi cân nặng mới.
 export const KCAL_PER_KG_BODY_WEIGHT = 7700;
 
-// Chỉ dùng để xem trước trong lúc thiết lập. Con số chính thức do backend tính.
+export type MacroTargets = {
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+// Hết phần khai báo ở trên. Từ đây trở xuống là các phép tính theo đúng luồng
+// màn hình cần dùng: xác định hướng cân → ước tính năng lượng → chia mục tiêu macro.
+
+// Chỉ dùng để xem trước; profileController.updateProfile gọi calorieGoal.autoGoal
+// để quyết định giá trị được lưu.
+// Nếu response cũ chưa có ngưỡng giữ cân, giao diện vẫn phân biệt được tăng/giảm
+// thay vì chặn mọi cân mục tiêu.
+export function resolveDraftWeightDirection(
+  currentWeight: number | null,
+  targetWeight: number | null,
+  maintainThresholdKg?: number,
+): WeightDirection | null {
+  if (currentWeight == null || targetWeight == null || !Number.isFinite(targetWeight)) return null;
+  const differenceKg = targetWeight - currentWeight;
+  if (differenceKg === 0 || (maintainThresholdKg != null && Math.abs(differenceKg) < maintainThresholdKg)) {
+    return "maintain";
+  }
+  return differenceKg < 0 ? "lose" : "gain";
+}
+
+// Chỉ dùng để XEM TRƯỚC trong lúc thiết lập.
+// Con số lưu chính thức do backend/src/services/nutrition/calorieGoal.js tính.
 export function estimateTDEE(
   weightKg: number, heightCm: number, age: number,
   gender: "male" | "female", activityLevel: string,
@@ -138,12 +162,6 @@ export function estimateCalorieGoal(
   }
   return Math.round(Math.max(floor, tdee));
 }
-
-export type MacroTargets = {
-  protein: number;
-  carbs: number;
-  fat: number;
-};
 
 // Bản cũ là macroGoals trong ui/theme.ts, chia cứng 30, 45 và 25 phần trăm
 // cho mọi người. Ba tỷ lệ đó không có nguồn, và logic dinh dưỡng cũng không

@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Đổi câu lỗi kỹ thuật của backend thành câu người dùng đọc hiểu được.
+// Đổi message do apiClient ném khi route trả lỗi thành câu người dùng đọc hiểu được.
 //
 // Ai gọi tới: gần như mọi màn hình, ở chỗ bắt lỗi khi gọi mạng
 // Nhận vào:   lỗi bắt được, danh mục ngôn ngữ, và câu dự phòng của màn hình
@@ -13,7 +13,7 @@ export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error ?? "");
 }
 
-// Câu lỗi của backend luôn bằng tiếng Anh, hữu ích cho log và test nhưng không
+// Message trong response lỗi của các controller luôn bằng tiếng Anh, hữu ích cho log và test nhưng không
 // hợp để hiện cho người dùng. Chỉ những câu ĐÃ BIẾT mới được dịch sang danh mục
 // ngôn ngữ, còn lại đều dùng câu dự phòng của màn hình. Nhờ vậy lỗi kỹ thuật như
 // tên bảng hay chuỗi kết nối database không bao giờ lọt ra giao diện.

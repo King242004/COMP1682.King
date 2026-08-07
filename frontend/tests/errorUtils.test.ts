@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra lỗi kỹ thuật được đổi thành câu người dùng hiểu theo ngôn ngữ app.
+// Test khóa nhánh timeout, mạng, quota và fallback chung.
 import { en } from "@/i18n/en";
 import { vi } from "@/i18n/vi";
 import { getUserErrorMessage } from "@/utils/errorUtils";

@@ -5,17 +5,17 @@
 // Nhận vào:   một bộ model đã dựng sẵn, và câu lệnh cần hỏi
 // Trả ra:     câu trả lời của model đầu tiên chạy được
 // Khi lỗi:    thử hết mọi cách gọi mà vẫn hỏng thì ném AI_QUOTA_EXHAUSTED,
-//             controller bắt và trả QUOTA cho app
+//             scanController, coachController hoặc planController trả mã QUOTA cho app
 //
 // Hai mốc thời gian: mỗi lần thử chờ tối đa 12 giây, cả lượt chờ tối đa 40 giây.
 // Có hạn để một câu hỏi hỏng không treo người dùng mãi.
 //
-// File này là cửa duy nhất để gọi AI. Mọi tính năng AI đều đi qua đây.
-// Vì sao cần thử nhiều model: Gemini bản miễn phí giới hạn lượt gọi mỗi ngày.
-// Có nhiều khóa và nhiều model thì hết cái này còn cái kia.
 const ATTEMPT_TIMEOUT_MS = 12_000;
+// Trần cho CẢ lượt gọi, tính hết mọi lần thử. Có trần để một câu hỏi hỏng
+// không treo người dùng mãi.
 const TOTAL_TIMEOUT_MS = 40_000;
 
+// Bọc một lời hứa bằng đồng hồ đếm ngược. Quá giờ là bỏ, không chờ nữa.
 function withTimeout(promise, timeoutMs) {
   let timer;
   const timeout = new Promise((resolve, reject) => {
@@ -25,6 +25,8 @@ function withTimeout(promise, timeoutMs) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// Nhận ra lỗi hết lượt miễn phí. Gặp lỗi này thì thử khóa khác, còn lỗi
+// khác thì thử model khác.
 function isQuotaError(error) {
   return /429|quota|resource[_\s-]?exhausted|rate limit|too many requests/i.test(
     String(error?.message || "")
@@ -33,6 +35,7 @@ function isQuotaError(error) {
 
 async function generateWithFallback(models, payload) {
   let lastErr;
+  // Gom lỗi của từng lần thử, để nếu hỏng hết thì báo được lý do cuối cùng.
   const errors = [];
   const deadline = Date.now() + TOTAL_TIMEOUT_MS;
   for (const model of models) {

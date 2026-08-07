@@ -17,9 +17,6 @@ const User = require("../../models/User");
 const { addNotification } = require("./communityHelpers");
 const { INPUT_LIMITS } = require("../../config/inputLimits");
 
-// File này lo quan hệ giữa người dùng: theo dõi, tìm người, gợi ý người,
-// danh sách người theo dõi, và trang cá nhân công khai.
-
 // Nút Theo dõi.
 // Dùng upsert nên bấm nhiều lần cũng chỉ có một quan hệ, không bị trùng.
 exports.followUser = async (req, res) => {
@@ -58,6 +55,7 @@ exports.searchUsers = async (req, res) => {
   // khớp ai, nên đây chỉ là chặn chuỗi vô hạn bị ném thẳng vào $regex.
   if (req.query.q !== undefined && typeof req.query.q !== "string")
     return res.status(400).json({ message: "Search query must be text." });
+  // Cắt từ khóa trước khi ghép vào truy vấn, chặn chuỗi dài vô hạn.
   const query = (req.query.q || "").trim().slice(0, INPUT_LIMITS.USER_SEARCH);
   if (!query) return res.json({ users: [] });
 
@@ -92,6 +90,7 @@ exports.searchUsers = async (req, res) => {
 exports.getSuggestions = async (req, res) => {
   const currentUser = await User.findById(req.user.id).select("goal");
   const followingIds = await Follow.find({ follower: req.user.id }).distinct("following");
+  // Bỏ khỏi gợi ý những người đã theo dõi, và bỏ luôn chính mình.
   const excludedIds = [...followingIds, req.user.id];
 
   const candidates = await User.find({ _id: { $nin: excludedIds } })

@@ -5,7 +5,7 @@
 // Nhận vào:   email nhận, mã 6 số, loại việc, và ngôn ngữ
 // Trả ra:     kết quả gửi thành công hay không
 // Khi lỗi:    thiếu cấu hình relay hoặc relay không trả lời thì báo lỗi,
-//             controller nói người dùng thử lại sau
+//             authController.sendRegistrationOTP hoặc accountController.sendPasswordOTP trả lỗi thử lại
 //
 // Vì sao không gửi thẳng bằng SMTP: máy chủ Render chặn cổng SMTP,
 // nên phải đi qua một dịch vụ trung gian gọi bằng HTTPS.

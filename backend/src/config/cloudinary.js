@@ -9,11 +9,6 @@
 //
 // LƯU Ý: quét ảnh món ăn KHÔNG lưu vào đây. Ảnh quét chỉ đi thẳng cho AI rồi bỏ.
 //
-// File này khai báo kho ảnh trên mạng, dùng chung cho mọi chỗ có tải ảnh lên.
-// Nơi dùng: ảnh đại diện, ảnh bài đăng Community, ảnh gửi cho Coach.
-// Xóa ảnh cũng đi qua đây khi đổi ảnh đại diện, sửa bài, xóa bài,
-//   xóa lịch sử trò chuyện và xóa tài khoản.
-// Lưu ý: quét ảnh món ăn KHÔNG lưu vào đây, ảnh chỉ đi thẳng cho AI rồi bỏ.
 const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({

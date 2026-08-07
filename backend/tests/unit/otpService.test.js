@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra reserve/verify OTP cập nhật nguyên tử khi gửi lại hoặc xác minh.
+// Model được mock; test khóa chống dùng lại mã và hai request cùng thắng.
 jest.mock("../../src/models/OTP", () => ({
   findOne: jest.fn(),
   findOneAndDelete: jest.fn(),

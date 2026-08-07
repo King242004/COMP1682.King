@@ -13,13 +13,14 @@
 // Ngày ở tương lai là hợp lệ, vì đây là kế hoạch.
 const mongoose = require("mongoose");
 const nutritionFields = require("./nutritionFields");
+const { MEAL_TYPES } = require("../config/mealEnums");
 const planMealSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     name: { type: String, required: true },
     mealType: {
       type: String,
-      enum: ["breakfast", "lunch", "dinner", "snack"],
+      enum: MEAL_TYPES,
       required: true,
     },
     ...nutritionFields,

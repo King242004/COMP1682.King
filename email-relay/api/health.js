@@ -1,4 +1,6 @@
-// Địa chỉ kiểm tra sức khỏe của dịch vụ email.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Handler GET /api/health của dịch vụ email trên Vercel.
+// Nó báo phiên bản và trạng thái cấu hình để kiểm tra triển khai, không gửi email.
 // Chỉ trả CÓ hoặc KHÔNG, không bao giờ trả giá trị thật của khóa bí mật.
 module.exports = (req, res) => {
   res.setHeader("Cache-Control", "no-store");

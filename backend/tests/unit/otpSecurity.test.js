@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra helper OTP tạo mã, băm theo mục đích và chuẩn hóa email.
+// Đầu vào cố định khóa các thuộc tính bảo mật không phụ thuộc database.
 const { OTP_PURPOSE, generateOTP, hashOTP, isOTPMatch, normalizeEmail } = require("../../src/utils/otpSecurity");
 
 describe("OTP security helpers", () => {

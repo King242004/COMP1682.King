@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra nhãn khẩu phần và trạng thái theo dõi dùng trong các màn Community.
+// Test khóa helper hiển thị thuần, không gọi API.
 import { mealPortionLabel, resolvedFollowState } from "@/features/community/communityDisplay";
 
 describe("mealPortionLabel", () => {

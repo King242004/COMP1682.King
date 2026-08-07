@@ -11,7 +11,7 @@
 // 2. Viết chú thích, có thể gắn thêm một món ăn
 // 3. Bấm Đăng, chạy handleSubmit
 // 4. api.createPost gói ảnh và chữ vào FormData  (POST /community/posts)
-// 5. backend đẩy từng ảnh lên kho ảnh rồi tạo bài
+// 5. postController.createPost upload từng ảnh qua communityHelpers.uploadImage rồi tạo Post
 // 6. quay về màn Community, bài mới nằm trên đầu
 // Gắn món là tùy chọn và chỉ lấy từ nhật ký để luôn mang theo
 // khẩu phần cùng số dinh dưỡng đã được người đăng xác nhận.

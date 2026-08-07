@@ -9,15 +9,14 @@
 // Khi lỗi:    AI hết lượt thì báo và vẫn cho gõ tay số dinh dưỡng.
 //             Chưa chọn buổi ăn hoặc chưa có đủ số thì nút Lưu bị khóa.
 //
-// LUỒNG THÊM MÓN
-// 1. Gõ tên món và khẩu phần, nguyên liệu là tuỳ chọn
-// 2. Bấm Ước tính, chạy handleEstimate
-// 3. scanApi.estimateNutrition        (POST /scan/estimate)
-// 4. backend hỏi Gemini rồi trả calo cùng ba chất
-// 5. Số hiện ra kèm nhãn nguồn, người dùng sửa tay được
-// 6. Bấm Lưu, chạy handleSave
-// 7. MealsContext.addMeals            (POST /meals)
-// 8. Quay lại màn trước đó, màn đó thấy dữ liệu đổi nên tự tải lại
+// Màn này chứa HAI luồng riêng, đánh số riêng, tìm trong file bằng chữ BƯỚC.
+//
+// LUỒNG ƯỚC TÍNH, chạy khi bấm nút Ước tính.
+// Đường đi: FILE NÀY → scanApi → apiClient → POST /scan/estimate → scanController → Gemini
+//
+// LUỒNG LƯU MÓN, chạy khi bấm nút Lưu.
+// Đường đi: FILE NÀY → MealsContext → mealsApi → apiClient → POST /meals/batch
+//           → mealController.addMeals → mealInputValidator → model Meal → MongoDB
 // Màn này còn được DÙNG LẠI cho bốn lối vào khác: quét ảnh, quét mã vạch,
 // bài Community, và ghi lại món cũ. Các lối đó truyền sẵn dữ liệu qua tham số
 // route, và nutritionSourceFromParam quyết định nhãn nguồn hiện lên là gì.
@@ -74,8 +73,12 @@ type DraftMeal = {
 type DraftField = "name" | "portion" | "details" | "calories" | "protein" | "carbs" | "fat";
 type FieldErrors = Record<string, string | undefined>;
 
+// Dựng khóa cho một ô nhập, kiểu "1:name". Cần vì một màn có tối đa 8 món,
+// nên phải phân biệt ô tên của món 1 với ô tên của món 2.
 const fieldKey = (id: number, field: DraftField) => `${id}:${field}`;
 
+// Đổi tham số route thành nhãn nguồn số liệu.
+// Đây là chỗ quyết định thẻ "AI ước tính" hay "Quét ảnh" hiện lên trên màn.
 function nutritionSourceFromParam(source: string | undefined, isPrefilled: boolean): NutritionSource {
   if (source === "photo") return "photo_scan";
   if (source === "barcode") return "barcode";
@@ -91,6 +94,7 @@ export default function AddMealScreen() {
   const { addMeals, historyMeals, fetchMealHistory } = useMeals();
   const t = useT();
   const locale = localeTag(resolveLanguage(user?.language));
+  // Mã món tiếp theo khi bấm thêm dòng. Bắt đầu từ 2 vì món đầu luôn là 1.
   const nextItemId = useRef(2);
   const {
     mealType: defaultType,
@@ -133,11 +137,17 @@ export default function AddMealScreen() {
   const isFromSuggestion = source === "suggest" || source === "coach";
   const isFromScan = isFromPhoto || isFromBarcode || (isPrefilled && !isFromSuggestion && !isFromCommunity && !isFromRepeat);
 
+  // Đoán khẩu phần ban đầu. Lối vào nào có sẵn khẩu phần thì dùng luôn,
+  // không có thì mặc định 1 phần, trừ bài Community vì bài đó thường không ghi.
   const initialPortion = () => {
     if (prefillPortion) return prefillPortion;
+    // Đường lùi cho bản cũ, hồi đó khẩu phần tách làm hai tham số số và đơn vị.
+    // Ghép lại thành một chuỗi, thiếu mảnh nào thì filter bỏ qua mảnh đó.
     const legacyPortion = [prefillAmount, prefillUnit].filter(Boolean).join(" ").trim();
     return legacyPortion || (prefillName && !isFromCommunity ? `1 ${t.meals.servingUnit}` : "");
   };
+  // Dựng một dòng món trống, hoặc điền sẵn nếu vào từ quét ảnh, mã vạch,
+  // bài Community, gợi ý, hay ghi lại món cũ.
   const initialItem = (): DraftMeal => ({
     id: 1,
     name: prefillName ?? "",
@@ -185,6 +195,7 @@ export default function AddMealScreen() {
     if (!isPrefilled) void fetchMealHistory().catch(() => {});
   }, [fetchMealHistory, isPrefilled]);
 
+  // Vài món gần đây để bấm một cái là điền sẵn, khỏi gõ lại.
   const recentDishes = useMemo(
     () => recentUniqueMeals(historyMeals, 4).map((meal) => ({
       name: meal.name,
@@ -197,8 +208,11 @@ export default function AddMealScreen() {
     })),
     [historyMeals, t.meals.servingUnit],
   );
+  // Danh sách tên món gần đây, dùng cho phần gợi ý khi đang gõ.
   const recentNameOptions = useMemo(() => recentUniqueMeals(historyMeals, 20), [historyMeals]);
 
+  // Kiểm MỘT món. requireNutrition bật khi bấm Lưu, tắt khi chỉ bấm Ước tính,
+  // vì lúc ước tính thì chưa có số dinh dưỡng là chuyện bình thường.
   const collectItemErrors = (item: DraftMeal, requireNutrition: boolean) => {
     const next: FieldErrors = {};
     // Chỉ còn kiểm phần TỐI THIỂU và phần bắt buộc. Trần độ dài do maxLength của
@@ -214,11 +228,14 @@ export default function AddMealScreen() {
     return Object.fromEntries(Object.entries(next).filter(([, message]) => message));
   };
 
+  // Kiểm CẢ danh sách món, gom lỗi của từng món lại thành một.
   const collectErrors = (requireNutrition: boolean) => Object.assign(
     {},
     ...items.map((item) => collectItemErrors(item, requireNutrition)),
   );
 
+  // Đánh dấu là người dùng đã đụng vào các ô này.
+  // Chưa đụng thì không hiện lỗi, tránh vừa mở màn đã đỏ lòm.
   const touchFields = (fields: DraftField[]) => {
     const next: Record<string, boolean> = {};
     items.forEach((item) => fields.forEach((field) => { next[fieldKey(item.id, field)] = true; }));
@@ -257,15 +274,19 @@ export default function AddMealScreen() {
     setSaveError("");
   };
 
+  // Rời khỏi một ô thì mới kiểm ô đó, không kiểm lúc đang gõ dở.
   const handleBlur = (id: number, field: DraftField) => {
     setTouched((current) => ({ ...current, [fieldKey(id, field)]: true }));
     const item = items.find((draft) => draft.id === id);
+    // Vừa rời một ô số thì kiểm luôn phần số. Rời ô chữ thì chỉ kiểm phần số
+    // khi cả bốn ô của món đó đã đầy, kẻo món còn dở đã báo đỏ khắp nơi.
     const nutritionField = ["calories", "protein", "carbs", "fat"].includes(field);
     if (item) setErrors((current) => ({ ...current, ...collectItemErrors(item, nutritionField || hasCompleteNutrition(item)) }));
   };
 
   // Thêm một món trống vào cuối danh sách. Trần 8 món khớp đúng giới hạn
-  // mà mealController và scanController đang kiểm ở backend.
+  // trong backend/src/validators/mealInputValidator.js và
+  // backend/src/services/nutrition/nutritionEstimator.js.
   const addItem = () => {
     if (items.length >= 8) return;
     setItems((current) => [...current, {
@@ -287,11 +308,15 @@ export default function AddMealScreen() {
     setSaveError("");
   };
 
-  // BƯỚC 2 CỦA LUỒNG. Người dùng bấm Ước tính trên một món.
-  // Mỗi lúc chỉ cho ước tính MỘT món, vì mỗi lượt gọi tốn một lượt AI.
-  // Trước khi điền, so lại tên, khẩu phần và nguyên liệu với lúc gửi đi.
-  // Người dùng gõ tiếp trong lúc chờ thì kết quả cũ bị bỏ, tránh điền số của
-  // món đã không còn tồn tại trên màn hình.
+  // ══════════════════════════════════════════════════════════
+  // ƯỚC TÍNH
+  //
+  // Người dùng gõ tên món với khẩu phần rồi bấm Ước tính. Bốn bước, đọc xuôi.
+  // Xong thì số hiện lên ô dinh dưỡng, và người dùng vẫn sửa tay được.
+  // ══════════════════════════════════════════════════════════
+
+  // ƯỚC TÍNH BƯỚC 1. Người dùng bấm Ước tính trên MỘT món.
+  // Mỗi lúc chỉ cho ước tính một món, vì mỗi lượt gọi tốn một lượt AI.
   const handleEstimate = async (id: number) => {
     const item = items.find((draft) => draft.id === id);
     if (!item || estimatingItemId !== null) return;
@@ -300,6 +325,8 @@ export default function AddMealScreen() {
       [fieldKey(id, "name")]: true,
       [fieldKey(id, "portion")]: true,
     }));
+    // ƯỚC TÍNH BƯỚC 2. Kiểm tên với khẩu phần ngay tại máy.
+    // Thiếu là dừng luôn, đỡ tốn một lượt AI cho dữ liệu chắc chắn sai.
     const inputErrors = collectItemErrors(item, false);
     setErrors((current) => ({ ...current, ...inputErrors }));
     if (Object.keys(inputErrors).length || !token) return;
@@ -313,9 +340,15 @@ export default function AddMealScreen() {
         portion: item.portion.trim(),
         details: item.details.trim(),
       };
+      // ƯỚC TÍNH BƯỚC 3. scanApi.estimateNutrition → POST /scan/estimate
+      // → scanController.estimateNutrition; cache hit trả ngay, cache miss gọi aiClient.
       const estimate = await estimateNutrition({
         items: [{ ...requested, details: requested.details || undefined }],
       }, token, resolveLanguage(user?.language));
+      // ƯỚC TÍNH BƯỚC 4. Điền số vào ô, và dán nhãn nguồn là ai_estimate.
+      // Nhớ: so lại tên, khẩu phần, nguyên liệu với lúc gửi đi trước khi điền.
+      // Người dùng gõ tiếp trong lúc chờ thì bỏ kết quả cũ, kẻo điền số của
+      // một món đã không còn trên màn hình nữa.
       setItems((current) => current.map((draft) => {
         if (draft.id !== id || draft.name.trim() !== requested.name || draft.portion.trim() !== requested.portion || draft.details.trim() !== requested.details)
           return draft;
@@ -339,7 +372,15 @@ export default function AddMealScreen() {
     }
   };
 
-  // BƯỚC 6 CỦA LUỒNG. Người dùng bấm Lưu.
+  // ══════════════════════════════════════════════════════════
+  // LƯU MÓN
+  //
+  // Người dùng bấm Lưu. Ba bước, đọc xuôi.
+  // Xong thì quay lại đúng màn trước đó, màn đó tự tải lại vì số đếm đã đổi.
+  // ══════════════════════════════════════════════════════════
+
+  // LƯU MÓN BƯỚC 1. Người dùng bấm Lưu. Kiểm hết tại máy trước, sai thì dừng luôn.
+  // Một lần lưu ghi được tối đa 8 món, nên phải kiểm cả danh sách items.
   const handleSave = async () => {
     if (isSaving || !mealType) return;
     touchFields(["name", "portion", "calories", "protein", "carbs", "fat"]);
@@ -350,6 +391,9 @@ export default function AddMealScreen() {
     setIsSaving(true);
     setSaveError("");
     try {
+      // LƯU MÓN BƯỚC 2. MealsContext.addMeals → mealsApi.addMealsRequest
+      // → POST /meals/batch → mealController.addMeals ghi MongoDB và gọi readDay.
+      // Dòng này chạy xong nghĩa là món đã nằm trong database rồi.
       await addMeals(items.map((item) => ({
         name: item.name.trim(),
         calories: parseDecimal(item.calories),
@@ -362,8 +406,8 @@ export default function AddMealScreen() {
         date: logDate,
         note: item.details.trim() || undefined,
       })));
-      // Quay lại đúng màn người dùng đang đứng trước khi vào đây.
-      // Màn quét dùng router.replace nên nó đã bị thay thế khỏi ngăn xếp,
+      // LƯU MÓN BƯỚC 3. Quay lại đúng màn người dùng đang đứng trước khi vào đây.
+      // Màn quét dùng router.replace nên nó đã bị thay khỏi ngăn xếp,
       // back sẽ về thẳng màn trước đó chứ không rơi ngược lại vào camera.
       router.back();
     } catch (error) {
@@ -372,6 +416,8 @@ export default function AddMealScreen() {
     }
   };
 
+  // Bấm vào một món gần đây thì điền hết cả tên lẫn số dinh dưỡng,
+  // và dán nhãn nguồn là repeat để người dùng biết đây là món ghi lại.
   const fillSuggestion = (suggestion: typeof recentDishes[number]) => {
     setItems([{
       id: 1,
@@ -392,6 +438,9 @@ export default function AddMealScreen() {
     setEstimateError(null);
   };
 
+  // Cộng tổng calo với ba chất của tất cả món đang gõ, để hiện thẻ tổng.
+  // Chỉ để XEM TRƯỚC trên màn. Tổng lưu chính thức do mealController.readDay cộng
+  // trong mealController.js, và mọi màn khác đều lấy từ đó.
   const totals = useMemo(() => items.reduce((sum, item) => ({
     calories: sum.calories + (parseDecimal(item.calories) || 0),
     protein: Math.round((sum.protein + (parseDecimal(item.protein) || 0)) * 10) / 10,
@@ -406,6 +455,7 @@ export default function AddMealScreen() {
   const backdatedLabel = new Date(`${logDate}T00:00:00`).toLocaleDateString(locale, {
     weekday: "long", month: "short", day: "numeric",
   });
+  // Đổi mã nguồn thành chữ hiện cho người dùng đọc.
   const sourceLabel = (sourceValue: NutritionSource) => nutritionSourceLabel(sourceValue, t);
 
   return (

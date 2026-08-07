@@ -1,3 +1,9 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra TDEE, hướng cân, tốc độ đổi cân và mục tiêu calo.
+// Dữ liệu cố định khóa công thức và giới hạn có nguồn trong nutritionConstants.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra TDEE, hướng cân, tốc độ đổi cân và mục tiêu calo.
+// Dữ liệu cố định khóa công thức và giới hạn có nguồn trong nutritionConstants.
 const {
   calculateBMR, calculateTDEE, dailyDeltaFromRate, resolveWeightDirection, resolveWeightGoal, resolveRate,
   buildCalorieGoal, estimateGoalDate, autoGoal, autoGoalDetail,

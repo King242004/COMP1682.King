@@ -16,8 +16,6 @@ const { autoGoal, resolveWeightGoal } = require("../services/nutrition/calorieGo
 const { PROFILE_LIMITS } = require("../config/nutritionConstants");
 const { requestTodayKey } = require("../utils/dateUtils");
 
-// File này lo nhật ký cân nặng và giữ cho hồ sơ luôn khớp với lần cân mới nhất.
-
 // Đồng bộ cân nặng vào hồ sơ, và tính lại mục tiêu calo nếu người dùng
 // đang để app tự tính. Ai tự đặt mục tiêu riêng thì không đụng tới.
 async function syncUserWeight(userId, currentWeight) {

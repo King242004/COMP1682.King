@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra AppHeader lấy avatar hiện tại và có lối mở đúng trang hồ sơ.
+// Test đọc source để khóa cấu trúc nhỏ mà không cần dựng native UI.
 import fs from "fs";
 import path from "path";
 

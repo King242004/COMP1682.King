@@ -1,17 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Ba việc của cửa vào app: gửi mã đăng ký, tạo tài khoản, và đăng nhập.
-// Đây là chặng cuối của luồng, ngay trước database.
-//
-// Ai gọi tới: authRoutes, tức màn Đăng nhập và màn Đăng ký
-// Nhận vào:   email, mật khẩu, tên, và mã 6 số khi đăng ký
-// Trả ra:     thẻ đăng nhập JWT kèm hồ sơ đã lọc bỏ mật khẩu
-// Khi lỗi:    sai email hoặc mật khẩu thì trả cùng một câu chung chung,
-//             để người lạ không dò được email nào đã có tài khoản
-//
-// Hai chỗ đáng chú ý khi bảo vệ:
-//   publicUser lọc hồ sơ trước khi gửi đi, mật khẩu đã mã hóa cũng không lọt ra.
-//   Câu trả lời lúc gửi mã luôn giống nhau và chờ đủ một khoảng thời gian,
-//     để kẻ dò không đoán được email có tồn tại hay không qua tốc độ trả lời.
 const bcrypt = require("bcryptjs");
 const { sendOTP } = require("../services/emailRelayClient");
 const OTP = require("../models/OTP");
@@ -53,6 +41,7 @@ const isValidEmail = (email) =>
 // nghĩa là mật khẩu dài hơn sẽ có một phần đuôi không hề có tác dụng.
 const isValidPassword = (pw) =>
   typeof pw === "string" && pw.length >= 6 && pw.length <= INPUT_LIMITS.PASSWORD && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
+// Ngôn ngữ email chỉ nhận vi hoặc en, giá trị lạ thì về mặc định.
 const resolveEmailLanguage = (value) => value === "vi" ? "vi" : "en";
 // \p{L} = any Unicode letter (supports Vietnamese diacritics, Chinese, etc.)
 const isValidName = (name) =>
@@ -104,7 +93,7 @@ exports.sendRegistrationOTP = async (req, res) => {
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 exports.register = async (req, res) => {
-  const { name, password, otp, goal, conditions, calorieGoal, weight, height, age } = req.body;
+  const { name, password, otp, goal, conditions, calorieGoal, weight, height, age, language } = req.body;
   const email = normalizeEmail(req.body.email);
 
   // Kiểm các trường bắt buộc trước khi đụng tới database
@@ -150,6 +139,10 @@ exports.register = async (req, res) => {
       // Chưa có số đo thì để rỗng, bước thiết lập lần đầu sẽ tính mục tiêu thật.
       calorieGoal: calorieGoal || null,
       weight, height, age,
+      // Ngôn ngữ người dùng chọn ở màn Đăng ký. Lưu luôn để app khỏi gọi
+      // thêm một lượt PUT /profile ngay sau khi tạo tài khoản.
+      // Ngôn ngữ lạ thì bỏ qua, để undefined và model dùng mặc định.
+      language: language === "vi" || language === "en" ? language : undefined,
     });
   } catch (err) {
     // Mã 11000 là lỗi trùng email của database. Xảy ra khi hai lần đăng ký
@@ -163,8 +156,11 @@ exports.register = async (req, res) => {
 };
 
 // ─── Login ────────────────────────────────────────────────────────────────────
+// Nhận thêm language, là ngôn ngữ người dùng đã chọn ở màn Đăng nhập trước khi bấm.
+// Trước kia app phải gọi thêm một lượt PUT /profile chỉ để đẩy lựa chọn đó lên,
+// giờ gộp vào đây nên đăng nhập chỉ còn một lượt mạng.
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, language } = req.body;
 
   if (typeof email !== "string" || typeof password !== "string" || !email || !password)
     return res.status(400).json({ message: "Email and password are required." });
@@ -179,9 +175,17 @@ exports.login = async (req, res) => {
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(400).json({ message: "Invalid email or password." });
 
+  // Chỉ ghi khi thật sự khác, để đăng nhập bình thường không tốn thêm lệnh ghi.
+  // Ngôn ngữ lạ thì bỏ qua, coi như người dùng không chọn gì.
+  if ((language === "vi" || language === "en") && user.language !== language) {
+    user.language = language;
+    await user.save();
+  }
+
   res.json({ token: createAuthToken(user._id, user.tokenVersion), user: publicUser(user) });
 };
 
+// App gọi khi cần lấy lại hồ sơ mới nhất mà không phải đăng nhập lại.
 exports.getMe = async (req, res) => {
   const user = await User.findById(req.user.id).select("-password");
   res.json(user);

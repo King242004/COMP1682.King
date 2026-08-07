@@ -6,7 +6,8 @@
 // Trả ra:     thẻ điểm, luôn hiện đủ bốn phần chứ không chỉ con số tổng
 // Khi lỗi:    chưa đủ hồ sơ thì mời hoàn tất, không hiện điểm bịa
 
-// Điểm này do backend TÍNH bằng công thức cố định, không phải AI chấm.
+// Điểm này do backend/src/services/coach/dailyHealthScore.js tính bằng công thức cố định,
+// không phải do aiClient chấm.
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";

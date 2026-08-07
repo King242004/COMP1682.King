@@ -23,11 +23,14 @@ function parseCoachReply(rawText) {
   }
 }
 
+// Ép về số nguyên không âm. AI đôi khi trả số lẻ hoặc số âm cho calo.
 function nonNegativeInteger(value) {
   return Math.max(0, Math.round(Number(value) || 0));
 }
 
+// Các loại ý định mà Coach nhận. AI trả về loại lạ thì bỏ, coi như không có.
 const INTENTS = new Set(["meal_advice", "meal_log", "cooking", "exercise", "personal_status", "small_talk", "out_of_scope"]);
+// Ba loại liên quan tới món ăn. Chỉ ba loại này mới được kèm thẻ món.
 const MEAL_INTENTS = new Set(["meal_advice", "meal_log", "cooking"]);
 
 // Câu chuyển hướng CỐ ĐỊNH cho mọi yêu cầu ngoài phạm vi, kể cả câu dụ phá luật.
@@ -48,10 +51,13 @@ function photoNotFood(language) {
     : "I can't see any food, drink or menu in this photo. Send a photo of a meal and I'll take a look.";
 }
 
+// Bỏ dấu câu và hạ chữ thường, để so hai câu trả lời có giống nhau không.
 function normalizeForComparison(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+// Chặn Coach lặp lại y nguyên câu vừa nói lượt trước.
+// AI hay bí mà nhắc lại, người dùng đọc thấy như máy hỏng.
 function avoidDuplicateCoachReply(reply, history, language) {
   const normalized = normalizeForComparison(reply);
   const repeated = normalized && history.filter((item) => item.role === "coach").slice(-3)
@@ -62,6 +68,8 @@ function avoidDuplicateCoachReply(reply, history, language) {
     : "I answered that point above. Would you like more detail about the portion, preparation, or how it fits your goal?";
 }
 
+// Chốt câu trả lời trước khi gửi về app.
+// Ép mọi con số về hợp lệ, bỏ thẻ món nếu ý định không thuộc nhóm món ăn.
 function finalizeCoachReply(parsed, { language, mealType }) {
   const intent = INTENTS.has(parsed?.intent) ? parsed.intent : "small_talk";
   const reply = intent === "out_of_scope" ? genericOutOfScope(language) : String(parsed?.reply || "").trim() || (language === "vi"

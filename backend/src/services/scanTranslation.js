@@ -10,15 +10,14 @@
 // giữ nguyên toàn bộ con số dinh dưỡng và độ tin cậy của lượt đầu.
 // Nếu để nó tính lại số thì hai lượt sẽ cho hai kết quả khác nhau.
 //
-// File này là lớp chắn ngôn ngữ cho Quét ảnh, làm cùng việc như coachLanguage
-// nhưng dò theo từ về món ăn và khẩu phần thay vì từ hội thoại.
-
 // Ba bộ dấu hiệu: dấu tiếng Việt, tên món tiếng Việt không dấu,
 // và từ tiếng Anh hay gặp khi mô tả món và khẩu phần.
 const VIETNAMESE_DIACRITICS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+// Tên món tiếng Việt KHÔNG DẤU hay gặp, để bắt trường hợp AI trả về không dấu.
 const VIETNAMESE_FOOD_WORDS = /\b(com|ga|bo|heo|lon|ca|tom|bun|pho|mi|dau|hu|chien|xao|nuong|luoc|hap|sot|canh|chen|to|dia|phan|mieng)\b/i;
 const ENGLISH_FOOD_WORDS = /\b(small|medium|large|bowl|plate|serving|piece|pieces|cup|fried|spicy|with|sauce|tofu|rice|chicken|beef|pork|fish|noodle|noodles|soup|grilled|steamed|roasted)\b/i;
 
+// Gom tên món và mô tả khẩu phần của mọi ứng viên thành một chuỗi để dò.
 function candidateText(candidates) {
   return candidates
     .flatMap((candidate) => [candidate?.name, candidate?.portionDescription])
@@ -26,6 +25,7 @@ function candidateText(candidates) {
     .join(" ");
 }
 
+// Dò xem kết quả quét có lẫn ngôn ngữ không.
 function hasLanguageMismatch(candidates, language) {
   const text = candidateText(Array.isArray(candidates) ? candidates : []);
   if (!text) return false;

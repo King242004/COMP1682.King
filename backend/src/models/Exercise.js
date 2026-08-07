@@ -15,7 +15,8 @@ const mongoose = require("mongoose");
 // Nơi ghi vào: màn Ghi buổi tập, khi tập xong một bài hướng dẫn,
 //   và khi bấm "Xong" ở gợi ý tập trong kế hoạch tuần.
 // Nơi đọc ra: màn Trang chủ, màn Tiến trình, và phần dữ liệu đưa cho Coach.
-// caloriesBurned được server tính rồi mới lưu, app không gửi con số này lên.
+// exerciseController.addExercise gọi computeBurned rồi mới lưu caloriesBurned;
+// exerciseApi.addExercise không gửi trường này.
 // sourceKey, mã MET và cân nặng là snapshot để phép tính cũ vẫn giải thích được
 // sau khi người dùng đổi cân nặng hoặc catalog được cập nhật.
 const exerciseSchema = new mongoose.Schema(

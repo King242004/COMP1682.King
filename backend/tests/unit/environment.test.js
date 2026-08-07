@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra server từ chối khởi động khi thiếu biến môi trường bắt buộc.
+// Test thay process.env tạm thời rồi khôi phục sau mỗi trường hợp.
 const { validateEnvironment } = require("../../src/config/environment");
 
 const validEnv = {

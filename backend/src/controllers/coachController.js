@@ -26,9 +26,7 @@ const cloudinary = require("../config/cloudinary");
 const { validateCoachChat } = require("../validators/coachChatValidator");
 const { normalizeCoachText, resolveRequestedLanguage, requestedLanguage, languageSwitchReply } = require("../services/coach/coachLanguage");
 const { requestTodayKey } = require("../utils/dateUtils");
-
-// File này lo AI Coach: chấm điểm ngày, trò chuyện, gợi ý món,
-// lưu và xóa lịch sử, ghi món từ tin nhắn vào nhật ký.
+const { MEAL_TYPES } = require("../config/mealEnums");
 
 // Đoán bữa đang tới dựa trên giờ hiện tại. Bản giống hệt bên frontend
 // nằm ở features/meals/mealHelpers.ts, hai bên phải cho ra cùng kết quả.
@@ -153,7 +151,8 @@ exports.chat = async (req, res) => {
     // Bước 3. CỔNG CHUNG. Mọi tin nhắn phải qua đây trước khi được phép
     // tốn một lượt Gemini để trả lời nội dung.
     // Chỉ gửi ảnh mà không gõ chữ thì luôn là câu hỏi về món trong ảnh.
-    // Lượt xin đổi ngôn ngữ chỉ cần lớp từ khóa, vì backend tự trả lời câu xác nhận.
+    // Lượt xin đổi ngôn ngữ chỉ cần coachLanguage.requestedLanguage;
+    // nhánh bên dưới tự tạo câu xác nhận nên không gọi aiClient.generateJson.
     const photoOnly = !text && Boolean(image);
     const scope = photoOnly
       ? { scope: SUPPORTED, capability: "food_choice", reason: null }
@@ -285,8 +284,8 @@ exports.chat = async (req, res) => {
 };
 
 // Thẻ gợi ý món ở màn Trang chủ.
-// Số calo còn lại tính bằng mục tiêu trừ đã ăn cộng đã đốt,
-// nên tập nhiều thì được gợi ý món nhiều calo hơn.
+// Số calo còn lại tính bằng mục tiêu trừ lượng đã ăn. Không cộng caloriesBurned vì
+// calorieGoal đã dựa trên TDEE có hệ số vận động; cộng thêm sẽ tính vận động hai lần.
 // Nếu kế hoạch tuần đã có món cho bữa này thì AI được dặn gợi ý món KHÁC để thay thế.
 exports.suggestMeal = async (req, res) => {
   try {
@@ -381,6 +380,18 @@ exports.getHistory = async (req, res) => {
   });
 };
 
+// Nút xóa lịch sử trò chuyện trong màn Coach.
+// Đặt ngay sau getHistory vì đây là cặp đọc/xóa của cùng tài nguyên /coach/history.
+// Phải xóa ảnh TRƯỚC, vì xóa tin nhắn rồi thì không còn biết
+// đường dẫn ảnh nào cần dọn, ảnh sẽ nằm lại trên kho mãi mãi.
+// Xóa cả hai ngôn ngữ chứ không chỉ ngôn ngữ đang xem.
+exports.clearHistory = async (req, res) => {
+  const withImages = await ChatMessage.find({ user: req.user.id, imagePublicId: { $ne: null } }).select("imagePublicId");
+  await Promise.allSettled(withImages.map((m) => cloudinary.uploader.destroy(m.imagePublicId)));
+  await ChatMessage.deleteMany({ user: req.user.id });
+  res.json({ message: "Chat history cleared." });
+};
+
 // Nút "Thêm" trên tin nhắn Coach có kèm món.
 // Ghi mã món vào tin nhắn để nút giữ đúng trạng thái sau khi thoát app mở lại,
 // và để nút hoàn tác biết cần xóa món nào.
@@ -391,7 +402,7 @@ exports.logFromMessage = async (req, res) => {
   if (msg.loggedMealId) return res.status(400).json({ message: "Already added." });
 
   const m = msg.meal;
-  const type = ["breakfast", "lunch", "dinner", "snack"].includes(mealType) ? mealType : m.mealType;
+  const type = MEAL_TYPES.includes(mealType) ? mealType : m.mealType;
   const meal = await Meal.create({
     user: req.user.id,
     name: m.name,
@@ -418,15 +429,4 @@ exports.unlogFromMessage = async (req, res) => {
     await msg.save();
   }
   res.json({ message: "Removed." });
-};
-
-// Nút xóa lịch sử trò chuyện trong màn Coach.
-// Phải xóa ảnh TRƯỚC, vì xóa tin nhắn rồi thì không còn biết
-// đường dẫn ảnh nào cần dọn, ảnh sẽ nằm lại trên kho mãi mãi.
-// Xóa cả hai ngôn ngữ chứ không chỉ ngôn ngữ đang xem.
-exports.clearHistory = async (req, res) => {
-  const withImages = await ChatMessage.find({ user: req.user.id, imagePublicId: { $ne: null } }).select("imagePublicId");
-  await Promise.allSettled(withImages.map((m) => cloudinary.uploader.destroy(m.imagePublicId)));
-  await ChatMessage.deleteMany({ user: req.user.id });
-  res.json({ message: "Chat history cleared." });
 };

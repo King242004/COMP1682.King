@@ -3,7 +3,7 @@
 //
 // Ai gọi tới: ProfileScreen
 // Nhận vào:   bật hay tắt từng bữa, và giờ muốn nhắc
-// Trả ra:     không trả gì, lời nhắc đặt thẳng trên MÁY chứ không lưu server
+// Trả ra:     lịch do notificationService lưu bằng expo-notifications và AsyncStorage
 // Khi lỗi:    chưa cho phép thông báo thì công tắc tự tắt lại, không để bật giả
 
 // LUỒNG ĐẶT LỜI NHẮC
@@ -12,8 +12,8 @@
 // 3. hủy lời nhắc cũ của bữa đó trước
 // 4. notifications.scheduleDailyReminder xin quyền rồi đặt lịch mới
 // 5. lưu trạng thái vào bộ nhớ máy
-// Điểm quan trọng: luồng này KHÔNG gọi backend. Lời nhắc do hệ điều hành
-// của điện thoại giữ, không liên quan tới server.
+// Điểm quan trọng: luồng này không gọi apiClient. notificationService dùng
+// expo-notifications để hệ điều hành giữ lịch ngay trên điện thoại.
 // Vì vậy thông báo vẫn hiện dù món của bữa đó đã được ghi rồi.
 // Đăng xuất sẽ hủy toàn bộ lời nhắc, để không nhắc nhầm tài khoản khác.
 import { useCallback, useState } from "react";

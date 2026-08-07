@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Chặng giữa phần Quét và backend. Chỉ lo gọi mạng và nén ảnh,
+// Adapter giữa ScanScreen/AddMealScreen và scanRoutes/scanController; ngoài HTTP còn nén ảnh,
 // không giữ state và không vẽ gì.
 //
 // Ai gọi tới: ScanScreen (quét ảnh, quét mã vạch),
@@ -10,10 +10,10 @@
 //
 // Ba việc, ba địa chỉ:
 //   scanPhoto          POST /scan/photo     ảnh món, AI trả tối đa ba ứng viên
-//   scanBarcode        POST /scan/barcode   mã vạch, backend tra Open Food Facts
+//   scanBarcode        POST /scan/barcode   scanController.scanBarcode tra Open Food Facts
 //   estimateNutrition  POST /scan/estimate  tên và khẩu phần, AI trả calo cùng ba chất
 // Ảnh được thu nhỏ và nén TRƯỚC khi gửi. Ảnh gốc của điện thoại quá nặng nên
-// vừa lâu vừa dễ vượt giới hạn dung lượng mà backend đặt.
+// vừa lâu vừa dễ vượt giới hạn của scanUploadLimiter trong scanRoutes.js.
 import * as ImageManipulator from "expo-image-manipulator";
 import { apiFetch } from "@/utils/apiClient";
 import type { Lang } from "@/utils/languageUtils";
@@ -68,7 +68,7 @@ export const BARCODE_SETTINGS = { barcodeTypes: [...BARCODE_TYPES] } as {
   barcodeTypes: ("ean13" | "ean8" | "upc_a" | "upc_e" | "code128")[];
 };
 
-// File này là chặng giữa ScanScreen và backend.
+// File này nối ScanScreen với backend/src/routes/scanRoutes.js.
 
 export async function compressImage(uri: string): Promise<string> {
   try {
@@ -83,7 +83,7 @@ export async function compressImage(uri: string): Promise<string> {
   }
 }
 
-// Gửi kèm ngôn ngữ để backend dặn AI trả tên món đúng tiếng đang dùng trong app.
+// Gửi language để scanController.scanPhoto đưa ngôn ngữ vào vision prompt.
 export async function scanImage(
   uri: string,
   token: string,

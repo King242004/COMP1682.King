@@ -14,8 +14,6 @@
 const OTP = require("../models/OTP");
 const { OTP_MAX_ATTEMPTS, OTP_RESEND_COOLDOWN_MS, isOTPMatch } = require("../utils/otpSecurity");
 
-// File này lo vòng đời mã xác minh 6 số, dùng chung cho đăng ký và quên mật khẩu.
-
 // Cách chặn spam nằm ngay trong điều kiện tìm kiếm, nên hai request chạy
 // song song cũng chỉ một cái thắng.
 async function reserveOTP({ email, purpose, codeHash, expiresAt }) {
@@ -68,7 +66,7 @@ async function recordFailedOTPAttempt(recordId, expectedCodeHash) {
 }
 
 // Hàm kiểm mã dùng chung cho cả bốn chỗ: đăng ký, xem mã, và đặt lại mật khẩu.
-// Bốn chữ này để controller hiện đúng câu cho người dùng, ví dụ hết hạn thì
+// Bốn mã này để authController và accountController chọn đúng response, ví dụ hết hạn thì
 // bảo xin mã mới, còn sai quá nhiều lần thì bảo phải xin mã khác.
 async function verifyOTPCode({ email, purpose, candidate, consume = false }) {
   const record = await OTP.findOne({ email, purpose }).select("+codeHash");

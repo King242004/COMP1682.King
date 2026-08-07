@@ -13,7 +13,6 @@
 // Có một mức SÀN không cho tụt xuống dưới, để app không đề xuất ăn quá ít.
 //
 // Mọi con số dùng ở đây đều lấy từ config/nutritionConstants, không gõ thẳng vào file này.
-// Mọi con số dùng ở đây đều lấy từ config/nutritionConstants, không gõ thẳng vào file này.
 const {
   MIFFLIN_ST_JEOR, ACTIVITY_MULTIPLIERS, DEFAULT_ACTIVITY_LEVEL, CALORIE_FLOOR,
   KCAL_PER_KG_BODY_WEIGHT, WEEKLY_RATE_KG, WEIGHT_GOALS,
@@ -143,7 +142,7 @@ function autoGoalDetail(profile) {
   return { ...plan, eta };
 }
 
-// Bản rút gọn chỉ trả về con số, giữ nguyên cách gọi cũ của các controller.
+// Bản rút gọn giữ cách gọi của profileController, weightController và coachContext.
 function autoGoal(profile) {
   const detail = autoGoalDetail(profile);
   return detail ? detail.calorieGoal : null;

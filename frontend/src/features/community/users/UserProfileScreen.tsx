@@ -9,9 +9,9 @@
 // LUỒNG MỞ TRANG CÁ NHÂN
 // 1. Chạm tên hoặc ảnh của ai đó, mở màn này kèm mã người đó
 // 2. api.getPublicProfile         (GET /community/users/:id)
-//    backend trả tên, ảnh, ba con số thống kê, và ba cờ trạng thái
+//    socialController.getPublicProfile trả tên, ảnh, thống kê và trạng thái quan hệ
 // 3. api.getUserPosts             (GET /community/posts/user/:id)
-//    backend trả lưới bài, hoặc trả rỗng kèm cờ riêng tư
+//    feedController.getUserPosts trả lưới bài, hoặc private=true kèm mảng rỗng
 // 4. màn hiện thông tin và lưới bài
 // Ba cờ quyết định giao diện: isMe thì ẩn nút Theo dõi,
 // isFollowing đổi chữ trên nút, postsHidden thì thay lưới bài

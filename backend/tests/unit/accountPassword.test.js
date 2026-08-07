@@ -1,3 +1,9 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khóa luồng đổi mật khẩu: kiểm mật khẩu cũ, băm mật khẩu mới và cấp lại token.
+// Model và dịch vụ ngoài được mock; test đạt khi controller trả đúng mã và state.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khóa luồng đổi mật khẩu: kiểm mật khẩu cũ, băm mật khẩu mới và cấp lại token.
+// Model và dịch vụ ngoài được mock; test đạt khi controller trả đúng mã và state.
 jest.mock("bcryptjs", () => ({ compare: jest.fn(), hash: jest.fn() }));
 jest.mock("../../src/config/cloudinary", () => ({ uploader: {} }));
 jest.mock("../../src/services/emailRelayClient", () => ({ sendOTP: jest.fn() }));

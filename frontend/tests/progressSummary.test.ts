@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra gom lịch sử món thành số liệu ngày cho biểu đồ Tiến trình.
+// Test khóa tổng, tỷ lệ mục tiêu, ngày tương lai và nhánh chưa có mục tiêu.
 import type { Meal } from "@/features/meals/MealsContext";
 import { buildDaySummaries } from "@/features/progress/progressSummary";
 import { dateKey } from "@/utils/dateUtils";

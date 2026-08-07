@@ -70,6 +70,30 @@ exports.uploadAvatar = async (req, res) => {
   }
 };
 
+// Đổi tên nằm cạnh đổi ảnh vì hai thao tác này cùng cập nhật hồ sơ công khai
+// và cùng được gọi từ ProfileScreen/AuthContext, trước các luồng mật khẩu bên dưới.
+exports.changeName = async (req, res) => {
+  const { name } = req.body;
+
+  if (typeof name !== "string" || name.trim().length < 2)
+    return res.status(400).json({ message: "Name must be at least 2 characters." });
+
+  if (name.trim().length > INPUT_LIMITS.DISPLAY_NAME)
+    return res.status(400).json({ message: `Name must be ${INPUT_LIMITS.DISPLAY_NAME} characters or fewer.` });
+
+  // \p{L} = any Unicode letter (English + Vietnamese diacritics + other languages)
+  if (!/^[\p{L}\s]+$/u.test(name.trim()))
+    return res.status(400).json({ message: "Name must contain only letters." });
+
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { name: name.trim() },
+    { returnDocument: "after" }
+  ).select("-password");
+
+  res.json({ message: "Name updated successfully.", user });
+};
+
 // ─── Send OTP ─────────────────────────────────────────────────────────────────
 // Bước 1 của luồng Quên mật khẩu.
 // Giống luồng đăng ký, câu trả lời luôn như nhau để không lộ email nào đã đăng ký.
@@ -237,27 +261,4 @@ exports.deleteAccount = async (req, res) => {
 
   await user.deleteOne();
   res.json({ message: "Account deleted." });
-};
-
-// ─── Change Name ──────────────────────────────────────────────────────────────
-exports.changeName = async (req, res) => {
-  const { name } = req.body;
-
-  if (typeof name !== "string" || name.trim().length < 2)
-    return res.status(400).json({ message: "Name must be at least 2 characters." });
-
-  if (name.trim().length > INPUT_LIMITS.DISPLAY_NAME)
-    return res.status(400).json({ message: `Name must be ${INPUT_LIMITS.DISPLAY_NAME} characters or fewer.` });
-
-  // \p{L} = any Unicode letter (English + Vietnamese diacritics + other languages)
-  if (!/^[\p{L}\s]+$/u.test(name.trim()))
-    return res.status(400).json({ message: "Name must contain only letters." });
-
-  const user = await User.findByIdAndUpdate(
-    req.user.id,
-    { name: name.trim() },
-    { returnDocument: "after" }
-  ).select("-password");
-
-  res.json({ message: "Name updated successfully.", user });
 };

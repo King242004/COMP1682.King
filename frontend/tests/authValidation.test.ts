@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra email, OTP sáu số và mật khẩu theo đúng luật form xác thực.
+// Test khóa helper thuần, không gọi mạng hay dựng màn hình.
 import { isStrongPassword, isValidEmail, isValidOtp } from "@/features/auth/authValidation";
 
 test("auth fields follow the app rules", () => {

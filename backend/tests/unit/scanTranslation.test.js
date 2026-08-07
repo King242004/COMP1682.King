@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra tên món scan khớp ngôn ngữ yêu cầu và phát hiện nội dung lẫn tiếng.
+// Test khóa helper ngôn ngữ độc lập, không gọi AI.
 const { hasLanguageMismatch, buildLanguageCorrectionPrompt, mergeLocalizedText } = require("../../src/services/scanTranslation");
 
 describe("scan result language", () => {

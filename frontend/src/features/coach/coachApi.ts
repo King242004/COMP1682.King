@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Chặng giữa màn Coach và backend.
+// Adapter HTTP giữa CoachScreen/HomeScreen và coachRoutes/coachController.
 //
 // Ai gọi tới: CoachScreen, InsightCard
 // Nhận vào:   câu hỏi, ảnh, ngôn ngữ, và ngày cần chấm điểm
@@ -20,7 +20,7 @@ const AI_TIMEOUT_MS = 120_000;
 
 export type CoachInsight = {
   date: string;
-  // Ngày chưa có bữa nào thì backend trả cờ này thay cho điểm.
+  // coachController.getInsight trả pending khi ngày chưa có Meal.
   pending?: boolean;
   score: number;
   breakdown: { calorie: number; protein: number; activity: number; consistency: number };
@@ -48,6 +48,11 @@ export type ChatMessage = {
   // Thời gian ISO dùng để chia tin nhắn theo ngày.
   createdAt?: string;
 };
+
+export type CachedInsight = { insight: CoachInsight; at: number };
+
+// ─── CHUẨN HÓA DỮ LIỆU HIỂN THỊ ───
+
 // Cần hàm này vì app hiện chữ thuần, không dựng Markdown.
 export function stripMarkdown(s: string): string {
   return (s || "")
@@ -67,8 +72,10 @@ export function stripMarkdown(s: string): string {
     .trim();
 }
 
+// ─── ĐIỂM SỨC KHỎE VÀ TRÒ CHUYỆN ───
+
 // Lấy điểm sức khỏe và lời nhận xét. Gọi GET /coach/insight.
-// Điểm do backend TÍNH bằng công thức, AI chỉ viết lời bình.
+// dailyHealthScore.computeHealthScore tính điểm; Gemini chỉ viết lời bình.
 // Xóa Markdown khỏi mọi câu chữ trước khi trả về.
 export async function getInsight(token: string, date: string, language: Lang): Promise<CoachInsight> {
   const data = await apiRequest(
@@ -87,7 +94,7 @@ export async function getInsight(token: string, date: string, language: Lang): P
 }
 
 // Gửi một tin nhắn cho Coach. Gọi POST /coach/chat.
-// Backend tự đọc hồ sơ, số liệu sức khỏe và lịch sử từ database.
+// coachController.chat gọi coachContext.buildContext và đọc 10 ChatMessage gần nhất.
 // Frontend chỉ gửi tin hiện tại, ngôn ngữ, giờ địa phương và ảnh nếu có.
 export async function chatWithCoach(
   token: string,
@@ -112,7 +119,7 @@ export async function chatWithCoach(
 }
 
 // Tải lại tin nhắn cũ. Gọi GET /coach/history kèm ngôn ngữ.
-// Backend chỉ trả tin của đúng ngôn ngữ đó.
+// coachController.getHistory lọc ChatMessage theo language.
 // Giữ nguyên phần món và trạng thái đã ghi, để các nút còn đúng sau khi mở lại.
 export async function getChatHistory(token: string, language: Lang): Promise<ChatMessage[]> {
   const data = await apiRequest<{ messages: ChatMessage[] }>(
@@ -135,19 +142,18 @@ export async function getChatHistory(token: string, language: Lang): Promise<Cha
 }
 
 // Xóa hết lịch sử. Gọi DELETE /coach/history.
-// Backend xóa cả ảnh trên kho ảnh và tin của CẢ HAI ngôn ngữ.
+// coachController.clearHistory xóa ảnh Cloudinary và toàn bộ ChatMessage của user.
 export async function clearChatHistory(token: string): Promise<void> {
   await apiRequest("/coach/history", "DELETE", undefined, token);
 }
 
+// ─── BỘ NHỚ ĐỆM ĐIỂM SỨC KHỎE ───
 
 // Đổi lên v3 khi cách chấm điểm thay đổi, để bỏ bản cũ đang nằm trong máy.
 const insightKey = (date: string, language: Lang) => `coach_insight_v3_${date}_${language}`;
 
 // Dữ liệu insight trong bộ nhớ đệm còn mới trong 10 phút.
 export const INSIGHT_TTL_MS = 10 * 60 * 1000;
-
-export type CachedInsight = { insight: CoachInsight; at: number };
 
 // Đọc điểm sức khỏe đã lưu trong máy, để hiện ngay khi mở màn.
 // Bản lưu kiểu cũ không có thời điểm lưu nên bị coi là đã hết hạn.

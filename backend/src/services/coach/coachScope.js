@@ -11,12 +11,8 @@
 // ngoài phạm vi. Tên món ăn hay tên bệnh nằm trong câu KHÔNG tự động
 // làm cho một yêu cầu khác trở thành hợp lệ.
 //
-// File này là CỔNG CHUNG của Coach. Mọi tin nhắn phải đi qua đây
-// trước khi được phép tốn một lượt gọi Gemini để trả lời nội dung.
-// Nguyên tắc chốt: MẶC ĐỊNH TỪ CHỐI. Không chứng minh được câu hỏi thuộc
-// một năng lực được hỗ trợ thì coi như ngoài phạm vi. Tên món ăn, tên môn thể thao
-// hay tên bệnh nằm trong câu KHÔNG làm cho một yêu cầu khác trở thành hợp lệ.
 const SUPPORTED = "supported";
+// Hai kết quả duy nhất mà cổng gác này trả về.
 const OUT_OF_SCOPE = "out_of_scope";
 
 // Danh sách ĐÓNG các việc Coach được phép làm. Gemini phải chọn đúng một mục
@@ -32,8 +28,11 @@ const COACH_CAPABILITIES = [
   "supported_small_talk",
 ];
 
+// Bọc thành Set để tra nhanh khi kiểm câu trả lời của lớp phân loại.
 const CAPABILITY_SET = new Set(COACH_CAPABILITIES);
 
+// Hạ chữ thường và bỏ dấu tiếng Việt, để dò từ khóa không bị lệch
+// giữa "chính trị" và "chinh tri". Người muốn lách hay gõ không dấu.
 function normalizeScopeText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -61,6 +60,8 @@ const HARD_SIGNALS = [
 // Nhóm này dùng từ ĐA NGHĨA, ví dụ câu chuyện hay email, nên chỉ chặn khi
 // đi kèm một động từ nhờ làm hộ. Nhờ vậy "câu chuyện giảm cân của tôi" vẫn lọt.
 const REQUEST_VERBS = /\b(viet|soan|tao|lam|cho|gui|giai|write|create|make|generate|give|draft|compose|build|solve|do)\b/;
+// Các yêu cầu kiểu sáng tác: viết truyện, viết email, làm bài văn.
+// Gài thêm tên món vào vẫn không biến chúng thành câu hỏi dinh dưỡng.
 const AMBIGUOUS_CONTENT = /\b(cau chuyen|story|script|essay|bai van|email|thu moi|thu xin viec|bai dang|post facebook)\b/;
 
 // Câu nhờ Coach bỏ qua chính luật của nó, hoặc moi câu lệnh hệ thống.
@@ -68,6 +69,7 @@ const RULE_BYPASS = /\b(bo qua|quen|ignore|disregard|forget|bypass|override|tiet
 // "dong vai" bị loại trừ khi theo sau là "tro", vì "đóng vai trò" là câu hỏi thật.
 const INJECTION_MARKERS = /\b(system prompt|prompt injection|jailbreak|developer mode|dan mode|act as an ai|ban la mot ai|role play as|dong vai (?!tro))/;
 
+// Đếm xem câu này chạm bao nhiêu nhóm dấu hiệu ngoài phạm vi.
 function outOfScopeSignals(message) {
   const text = normalizeScopeText(message);
   if (!text) return [];
@@ -77,10 +79,14 @@ function outOfScopeSignals(message) {
   return signals;
 }
 
+// LỚP MỘT, chặn cứng. Rõ ràng ngoài phạm vi thì chặn ngay,
+// không tốn một lượt gọi Gemini nào cả.
 function hasBlockedCoachIntent(message) {
   return outOfScopeSignals(message).length > 0;
 }
 
+// LỚP HAI, nhờ AI phân loại phần còn lại mà lớp một chưa chắc.
+// Câu lệnh dặn rõ: không chắc thì trả về ngoài phạm vi.
 function buildScopePrompt({ message, history = [], hasImage = false }) {
   const recent = history.slice(-6).map((item) => `${item.role === "user" ? "User" : "Coach"}: ${item.text}`).join("\n");
   return `You are a strict capability gate for MealMate's health Coach. You do not answer the user.
@@ -128,6 +134,8 @@ Return ONLY JSON:
 Set scope to supported ONLY when capability is in the list AND hasOutOfScopeRequest is false.`;
 }
 
+// Đọc câu trả lời của lớp hai. Đọc không ra, hoặc năng lực trả về không có
+// trong danh sách, thì coi là NGOÀI PHẠM VI. Mặc định luôn là từ chối.
 function parseScope(raw) {
   try {
     const value = JSON.parse(String(raw || "").trim());

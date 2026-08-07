@@ -1,20 +1,19 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Kiểm dữ liệu món TRƯỚC khi controller ghi xuống database.
+// Kiểm dữ liệu món trước mealController.addMeal/addMeals hoặc planController.markEaten ghi Meal.
 //
 // Ai gọi tới: mealController (thêm sửa món), planController (món trong kế hoạch)
 // Nhận vào:   tên món, buổi ăn, calo và ba chất, ngày, nguồn số liệu
 // Trả ra:     dữ liệu đã sạch và đã ép về đúng kiểu, hoặc một câu báo lỗi
-// Khi lỗi:    trả về error kèm tên trường sai, controller dừng luôn
+// Khi lỗi:    trả error để mealController.addMeal/addMeals hoặc planController.markEaten trả 400
 //
-// Vì sao tách thành file riêng: hai controller khác nhau cùng gọi vào đây,
+// Vì sao tách riêng: mealController.js và planController.js cùng gọi vào đây,
 // nên luồng thêm món và luồng kế hoạch luôn dùng chung một bộ giới hạn.
 // Nếu mỗi bên tự kiểm thì rất dễ lệch nhau.
 // mealController và planController cùng gọi file này để luồng tạo và sửa món
 // luôn dùng chung giới hạn calo, protein, carb và fat.
 const { INPUT_LIMITS, LEGACY_LIMITS, DIGIT_LIMITS } = require("../config/inputLimits");
+const { MEAL_TYPES, NUTRITION_SOURCES } = require("../config/mealEnums");
 
-const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
-const NUTRITION_SOURCES = ["manual", "ai_estimate", "ai_adjusted", "photo_scan", "barcode", "community", "repeat", "ai_suggestion"];
 const CALORIE_MAX = 10 ** DIGIT_LIMITS.CALORIE - 1;
 const MACRO_MAX = 10 ** DIGIT_LIMITS.MACRO - 1;
 
@@ -39,6 +38,8 @@ function validateNutritionValues(input = {}) {
   return { value };
 }
 
+// Cửa vào của file này, thuộc LUỒNG LƯU MÓN.
+// Đến từ mealController.addMeal hoặc addMeals.
 function validateMealInput(input, userId, currentDate = new Date().toISOString().slice(0, 10)) {
   const name = validateMealName(input?.name);
   const mealType = String(input?.mealType || "");

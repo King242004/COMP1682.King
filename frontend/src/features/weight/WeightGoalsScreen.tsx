@@ -3,9 +3,9 @@
 //
 // Ai gọi tới: ProfileScreen, qua địa chỉ /profile/goals
 // Nhận vào:   cân nặng mục tiêu và tốc độ muốn đổi mỗi tuần
-// Trả ra:     không trả gì, lưu xong thì mục tiêu calo được backend tính lại
+// Trả ra:     không trả gì; profileController.updateProfile trả mục tiêu calo mới
 // Khi lỗi:    thiếu hồ sơ để tính thì mời hoàn tất hồ sơ trước.
-//             Tốc độ quá nhanh thì backend kẹp lại và app hiện con số thật.
+//             calorieGoal.resolveRate kẹp tốc độ quá nhanh và response trả con số thật.
 //
 // Điểm cần nói khi bảo vệ: mục tiêu calo có một mức SÀN, app không cho tụt
 // xuống dưới. Câu cảnh báo nói rõ phần mềm dừng ở đâu và vì sao, chứ không
@@ -15,19 +15,19 @@
 // 1. Mở màn, useFocusEffect gọi lại hồ sơ để lấy số mới nhất
 // 2. Chọn hướng là giảm, giữ, hay tăng cân
 // 3. Nhập cân nặng đích
-// 4. Chọn tốc độ kg mỗi tuần trong các mức backend cho phép
+// 4. Chọn tốc độ kg mỗi tuần trong stats.rateOptions do profileController trả
 // 5. Màn hiện thử mục tiêu calo, tính tại chỗ bằng estimateCalorieGoal
 // 6. Bấm Lưu, chạy saveGoal
 // 7. AuthContext.updateProfile        (PUT /profile)
-// 8. backend tính lại mục tiêu chính thức và trả hồ sơ mới
+// 8. profileController.updateProfile gọi calorieGoal.js và trả hồ sơ mới
 // BA điều dễ hiểu nhầm ở màn này:
 // Hướng và cân đích ràng buộc lẫn nhau. Chọn hướng thì ô cân đích được chuẩn bị
 // sẵn, còn gõ cân đích thì hướng tự đổi theo. Người dùng đi đường nào cũng được.
-// Con số calo trên màn chỉ là XEM TRƯỚC, tính bằng bản mirror ở frontend.
-// Con số chính thức do backend tính lại sau khi lưu, và hai bên có thể lệch nhau
-// khi backend phải áp mức sàn calo.
-// Chọn tự động thì gửi calorieGoal bằng null để backend tự tính. Chọn tự đặt thì
-// gửi đúng con số người dùng gõ, và backend ghi nhớ đây là mục tiêu tự đặt.
+// Con số calo trên màn chỉ là XEM TRƯỚC, tính bằng config/nutritionCalculations.ts.
+// Con số lưu chính thức do backend/src/services/nutrition/calorieGoal.js tính lại sau
+// khi lưu; preview có thể lệch khi calorieGoal.buildCalorieGoal áp mức sàn calo.
+// Chọn tự động gửi calorieGoal=null để profileController.updateProfile gọi autoGoal.
+// Chọn tự đặt gửi con số người dùng gõ để profileController.updateProfile bật customGoal.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -61,6 +61,10 @@ const DIRECTION_ICONS = {
   gain: "trending-up",
 } as const;
 
+// Số buổi tập mỗi tuần cho người dùng chọn. null đứng đầu là "Không đặt".
+// Trần 7 khớp luật trong profileController.updateProfile.
+const WORKOUT_TARGET_OPTIONS: (number | null)[] = [null, 1, 2, 3, 4, 5, 6, 7];
+
 const parseNumber = (value: string) => Number(value.trim().replace(",", "."));
 
 export default function WeightGoalsScreen() {
@@ -73,6 +77,9 @@ export default function WeightGoalsScreen() {
   const [selectedRate, setSelectedRate] = useState<number | null>(null);
   const [calorieMode, setCalorieMode] = useState<CalorieMode>("automatic");
   const [calorieInput, setCalorieInput] = useState("");
+  // null nghĩa là chưa đặt mục tiêu. App KHÔNG tự đoán hộ một con số,
+  // vì số buổi tập mỗi tuần là lựa chọn cá nhân, không phải ngưỡng sức khỏe.
+  const [workoutTarget, setWorkoutTarget] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -93,6 +100,7 @@ export default function WeightGoalsScreen() {
     setSelectedRate(user?.weeklyRateKg ?? null);
     setCalorieMode(user?.customGoal ? "custom" : "automatic");
     setCalorieInput(user?.calorieGoal == null ? "" : String(user.calorieGoal));
+    setWorkoutTarget(user?.weeklyWorkoutTarget ?? null);
   }, [
     stats?.maintainWeightThresholdKg,
     stats?.weightDirection,
@@ -100,6 +108,7 @@ export default function WeightGoalsScreen() {
     user?.customGoal,
     user?.targetWeight,
     user?.weeklyRateKg,
+    user?.weeklyWorkoutTarget,
     user?.weight,
   ]);
 
@@ -132,7 +141,7 @@ export default function WeightGoalsScreen() {
 
   // Workflow tự chạy: giữ tốc độ đang chọn luôn nằm trong danh sách hợp lệ.
   // Giữ cân thì tốc độ đúng bằng 0. Đổi hướng mà tốc độ cũ không còn trong danh
-  // sách của hướng mới thì lấy mức mặc định backend đưa xuống.
+  // sách của hướng mới thì lấy stats.rateBands do profileController.getProfile trả.
   useEffect(() => {
     if (selectedDirection === "maintain") {
       setSelectedRate(0);
@@ -180,7 +189,7 @@ export default function WeightGoalsScreen() {
     : null;
 
   // BƯỚC 6 CỦA LUỒNG. Người dùng bấm Lưu.
-  // Gửi calorieGoal bằng null khi chọn tự động. Đó là tín hiệu để backend tính
+  // Gửi calorieGoal=null để profileController.updateProfile tính
   // lại từ TDEE chứ không phải là xóa mục tiêu.
   const saveGoal = async () => {
     if (!canSave || previewTargetWeight == null) return;
@@ -192,6 +201,7 @@ export default function WeightGoalsScreen() {
         targetWeight: previewTargetWeight,
         weeklyRateKg: selectedDirection === "maintain" ? 0 : selectedRate,
         calorieGoal: calorieMode === "custom" ? customCalorieGoal : null,
+        weeklyWorkoutTarget: workoutTarget,
       });
       router.back();
     } catch (error) {
@@ -400,6 +410,39 @@ export default function WeightGoalsScreen() {
           )}
         </Card>
 
+        {/* Nằm ngoài khối Tốc độ vì khối đó tự ẩn khi chọn Giữ cân,
+            mà người giữ cân vẫn tập. */}
+        <SectionLabel>{t.weightGoals.workoutSection}</SectionLabel>
+        <Card style={styles.workoutCard}>
+          <AppText variant="subtle" style={styles.hint}>{t.weightGoals.workoutHint}</AppText>
+          <View style={styles.workoutGrid}>
+            {WORKOUT_TARGET_OPTIONS.map((option) => {
+              const active = workoutTarget === option;
+              return (
+                <Pressable
+                  key={option ?? "none"}
+                  onPress={() => {
+                    setWorkoutTarget(option);
+                    setSaveError("");
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  style={({ pressed }) => [
+                    styles.workoutOption,
+                    option == null && styles.workoutOptionWide,
+                    active && styles.workoutOptionActive,
+                    pressed && styles.dim,
+                  ]}
+                >
+                  <AppText style={[styles.workoutText, active && styles.activeText]}>
+                    {option == null ? t.weightGoals.workoutNone : String(option)}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Card>
+
         {saveError ? <AppText style={styles.error}>{saveError}</AppText> : null}
         <Button
           title={saving ? t.common.saving : t.weightGoals.save}
@@ -460,6 +503,18 @@ const styles = StyleSheet.create({
   rateTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   rateName: { fontWeight: "700" },
   activeText: { color: theme.colors.primary },
+  workoutCard: { padding: theme.space.lg, gap: theme.space.md },
+  workoutGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  workoutOption: {
+    minWidth: 46, alignItems: "center",
+    paddingVertical: theme.space.md, paddingHorizontal: theme.space.md,
+    borderWidth: 1, borderColor: theme.colors.border,
+    borderRadius: theme.radius.input, backgroundColor: theme.colors.tintSoft,
+  },
+  // Ô "Không đặt" là chữ chứ không phải một chữ số nên cần rộng hơn.
+  workoutOptionWide: { flexGrow: 1 },
+  workoutOptionActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
+  workoutText: { fontWeight: "700" },
   metricRow: {
     flexDirection: "row", alignItems: "center",
     paddingVertical: theme.space.md, borderRadius: theme.radius.input, backgroundColor: theme.colors.tintSoft,

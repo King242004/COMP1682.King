@@ -12,7 +12,8 @@
 // 3. Hết giờ một bước thì tự nhảy sang bước kế tiếp
 // 4. Xong bước cuối, chạy finish
 // 5. addExercise                  (POST /exercise)
-// 6. backend tạo một buổi tập thật, tính calo theo cân nặng
+// 6. exerciseApi.addExercise gọi POST /exercises;
+//    exerciseController.addExercise tạo buổi tập và gọi computeBurned
 // 7. hiện thông báo rồi quay về màn trước
 // Nội dung các bài nằm ở features/exercise/guidedRoutines.ts.
 // finishedRef chặn ghi trùng, vì đồng hồ có thể chạm mốc cuối nhiều lần.

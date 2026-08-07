@@ -4,7 +4,7 @@
 // Ai gọi tới: CoachScreen
 // Nhận vào:   đường dẫn ảnh trong máy
 // Trả ra:     chuỗi base64 đã nén, đủ nhẹ để gửi qua mạng
-// Khi lỗi:    ảnh hỏng thì ném lỗi, màn hiện thông báo thay vì gửi rác lên server
+// Khi lỗi:    ảnh hỏng thì ném lỗi trước khi coachApi.chatWithCoach tạo request
 
 import * as ImageManipulator from "expo-image-manipulator";
 

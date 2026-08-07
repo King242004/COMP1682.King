@@ -1,7 +1,8 @@
-// Đây là dịch vụ riêng chạy trên Vercel, tách khỏi backend chính.
-// Vì sao tách riêng: Render chặn cổng SMTP ở gói miễn phí, nên backend
-// không tự gửi mail được. Vercel gọi được SMTP nên đứng ra gửi hộ.
-// Chữ ký là thứ duy nhất chứng minh request đến từ backend thật.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Handler POST /api/send-email, được backend/src/services/emailRelayClient.js gọi qua HTTP.
+// Render chặn cổng SMTP ở gói miễn phí; hàm handler bên dưới dùng nodemailer trên Vercel.
+// requestSignature.verifySignature xác nhận chữ ký do emailRelayClient.createRelaySignature tạo.
+// Luồng: kiểm method/config → đọc body → kiểm chữ ký → kiểm dữ liệu → gửi SMTP → trả response.
 const nodemailer = require("nodemailer");
 const { verifySignature } = require("../src/requestSignature");
 const { buildOtpEmail } = require("../src/otpEmailTemplate");

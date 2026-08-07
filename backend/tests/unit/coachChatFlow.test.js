@@ -1,7 +1,13 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chạy đúng coachController.chat để khóa cửa phạm vi, ngôn ngữ và response.
+// Model và Gemini được mock nên test luồng thật mà không gọi dịch vụ ngoài.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Chạy đúng coachController.chat để khóa cửa phạm vi, ngôn ngữ và response.
+// Model và Gemini được mock nên test luồng thật mà không gọi dịch vụ ngoài.
 // Bài kiểm thử này chạy ĐÚNG hàm coachController.chat, tức là cả luồng API
 // từ kiểm dữ liệu, cổng năng lực, chọn ngôn ngữ tới câu trả lời cuối cùng.
 // Gemini và database bị thay bằng bản giả, nên test không tốn lượt gọi AI
-// và không cần MongoDB, nhưng logic được kiểm là logic thật của controller.
+// và không cần MongoDB, nhưng vẫn chạy logic thật trong coachController.chat.
 jest.mock("../../src/config/geminiModels", () => ({
   insightModels: ["insight-model"],
   nutritionModels: ["nutrition-model"],

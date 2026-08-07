@@ -7,14 +7,13 @@
 // Khi lỗi:    dịch lại thất bại thì giữ nguyên câu gốc,
 //             thà sai ngôn ngữ còn hơn màn hình trống
 //
-// File này là lớp chắn ngôn ngữ cho Coach.
-// Vấn đề: app để tiếng Anh nhưng AI vẫn có lúc trả lời tiếng Việt, và ngược lại.
-// Cách chặn: dò kết quả, nếu thấy lẫn ngôn ngữ thì gọi AI thêm một lượt để dịch lại.
-
 // Ba bộ dấu hiệu để đoán ngôn ngữ. Dấu tiếng Việt, từ tiếng Việt không dấu,
 // và các từ tiếng Anh hay gặp.
 const VIETNAMESE_MARKS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+// Từ tiếng Việt KHÔNG DẤU hay gặp. Cần vì người dùng thường gõ không dấu,
+// lúc đó bộ dò dấu ở trên không bắt được.
 const VIETNAMESE_WORDS = /\b(ban|minh|hom|nay|khong|nen|thu|voi|cho|bua|nhe|nha|suc|khoe)\b/i;
+// Từ tiếng Anh hay gặp, dùng để phát hiện AI trả lời sai tiếng.
 const ENGLISH_WORDS = /\b(the|and|you|your|today|try|with|for|meal|health|calories|keep|choose|add|avoid|should|could|this|that|is|are|to|of)\b/i;
 
 // Người dùng xin đổi ngôn ngữ theo rất nhiều kiểu nói, nên cần hai dấu hiệu.
@@ -37,7 +36,7 @@ function normalizeLanguageText(value) {
 
 // Lấy tên ngôn ngữ CUỐI CÙNG trong câu, vì đích đến thường đứng sau,
 // ví dụ "từ tiếng Việt sang tiếng Anh".
-// Việc đổi ngôn ngữ do backend quyết định bằng luật cố định chứ không hỏi Gemini,
+// coachController.chat dùng luật cố định trong file này để đổi ngôn ngữ, không hỏi Gemini,
 // nên câu xác nhận luôn đúng ngôn ngữ người dùng vừa chọn.
 function requestedLanguage(message) {
   const text = normalizeLanguageText(message);
@@ -48,10 +47,14 @@ function requestedLanguage(message) {
   return /anh|english/.test(targets[targets.length - 1]) ? "en" : "vi";
 }
 
+// Quyết định ngôn ngữ trả lời cho lượt này.
+// Ưu tiên: người dùng xin đổi trong chính câu này, rồi tới ngôn ngữ lượt trước.
 function resolveRequestedLanguage(message, fallback) {
   return requestedLanguage(message) || (fallback === "vi" ? "vi" : "en");
 }
 
+// Câu xác nhận khi người dùng xin đổi ngôn ngữ.
+// Gom về một chỗ để Coach không bao giờ nói kiểu tự mâu thuẫn.
 function languageSwitchReply(language) {
   return language === "vi"
     ? "Được, từ giờ mình sẽ trả lời bằng tiếng Việt."
@@ -68,6 +71,7 @@ function collectText(value, output = []) {
   return output;
 }
 
+// Dò xem kết quả AI có lẫn ngôn ngữ không. Đây là lớp chắn chạy SAU khi AI trả lời.
 function hasLanguageMismatch(value, language) {
   const text = collectText(value).join(" ");
   if (!text) return false;
@@ -75,6 +79,8 @@ function hasLanguageMismatch(value, language) {
   return VIETNAMESE_MARKS.test(text) || VIETNAMESE_WORDS.test(text);
 }
 
+// Câu lệnh nhờ AI dịch lại phần chữ bị sai tiếng.
+// Nhớ: CHỈ đổi chữ, giữ nguyên mọi con số, kẻo hai lượt ra hai kết quả khác nhau.
 function buildCorrectionPrompt(value, language) {
   const languageName = language === "vi" ? "Vietnamese" : "English";
   const rule = language === "vi"

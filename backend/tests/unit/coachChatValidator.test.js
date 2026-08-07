@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra giới hạn và kiểu dữ liệu của tin nhắn, ảnh và nguồn gửi tới Coach.
+// Input đúng được chuẩn hóa; input sai phải bị chặn đúng lý do.
 const { validateCoachChat } = require("../../src/validators/coachChatValidator");
 
 describe("validateCoachChat", () => {

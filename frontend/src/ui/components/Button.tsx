@@ -13,14 +13,24 @@ import { AppText } from "./AppText";
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "lg" | "md";
 
+// ══════════════════════════════════════════════════════════
+// BỐN BẢNG TRA KIỂU
+//
+// Không phải luồng, chỉ là bốn bảng tra nhỏ. Gọi cái nào trước cũng được.
+// Cả bốn đều được gọi ở khối DỰNG NÚT bên dưới, lúc xếp chồng style.
+// ══════════════════════════════════════════════════════════
+
+// Cỡ nút chỉ có hai mức, lg cao 56 còn md cao 48. Không có cỡ nhỏ hơn.
 function getSizeStyle(size: Size): ViewStyle {
   return size === "lg" ? styles.large : styles.medium;
 }
 
+// Màu nền lúc thường. Tên kiểu trùng luôn tên khóa trong styles nên tra thẳng được.
 function getVariantStyle(variant: Variant): ViewStyle {
   return styles[variant];
 }
 
+// Màu nền lúc ngón tay đang đè xuống. Đậm hơn màu thường, để người dùng thấy nút đã ăn.
 function getPressedVariantStyle(variant: Variant): ViewStyle {
   const pressedStyles: Record<Variant, ViewStyle> = {
     primary: styles.primaryPressed,
@@ -32,6 +42,8 @@ function getPressedVariantStyle(variant: Variant): ViewStyle {
   return pressedStyles[variant];
 }
 
+// Màu chữ theo kiểu. Phải tách riêng khỏi màu nền, vì nút danger nền đỏ nhạt
+// mà chữ lại đỏ đậm, hai màu không suy ra được từ nhau.
 function getTextVariantStyle(variant: Variant): TextStyle {
   const textStyles: Record<Variant, TextStyle> = {
     primary: styles.primaryText,
@@ -43,6 +55,15 @@ function getTextVariantStyle(variant: Variant): TextStyle {
   return textStyles[variant];
 }
 
+// ══════════════════════════════════════════════════════════
+// DỰNG NÚT
+//
+// Đến từ gần như mọi màn. Hai bước, đọc từ trên xuống là đúng thứ tự.
+// Xong thì trả về một Pressable đã đủ cỡ, đủ màu nền, đủ màu chữ.
+// ══════════════════════════════════════════════════════════
+
+// DỰNG NÚT BƯỚC 1. Nhận props. variant với size đã có sẵn giá trị mặc định,
+// nên nơi gọi chỉ cần truyền title và onPress là chạy được.
 export function Button({
   title,
   onPress,
@@ -61,6 +82,10 @@ export function Button({
   size?: Size;
   style?: ViewStyle;
 }) {
+  // DỰNG NÚT BƯỚC 2. Xếp chồng style rồi trả nút ra.
+  // Nhớ: THỨ TỰ trong mảng style là quan trọng, cái dưới đè cái trên.
+  // base rồi cỡ rồi màu nền, sau đó mới tới màu lúc đang đè, rồi mờ khi bị khóa,
+  // cuối cùng là style nơi gọi truyền vào nên nơi gọi luôn đè được hết.
   return (
     <Pressable
       accessibilityRole="button"

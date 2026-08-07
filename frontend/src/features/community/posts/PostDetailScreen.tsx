@@ -9,10 +9,10 @@
 // LUỒNG MỞ CHI TIẾT
 // 1. Chạm một bài ở feed, mở màn này kèm mã bài
 // 2. api.getPost                    (GET /community/posts/:id)
-// 3. backend kiểm quyền xem rồi trả bài
+// 3. postController.getPost gọi communityHelpers.canViewUser rồi trả bài
 // 4. hiện ảnh, chú thích, và các nút
 // CÁC NÚT TRONG MÀN
-//   Tim, gọi POST /community/posts/:id/like, backend tạo hoặc gỡ thông báo cho chủ bài.
+//   Tim gọi POST /community/posts/:id/like; postController.toggleLike tạo hoặc gỡ Notification.
 //   Lưu bài, gọi POST /community/posts/:id/save, không tạo thông báo.
 //   Hỏi Coach cách làm, chỉ có ở bài món ăn, chuyển sang tab Coach kèm câu hỏi.
 //     Coach được báo nguồn là community để nói rõ đây chỉ là cách nấu tham khảo,
@@ -65,7 +65,7 @@ export default function PostDetailScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // Nút tim. Đổi giao diện trước rồi gọi mạng, lỗi thì trả về như cũ.
-  // Backend tự tạo thông báo cho chủ bài, hoặc gỡ khi bỏ tim.
+  // postController.toggleLike tạo thông báo cho chủ bài, hoặc gỡ khi bỏ tim.
   const onLike = async () => {
     if (!token || !post) return;
     const prev = post;
@@ -92,8 +92,8 @@ export default function PostDetailScreen() {
   };
 
   // Nút Xóa, chỉ chủ bài thấy.
-  // Hỏi xác nhận rồi gọi DELETE, backend xóa cả ảnh trên kho
-  // và các thông báo trỏ tới bài này.
+  // Hỏi xác nhận rồi gọi DELETE; postController.deletePost xóa Cloudinary images
+  // và các Notification trỏ tới Post.
   const onDelete = () => {
     Alert.alert(t.community.deletePostTitle, t.community.deletePostMsg, [
       { text: t.common.cancel, style: "cancel" },

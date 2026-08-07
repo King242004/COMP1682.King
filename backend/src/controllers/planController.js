@@ -27,11 +27,7 @@ const {
 } = require("../config/homeRoutineRules");
 const { getGuidedRoutine, buildExerciseSnapshot } = require("../config/exerciseCatalog");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
-
-// File này lo kế hoạch tuần: món dự định ăn, tạo thực đơn bằng AI,
-// danh sách đi chợ, và nút chuyển món kế hoạch thành dữ liệu thật.
-
-const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
+const { MEAL_TYPES } = require("../config/mealEnums");
 
 // Khác với nhật ký món, ở đây ngày ở tương lai là hợp lệ vì đang lên kế hoạch.
 // Người dùng tự thêm một món vào kế hoạch, không qua AI.
@@ -83,7 +79,7 @@ exports.getPlanMeals = async (req, res) => {
 
 // Đây là luồng AI phức tạp nhất của app, và là luồng cần nắm rõ nhất khi bảo vệ.
 // Vì sao cần hai lớp an toàn: câu lệnh gửi AI chỉ là lời dặn, AI vẫn có thể quên.
-// Lớp thứ hai chạy ở server nên người dùng không tắt được, đây là chỗ chặn cuối cùng.
+// Lớp thứ hai là foodSafetyFilter chạy sau phản hồi AI nên app không bỏ qua được.
 // Giới hạn của lớp hai: nó chỉ đọc TÊN món, không phân tích được nguyên liệu bên trong.
 exports.generatePlan = async (req, res) => {
   const { startDate, endDate, language, note } = req.body;
@@ -163,6 +159,8 @@ Return ONLY valid JSON:
     // Bước 4. Không tin thẳng dữ liệu AI trả về. Ép mọi số về số nguyên không âm,
     // cắt chữ quá dài, và bỏ qua ngày nào không nằm trong khoảng đã yêu cầu.
     const mealDocs = [];
+    // Gợi ý tập của từng ngày. Lọc bỏ những gợi ý mà app không có mục tương ứng,
+    // xem homeRoutineRules, kẻo người dùng bấm vào không được.
     const workoutDocs = [];
     for (const day of Array.isArray(parsed.days) ? parsed.days : []) {
       if (!dates.includes(day?.date)) continue;

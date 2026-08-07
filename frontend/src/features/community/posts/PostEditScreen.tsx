@@ -4,18 +4,18 @@
 // Ai gọi tới: PostDetailScreen
 // Nhận vào:   bài cần sửa, ảnh giữ lại và ảnh thêm mới
 // Trả ra:     không trả gì, lưu xong thì quay lại chi tiết bài
-// Khi lỗi:    backend kiểm lại chủ sở hữu, nên sửa bài người khác vẫn bị chặn
+// Khi lỗi:    postController.updatePost kiểm author, nên sửa bài người khác vẫn bị chặn
 
 // LUỒNG SỬA BÀI
 // 1. Tải lại bài cần sửa, điền sẵn vào các ô
 // 2. Sửa chú thích, đổi loại bài, thêm hoặc bớt ảnh
 // 3. Bấm Lưu, api.updatePost                (PATCH /community/posts/:id)
-// 4. backend cập nhật rồi trả bài mới
+// 4. postController.updatePost cập nhật rồi trả Post mới
 // HAI CÁCH GỬI, api.updatePost tự chọn
 //   Không thêm ảnh mới thì gửi JSON thường cho nhẹ.
 //   Có thêm ảnh mới thì gửi kèm file, và gửi thêm keepUrls là danh sách
 //     ảnh cũ muốn giữ. Ảnh cũ nào không nằm trong danh sách đó
-//     sẽ bị backend xóa khỏi kho ảnh.
+//     sẽ bị postController.updatePost xóa khỏi Cloudinary.
 import { useState, useEffect } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";

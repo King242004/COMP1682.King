@@ -16,7 +16,9 @@
 // LUỒNG XÓA TÀI KHOẢN
 // 1. Bấm Xóa tài khoản, hộp thoại yêu cầu nhập mật khẩu
 // 2. AuthContext.deleteAccount           (DELETE /user/account)
-// 3. backend so mật khẩu, xóa mọi ảnh trên kho ảnh,
+// 3. Route gọi hàm deleteAccount trong backend/src/controllers/accountController.js;
+//    hàm này so mật khẩu,
+//    xóa ảnh qua cloudinary và xóa dữ liệu tài khoản
 //    rồi xóa dữ liệu ở tất cả các bảng, cuối cùng xóa tài khoản
 // 4. app tự đăng xuất và quay về màn Đăng nhập
 import { useCallback, useState } from "react";
@@ -61,21 +63,6 @@ export default function SettingsScreen() {
   const [isPrivate, setIsPrivate] = useState(!!user?.isPrivate);
   const [savingLang, setSavingLang] = useState(false);
 
-  // Nút Xóa tài khoản. Đây là thao tác KHÔNG hoàn tác được.
-  const handleDeleteAccount = async () => {
-    if (!deletePw || deleting) return;
-    setDeleting(true);
-    try {
-      await deleteAccount(deletePw);
-      setDeleteVisible(false);
-      router.replace("/auth/login");
-    } catch (error) {
-      Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.settings.deleteFailed));
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   // Tải lại số lời nhắc khi quay về vì lời nhắc được chỉnh ở màn riêng.
   useFocusEffect(useCallback(() => {
     void loadReminders().then((r) => setReminderCount(enabledCount(r))).catch(() => {});
@@ -101,7 +88,8 @@ export default function SettingsScreen() {
   ) ?? stats?.weightDirection;
   const displayedGoal = displayedDirection ? WEIGHT_GOAL_BY_DIRECTION[displayedDirection] : user?.goal;
   // Đổi ngôn ngữ app. Lưu qua PUT /profile chứ không chỉ lưu ở máy,
-  // vì backend cần biết để dặn AI trả lời đúng tiếng.
+  // vì AuthContext.updateProfile gửi nó tới profileController.updateProfile;
+  // coachController.chat đọc trường này để chọn ngôn ngữ trả lời.
   // Đổi xong thì Coach tải lịch sử của ngôn ngữ mới, và các lời nhắc
   // được đặt lại bằng ngôn ngữ đó.
   const handleSetLanguage = async (l: Lang) => {
@@ -113,6 +101,21 @@ export default function SettingsScreen() {
       Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.settings.failedLanguage));
     } finally {
       setSavingLang(false);
+    }
+  };
+
+  // Nút Xóa tài khoản đặt cuối nhóm thao tác vì đây là lối kết thúc phiên và không hoàn tác được.
+  const handleDeleteAccount = async () => {
+    if (!deletePw || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteAccount(deletePw);
+      setDeleteVisible(false);
+      router.replace("/auth/login");
+    } catch (error) {
+      Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.settings.deleteFailed));
+    } finally {
+      setDeleting(false);
     }
   };
 

@@ -105,6 +105,10 @@ export function NutritionManualFields({ values, onChange, onBlur, errorFor }: {
 }) {
   const t = useT();
 
+  // Khuôn chung của một ô số. Viết một lần rồi gọi bốn lần ở JSX dưới.
+  // Bàn phím để decimal-pad nên chỉ gõ được số với dấu chấm.
+  // Ô calo cho nhiều chữ số hơn ba ô kia, vì calo lên tới hàng nghìn còn ba chất thì không.
+  // Kiểm số chạy lúc RỜI ô, không phải lúc đang gõ, kẻo mới gõ chữ đầu đã bị mắng.
   const field = (name: NutritionField, label: string, placeholder: string) => (
     <TextField
       label={label}

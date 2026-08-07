@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra Coach giữ đúng ngôn ngữ người dùng trong mọi nhánh response.
+// Câu mẫu Việt/Anh khóa cả nhánh nhận diện và sửa nội dung bị lẫn tiếng.
 const { hasLanguageMismatch, mergeTextValues, normalizeCoachText, resolveRequestedLanguage, requestedLanguage, languageSwitchReply } = require("../../src/services/coach/coachLanguage");
 
 describe("Coach response language", () => {

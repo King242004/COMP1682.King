@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bộ đếm số lần gọi. Ai gọi quá dày thì chặn lại trước khi vào controller.
+// Bộ đếm số lần gọi; middleware trong từng route chặn request quá dày trước hàm controller.
 //
 // Ai gọi tới: authRoutes, accountRoutes, coachRoutes
 // Nhận vào:   request đi vào

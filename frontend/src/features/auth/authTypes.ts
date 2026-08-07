@@ -7,7 +7,7 @@
 // Khi lỗi:    gán sai kiểu thì TypeScript báo lỗi ngay lúc build, không đợi tới lúc chạy
 
 // Chỉ có kiểu, không có code chạy.
-// User phải khớp với hàm publicUser trong backend authController,
+// User phải khớp object do hàm publicUser trong backend/src/controllers/authController.js trả về,
 // lệch một trường là app đọc thiếu dữ liệu.
 import type { WeightGoal } from "@/config/nutritionCalculations";
 import type { Lang } from "@/utils/languageUtils";
@@ -52,7 +52,7 @@ export type Stats = {
   maintainWeightThresholdKg?: number;
 };
 
-  // calorieGoal bằng null sẽ cho backend quay lại mục tiêu TDEE tự động.
+  // calorieGoal bằng null làm profileController.updateProfile gọi calorieGoal.autoGoal.
 export type ProfileUpdate = Partial<Omit<User, "calorieGoal">> & {
   calorieGoal?: number | null;
 };

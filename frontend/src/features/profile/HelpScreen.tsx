@@ -4,9 +4,9 @@
 // Ai gọi tới: ProfileScreen
 // Nhận vào:   không nhận gì
 // Trả ra:     các mục hướng dẫn dùng app
-// Khi lỗi:    không có nhánh lỗi, màn này KHÔNG gọi backend
+// Khi lỗi:    không có nhánh lỗi; file này không gọi apiClient
 
-// Đây là màn TÀI LIỆU, không phải màn dữ liệu. Nó KHÔNG gọi backend,
+// Đây là màn TÀI LIỆU, không phải màn dữ liệu. Nó không gọi apiClient,
 // KHÔNG đọc hồ sơ người dùng và không hiện con số của ai.
 // Lý do: mỗi con số chỉ nên có một nhà, và nhà của BMI, BMR, TDEE là màn Hồ sơ.
 // Nhét lại vào đây là lặp đúng cái đã dọn khi bỏ ô mục tiêu calo khỏi Hồ sơ.

@@ -6,7 +6,6 @@
 // Trả ra:     đúng hoặc sai
 // Khi lỗi:    kiểm ngay tại app để báo lỗi mà không tốn một lượt gọi mạng
 
-// Kiểm ngay tại app để báo lỗi mà không tốn một lượt gọi mạng.
 // Backend VẪN kiểm lại đủ cả ba, vì phần kiểm ở app có thể bị bỏ qua.
 export const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 export const isValidOtp = (value: string) => /^\d{6}$/.test(value.trim());

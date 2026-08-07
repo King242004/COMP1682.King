@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra chuỗi ngày ghi món hiện tại, dài nhất và tập ngày đủ điều kiện.
+// Test dùng mốc ngày cố định để khóa lỗi đứt chuỗi và tính trùng.
 import { longestMealStreak, mealStreak, streakEligibleDates } from "@/utils/mealStreak";
 
 describe("streakEligibleDates", () => {

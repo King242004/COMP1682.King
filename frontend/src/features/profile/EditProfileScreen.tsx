@@ -4,22 +4,21 @@
 // Ai gọi tới: ProfileScreen
 // Nhận vào:   thông tin cá nhân và ảnh mới
 // Trả ra:     không trả gì, lưu xong thì quay lại và mục tiêu calo được tính lại
-// Khi lỗi:    ảnh quá nặng thì backend từ chối, màn hiện thông báo
+// Khi lỗi:    imageUpload middleware từ chối ảnh quá nặng, màn hiện thông báo
 
 // LUỒNG LƯU HỒ SƠ
 // 1. Sửa các ô rồi bấm Lưu
 // 2. AuthContext.updateProfile
 // 3. accountApi.updateProfileRequest     (PUT /profile)
-// 4. backend kiểm từng số nằm trong khoảng cho phép, tính lại mục tiêu calo
+// 4. profileController.updateProfile kiểm giới hạn và gọi calorieGoal.autoGoal
 // 5. quay về màn Hồ sơ với dữ liệu mới
 // LUỒNG ĐỔI ẢNH ĐẠI DIỆN
 // 1. Chạm vào ảnh, chọn chụp mới hoặc lấy từ thư viện
 // 2. AuthContext.uploadAvatar
 // 3. accountApi.uploadAvatarRequest      (POST /user/avatar, gửi kèm file)
-// 4. backend đẩy ảnh lên kho ảnh, cắt vuông, rồi XÓA ảnh cũ
+// 4. accountController.uploadAvatar upload Cloudinary, cắt vuông rồi xóa ảnh cũ
 // 5. hồ sơ nhận đường dẫn ảnh mới, ảnh đổi ngay trên màn hình
-// Đổi tên đi theo đường riêng là PUT /user/name, vì backend có
-// quy tắc kiểm tên riêng cho việc này.
+// Đổi tên đi theo PUT /user/name vì accountController.changeName có luật kiểm riêng.
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -34,6 +33,7 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 import { INPUT_LIMITS, DIGIT_LIMITS } from "@/config/inputLimits";
+import { PROFILE_LIMITS } from "@/config/nutritionCalculations";
 
 const ACTIVITY_KEYS = ["sedentary", "moderate", "active"] as const;
 const CONDITION_KEYS = ["diabetes", "hypertension", "gout", "high_cholesterol", "gastritis", "none"] as const;
@@ -74,16 +74,21 @@ export default function EditProfileScreen() {
       Alert.alert(t.editProfile.invalidName, t.editProfile.nameLettersOnly);
       return;
     }
-    if (age && (Number(age) < 10 || Number(age) > 120)) {
-      Alert.alert(t.editProfile.invalidAge, t.editProfile.ageRange);
+    // Khoảng hợp lệ lấy từ PROFILE_LIMITS; bản gốc nằm ở backend/src/config/nutritionConstants.js.
+    // Không gõ lại số để tránh lệch với profileController.updateProfile.
+    const ageLimit = PROFILE_LIMITS.age;
+    const weightLimit = PROFILE_LIMITS.weightKg;
+    const heightLimit = PROFILE_LIMITS.heightCm;
+    if (age && (Number(age) < ageLimit.min || Number(age) > ageLimit.max)) {
+      Alert.alert(t.editProfile.invalidAge, t.editProfile.ageRange(ageLimit.min, ageLimit.max));
       return;
     }
-    if (weight && (Number(weight) < 20 || Number(weight) > 300)) {
-      Alert.alert(t.editProfile.invalidWeight, t.editProfile.weightRange);
+    if (weight && (Number(weight) < weightLimit.min || Number(weight) > weightLimit.max)) {
+      Alert.alert(t.editProfile.invalidWeight, t.editProfile.weightRange(weightLimit.min, weightLimit.max));
       return;
     }
-    if (height && (Number(height) < 50 || Number(height) > 250)) {
-      Alert.alert(t.editProfile.invalidHeight, t.editProfile.heightRange);
+    if (height && (Number(height) < heightLimit.min || Number(height) > heightLimit.max)) {
+      Alert.alert(t.editProfile.invalidHeight, t.editProfile.heightRange(heightLimit.min, heightLimit.max));
       return;
     }
     setIsSaving(true);

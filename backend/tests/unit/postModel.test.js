@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra schema Post giữ snapshot món và các trường dinh dưỡng trong bài.
+// Test khóa kiểu dữ liệu model mà không kết nối MongoDB.
 const Post = require("../../src/models/Post");
 
 describe("Post meal snapshot", () => {

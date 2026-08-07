@@ -7,15 +7,6 @@
 // Khi lỗi:    sai email hoặc mật khẩu thì hiện một câu chung chung,
 //             không nói rõ sai cái nào, để người lạ không dò được tài khoản
 //
-// LUỒNG ĐĂNG NHẬP
-// 1. Bấm nút Đăng nhập tại đây, chạy handleLogin
-// 2. AuthContext.login
-// 3. accountApi.loginRequest      (POST /auth/login)
-// 4. backend authController.login, so mật khẩu đã mã hóa
-// 5. trả thẻ đăng nhập và hồ sơ
-// 6. AuthContext lưu vào state và vào bộ nhớ máy
-// 7. router.replace chuyển sang /tabs
-// Hai lối đi khác từ màn này: sang Đăng ký, và sang Quên mật khẩu.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Image, Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Link, useRouter } from "expo-router";
@@ -31,6 +22,7 @@ import { Screen } from "@/ui/components/Screen";
 import { TextField } from "@/ui/components/TextField";
 import { INPUT_LIMITS } from "@/config/inputLimits";
 
+// Số điểm ảnh đẩy nội dung lên khi bàn phím bật. Số âm là đẩy lên trên.
 const LOGIN_KEYBOARD_SHIFT = -56;
 
 export default function LoginScreen() {
@@ -38,6 +30,7 @@ export default function LoginScreen() {
   const { login, languagePreference, setLanguagePreference } = useAuth();
   const t = useT();
   const currentLanguage = resolveLanguage(languagePreference);
+  // Giá trị chạy của hoạt ảnh đẩy nội dung lên khi bàn phím bật.
   const keyboardShift = useRef(new Animated.Value(0)).current;
 
   const [email, setEmail] = useState("");
@@ -45,9 +38,17 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // ══════════════════════════════════════════════════════════
+  // BÀN PHÍM
+  //
+  // Không liên quan gì tới đăng nhập, chỉ lo phần nhìn.
+  // Bàn phím bật lên thì đẩy nội dung lên vừa đủ để thấy ô đang gõ.
+  // ══════════════════════════════════════════════════════════
+
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    // Dừng hoạt ảnh cũ trước khi chạy cái mới, kẻo hai cái đè nhau giật giật.
     const animate = (toValue: number, duration?: number) => {
       keyboardShift.stopAnimation();
       Animated.timing(keyboardShift, {
@@ -67,22 +68,30 @@ export default function LoginScreen() {
       keyboardShift.stopAnimation();
     };
   }, [keyboardShift]);
-  // Kiểm tại chỗ trước khi gọi mạng, để báo lỗi ngay mà không tốn một lượt gọi.
-  // Backend vẫn kiểm lại lần nữa, vì kiểm ở app có thể bị bỏ qua.
+  // ══════════════════════════════════════════════════════════
+  // ĐĂNG NHẬP
+  //
+  // Ba bước: bấm nút, giao cho AuthContext, rồi chuyển màn.
+  // AuthContext.login điều phối authApi.loginRequest và lưu AuthSession; màn này chỉ quản lý form.
+  // ══════════════════════════════════════════════════════════
+
+  // Kiểm ngay tại máy trước khi gọi mạng, báo lỗi liền mà không tốn một lượt gọi.
+  // Backend vẫn kiểm lại lần nữa, vì kiểm ở app thì người ta bỏ qua được.
   const validate = (): string | null => {
     if (!isValidEmail(email)) return t.auth.invalidEmail;
     if (password.length < 6) return t.auth.passwordTooShort;
     return null;
   };
 
-  // Điều kiện bật nút. Lỏng hơn hàm kiểm ở trên, chỉ để nút không bị mờ
-  // ngay từ khi người dùng mới gõ vài ký tự.
+  // Điều kiện bật nút. Lỏng hơn hàm kiểm ở trên.
+  // Chỉ để nút đừng mờ ngay lúc người ta mới gõ được vài ký tự.
   const canSubmit = useMemo(() => {
     const okEmail = isValidEmail(email);
     const okPassword = password.length >= 6;
     return okEmail && okPassword && !isLoading;
   }, [email, password, isLoading]);
 
+  // ĐĂNG NHẬP BƯỚC 1. Người dùng bấm nút Đăng nhập là vào đây.
   const handleLogin = async () => {
     Keyboard.dismiss();
     const validationError = validate();
@@ -90,8 +99,12 @@ export default function LoginScreen() {
     setError("");
     setIsLoading(true);
     try {
+      // BƯỚC 2. AuthContext.login → authApi.loginRequest → POST /auth/login
+      // → authController.login kiểm mật khẩu và trả AuthSession,
+      // rồi AuthContext lưu thẻ với hồ sơ vào state và xuống máy.
+      // Dòng này chạy xong nghĩa là đăng nhập đã thành công hết rồi.
       await login(email.trim(), password);
-      // Dùng replace chứ không push, để vuốt ngược không quay lại màn đăng nhập.
+      // BƯỚC 3. Chuyển màn. Dùng replace chứ không push, để vuốt ngược không quay lại đây.
       router.replace("/tabs");
     } catch (error) {
       setError(getUserErrorMessage(error, t, t.auth.invalidCredentials));

@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra công thức điểm sức khỏe và từng phần calo, đạm, tập, đều đặn.
+// Test bảo đảm điểm số cố định ở server, không phụ thuộc câu trả lời Gemini.
 const { computeHealthScore } = require("../../src/services/coach/dailyHealthScore");
 
 function context({ eaten, burned, loggedDays = 7, eligibleDays = 7 }) {

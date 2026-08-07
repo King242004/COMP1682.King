@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+// Ánh xạ /api/plan/* tới hàm trong controllers/planController.js.
 //
 // Ai gọi tới: app.js, gắn cả file này vào /api/plan
 // Nhận vào:   request từ màn Kế hoạch tuần

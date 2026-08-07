@@ -16,11 +16,15 @@
 // Nguồn: Herrmann và cộng sự (2024), 2024 Adult Compendium of Physical Activities.
 // Tra cứu tại https://pacompendium.com/adult-compendium/
 // Trường code là mã tra cứu trong Compendium, để bất kỳ ai cũng kiểm lại được
-// từng con số. Bài tập hướng dẫn trong app không có mục riêng trong Compendium
+// từng con số. Riêng đá cầu dùng giá trị 6.0 MET trong Shen và cộng sự (2025),
+// DOI 10.3390/su17010263, vì Compendium chưa có mục đá cầu/Jianzi.
+// Bài tập hướng dẫn trong app không có mục riêng trong Compendium
 // vì nó trộn nhiều động tác, nên lấy theo hoạt động gần nhất và thiên về phía
-// thấp hơn. Bốn mốc đang dùng: 02101 giãn cơ nhẹ, 02150 yoga,
+// thấp hơn. Năm mốc đang dùng: 02101 giãn cơ nhẹ, 02150 yoga,
 // 02022 calisthenics mức vừa, 17190 đi bộ mức vừa, và 15110 đấm bao cát.
 
+// Các hoạt động ngoài app được ghi nhận trong khảo sát 392 sinh viên nội trú
+// Đại học Cần Thơ: Dang và cộng sự (2025), DOI 10.46827/ejpe.v12i6.6045.
 const EXTERNAL_ACTIVITIES = {
   walking: { met: 3.8, code: "17190" },
   jogging: { met: 7.5, code: "12020" },
@@ -30,6 +34,16 @@ const EXTERNAL_ACTIVITIES = {
   football: { met: 7.0, code: "15610" },
   basketball: { met: 7.5, code: "15055" },
   volleyball: { met: 3.0, code: "15720" },
+  shuttlecock: {
+    met: 6.0,
+    code: null,
+    source: "Shen et al. (2025), Sustainability, DOI 10.3390/su17010263",
+  },
+  gym: { met: 5.0, code: "02061" },
+  martial_arts: { met: 5.3, code: "15425" },
+  yoga: { met: 2.3, code: "02175" },
+  jump_rope: { met: 11.0, code: "02068" },
+  table_tennis: { met: 4.0, code: "15660" },
 };
 
 const MET_SOURCE = "Herrmann et al. (2024), Adult Compendium of Physical Activities";
@@ -57,7 +71,8 @@ const GUIDED_FAMILIES = {
   coordinationCardio: { category: "cardio", met: 3.8, code: "02022" },
 };
 
-const GUIDED_DURATIONS = [10, 15, 20, 30];
+// Mọi mốc là bội số của khối 10 phút. Phải khớp ROUTINE_DURATIONS bên frontend.
+const GUIDED_DURATIONS = [10, 20, 30];
 const GUIDED_ROUTINES = Object.fromEntries(
   Object.entries(GUIDED_FAMILIES).flatMap(([familyKey, family]) =>
     GUIDED_DURATIONS.map((durationMin) => [
@@ -80,8 +95,8 @@ const buildExerciseSnapshot = (sourceType, sourceKey, reference, weightKg) => ({
   sourceType,
   sourceKey,
   met: reference.met,
-  metCode: reference.code,
-  metSource: MET_SOURCE,
+  metCode: reference.code ?? null,
+  metSource: reference.source ?? MET_SOURCE,
   weightKgAtLog: weightKg,
 });
 

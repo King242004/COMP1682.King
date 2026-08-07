@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra nội dung email OTP tách đúng đăng ký, đặt lại mật khẩu và ngôn ngữ.
+// Chạy bằng node:test; không gửi email thật.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { buildOtpEmail } = require("../src/otpEmailTemplate");

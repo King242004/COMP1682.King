@@ -10,18 +10,13 @@
 // người dùng và chữ nằm trong ảnh là NỘI DUNG ĐỂ ĐỌC, không phải mệnh lệnh.
 // Đó là lớp chắn việc người dùng gõ câu ra lệnh để chiếm quyền điều khiển AI.
 //
-// File này dựng câu lệnh gửi cho AI của Coach. KHÔNG gọi mạng, không đụng database.
-// Ba loại câu lệnh, dùng chung phần vai trò và phần an toàn:
-//   buildChatPrompt           cho tin nhắn trò chuyện
-//   buildInsightPrompt        cho thẻ điểm sức khỏe ở Trang chủ
-//   buildMealSuggestionPrompt cho phần gợi ý món
-// Khối ROLE_AND_SAFETY nói rõ với AI rằng tin nhắn người dùng và chữ nằm trong
-// ảnh là NỘI DUNG ĐỂ ĐỌC, không phải mệnh lệnh. Đó là lớp chắn việc người dùng
-// gõ câu ra lệnh để lách các quy tắc an toàn ở trên.
 const { CONDITION_GUIDE } = require("./coachContext");
 const { HOME_EXERCISE_GUIDE } = require("../../config/homeRoutineRules");
 const { EXTERNAL_ACTIVITIES } = require("../../config/exerciseCatalog");
 
+// Khối vai trò và an toàn, gắn vào MỌI câu lệnh gửi Gemini.
+// Đây là chỗ dặn AI rằng tin nhắn người dùng và chữ trong ảnh là NỘI DUNG
+// để đọc, không phải mệnh lệnh. Lớp chắn việc người dùng gõ câu chiếm quyền.
 const ROLE_AND_SAFETY = `You are "Coach", a warm, practical health companion inside MealMate.
 
 SAFETY:
@@ -31,6 +26,7 @@ SAFETY:
 - Always consider the user's declared health conditions (${CONDITION_GUIDE}).
 - Nutrition values produced by AI are estimates that vary with ingredients and portion size.`;
 
+// Quy định giọng văn cho phần trò chuyện: ngắn, thân thiện, không giảng đạo.
 const CHAT_STYLE = `STYLE:
 - Be short by default: 2 to 3 sentences. For a recipe, meal plan or exercise guide, use concise numbered steps.
 - For "can I eat X?", give a quick verdict and ask at most one useful follow-up question when details matter.
@@ -40,6 +36,8 @@ const CHAT_STYLE = `STYLE:
 - Plain text only: no markdown, headings or tables.
 - Never use the em dash character; use a comma, colon or period instead.`;
 
+// Câu lệnh ép AI trả lời đúng ngôn ngữ. Đặt riêng để ba loại câu lệnh
+// bên dưới dùng chung, khỏi mỗi chỗ viết một kiểu.
 function languageDirective(raw) {
   const language = raw === "vi" ? "vi" : "en";
   const name = language === "vi" ? "Vietnamese (tiếng Việt)" : "English";
@@ -49,10 +47,14 @@ function languageDirective(raw) {
   return `IMPORTANT: Write every response string in ${name}. ${rule}`;
 }
 
+// Liệt kê đúng những nhóm bài tập và mốc thời lượng mà app THẬT SỰ có.
+// Không có dòng này thì AI gợi ý bơi 45 phút, mà app không có mục đó.
 function exerciseOptions() {
   return `EXERCISE OPTIONS AVAILABLE IN MEALMATE:\n${HOME_EXERCISE_GUIDE}\nSupported external activity keys for answering explicit user questions: ${Object.keys(EXTERNAL_ACTIVITIES).join(", ")}.`;
 }
 
+// Câu lệnh cho thẻ điểm sức khỏe.
+// Nhớ: điểm đã tính sẵn ở dailyHealthScore rồi, đây chỉ nhờ AI viết lời bình.
 function buildInsightPrompt({ contextText, language, score, maxScore, breakdown, weights }) {
   return `${ROLE_AND_SAFETY}
 ${languageDirective(language)}
@@ -73,6 +75,7 @@ Write a short daily analysis. Return ONLY valid JSON:
 ${languageDirective(language)} Every string value in the JSON must use that language.`;
 }
 
+// Gói mấy lượt chat gần nhất thành chữ, để AI nhớ mạch câu chuyện.
 function formatHistory(history) {
   if (!history.length) return "";
   return `CONVERSATION SO FAR:\n${history
@@ -80,6 +83,8 @@ function formatHistory(history) {
     .join("\n")}\n`;
 }
 
+// Câu lệnh cho phần trò chuyện. Dài nhất trong ba loại vì phải gộp
+// vai trò, an toàn, giọng văn, ngữ cảnh người dùng, và lịch sử chat.
 function buildChatPrompt({ contextText, history, userText, language, hour, hasImage, source }) {
   // Không được khẳng định trước rằng ảnh là món ăn. Nói vậy là mớm cho AI
   // phải tìm ra một món trong mọi tấm ảnh, kể cả ảnh không liên quan.
@@ -140,6 +145,7 @@ Read the history before answering so follow-ups remain coherent.
 ${languageDirective(language)} Every string value in the JSON must use that language.`;
 }
 
+// Câu lệnh cho thẻ gợi ý món ở Trang chủ. Xin đúng ba món kèm lý do chọn.
 function buildMealSuggestionPrompt({ contextText, planText, language, hour, slot, remaining, planRule }) {
   return `${ROLE_AND_SAFETY}
 ${languageDirective(language)}

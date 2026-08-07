@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+// Ánh xạ /api/exercise/* tới hàm trong controllers/exerciseController.js.
 //
 // Ai gọi tới: app.js, gắn cả file này vào /api/exercise
 // Nhận vào:   request từ màn Ghi buổi tập và màn Bài tập có hướng dẫn

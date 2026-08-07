@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Khóa giới hạn text/số hiện hành, giới hạn dữ liệu cũ và bản sao frontend.
+// Test thất bại nếu một màn gõ lại con số hoặc hai phía lệch nhau.
 const fs = require("fs");
 const path = require("path");
 const { INPUT_LIMITS, DIGIT_LIMITS, LEGACY_LIMITS } = require("../../src/config/inputLimits");
@@ -105,7 +108,7 @@ describe("hai bản hằng số phải khớp nhau", () => {
 
   it("giao diện có đủ mọi khóa mà backend khai", () => {
     const frontendLimits = readBlock(source, "INPUT_LIMITS");
-    // PORTION_UNIT chỉ backend dùng, vì đơn vị khẩu phần do app chọn từ danh sách
+    // PORTION_UNIT chỉ Meal.js và mealInputValidator dùng vì app chọn đơn vị từ danh sách
     // chứ người dùng không gõ tay, nên nó không cần có mặt ở giao diện.
     const uiKeys = Object.keys(INPUT_LIMITS).filter((key) => key !== "PORTION_UNIT");
     for (const key of uiKeys) {

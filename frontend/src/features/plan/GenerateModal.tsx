@@ -27,7 +27,8 @@ export function GenerateModal({ visible, scope, note, onChangeNote, remember, on
   onCancel: () => void;
   onStart: () => void;
 }) {
-  const L = useT().plan;
+  // Viết tắt cụm chữ của phần Kế hoạch, file này dùng nhiều lần.
+const L = useT().plan;
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>

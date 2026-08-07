@@ -7,7 +7,7 @@
 // Khi lỗi:    gán sai kiểu thì TypeScript báo lỗi ngay lúc build
 
 // Chỉ có kiểu, không có code chạy.
-// RawMeal là dạng backend trả về, còn dùng _id.
+// RawMeal khớp JSON do mealController trả về và còn dùng _id.
 // Meal là dạng app dùng, đã đổi sang id. Việc đổi nằm ở utils/meals/mealsApi.
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 export type NutritionSource = "manual" | "ai_estimate" | "ai_adjusted" | "photo_scan" | "barcode" | "community" | "repeat" | "ai_suggestion";

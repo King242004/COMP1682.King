@@ -1,4 +1,5 @@
-// File này soạn nội dung email chứa mã 6 số.
+// ═══ FILE NÀY LÀM GÌ ═══
+// buildOtpEmail chọn nội dung theo language và purpose rồi tạo email chứa mã 6 số.
 // Email dùng bảng và kiểu chữ viết thẳng trong thẻ, vì các ứng dụng đọc mail
 // không hỗ trợ đầy đủ CSS hiện đại.
 // Luôn kèm bản chữ thuần bên cạnh bản HTML cho ứng dụng nào không hiện được HTML.

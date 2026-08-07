@@ -20,9 +20,10 @@ const {
 const { LEGACY_LIMITS } = require("../config/inputLimits");
 
 // Công thức calo tiêu hao: mức nặng nhẹ của bài tập nhân cân nặng nhân số giờ.
-// Mức nặng nhẹ này gọi là MET. MET được tra bằng mã hoạt động ở server, không nhận từ app.
+// Mức nặng nhẹ là MET. addExercise tra mã trong config/exerciseMet.js,
+// không nhận giá trị MET từ exerciseApi.addExercise.
 // ─── Add Exercise ─────────────────────────────────────────────────────────────
-// Calo được tính ở server chứ không nhận từ app, để người dùng không sửa được con số.
+// addExercise gọi computeBurned tại file này; request từ app không chứa caloriesBurned.
 exports.addExercise = async (req, res) => {
   const { name, activityKey, routineKey, durationMin, date } = req.body;
 

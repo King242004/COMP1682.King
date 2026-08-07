@@ -16,9 +16,6 @@ const PlanWorkout = require("../../models/PlanWorkout");
 const WeightLog = require("../../models/WeightLog");
 const { autoGoal } = require("../nutrition/calorieGoal");
 
-// File này gom dữ liệu thật của người dùng để đưa cho AI.
-// Nhờ nó mà Coach nói đúng số liệu của từng người thay vì nói chung chung.
-
 // Cộng hoặc trừ số ngày vào một chuỗi ngày dạng YYYY-MM-DD.
 function shiftDate(dateStr, days) {
   const d = new Date(dateStr + "T00:00:00");
@@ -39,6 +36,7 @@ function daysInclusive(fromKey, toKey) {
   return Math.floor((to - from) / 86400000) + 1;
 }
 
+// Cộng calo với ba chất của một danh sách món.
 function sumMacros(meals) {
   return meals.reduce(
     (acc, m) => {

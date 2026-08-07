@@ -104,6 +104,8 @@ Return ONLY valid JSON in this exact format:
     });
   } catch (err) {
     console.error("Gemini scan error:", err.message);
+    if (err.message === "AI_QUOTA_EXHAUSTED")
+      return res.status(429).json({ message: "AI quota exhausted.", code: "QUOTA" });
     res.status(500).json({ message: "AI scan failed. Please try again." });
   }
 };

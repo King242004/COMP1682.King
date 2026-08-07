@@ -4,13 +4,13 @@
 // Ai gọi tới: mọi màn có ô nhập chữ
 // Nhận vào:   không nhận gì, đây là bảng số khai sẵn
 // Trả ra:     các con số giới hạn
-// Khi lỗi:    không có nhánh lỗi. Backend vẫn là nơi kiểm cuối cùng, đây chỉ chặn sớm
-// Bản gốc nằm ở backend/src/config/inputLimits.js. Backend vẫn là nơi kiểm
-// cuối cùng, file này chỉ để ô nhập dừng sớm ngay trên máy người dùng,
+// Khi lỗi:    không có nhánh lỗi; validator của từng route vẫn kiểm request
+// Bản gốc nằm ở backend/src/config/inputLimits.js. Validator nhập file đó để kiểm
+// request; file này chỉ để ô nhập dừng sớm ngay trên máy người dùng,
 // nhờ vậy không ai phải gửi request lên rồi mới biết mình gõ quá dài.
 // Sửa một bên thì phải sửa bên kia, và có unit test bắt hai bên khớp nhau.
-// Vài giới hạn ở đây NHỎ HƠN bản backend. Đó là cố ý: các trường đó vừa được
-// hạ số, nên backend phải giữ trần cũ để bản ghi tạo từ trước vẫn sửa và lưu
+// Vài giới hạn ở đây NHỎ HƠN file nguồn. Đó là cố ý: các trường đó vừa được
+// hạ số, nên validator phải giữ trần cũ để bản ghi tạo từ trước vẫn sửa và lưu
 // lại được, còn giao diện thì áp số mới cho mọi thứ người dùng gõ từ nay.
 
 export const INPUT_LIMITS = {
@@ -37,11 +37,11 @@ export const INPUT_LIMITS = {
   PASSWORD: 64,
   // Ô tìm tên người dùng.
   USER_SEARCH: 50,
-  // Mã vạch, đúng bằng luật EAN và UPC mà backend đang kiểm.
+  // Mã vạch, đúng bằng luật 8–14 chữ số trong scanController.scanBarcode.
   BARCODE: 14,
   // Giờ nhắc bữa, dạng HH:MM.
   REMINDER_TIME: 5,
-  // Mã xác minh gửi qua email, backend luôn sinh đúng 6 chữ số.
+  // Mã xác minh do services/otpService.js sinh đúng 6 chữ số.
   OTP_CODE: 6,
 } as const;
 
@@ -54,9 +54,9 @@ export const DIGIT_LIMITS = {
   WEIGHT: 5,
   // Chiều cao tối đa 250, để năm ký tự cho trường hợp nhập số lẻ.
   HEIGHT: 5,
-  // Calo và ba chất của MỘT món, backend chặn ở 9999 nên bốn chữ số.
+  // Calo và ba chất của MỘT món; validators/mealInputValidator.js chặn ở 9999.
   CALORIE: 4,
   MACRO: 4,
-  // Mục tiêu calo mỗi ngày trong hồ sơ, backend cho tối đa 10000.
+  // Mục tiêu calo mỗi ngày; profileController.updateProfile cho tối đa 10000.
   CALORIE_GOAL: 5,
 } as const;

@@ -5,16 +5,12 @@
 // Nhận vào:   mã món cần xem
 // Trả ra:     chi tiết món, kèm nút Sửa và nút Xóa
 // Khi lỗi:    xóa thì hỏi xác nhận trước, tránh bấm nhầm mất dữ liệu
-
-// LUỒNG XÓA MÓN
-// 1. Bấm Xóa, hộp thoại hỏi xác nhận
-// 2. MealsContext.deleteMeal
-// 3. mealsApi.deleteMealRequest        (DELETE /meals/:id)
-// 4. backend kiểm đúng chủ món rồi xóa
-// 5. MealsContext bỏ món khỏi danh sách và trừ lại tổng calo
-// 6. router.back quay về, món biến mất khỏi Trang chủ
-// Ba nút trong màn này: Sửa mở màn Sửa món, Xóa như trên,
-// và Ghi lại mở màn Thêm món điền sẵn để ăn lại món quen.
+//
+// Ba nút trong màn: Sửa mở màn Sửa món, Xóa xem khối XÓA MÓN bên dưới,
+// và Ghi lại mở màn Thêm món đã điền sẵn, để ăn lại món quen cho nhanh.
+//
+// Nhớ: màn này KHÔNG tự gọi mạng để lấy món. Nó tìm trong dữ liệu MealsContext
+//      đã có sẵn, nên mở thẳng bằng đường dẫn mà chưa qua Trang chủ là không thấy món.
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -34,6 +30,16 @@ import { ProgressRing } from "@/ui/components/ProgressRing";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
+// ══════════════════════════════════════════════════════════
+// HAI MẢNH VẼ NHỎ
+//
+// Không phải luồng, chỉ là hai mảnh tách ra cho phần JSX ở dưới đỡ rối.
+// Gọi cái nào trước cũng được, cả hai đều không gọi mạng.
+// ══════════════════════════════════════════════════════════
+
+// Một dòng macro: chấm màu, tên chất, số so với mục tiêu, và thanh chạy bên dưới.
+// Gọi ba lần ở JSX, mỗi lần cho một chất. Mục tiêu bằng 0 thì thanh để trống,
+// tránh chia cho 0. Vượt mục tiêu thì thanh dừng ở đầy chứ không tràn ra ngoài.
 function MacroRow({ label, value, total, color }: {
   label: string; value: number; total: number; color: string;
 }) {
@@ -55,6 +61,9 @@ function MacroRow({ label, value, total, color }: {
   );
 }
 
+// Rút giờ phút khỏi createdAt do Meal model/Mongoose tạo.
+// Chỉ dùng khi món được ghi ĐÚNG ngày ăn, xem loggedSameDay ở dưới.
+// Món ghi bù ngày cũ thì giờ ghi chẳng nói lên điều gì nên giấu đi.
 function hhmm(iso: string) {
   const d = new Date(iso);
   const h = String(d.getHours()).padStart(2, "0");
@@ -62,6 +71,15 @@ function hhmm(iso: string) {
   return `${h}:${m}`;
 }
 
+// ══════════════════════════════════════════════════════════
+// MỞ CHI TIẾT MÓN
+//
+// Đến từ Trang chủ và màn Lịch sử món, cả hai đều truyền mã món qua đường dẫn.
+// Bốn bước, đọc từ trên xuống là đúng thứ tự. KHÔNG gọi mạng.
+// Xong thì màn hiện chi tiết cùng ba nút Sửa, Ghi lại, Xóa.
+// ══════════════════════════════════════════════════════════
+
+// MỞ CHI TIẾT BƯỚC 1. Lấy mã món từ đường dẫn, lấy dữ liệu từ hai context.
 export default function MealDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -70,13 +88,17 @@ export default function MealDetailScreen() {
   const locale = localeTag(resolveLanguage(user?.language));
   const { meals, historyMeals, deleteMeal } = useMeals();
   const t = useT();
-  // Tìm trong cả danh sách hôm nay và lịch sử vì món có thể được mở từ hai nơi.
+  // MỞ CHI TIẾT BƯỚC 2. Tìm món trong dữ liệu đã có, KHÔNG gọi mạng.
+  // Tìm ở cả hai danh sách vì món có thể mở từ Trang chủ hoặc từ màn Lịch sử,
+  // hai màn đó lấy món từ hai danh sách khác nhau.
   const meal = meals.find((m) => m.id === id) || historyMeals.find((m) => m.id === id);
   // Chưa có mục tiêu thì vòng tiến độ và thanh macro không có gì để so,
   // nên chỉ hiện con số của món chứ không dựng ra một mục tiêu giả.
   const goal = user?.calorieGoal ?? null;
   const macros = macroTargets(goal, user?.weight);
 
+  // MỞ CHI TIẾT BƯỚC 3. Không tìm thấy thì dừng ngay tại đây, hiện màn rỗng có nút quay về.
+  // Hay gặp khi món vừa bị xóa ở màn khác, hoặc mở thẳng đường dẫn lúc app mới bật.
   if (!meal) {
     return (
       <Screen style={styles.notFound}>
@@ -86,6 +108,9 @@ export default function MealDetailScreen() {
     );
   }
 
+  // MỞ CHI TIẾT BƯỚC 4. Dựng mấy nhãn cho phần JSX ở dưới.
+  // Ghép "T00:00:00" vào chuỗi ngày để máy hiểu là giờ địa phương.
+  // Thiếu đuôi đó thì máy hiểu là giờ UTC, và múi giờ âm sẽ hiện lùi một ngày.
   const eatenDateLabel = new Date(meal.date + "T00:00:00").toLocaleDateString(locale, {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
@@ -94,7 +119,16 @@ export default function MealDetailScreen() {
   const eatenToday = meal.date === dateKey(new Date());
   const portionLabel = meal.portionText || [meal.portionAmount, meal.portionUnit].filter(Boolean).join(" ");
 
-  // Nút Xóa, điểm bắt đầu của luồng xóa món.
+  // ══════════════════════════════════════════════════════════
+  // XÓA MÓN
+  //
+  // Đến từ nút Xóa của màn này. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Màn này chỉ xác nhận; MealsContext.deleteMeal gọi mealsApi.deleteMealRequest,
+  // rồi DELETE /meals/:id chạy mealController.deleteMeal.
+  // Xong thì quay về màn trước, và món đã biến khỏi Trang chủ lẫn Lịch sử.
+  // ══════════════════════════════════════════════════════════
+
+  // XÓA MÓN BƯỚC 1. Hỏi lại cho chắc. Xóa là mất hẳn, không hoàn lại được.
   const handleDelete = () => {
     Alert.alert(
       t.meals.deleteMealTitle,
@@ -105,8 +139,13 @@ export default function MealDetailScreen() {
           text: t.common.delete,
           style: "destructive",
           onPress: async () => {
+            // XÓA MÓN BƯỚC 2. MealsContext.deleteMeal → mealsApi.deleteMealRequest
+            // → DELETE /meals/:id → mealController.deleteMeal kiểm chủ sở hữu và xóa.
+            // Request xong, MealsContext bỏ món khỏi state và trừ tổng của ngày.
             await deleteMeal(meal.id);
-            // Quay về Home hoặc Lịch sử. Cả hai nơi đều tự cập nhật dữ liệu mới.
+            // XÓA MÓN BƯỚC 3. Quay về màn trước, là Trang chủ hoặc Lịch sử.
+            // Không phải tải lại gì cả, vì MealsContext vừa sửa xong ở bước trên,
+            // hai màn đó dùng chung dữ liệu nên tự vẽ lại.
             router.back();
           },
         },

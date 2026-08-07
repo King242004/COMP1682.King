@@ -1,11 +1,11 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+// Ánh xạ /api/auth/* tới hàm trong controllers/authController.js.
 //
 // Ai gọi tới: app.js, gắn cả file này vào /api/auth
 // Nhận vào:   request từ app điện thoại
 // Trả ra:     không tự trả gì, chuyển thẳng cho authController
 // Khi lỗi:    địa chỉ /me thiếu thẻ đăng nhập thì bị chặn ngay tại đây,
-//             controller không bao giờ được gọi tới
+//             protect trả 401 trước authController.getMe
 //
 // Bảng chia việc cho nhóm đăng nhập đăng ký, địa chỉ bắt đầu bằng /api/auth.
 // POST /register/send-otp  bấm nút Gửi mã ở màn Đăng ký

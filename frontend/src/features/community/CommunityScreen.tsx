@@ -9,7 +9,9 @@
 // LUỒNG XEM FEED, tự chạy khi vào tab
 // 1. useFocusEffect gọi hàm tải theo tab đang chọn
 // 2. getFeed hoặc getExplore hoặc getSavedPosts   (GET /community/posts/...)
-// 3. backend lọc bỏ bài của tài khoản riêng tư, chia trang, tính sẵn
+// 3. Route gọi hàm getFeed trong backend/src/controllers/community/feedController.js;
+//    hàm này lọc bài của tài khoản
+//    riêng tư, chia trang và tính sẵn
 //    số tim và hai cờ đã tim đã lưu
 // 4. danh sách hiện lên, cuộn tới cuối thì tải trang kế tiếp
 // BA TAB
@@ -73,7 +75,6 @@ export default function CommunityScreen() {
   const load = useCallback(async (which: Tab, mode: LoadMode = "load") => {
     if (!token) return;
     // Không tải trang tiếp theo trước khi trang đầu hoàn tất.
-    // FlatList trống trên web có thể gọi onEndReached ngay và làm mất kết quả trang đầu.
     if (mode === "more" && (
       !hasMoreRef.current[which] ||
       loadingMoreRef.current[which] ||

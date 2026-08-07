@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Kiểm cấu hình trong .env TRƯỚC khi backend nhận request đầu tiên.
+// Kiểm cấu hình trong .env trước khi server.js gọi app.listen.
 //
 // Ai gọi tới: server.js, ngay lúc khởi động
 // Nhận vào:   toàn bộ biến môi trường
@@ -10,7 +10,7 @@
 // Vì sao chia hai mức: thiếu chuỗi kết nối database thì chạy cũng vô nghĩa,
 // nhưng thiếu khóa AI thì app vẫn dùng được phần nhật ký món và cân nặng.
 //
-// Kiểm tra biến môi trường trước khi backend nhận request.
+// Hàm này chạy từ server.js trước app.listen, nên cấu hình thiếu làm tiến trình dừng sớm.
 // server.js gọi file này; lỗi bắt buộc sẽ dừng khởi động, cảnh báo chỉ được ghi log.
 const REQUIRED_ENV = [
   "MONGODB_URI",

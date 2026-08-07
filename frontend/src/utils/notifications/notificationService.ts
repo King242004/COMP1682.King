@@ -5,28 +5,9 @@
 // Nhận vào:   nội dung và giờ muốn nhắc
 // Trả ra:     mã của lời nhắc đã đặt
 // Khi lỗi:    người dùng chưa cho phép thông báo thì trả rỗng, không báo lỗi ầm ĩ
-// Bản web không có thông báo nên mọi hàm ở đây trả rỗng.
-// Nạp thư viện theo kiểu chờ khi cần, để bản web không phải tải thư viện thừa.
-import { Platform } from "react-native";
-
-// Bản web không sử dụng expo-notifications.
-const isWeb = Platform.OS === "web";
-
-type NotificationsModule = typeof import("expo-notifications");
-let notificationsModule: NotificationsModule | null = null;
-
-async function getNotificationsModule(): Promise<NotificationsModule | null> {
-  if (isWeb) return null;
-  if (!notificationsModule) {
-    notificationsModule = await import("expo-notifications");
-  }
-  return notificationsModule;
-}
+import * as Notifications from "expo-notifications";
 
 async function ensureNotificationPermissions() {
-  const Notifications = await getNotificationsModule();
-  if (!Notifications) return false;
-
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   if (existingStatus === "granted") {
     return true;
@@ -44,9 +25,6 @@ export async function scheduleDailyReminder(
   const hasPermission = await ensureNotificationPermissions();
   if (!hasPermission) return null;
 
-  const Notifications = await getNotificationsModule();
-  if (!Notifications) return null;
-
   const id = await Notifications.scheduleNotificationAsync({
     content,
     // Trigger DAILY lặp lại mỗi ngày vào đúng giờ và phút đã chọn.
@@ -63,8 +41,6 @@ export async function scheduleDailyReminder(
 
 export async function cancelNotification(id: string | null | undefined) {
   if (!id) return;
-  const Notifications = await getNotificationsModule();
-  if (!Notifications) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(id);
   } catch {

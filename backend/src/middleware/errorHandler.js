@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Nơi mọi lỗi của backend đi về. Đặt ở CUỐI app.js nên nó bắt được
+// Express error middleware cuối backend/src/app.js; nó bắt được
 // mọi thứ mà các chặng trước ném ra.
 //
 // Ai gọi tới: app.js, gắn cuối cùng sau tất cả route

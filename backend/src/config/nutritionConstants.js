@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Giữ MỌI con số dinh dưỡng mà backend dùng để tính toán, ở một chỗ duy nhất.
+// Giữ mọi con số mà calorieGoal.js và profileController.js dùng để tính dinh dưỡng.
 // Đây là file quan trọng nhất khi giám khảo hỏi "số này ở đâu ra".
 //
 // Ai gọi tới: calorieGoal, dailyHealthScore, profileController, planController
@@ -12,13 +12,6 @@
 // hoặc giới hạn kỹ thuật của hệ thống. Số không truy được về một trong ba loại
 // thì không được đặt ở đây, và cũng không được rải trong controller.
 //
-// File này giữ MỌI con số dinh dưỡng mà backend dùng để tính toán.
-// Quy tắc của file: một hằng số phải đi kèm dòng nói rõ nó ở đâu ra, thuộc một
-// trong ba loại là tài liệu khoa học đã công bố, quyết định thiết kế của dự án,
-// hoặc giới hạn kỹ thuật của hệ thống. Số không truy được về một trong ba thì
-// không được đặt ở đây, và cũng không được rải trong controller.
-// Nơi dùng: calorieGoal, dailyHealthScore, profileController, planController.
-
 // Hệ số của công thức tính năng lượng lúc nghỉ.
 // Nguồn: Mifflin và cộng sự (1990), đã dẫn trong báo cáo mục 6.3.2.
 // Dùng ĐÚNG hệ số bài báo gốc là 9.99 và 4.92, không dùng bản làm tròn 10 và 5,
@@ -43,6 +36,7 @@ const ACTIVITY_MULTIPLIERS = {
   active: 2.25,
 };
 
+// Mức vận động mặc định khi hồ sơ chưa khai. Chọn mức giữa cho an toàn.
 const DEFAULT_ACTIVITY_LEVEL = "moderate";
 
 // Ba mục tiêu cân nặng được lưu trong hồ sơ. Khai báo một lần để model,
@@ -53,6 +47,7 @@ const WEIGHT_GOALS = Object.freeze({
   maintain: "maintain_weight",
 });
 
+// Danh sách giá trị của ba mục tiêu cân nặng, để model dùng làm enum.
 const WEIGHT_GOAL_VALUES = Object.freeze(Object.values(WEIGHT_GOALS));
 
 // Quyết định thiết kế: chênh lệch nhỏ hơn nửa kg được xem là đang giữ cân.
@@ -104,7 +99,7 @@ const WEEKLY_RATE_KG = {
 };
 
 // Các lựa chọn giao diện. Đây là QUYẾT ĐỊNH THIẾT KẾ của dự án, không phải
-// ngưỡng y khoa: backend vẫn kiểm tra trần thật bằng WEEKLY_RATE_KG ở trên.
+// ngưỡng y khoa: calorieGoal.resolveRate vẫn kiểm trần bằng WEEKLY_RATE_KG ở trên.
 const WEIGHT_RATE_OPTIONS = Object.freeze({
   lose: Object.freeze([
     Object.freeze({ key: "slow", value: 0.25 }),

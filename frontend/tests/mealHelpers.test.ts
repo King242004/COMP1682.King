@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra chọn bữa theo giờ, tìm món gần giống và tính đủ trường dinh dưỡng.
+// Test khóa helper thuần dùng chung bởi màn Thêm/Sửa món.
 import {
   hasAnyNutrition,
   hasCompleteNutrition,

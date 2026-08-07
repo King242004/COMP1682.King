@@ -1,9 +1,9 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Chặng giữa MealsContext và backend. Chỉ lo gọi mạng, không giữ state nào cả.
+// Adapter HTTP giữa MealsContext và backend/src/routes/mealRoutes.js; không giữ state.
 //
 // Ai gọi tới: MealsContext, không màn hình nào gọi thẳng vào đây
 // Nhận vào:   món cần gửi đi, và thẻ đăng nhập
-// Trả ra:     món backend đã lưu, đã đổi tên trường cho hợp với app
+// Trả ra:     Meal do mealController lưu, đã đổi tên trường cho hợp với app
 // Khi lỗi:    ném lỗi lên cho MealsContext, rồi màn hình mới hiện thông báo
 import type { DailyTotals, Meal, NewMeal, RawMeal, UpdateMeal } from "@/features/meals/mealTypes";
 import { apiRequest } from "../../utils/apiClient";
@@ -29,6 +29,8 @@ function mapMeal(meal: RawMeal): Meal {
     createdAt: meal.createdAt,
   };
 }
+
+// ─── ĐỌC NHẬT KÝ ───
 
 export async function fetchMealsByDateRequest(
   date: string,
@@ -57,14 +59,37 @@ export async function fetchMealHistoryRequest(token: string): Promise<Meal[]> {
   return data.meals.map(mapMeal);
 }
 
-// Gọi POST /meals. Không trả về món vừa tạo, vì MealsContext
-// sẽ tải lại cả ngày ngay sau đó để lấy luôn tổng mới.
-export async function addMealRequest(meal: NewMeal, token: string): Promise<void> {
-  await apiRequest("/meals", "POST", meal, token);
+// ─── THÊM, SỬA VÀ XÓA MÓN ───
+
+// Đến từ MealsContext.addMeal. Đường đi tiếp: apiClient → POST /meals.
+// mealController.addMeal trả luôn CẢ NGÀY qua readDay, kèm tổng mới,
+// nhờ vậy MealsContext không phải gọi thêm một lượt GET nữa.
+export async function addMealRequest(
+  meal: NewMeal,
+  token: string
+): Promise<{ meals: Meal[]; totals: DailyTotals }> {
+  const data = await apiRequest<{ day: { meals: RawMeal[]; totals: DailyTotals } }>(
+    "/meals",
+    "POST",
+    meal,
+    token
+  );
+  return { meals: data.day.meals.map(mapMeal), totals: data.day.totals };
 }
 
-export async function addMealsRequest(meals: NewMeal[], token: string): Promise<void> {
-  await apiRequest("/meals/batch", "POST", { meals }, token);
+// Bản nhiều món. Đến từ MealsContext.addMeals.
+// Đường đi tiếp: apiClient → POST /meals/batch. Cũng trả về cả ngày y như trên.
+export async function addMealsRequest(
+  meals: NewMeal[],
+  token: string
+): Promise<{ meals: Meal[]; totals: DailyTotals }> {
+  const data = await apiRequest<{ day: { meals: RawMeal[]; totals: DailyTotals } }>(
+    "/meals/batch",
+    "POST",
+    { meals },
+    token
+  );
+  return { meals: data.day.meals.map(mapMeal), totals: data.day.totals };
 }
 
 // Gọi PUT /meals/:id. Trả về món sau khi sửa, vì MealsContext cần nó

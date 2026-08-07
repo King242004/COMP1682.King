@@ -103,8 +103,10 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
     return () => { alive = false; };
   }, [token, start, end]);
 
-  // Mục tiêu số buổi mỗi tuần dựa trên mức vận động: ít 3, vừa 4, cao 5.
-  const weekTarget = ({ sedentary: 3, moderate: 4, active: 5 } as Record<string, number>)[user?.activityLevel ?? ""] ?? 4;
+  // Mục tiêu số buổi mỗi tuần do NGƯỜI DÙNG đặt ở màn Mục tiêu, null là chưa đặt.
+  // Bản cũ suy con số này từ mức vận động theo bảng 3/4/5 tự chế, không có nguồn,
+  // và lệch hẳn với Trang chủ vốn đã đọc đúng trường trong hồ sơ.
+  const weekTarget = user?.weeklyWorkoutTarget ?? null;
 
   const burnDays = buildBurnDays(exercises, windowDays, locale);
   const burnMonths = mode === "year" ? buildBurnMonths(exercises, year, locale) : [];
@@ -191,7 +193,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
         <Card style={styles.consistencyCard}>
           <View style={styles.consistencyHead}>
             <AppText variant="h2">{t.progress.actConsistency}</AppText>
-            <AppText variant="subtle" style={[styles.consistencyMeta, daysTrained >= weekTarget && styles.metaMet]}>
+            <AppText variant="subtle" style={[styles.consistencyMeta, weekTarget != null && daysTrained >= weekTarget && styles.metaMet]}>
               {t.progress.actDaysTrainedOf7(daysTrained)}
             </AppText>
           </View>
@@ -209,7 +211,10 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
               );
             })}
           </View>
-          <AppText variant="subtle" style={styles.targetText}>{t.progress.actWeekTarget(weekTarget)}</AppText>
+          {/* Chưa đặt mục tiêu thì không vẽ dòng này, thay vì bịa ra một con số. */}
+          {weekTarget != null && (
+            <AppText variant="subtle" style={styles.targetText}>{t.progress.actWeekTarget(weekTarget)}</AppText>
+          )}
         </Card>
       )}
 

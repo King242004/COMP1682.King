@@ -1,4 +1,7 @@
-// File này lo chữ ký chứng minh request đến từ backend MealMate thật.
+// ═══ FILE NÀY LÀM GÌ ═══
+// canonicalizePayload → createSignature → verifySignature bảo vệ request gửi email.
+// Xác minh chữ ký do hàm createRelaySignature trong
+// backend/src/services/emailRelayClient.js tạo.
 // Cách tính phải giống hệt backend/src/services/emailRelayClient.js, lệch một ký tự là hỏng.
 const crypto = require("crypto");
 

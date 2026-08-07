@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Chặng giữa thẻ gợi ý món và backend, có lưu tạm kết quả.
+// Adapter giữa SuggestMealCard và coachApi.suggestMeal, có lưu tạm kết quả.
 //
 // Ai gọi tới: SuggestMealCard
 // Nhận vào:   ngày, bữa, và ngôn ngữ
@@ -15,6 +15,7 @@ import { mealSlotByHour } from "@/features/meals/mealHelpers";
 import type { Lang } from "@/utils/languageUtils";
 import { todayKey } from "@/utils/dateUtils";
 
+// Chờ tối đa 2 phút. Dài hơn request thường vì AI phải nghĩ.
 const AI_TIMEOUT_MS = 120_000;
 
 export type MealSuggestion = {
@@ -34,6 +35,7 @@ export type MealSuggestions = {
 };
 
 export function nextMealSlot(hour: number, eatenTypes: Set<string>): string {
+  // Thứ tự bữa trong ngày. Tìm bữa kế tiếp thì đi theo đúng thứ tự này.
   const order = ["breakfast", "lunch", "snack", "dinner"];
   let idx = order.indexOf(mealSlotByHour(hour));
   while (idx < order.length && eatenTypes.has(order[idx])) idx++;
@@ -62,6 +64,8 @@ export async function suggestNextMeal(token: string, language: Lang): Promise<Me
   };
 }
 
+// Khóa nhớ tạm gồm cả ngày, bữa và ngôn ngữ. Đổi một trong ba là hỏi AI lại,
+// vì gợi ý cho bữa sáng tiếng Việt khác hẳn bữa tối tiếng Anh.
 const suggestCacheKey = (date: string, slot: string, language: Lang) =>
   `coach_suggest_${date}_${slot}_${language}`;
 

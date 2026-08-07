@@ -1,3 +1,9 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra aiClient thử model dự phòng theo thứ tự và chặn đúng thời gian chờ.
+// Không gọi Gemini thật; test khóa kết quả hoặc lỗi cuối cùng được truyền ra.
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra aiClient thử model dự phòng theo thứ tự và chặn đúng thời gian chờ.
+// Không gọi Gemini thật; test khóa kết quả hoặc lỗi cuối cùng được truyền ra.
 const { generateWithFallback, withTimeout } = require("../../src/services/aiClient");
 
 describe("AI fallback", () => {

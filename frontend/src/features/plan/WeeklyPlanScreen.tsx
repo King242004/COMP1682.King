@@ -12,19 +12,20 @@
 // 1. Bấm nút Tạo, GenerateModal mở ra cho chọn phạm vi và ghi chú khẩu vị
 // 2. Bấm xác nhận, chạy runGenerate ở file này
 // 3. generateWeekPlan          (POST /plan/generate)
-// 4. backend planController.generatePlan đọc hồ sơ và BỆNH NỀN
+// 4. Route gọi hàm generatePlan trong backend/src/controllers/planController.js;
+//    hàm này đọc hồ sơ và BỆNH NỀN
 // 5. LỚP AN TOÀN 1, đưa bệnh nền vào câu lệnh gửi cho Gemini
 // 6. Gemini trả các món cho từng ngày
-// 7. LỚP AN TOÀN 2, foodSafetyFilter lọc lại theo tên món ở server
-// 8. backend ghi kế hoạch mới thành công rồi mới thay kế hoạch cũ trong khoảng ngày
+// 7. LỚP AN TOÀN 2, services/nutrition/foodSafetyFilter.js lọc lại theo tên món
+// 8. planReplacement.replacePlanRange ghi bản mới rồi xóa kế hoạch cũ trong khoảng ngày
 // 9. màn này tải lại và hiện kế hoạch
 // Vì sao cần hai lớp: lớp 1 chỉ là lời dặn, AI có thể quên.
-// Lớp 2 chạy ở server nên người dùng không tắt được.
+// Lớp 2 chạy trong planController.generatePlan sau phản hồi AI nên app không bỏ qua được.
 // Giới hạn phải nói rõ khi bảo vệ: lớp 2 chỉ đọc TÊN món,
 // không phân tích được nguyên liệu, nên đây là lưới chắn thêm
 // chứ không phải bảo đảm y khoa.
 // BIẾN KẾ HOẠCH THÀNH DỮ LIỆU THẬT
-//   "Đã ăn" gọi POST /plan/:id/eaten, backend chép món sang nhật ký.
+//   "Đã ăn" gọi POST /plan/:id/eaten; planController.markEaten tạo Meal từ món kế hoạch.
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -67,6 +68,7 @@ export default function WeeklyPlanScreen() {
   // Nhãn ngày tháng đi theo ngôn ngữ trong app, không theo điện thoại.
   const locale = localeTag(lang);
   const t = useT();
+  // Viết tắt cụm chữ của phần Kế hoạch, màn này dùng rất nhiều lần.
   const L = t.plan;
 
   const [todayKey, setTodayKey] = useState(dateKey(new Date()));
@@ -144,6 +146,16 @@ export default function WeeklyPlanScreen() {
     }
   }, [token, weekStart, weekEnd]);
 
+  // Tải lại khi quay về màn hình hoặc đổi tuần.
+  // Đặt ngay sau hàm load để luồng mở màn đọc liền nhau: dựng khoảng tuần → tải → đặt state.
+  useFocusEffect(
+    useCallback(() => {
+      const fresh = dateKey(new Date());
+      if (fresh !== todayKey) setTodayKey(fresh);
+      load();
+    }, [load, todayKey])
+  );
+
   // Đổi tuần cũng đổi ngày đang chọn để ngày đó luôn nằm trong dải đang hiển thị.
   const changeWeek = (delta: number) => {
     const next = weekOffset + delta;
@@ -171,6 +183,7 @@ export default function WeeklyPlanScreen() {
       Alert.alert(L.error, L.pastWeek);
       return;
     }
+    // Mở hộp tạo kế hoạch sau khi đã chốt phạm vi và ghi chú khẩu vị.
     const show = () => {
       setGenScope(scope);
       // Điền khẩu vị đã lưu trong hồ sơ nếu ô hiện đang trống.
@@ -254,19 +267,11 @@ export default function WeeklyPlanScreen() {
     });
   };
 
-  // Tải lại khi quay về màn hình hoặc đổi tuần.
-  // Đồng thời cập nhật hôm nay nếu app được mở qua nửa đêm.
-  useFocusEffect(
-    useCallback(() => {
-      const fresh = dateKey(new Date());
-      if (fresh !== todayKey) setTodayKey(fresh);
-      load();
-    }, [load, todayKey])
-  );
-
   // Các món trong thực đơn của ngày đang chọn.
   const dayPlan = useMemo(() => plan.filter((p) => p.date === selectedDate), [plan, selectedDate]);
 
+  // Cộng calo của từng ngày trong tuần, để hiện dưới mỗi cột ngày.
+  // Chỉ cộng món trong kế hoạch, không tính món đã ăn thật.
   const dayTotals = useMemo(
     () =>
       dayPlan.reduce(
@@ -324,6 +329,7 @@ export default function WeeklyPlanScreen() {
     ]);
   };
 
+  // Bấm hỏi cách nấu một món trong kế hoạch thì sang tab Coach kèm sẵn câu hỏi.
   const askCoach = (item: PlanMeal) =>
     router.push({
       pathname: "/tabs/coach",

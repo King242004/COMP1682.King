@@ -5,7 +5,6 @@
 // Nhận vào:   không nhận gì, đây là bảng chữ khai sẵn
 // Trả ra:     toàn bộ chữ tiếng Việt, gom theo nhóm màn hình
 // Khi lỗi:    thiếu khóa so với en.ts thì TypeScript báo lỗi ngay lúc build
-// Bộ chữ tiếng Việt của toàn app, phải khớp từng khóa với en.ts.
 // Chọn bộ nào là do ngôn ngữ trong Cài đặt, chưa chọn thì theo ngôn ngữ điện thoại.
 import type { Strings } from "./en";
 
@@ -225,11 +224,11 @@ export const vi: Strings = {
     nameMin: "Tên phải có ít nhất 2 ký tự.",
     nameLettersOnly: "Tên chỉ được gồm chữ và khoảng trắng.",
     invalidAge: "Tuổi không hợp lệ",
-    ageRange: "Tuổi phải từ 10 đến 120.",
+    ageRange: (min: number, max: number) => `Tuổi phải từ ${min} đến ${max}.`,
     invalidWeight: "Cân nặng không hợp lệ",
-    weightRange: "Cân nặng phải từ 20 đến 300 kg.",
+    weightRange: (min: number, max: number) => `Cân nặng phải từ ${min} đến ${max} kg.`,
     invalidHeight: "Chiều cao không hợp lệ",
-    heightRange: "Chiều cao phải từ 50 đến 250 cm.",
+    heightRange: (min: number, max: number) => `Chiều cao phải từ ${min} đến ${max} cm.`,
     updateFailed: "Chưa cập nhật được hồ sơ. Vui lòng thử lại.",
   },
 
@@ -420,6 +419,9 @@ export const vi: Strings = {
     customLabel: "Mục tiêu tự đặt (kcal)",
     tdee: "TDEE",
     dailyGoal: "Mục tiêu calo",
+    workoutSection: "Buổi tập mỗi tuần",
+    workoutHint: "Đặt số buổi bạn muốn tập trong tuần. Để trống cũng được, MealMate vẫn đếm số buổi bạn đã tập.",
+    workoutNone: "Không đặt",
     save: "Lưu mục tiêu",
     adjust: "Điều chỉnh mục tiêu",
   },
@@ -472,7 +474,7 @@ export const vi: Strings = {
     actActiveMonths: "Tháng có tập",
     actConsistency: "Duy trì vận động",
     actDaysTrainedOf7: (n: number) => `${n}/7 ngày có tập`,
-    actWeekTarget: (n: number) => `Gợi ý: ${n} buổi/tuần`,
+    actWeekTarget: (n: number) => `Mục tiêu của bạn: ${n} buổi/tuần`,
   },
 
   home: {
@@ -750,7 +752,7 @@ export const vi: Strings = {
     quit: "Dừng",
     finishedTitle: "Hoàn thành! 🎉",
     finishedMsg: (minutes: number) => `Đã ghi nhận ${minutes} phút vận động vào tiến trình của bạn.`,
-    safety: "Nghe cơ thể mình, dừng ngay nếu thấy chóng mặt hoặc đau.",
+    safety: "Đây là bài tập chung, không riêng cho tình trạng của bạn. Nghe cơ thể mình, dừng ngay nếu thấy chóng mặt hoặc đau. Có bệnh nền hoặc chấn thương thì bạn nên hỏi chuyên gia trước.",
     groups: {
       cardio: "Cardio",
       strength: "Sức mạnh / Gym",
@@ -781,6 +783,9 @@ export const vi: Strings = {
       badminton: "Cầu lông",
       tennis: "Tennis",
       volleyball: "Bóng chuyền",
+      shuttlecock: "Đá cầu",
+      martial_arts: "Võ thuật",
+      table_tennis: "Bóng bàn",
       pickleball: "Pickleball",
       dancing: "Nhảy / khiêu vũ",
       hiking: "Leo núi",

@@ -16,6 +16,7 @@
 // chỉ là đếm độ dài mảng, không cần truy vấn thêm bảng khác.
 const mongoose = require("mongoose");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
+const { NUTRITION_SOURCES } = require("../config/mealEnums");
 
 const postSchema = new mongoose.Schema(
   {
@@ -44,7 +45,7 @@ const postSchema = new mongoose.Schema(
       portionText: { type: String, default: "", trim: true, maxlength: LEGACY_LIMITS.PORTION_TEXT },
       nutritionSource: {
         type: String,
-        enum: ["manual", "ai_estimate", "ai_adjusted", "photo_scan", "barcode", "community", "repeat", "ai_suggestion"],
+        enum: NUTRITION_SOURCES,
       },
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

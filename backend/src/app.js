@@ -13,7 +13,6 @@
 //   3. các bảng chia việc /api/...
 //   4. errorHandler, gắn CUỐI CÙNG nên nó hứng được mọi lỗi phía trên
 //
-// File này là cửa vào của mọi request từ app điện thoại.
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -42,6 +41,7 @@ function corsOptions() {
   };
 }
 
+// Dựng app Express. server.js gọi hàm này sau khi đã nối được database.
 function createApp() {
   const app = express();
 

@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra endpoint gửi email chỉ chuyển tiếp request có chữ ký hợp lệ.
+// Resend được mock; test khóa cả nhánh gửi thành công và chặn trước khi gửi.
 const { afterEach, beforeEach, test } = require("node:test");
 const assert = require("node:assert/strict");
 const nodemailer = require("nodemailer");

@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Chặng giữa phần Cân nặng và backend. Chỉ lo gọi mạng.
+// Adapter HTTP giữa phần Cân nặng và backend/src/routes/weightRoutes.js.
 //
 // Ai gọi tới: WeightSection, WeightGoalsScreen, ProgressScreen
 // Nhận vào:   số cân nặng và ngày
@@ -30,20 +30,21 @@ export type WeightMutationResponse = {
 };
 
 // Lấy danh sách cân nặng. Gọi GET /weight.
-// Backend trả từ cũ đến mới để biểu đồ vẽ thẳng, kèm cân hiện tại và cân mục tiêu.
+// weightController.getWeights trả từ cũ đến mới để biểu đồ vẽ thẳng,
+// kèm cân hiện tại và cân mục tiêu.
 export async function getWeights(token: string, limit = 90): Promise<WeightHistory> {
   return apiRequest(`/weight?limit=${limit}`, "GET", undefined, token);
 }
 
 // Ghi cân nặng. Gọi POST /weight.
 // Mỗi ngày chỉ giữ MỘT lần cân, cân lại trong ngày thì ghi đè.
-// Nếu là lần mới nhất, backend cập nhật luôn cân nặng trong hồ sơ.
+// Nếu là lần mới nhất, weightController.logWeight cập nhật luôn cân nặng trong hồ sơ.
 export function logWeight(token: string, weightKg: number, date?: string): Promise<WeightMutationResponse> {
   return apiRequest("/weight", "POST", { weightKg, date }, token);
 }
 
 // Xóa một lần cân. Gọi DELETE /weight/:id.
-// Backend tự lấy lần cân còn lại mới nhất để cập nhật lại hồ sơ.
+// weightController.deleteWeight lấy lần cân còn lại mới nhất để cập nhật lại hồ sơ.
 export function deleteWeight(token: string, id: string): Promise<WeightMutationResponse> {
   return apiRequest(`/weight/${id}`, "DELETE", undefined, token);
 }

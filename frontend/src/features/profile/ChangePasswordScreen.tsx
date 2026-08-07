@@ -10,8 +10,10 @@
 // LUỒNG ĐỔI MẬT KHẨU
 // 1. Nhập mật khẩu hiện tại và mật khẩu mới, bấm Lưu
 // 2. POST /user/change-password
-// 3. backend so mật khẩu hiện tại cho đúng rồi mới mã hóa và lưu cái mới
-// 4. backend vô hiệu hóa token cũ và trả token mới cho đúng thiết bị này
+// 3. Route gọi hàm changePassword trong backend/src/controllers/accountController.js;
+//    hàm này so mật khẩu hiện tại,
+//    mã hóa và lưu mật khẩu mới
+// 4. changePassword tăng tokenVersion để vô hiệu hóa token cũ và trả token mới
 // 5. AuthContext lưu token mới, hiện thông báo rồi quay về màn trước
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";

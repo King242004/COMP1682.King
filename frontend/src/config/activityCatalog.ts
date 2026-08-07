@@ -12,10 +12,8 @@
 // Activities: a third update of the energy costs of human activities',
 // Journal of Sport and Health Science, 13(1), tr. 6 tới 12.
 // Tra cứu trực tuyến: https://pacompendium.com/adult-compendium/
-// QUY TẮC CỦA FILE: mỗi hoạt động phải có trường `code` là mã tra cứu trong
-// Compendium. Có mã thì bất kỳ ai cũng mở tài liệu ra kiểm được con số.
-// Hoạt động nào Compendium không có thì `code` để rỗng và phải ghi rõ
-// nó được ước lượng theo hoạt động gần nhất nào.
+// QUY TẮC CỦA FILE: mỗi hoạt động phải có mã Compendium hoặc một nguồn học thuật
+// riêng để bất kỳ ai cũng mở tài liệu ra kiểm được con số.
 // LỊCH SỬ: trước ngày 4/8/2026 danh mục này nằm trong features/exercise/api.ts
 // và dùng số của Compendium bản 2011, trong khi báo cáo lại dẫn bản 2024.
 // Đối chiếu bốn hoạt động cho thấy cả bốn đều lệch, ví dụ đi bộ ghi 3.5
@@ -26,8 +24,9 @@ export type Activity = {
   met: number;
   icon: string;
   // Mã tra cứu trong Compendium 2024. Rỗng nghĩa là Compendium không có
-  // hoạt động này và con số là ước lượng theo hoạt động gần nhất.
+  // hoạt động này; khi đó phải có `source` riêng.
   code?: string;
+  source?: string;
   custom?: boolean;
 };
 
@@ -37,7 +36,6 @@ const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
     items: [
       // Đi bộ 2.8 tới 3.4 dặm mỗi giờ, mặt phẳng, nhịp vừa.
       { key: "walking", met: 3.8, code: "17190", icon: "🚶" },
-      // Đi bộ 3.5 tới 3.9 dặm mỗi giờ, mặt phẳng, nhịp nhanh.
       { key: "brisk_walking", met: 4.8, code: "17200", icon: "🚶‍♂️" },
       // Chạy bộ chậm, tốc độ tự chọn.
       { key: "jogging", met: 7.5, code: "12020", icon: "🏃" },
@@ -59,6 +57,8 @@ const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
       // Tập kháng lực nhiều bài, 8 tới 15 lần mỗi hiệp.
       { key: "weights_light", met: 3.5, code: "02054", icon: "🏋️" },
       { key: "weights_heavy", met: 6.0, code: "02050", icon: "🏋️‍♂️" },
+      // Buổi tập gym tổng hợp, gồm lớp tập và tập tạ trong cùng một lần đến phòng gym.
+      { key: "gym", met: 5.0, code: "02061", icon: "🏋️" },
       // Bài tập với trọng lượng cơ thể, sức vừa.
       { key: "bodyweight", met: 3.8, code: "02022", icon: "🤸" },
       { key: "hiit", met: 11.0, code: "02214", icon: "🔥" },
@@ -70,7 +70,7 @@ const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
   {
     key: "flexibility",
     items: [
-      { key: "yoga", met: 2.3, code: "02150", icon: "🧘" },
+      { key: "yoga", met: 2.3, code: "02175", icon: "🧘" },
       { key: "pilates", met: 2.8, code: "02105", icon: "🧎" },
       // Giãn cơ nhẹ.
       { key: "stretching", met: 2.3, code: "02101", icon: "🙆" },
@@ -87,6 +87,18 @@ const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
       { key: "tennis", met: 6.8, code: "15675", icon: "🎾" },
       // Bóng chuyền không thi đấu, đội 6 tới 9 người.
       { key: "volleyball", met: 3.0, code: "15720", icon: "🏐" },
+      // Compendium không có đá cầu/Jianzi. Shen và cộng sự (2025),
+      // Sustainability 17(1):263, DOI 10.3390/su17010263, dùng 6.0 MET.
+      {
+        key: "shuttlecock",
+        met: 6.0,
+        code: "",
+        source: "Shen et al. (2025), DOI 10.3390/su17010263",
+        icon: "🪶",
+      },
+      // Võ thuật ở nhịp chậm, phù hợp người mới tập.
+      { key: "martial_arts", met: 5.3, code: "15425", icon: "🥋" },
+      { key: "table_tennis", met: 4.0, code: "15660", icon: "🏓" },
       // Compendium 2024 KHÔNG có pickleball.
       // Lấy theo cầu lông giao lưu vì cùng nhóm môn vợt sân nhỏ.
       { key: "pickleball", met: 5.5, code: "", icon: "🥒" },
@@ -108,17 +120,24 @@ const ACTIVITY_GROUPS: { key: string; items: Activity[] }[] = [
 
 export const DURATION_PRESETS = [15, 30, 45, 60, 90];
 
-// Nhóm ngắn dùng trong bảng "đã vận động bên ngoài". Màn hình chỉ đọc danh sách
-// này, không tự giữ tên môn hay MET ở component.
+// Các hoạt động thể chất được ghi nhận trong khảo sát 392 sinh viên nội trú
+// Đại học Cần Thơ của Dang và cộng sự (2025), DOI 10.46827/ejpe.v12i6.6045.
+// Không đưa cờ vua và e-sports vào nhật ký tập vì đây không phải vận động thể chất.
 const POPULAR_ACTIVITY_KEYS = [
   "walking",
   "jogging",
-  "cycling",
-  "swimming",
   "badminton",
-  "football",
-  "basketball",
   "volleyball",
+  "football",
+  "shuttlecock",
+  "cycling",
+  "gym",
+  "martial_arts",
+  "yoga",
+  "basketball",
+  "jump_rope",
+  "swimming",
+  "table_tennis",
 ] as const;
 
 const ALL_ACTIVITIES = ACTIVITY_GROUPS.flatMap((group) => group.items);

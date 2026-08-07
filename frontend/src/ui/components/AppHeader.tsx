@@ -18,12 +18,25 @@ import { useT, type Strings } from "@/i18n";
 import { shadow, theme } from "@/ui/theme";
 import { AppText } from "./AppText";
 
+// Chọn lời chào theo giờ máy. Trước 12 giờ chào buổi sáng, trước 18 giờ chào buổi chiều,
+// còn lại chào buổi tối. Đọc Date trên thiết bị, không gọi apiClient.
 function greetingForHour(h: number, t: Strings) {
   if (h < 12) return t.nav.goodMorning;
   if (h < 18) return t.nav.goodAfternoon;
   return t.nav.goodEvening;
 }
 
+// ══════════════════════════════════════════════════════════
+// THANH ĐẦU
+//
+// Đến từ app/tabs/_layout, chỉ gắn cho riêng tab Trang chủ.
+// Ba bước, đọc từ trên xuống là đúng thứ tự. Có một chặng chờ mạng ở BƯỚC 2.
+// Xong thì bấm chuông đi màn Thông báo, bấm ngọn lửa mở bảng chuỗi ngày.
+// ══════════════════════════════════════════════════════════
+
+// THANH ĐẦU BƯỚC 1. Lấy sẵn mọi thứ cần hiện, KHÔNG gọi mạng ở đây.
+// Tên và ảnh lấy từ AuthContext, danh sách món lấy từ MealsContext,
+// rồi tự đếm chuỗi ngày với calo hôm nay ngay tại máy.
 export function AppHeader() {
   const { user, token, fetchProfile } = useAuth();
   const router = useRouter();
@@ -36,14 +49,23 @@ export function AppHeader() {
 
   const [unread, setUnread] = useState(0);
   const [streakVisible, setStreakVisible] = useState(false);
-  // Tự đếm thông báo chưa đọc mỗi lần quay về Trang chủ,
-  // đồng thời tải mục tiêu calo mới nhất cho thông báo streak.
+  // THANH ĐẦU BƯỚC 2. communityApi.getUnreadNotificationCount và getPendingFollowRequests
+  // gọi song song các route Community; Promise.all tiếp tục khi cả hai trả kết quả.
+  // Đường đi: getUnreadCount → apiClient → GET /community/notifications/unread-count
+  //           → notificationController.getUnreadCount
+  // Lượt kia là fetchProfile của AuthContext, lấy mục tiêu calo mới nhất
+  // cho bảng chuỗi ngày ở dưới hiện còn bao nhiêu kcal.
+  // Dùng useFocusEffect chứ không useEffect, nên mỗi lần quay về tab Trang chủ
+  // là đếm lại, chứ không phải chỉ đếm một lần lúc mở app.
+  // Cả hai đều .catch bỏ qua: đếm hụt một con số thì thà im, đừng chặn thanh đầu.
   useFocusEffect(useCallback(() => {
     if (!token) return;
     getUnreadCount(token).then(setUnread).catch(() => {});
     fetchProfile().catch(() => {});
   }, [fetchProfile, token]));
 
+  // THANH ĐẦU BƯỚC 3. Vẽ thanh, rồi vẽ luôn bảng chuỗi ngày nhưng để ẩn.
+  // Bảng chỉ hiện khi bấm ngọn lửa. Chuỗi ngày bằng 0 thì giấu luôn ngọn lửa.
   return (
     <>
       <View style={styles.header}>
@@ -73,7 +95,9 @@ export function AppHeader() {
               <AppText style={styles.streakNum}>{streak}</AppText>
             </Pressable>
           )}
-          {/* Community notifications bell with unread badge */}
+          {/* Chuông thông báo Cộng đồng, kèm chấm đỏ đếm số chưa đọc.
+              Bấm là xóa chấm ngay tại máy rồi mới đi màn Thông báo,
+              đỡ phải chờ một lượt gọi nữa mới thấy chấm biến mất. */}
           <Pressable
             onPress={() => { setUnread(0); router.push("/community/notifications"); }}
             accessibilityRole="button"

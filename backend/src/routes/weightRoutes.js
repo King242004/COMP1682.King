@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+// Ánh xạ /api/weight/* tới hàm trong controllers/weightController.js.
 //
 // Ai gọi tới: app.js, gắn cả file này vào /api/weight
 // Nhận vào:   request từ màn Cân nặng và mục tiêu, và biểu đồ ở Tiến trình

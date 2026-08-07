@@ -5,19 +5,9 @@
 // Nhận vào:   món đã ăn, buổi tập, cân nặng, mục tiêu calo, gợi ý món
 // Trả ra:     vòng calo, danh sách món theo bữa, và các thẻ tóm tắt
 // Khi lỗi:    một nguồn hỏng thì phần đó hiện lời nhắc, các phần khác vẫn chạy
-
-// Đây là màn gom nhiều nguồn dữ liệu nhất trong app.
-// LUỒNG MỞ TRANG CHỦ, tự chạy chứ không do ai bấm
-// 1. useFocusEffect chạy mỗi lần màn được nhìn thấy
-// 2. gọi song song năm thứ, xem chú thích tại chỗ
-//    món trong ngày, buổi tập, lịch sử món, kế hoạch hôm nay, số ngày tập trong tuần
-// 3. mỗi hàm gọi api riêng của mình tới backend
-// 4. đặt kết quả vào state
-// 5. màn hình vẽ lại vòng calo, danh sách bữa, thẻ hoạt động và thẻ Coach
-// LUỒNG TỰ TẢI LẠI KHI DỮ LIỆU ĐỔI
-// 1. Thêm món ở màn khác, MealsContext tăng số đếm revision
-// 2. useFocusEffect ở đây thấy revision đổi nên chạy lại
-// 3. handledRevisionRef nhớ đã xử lý số nào, để không tải lại hai lần
+//
+// Nhớ: màn này KHÔNG tự tải lúc dựng, nó tải mỗi lần được nhìn thấy.
+//      Xem khối MỞ TRANG CHỦ ở giữa file.
 // Các lối đi từ màn này: Thêm món, Chi tiết món, Lịch sử món, Ghi buổi tập,
 // Kế hoạch tuần, và tab Coach.
 import { useCallback, useState, useRef } from "react";
@@ -50,6 +40,10 @@ export default function HomeScreen() {
   const { user, token } = useAuth();
   const { revision, markHealthDataChanged } = useHealthDataRefresh();
   const { meals, dailyTotals, historyMeals, isLoading, fetchMealsByDate, fetchMealHistory } = useMeals();
+  const t = useT();
+  const lang = resolveLanguage(user?.language);
+  // Nhãn ngày tháng đi theo ngôn ngữ trong app, không theo ngôn ngữ điện thoại.
+  const locale = localeTag(lang);
 
   const today = new Date();
   const todayKey = dateKey(today);
@@ -62,11 +56,25 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
 
-  // Các ref này chặn thao tác lặp và bỏ kết quả tải đã cũ.
+  // Ba ref canh chừng, không phải dữ liệu để hiện. Đổi giá trị không làm màn vẽ lại.
+  // Chặn bấm nút "Đã ăn" hai lần liên tiếp, kẻo ghi trùng món vào nhật ký.
   const eatingPlanRef = useRef(false);
+  // Đánh số từng lần xin lời khuyên Coach, để bỏ kết quả về muộn. Xem khối LỜI KHUYÊN COACH.
   const insightRequestIdRef = useRef(0);
+  // Nhớ số revision đã xử lý, để biết dữ liệu sức khỏe có thật sự đổi hay không.
   const handledRevisionRef = useRef(0);
 
+  // ══════════════════════════════════════════════════════════
+  // BA HÀM TẢI DỮ LIỆU
+  //
+  // Không phải luồng. Ba hàm độc lập, mỗi hàm một nguồn, gọi cái nào trước cũng được.
+  // Cả ba đều được gọi ở khối MỞ TRANG CHỦ bên dưới, và ở nút kéo xuống làm mới.
+  // Hàm nào hỏng thì phần đó về rỗng, hai phần kia vẫn hiện bình thường.
+  // ══════════════════════════════════════════════════════════
+
+  // Buổi tập của ĐÚNG ngày đang xem, cùng tổng calo đã đốt.
+  // Đường đi: getExercisesByDate → apiClient → GET /exercise?date=...
+  //           → exerciseController.getExercisesByDate
   const loadExercises = useCallback(async () => {
     if (!token) return;
     try {
@@ -79,9 +87,10 @@ export default function HomeScreen() {
     }
   }, [token, selectedDate]);
 
-  // Mục tiêu số buổi tập mỗi tuần do người dùng tự đặt trong hồ sơ.
-  // Bản cũ suy ra từ mức vận động bằng ba con số gán cứng trong file này.
-  const weekTarget = user?.weeklyWorkoutTarget ?? null;
+  // Đếm số NGÀY có tập trong tuần đang xem, không phải số buổi.
+  // Đổ vào Set để một ngày tập ba buổi vẫn chỉ tính là một ngày.
+  // Đường đi: getExerciseHistory → apiClient → GET /exercise/history
+  //           → exerciseController.getExerciseHistory
   const loadWeekActivity = useCallback(async () => {
     if (!token) return;
     try {
@@ -93,6 +102,10 @@ export default function HomeScreen() {
     }
   }, [token, weekOffset]);
 
+  // Món dự kiến của HÔM NAY, lấy từ Kế hoạch tuần.
+  // Truyền todayKey cho cả ngày đầu lẫn ngày cuối, tức xin đúng một ngày.
+  // Đường đi: getPlanMeals → apiClient → GET /plan?startDate=...&endDate=...
+  //           → planController.getPlanMeals
   const loadPlanToday = useCallback(async () => {
     if (!token) return;
     try {
@@ -103,14 +116,27 @@ export default function HomeScreen() {
     }
   }, [token, todayKey]);
 
-  // Nút "Đã ăn" trên thẻ Kế hoạch.
-  // eatingPlanRef chặn bấm hai lần liên tiếp, tránh ghi trùng món vào nhật ký.
+  // ══════════════════════════════════════════════════════════
+  // ĐÁNH DẤU ĐÃ ĂN
+  //
+  // Đến từ nút "Đã ăn" trên dòng món dự kiến. Bốn bước, đọc từ trên xuống là đúng thứ tự.
+  // Xong thì món dự kiến biến mất và món thật hiện lên trong nhật ký bữa đó.
+  // ══════════════════════════════════════════════════════════
+
+  // ĐÃ ĂN BƯỚC 1. Người dùng bấm nút là vào đây.
+  // Cửa chặn ở dòng dưới cho bấm nhanh hai lần, kẻo ghi trùng món vào nhật ký.
   const eatPlanned = async (p: PlanMeal) => {
     if (!token || eatingPlanRef.current) return;
     eatingPlanRef.current = true;
     try {
+      // ĐÃ ĂN BƯỚC 2. planApi.markPlanEaten → POST /plan/:id/eaten
+      // → planController.markEaten tạo Meal rồi đánh dấu PlanMeal.done.
       await markPlanEaten(token, p.id);
+      // ĐÃ ĂN BƯỚC 3. Tải lại cả hai danh sách, chạy song song vì không phụ thuộc nhau.
+      // Phải tải lại vì planController.markEaten tạo Meal có _id mới mà state hiện tại chưa biết.
       await Promise.all([fetchMealsByDate(todayKey), loadPlanToday()]);
+      // ĐÃ ĂN BƯỚC 4. Báo cho cả app biết dữ liệu sức khỏe đã đổi.
+      // Nhờ đó lần sau quay lại màn này, Coach mới chịu gọi AI tính lại điểm.
       markHealthDataChanged();
     } catch {
       Alert.alert(t.common.errorTitle, t.home.logMealErr);
@@ -119,8 +145,14 @@ export default function HomeScreen() {
     }
   };
 
-  // Nút xóa một món dự định ngay tại Trang chủ.
+  // ══════════════════════════════════════════════════════════
+  // XÓA MÓN DỰ KIẾN
+  //
+  // Đến từ dấu x trên dòng món dự kiến. Ba bước, đọc từ trên xuống là đúng thứ tự.
   // Ở đây chỉ xóa được, muốn sửa món thì phải vào màn Kế hoạch tuần.
+  // ══════════════════════════════════════════════════════════
+
+  // XÓA DỰ KIẾN BƯỚC 1. Hỏi lại cho chắc trước khi xóa.
   const removePlanned = (p: PlanMeal) => {
     Alert.alert(t.home.removePlanTitle, t.home.removePlanMsg(p.name), [
       { text: t.common.cancel, style: "cancel" },
@@ -129,10 +161,16 @@ export default function HomeScreen() {
         style: "destructive",
         onPress: async () => {
           if (!token) return;
+          // XÓA DỰ KIẾN BƯỚC 2. Bỏ dòng khỏi state trước khi planController.deletePlanMeal hoàn tất.
+          // Làm vậy để bấm là thấy mất luôn, không phải đợi một lượt mạng.
           setPlanToday((prev) => prev.filter((x) => x.id !== p.id));
           try {
+            // XÓA DỰ KIẾN BƯỚC 3. Giờ mới gửi lệnh xóa thật rồi CHỜ.
+            // Đường đi: deletePlanMeal → apiClient → DELETE /plan/:id
+            //           → planController.deletePlanMeal
             await deletePlanMeal(token, p.id);
           } catch {
+            // Xóa hụt thì tải lại cả danh sách, cho dòng vừa giấu hiện về đúng chỗ cũ.
             loadPlanToday();
           }
         },
@@ -140,34 +178,57 @@ export default function HomeScreen() {
     ]);
   };
 
-  const lang = resolveLanguage(user?.language);
-  // Nhãn ngày tháng đi theo ngôn ngữ trong app, không theo ngôn ngữ điện thoại.
-  const locale = localeTag(lang);
-  const t = useT();
-  // Chỉ chạy cho hôm nay, xem ngày cũ thì bỏ trống thẻ Coach.
-  // insightRequestIdRef đánh số từng lần gọi, kết quả về muộn hơn lần gọi mới nhất
-  // sẽ bị bỏ, tránh việc bấm đổi ngày liên tục rồi dữ liệu cũ đè lên dữ liệu mới.
+  // ══════════════════════════════════════════════════════════
+  // LỜI KHUYÊN COACH
+  //
+  // Đến từ khối MỞ TRANG CHỦ bên dưới. Năm bước, đọc từ trên xuống là đúng thứ tự.
+  // Đây là chỗ TỐN LƯỢT GỌI AI, nên có bộ nhớ đệm và có cửa chặn ở BƯỚC 1.
+  // Xong thì thẻ AI Coach ở cuối màn hiện điểm với câu tóm tắt.
+  // ══════════════════════════════════════════════════════════
+
+  // LỜI KHUYÊN BƯỚC 1. Chỉ chạy cho hôm nay. Đang xem ngày cũ thì xóa trắng rồi thôi,
+  // vì Coach chỉ nhận xét ngày hiện tại.
   const loadInsight = useCallback(async (force = false) => {
     if (!token || selectedDate !== todayKey) { setCoachInsight(null); return; }
+    // LỜI KHUYÊN BƯỚC 2. Lấy số thứ tự cho lần gọi này.
+    // Từ đây trở xuống, chỗ nào cũng so lại số. Số không còn khớp nghĩa là
+    // đã có lần gọi mới hơn, kết quả của mình đã cũ nên phải bỏ, đừng đè lên bản mới.
+    // Không có bước này là bấm đổi ngày liên tục sẽ thấy dữ liệu nhảy loạn.
     const requestId = ++insightRequestIdRef.current;
+    // LỜI KHUYÊN BƯỚC 3. Xem bộ nhớ đệm trong máy trước, hiện ngay cho đỡ chờ.
     const cached = await getCachedInsight(todayKey, lang);
     if (requestId !== insightRequestIdRef.current) return;
     if (cached) {
       setCoachInsight(cached.insight);
-      // Không gọi AI lại khi insight trong bộ nhớ đệm vẫn còn mới.
+      // Bản đệm còn mới và không ai ép làm mới thì DỪNG LUÔN, không gọi AI.
+      // Đây là cửa tiết kiệm lượt gọi Gemini, bỏ đi là mỗi lần mở màn tốn một lượt.
       if (!force && Date.now() - cached.at < INSIGHT_TTL_MS) return;
     }
     try {
+      // LỜI KHUYÊN BƯỚC 4. coachApi.getInsight → GET /coach/insight
+      // → coachController.getInsight → aiClient.generateWithFallback.
       const fresh = await getInsight(token, todayKey, lang);
       if (requestId !== insightRequestIdRef.current) return;
+      // LỜI KHUYÊN BƯỚC 5. Hiện bản mới rồi cất vào đệm cho lần mở màn sau.
       setCoachInsight(fresh);
       cacheInsight(todayKey, lang, fresh);
     } catch {
+      // Gọi hỏng mà trước đó CÓ bản đệm thì cứ để bản đệm nằm đấy, còn hơn không có gì.
       if (requestId === insightRequestIdRef.current && !cached) setCoachInsight(null);
     }
   }, [token, selectedDate, todayKey, lang]);
 
-  // Kéo màn hình xuống để làm mới.
+  // ══════════════════════════════════════════════════════════
+  // MỞ TRANG CHỦ
+  //
+  // KHÔNG ai bấm, tự chạy mỗi lần màn được nhìn thấy. Năm bước, đọc từ trên xuống
+  // là đúng thứ tự. BƯỚC 3 là chặng chờ, sáu lượt gọi mạng chạy song song.
+  // Xong thì màn vẽ lại vòng calo, nhật ký bữa, thẻ Hoạt động và thẻ Coach.
+  // ══════════════════════════════════════════════════════════
+
+  // MỞ TRANG CHỦ BƯỚC 1. Lối phụ, người dùng kéo màn hình xuống để làm mới.
+  // Khác lối chính ở hai chỗ: có vòng xoay ở đầu màn, và ÉP Coach gọi AI lại.
+  // Dùng allSettled chứ không all, để một nguồn hỏng thì năm nguồn kia vẫn về.
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.allSettled([
@@ -189,24 +250,28 @@ export default function HomeScreen() {
     loadPlanToday,
   ]);
 
-  // Tự động tải lại, chạy mỗi lần màn được nhìn thấy chứ không do ai bấm.
-  // Chạy lại mỗi khi quay về màn này, nên món thêm ở màn Thêm món
-  // hay buổi tập ghi ở màn khác đều hiện ra ngay.
+  // MỞ TRANG CHỦ BƯỚC 2. Lối chính. Dùng useFocusEffect chứ không useEffect,
+  // nên chạy mỗi lần màn được NHÌN THẤY, không phải chỉ một lần lúc dựng.
+  // Nhờ vậy món thêm ở màn Thêm món hay buổi tập ghi ở màn khác đều hiện ra ngay.
   useFocusEffect(
     useCallback(() => {
-      // Nếu app mở qua nửa đêm thì cập nhật ngày hôm nay và chạy lại effect.
+      // Cửa chặn nửa đêm. App mở xuyên qua 0 giờ thì todayKey đã cũ,
+      // đổi ngày rồi thoát luôn. Đổi state là effect này tự chạy lại từ đầu.
       const freshToday = dateKey(new Date());
       if (todayKey !== freshToday && selectedDate === todayKey) {
         setSelectedDate(freshToday);
         return;
       }
+      // MỞ TRANG CHỦ BƯỚC 3. Bắn hết đi cùng lúc, KHÔNG chờ cái nào cả.
+      // Cố ý không await: chờ tuần tự thì màn đứng im tới khi lượt cuối về.
+      // Cứ để mỗi hàm tự đặt state của mình, phần nào về trước hiện trước.
       void fetchMealsByDate(selectedDate).catch(() => {});
       void fetchMealHistory().catch(() => {});
       loadExercises();
       loadWeekActivity();
-      // So số đếm với lần trước để biết dữ liệu sức khỏe có thật sự đổi không.
-      // Chỉ khi đổi mới ép Coach gọi AI lại, tránh tốn lượt gọi mỗi lần
-      // người dùng chỉ đơn giản là quay về màn này.
+      // MỞ TRANG CHỦ BƯỚC 4. So số revision với lần trước, để biết dữ liệu sức khỏe
+      // có thật sự đổi hay chỉ là người dùng quay về màn này.
+      // Chỉ khi đổi mới ép Coach gọi AI lại, kẻo mỗi lần bấm qua bấm lại là tốn một lượt.
       const healthChanged = revision !== handledRevisionRef.current;
       handledRevisionRef.current = revision;
       loadInsight(healthChanged);
@@ -224,9 +289,18 @@ export default function HomeScreen() {
     ])
   );
 
-  // Xóa một buổi tập ngay tại Trang chủ.
-  // Hỏi xác nhận rồi gọi DELETE /exercise/:id, sau đó tải lại
-  // thẻ Hoạt động và vòng tiến độ tuần.
+  // Mục tiêu số buổi tập mỗi tuần do người dùng tự đặt trong hồ sơ.
+  // Đây là dữ liệu để vẽ giao diện, nên đặt sau luồng tải và trước các giá trị hiển thị khác.
+  const weekTarget = user?.weeklyWorkoutTarget ?? null;
+
+  // ══════════════════════════════════════════════════════════
+  // XÓA BUỔI TẬP
+  //
+  // Đến từ nút thùng rác trên một dòng buổi tập ở thẻ Hoạt động.
+  // Ba bước, đọc từ trên xuống là đúng thứ tự. Xóa được ở bất kỳ ngày nào đang xem.
+  // ══════════════════════════════════════════════════════════
+
+  // XÓA BUỔI TẬP BƯỚC 1. Hỏi lại cho chắc trước khi xóa.
   const onDeleteExercise = (item: Exercise) => {
     Alert.alert(t.home.deleteWorkoutTitle, t.home.removeFromLog(item.name), [
       { text: t.common.cancel, style: "cancel" },
@@ -235,19 +309,33 @@ export default function HomeScreen() {
         style: "destructive",
         onPress: async () => {
           if (!token) return;
+          // XÓA BUỔI TẬP BƯỚC 2. Cập nhật state trước khi exerciseController.deleteExercise hoàn tất.
+          // Trừ tay ở đây chứ không tính lại, để con số đổi cùng lúc với dòng biến mất.
           setExercises((prev) => prev.filter((e) => e.id !== item.id));
           setTotalBurned((prev) => prev - item.caloriesBurned);
           try {
+            // XÓA BUỔI TẬP BƯỚC 3. Giờ mới gửi lệnh xóa thật rồi CHỜ.
+            // Đường đi: deleteExercise → apiClient → DELETE /exercise/:id
+            //           → exerciseController.deleteExercise
             await deleteExercise(token, item.id);
+            // Xóa xong thì đếm lại số ngày tập trong tuần, vì có thể vừa mất trọn một ngày.
             loadWeekActivity();
             markHealthDataChanged();
           } catch {
+            // Xóa hụt thì tải lại, cho dòng vừa giấu với con số calo về đúng như cũ.
             loadExercises();
           }
         },
       },
     ]);
   };
+
+  // ══════════════════════════════════════════════════════════
+  // TÍNH SỐ ĐỂ VẼ
+  //
+  // Không phải luồng, không gọi mạng. Chỉ là mấy phép tính từ state đã có,
+  // chạy lại mỗi lần màn vẽ. Xong thì phần JSX ở dưới lấy ra hiện.
+  // ══════════════════════════════════════════════════════════
 
   // Mục tiêu có thể chưa có nếu hồ sơ chưa đủ. Không thay bằng con số mặc định,
   // vì như vậy người dùng sẽ tưởng app đã tính riêng cho mình.
@@ -263,8 +351,11 @@ export default function HomeScreen() {
   const remaining = goal != null ? Math.max(0, goal - eaten) : 0;
   const overGoal = goal != null && eaten > goal;
 
+  // Mục tiêu đạm, tinh bột, chất béo. Tính từ mục tiêu calo và cân nặng.
+  // Chưa có mục tiêu calo thì trả null, và cả hàng macro dưới JSX bị giấu đi.
   const macros = macroTargets(goal, user?.weight);
 
+  // Đặt tên ngắn lại cho ba số của ngày đang xem, để phần JSX ở dưới đỡ dài dòng.
   const totalCarbs = dailyTotals.carbs;
   const totalFat = dailyTotals.fat;
   const totalProtein = dailyTotals.protein;
@@ -278,12 +369,16 @@ export default function HomeScreen() {
     setSelectedDate(next === 0 ? todayKey : dateKey(getCurrentWeekDays(next)[0]));
   };
 
+  // Bảy ngày của tuần đang xem, và tập ngày đã có món để chấm dấu lên chip ngày.
   const weekDays = getCurrentWeekDays(weekOffset);
   const loggedDays = new Set(historyMeals.map((m) => m.date));
 
+  // Lọc món theo bữa. Gọi bốn lần ở JSX, mỗi lần cho một thẻ bữa.
   const mealsByType = (type: MealTypeKey) =>
     meals.filter((m) => m.mealType === type);
 
+  // Cờ này quyết định khá nhiều thứ ở JSX: thẻ Coach, thẻ Kế hoạch, thẻ gợi ý
+  // và nút mở bài tập đều chỉ hiện khi đang xem hôm nay.
   const isToday = selectedDate === todayKey;
   const selectedDateLabel = new Date(selectedDate + "T00:00:00").toLocaleDateString(locale, {
     day: "numeric",

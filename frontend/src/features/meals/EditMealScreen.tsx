@@ -5,18 +5,13 @@
 // Nhận vào:   món cần sửa, truyền qua tham số route
 // Trả ra:     không trả gì, lưu xong thì quay lại màn trước
 // Khi lỗi:    sửa tên hoặc khẩu phần thì số dinh dưỡng cũ bị xóa, buộc ước tính lại
-
-// LUỒNG SỬA MÓN
-// 1. Mở từ màn Chi tiết món, mã món đi theo tham số route
-// 2. Tìm món đó trong MealsContext, KHÔNG gọi mạng để tải lại
-// 3. Đổ dữ liệu món vào form
-// 4. Sửa tên hay khẩu phần thì có thể bấm Ước tính lại, chạy handleEstimate
-// 5. Bấm Lưu, chạy handleSave
-// 6. MealsContext.updateMeal          (PUT /meals/:id)
-// 7. router.back về màn Chi tiết món
-// Khác Thêm món ở ba điểm: chỉ sửa MỘT món chứ không phải danh sách, dữ liệu
-// lấy sẵn từ Context nên mở màn là thấy ngay, và có thêm nút Xóa món.
+//
+// Khác màn Thêm món ở ba điểm: chỉ sửa MỘT món chứ không phải cả danh sách,
+// dữ liệu lấy sẵn từ MealsContext nên mở màn là thấy ngay, và có thêm nút Xóa món.
 // Phần ước tính dinh dưỡng thì giống hệt, cùng gọi POST /scan/estimate.
+//
+// Nhớ: đổi tên hay đổi khẩu phần là XÓA SẠCH bốn số dinh dưỡng cũ.
+//      Cố ý làm vậy, vì số cũ thuộc về món cũ, giữ lại là nói dối người dùng.
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -51,13 +46,27 @@ import { INPUT_LIMITS } from "@/config/inputLimits";
 type Errors = Partial<Record<"mealName" | "portion" | "details" | "calories" | "protein" | "carbs" | "fat", string>>;
 type Field = keyof Errors;
 
+// ══════════════════════════════════════════════════════════
+// SỬA MÓN
+//
+// Đến từ màn Chi tiết món, mã món đi theo tham số đường dẫn.
+// Năm bước, đọc từ trên xuống là đúng thứ tự. Có hai chặng chờ mạng,
+// một ở BƯỚC 4 gọi AI ước tính, một ở BƯỚC 5 lưu món.
+// Xong thì quay về màn Chi tiết món, và món đã đổi ở cả Trang chủ lẫn Lịch sử.
+// ══════════════════════════════════════════════════════════
+
+// SỬA MÓN BƯỚC 1. Lấy mã món từ đường dẫn rồi tìm trong MealsContext.
+// KHÔNG gọi mạng tải lại, nên mở màn là thấy dữ liệu ngay.
 export default function EditMealScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, token } = useAuth();
   const { meals, historyMeals, updateMeal, deleteMeal } = useMeals();
   const t = useT();
+  // Tìm ở cả hai danh sách, vì màn Chi tiết món mở được từ Trang chủ lẫn từ Lịch sử.
   const meal = meals.find((item) => item.id === id) || historyMeals.find((item) => item.id === id);
+  // Số đếm mỗi lần người dùng chạm vào form. BƯỚC 4 ghi lại số này lúc gửi đi
+  // rồi so lại lúc nhận về, để bỏ kết quả ước tính đã cũ thay vì đè lên thứ vừa gõ.
   const inputVersionRef = useRef(0);
 
   const [mealName, setMealName] = useState(meal?.name ?? "");
@@ -78,8 +87,9 @@ export default function EditMealScreen() {
   const [isEstimating, setIsEstimating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Workflow tự chạy: đổ lại dữ liệu vào form mỗi khi bản ghi món đổi.
-  // Chạy cả lúc mở màn lẫn lúc Context tải lại danh sách món từ backend.
+  // SỬA MÓN BƯỚC 2. Đổ dữ liệu món vào form. Không ai bấm, tự chạy.
+  // Chạy cả lúc mở màn lẫn lúc MealsContext.fetchMealsByDate cập nhật danh sách.
+  // Xóa luôn lỗi cũ và ô nào đã chạm, coi như form vừa mở lần đầu.
   useEffect(() => {
     if (!meal) return;
     inputVersionRef.current += 1;
@@ -100,10 +110,14 @@ export default function EditMealScreen() {
     setSaveError("");
   }, [meal]);
 
+  // Ba giá trị tính lại mỗi lần vẽ. completeNutrition quyết định có cho lưu thẳng
+  // hay bắt ước tính, approximate quyết định có hiện dấu ngã trước số calo hay không.
   const nutritionValues = { calories, protein, carbs, fat };
   const completeNutrition = hasCompleteNutrition(nutritionValues);
   const approximate = isApproximateSource(nutritionSource);
 
+  // Hàm kiểm dùng chung, gọi ở BƯỚC 4, BƯỚC 5 và mỗi lần rời một ô.
+  // requireNutrition tắt lúc ước tính, vì lúc đó bốn ô số còn trống là chuyện thường.
   const validate = (requireNutrition: boolean): Errors => {
     const next: Errors = {};
     // Chỉ còn kiểm phần TỐI THIỂU và phần bắt buộc. Trần độ dài do maxLength của
@@ -119,9 +133,10 @@ export default function EditMealScreen() {
     return Object.fromEntries(Object.entries(next).filter(([, message]) => message));
   };
 
-  // inputVersionRef là số đếm mỗi lần người dùng chạm vào form. handleEstimate
-  // ghi lại số này lúc gửi đi và so lại lúc nhận về, nên kết quả của một lần
-  // ước tính đã cũ sẽ bị bỏ thay vì đè lên thứ người dùng vừa gõ.
+  // SỬA MÓN BƯỚC 3. Người dùng gõ vào ô tên, khẩu phần hoặc mô tả.
+  // Đây là chỗ XÓA SẠCH bốn số dinh dưỡng cũ, và hạ nhãn nguồn về manual.
+  // Đổi từ "phở bò" sang "phở gà" mà giữ nguyên số của phở bò là con số nói dối.
+  // Tăng inputVersionRef để lượt ước tính đang chờ ngoài kia biết là mình đã cũ.
   const updateInput = (field: "mealName" | "portion" | "details", value: string) => {
     if (field === "mealName") setMealName(value);
     if (field === "portion") setPortion(value);
@@ -160,15 +175,16 @@ export default function EditMealScreen() {
     setSaveError("");
   };
 
+  // Chạy khi RỜI một ô, không phải lúc đang gõ, kẻo mới gõ chữ đầu đã bị mắng.
   const handleBlur = (field: Field) => {
     setTouched((current) => ({ ...current, [field]: true }));
+    // Vừa rời một ô số thì kiểm luôn phần số. Rời ô chữ thì chỉ kiểm phần số
+    // khi cả bốn ô đã đầy, kẻo form còn dở đã báo đỏ khắp nơi.
     const nutritionField = ["calories", "protein", "carbs", "fat"].includes(field);
     setErrors(validate(nutritionField || completeNutrition));
   };
 
-  // BƯỚC 4 CỦA LUỒNG. Người dùng bấm Ước tính lại.
-  // So inputVersionRef trước khi điền: người dùng gõ tiếp trong lúc chờ thì
-  // kết quả này đã thuộc về một món khác nên phải bỏ đi.
+  // SỬA MÓN BƯỚC 4. Người dùng bấm Ước tính lại.
   const handleEstimate = async () => {
     if (isEstimating || !token) return;
     setTouched((current) => ({ ...current, mealName: true, portion: true }));
@@ -181,14 +197,19 @@ export default function EditMealScreen() {
       portion: portion.trim(),
       details: details.trim(),
     };
+    // Chụp lại số đếm form NGAY TRƯỚC khi gửi, để lát nữa còn so.
     const requestVersion = inputVersionRef.current;
     setIsEstimating(true);
     setEstimateError("");
     setSaveError("");
     try {
+      // scanApi.estimateNutrition → POST /scan/estimate
+      // → scanController.estimateNutrition; cache miss mới gọi aiClient.
       const estimate = await estimateNutrition({
         items: [{ ...requested, details: requested.details || undefined }],
       }, token, resolveLanguage(user?.language));
+      // Số đếm đã đổi nghĩa là người dùng gõ tiếp trong lúc chờ.
+      // Kết quả này thuộc về món cũ rồi, bỏ đi chứ đừng đè lên thứ họ vừa gõ.
       if (inputVersionRef.current !== requestVersion) return;
       setCalories(String(estimate.items[0].calories));
       setProtein(String(estimate.items[0].protein));
@@ -206,7 +227,8 @@ export default function EditMealScreen() {
     }
   };
 
-  // BƯỚC 5 CỦA LUỒNG. Người dùng bấm Lưu.
+  // SỬA MÓN BƯỚC 5. Người dùng bấm Lưu.
+  // Đánh dấu chạm hết mọi ô rồi mới kiểm, để lỗi hiện đủ chứ không nhỏ giọt từng ô.
   const handleSave = async () => {
     if (isSaving || !id) return;
     setTouched({ mealName: true, portion: true, details: true, calories: true, protein: true, carbs: true, fat: true });
@@ -217,6 +239,8 @@ export default function EditMealScreen() {
     setIsSaving(true);
     setSaveError("");
     try {
+      // MealsContext.updateMeal → mealsApi.updateMealRequest → PUT /meals/:id
+      // → mealController.updateMeal.
       await updateMeal(id, {
         name: mealName.trim(),
         calories: parseDecimal(calories),
@@ -228,6 +252,8 @@ export default function EditMealScreen() {
         nutritionSource,
         note: details.trim(),
       });
+      // Lưu xong thì quay về màn Chi tiết món. Cố ý KHÔNG tắt isSaving ở đây,
+      // vì màn đang đóng, tắt nữa là nút nhấp nháy một cái rồi mới biến mất.
       router.back();
     } catch (error) {
       setSaveError(getUserErrorMessage(error, t, t.meals.saveChangesFailed));
@@ -235,6 +261,14 @@ export default function EditMealScreen() {
     }
   };
 
+  // ══════════════════════════════════════════════════════════
+  // XÓA MÓN
+  //
+  // Đến từ nút Xóa ở cuối màn này. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Khác nút Xóa ở màn Chi tiết món ở chỗ quay về: bên này phải nhảy lùi HAI màn.
+  // ══════════════════════════════════════════════════════════
+
+  // XÓA MÓN BƯỚC 1. Hỏi lại cho chắc. Xóa là mất hẳn, không hoàn lại được.
   const handleDelete = () => {
     Alert.alert(t.meals.deleteMealTitle, t.meals.deleteMealMsg(mealName), [
       { text: t.common.cancel, style: "cancel" },
@@ -243,7 +277,12 @@ export default function EditMealScreen() {
         style: "destructive",
         onPress: async () => {
           if (!id) return;
+          // XÓA MÓN BƯỚC 2. MealsContext.deleteMeal → mealsApi.deleteMealRequest
+          // → DELETE /meals/:id → mealController.deleteMeal.
           await deleteMeal(id);
+          // XÓA MÓN BƯỚC 3. Nhảy lùi HAI màn, vì màn Chi tiết món ngay phía sau
+          // cũng đang xem đúng món vừa xóa, lùi một màn là rơi vào màn báo không tìm thấy.
+          // Chồng màn không đủ sâu để lùi hai thì đi thẳng về màn Lịch sử.
           if (router.canDismiss()) router.dismiss(2);
           else router.replace("/meals/history");
         },
@@ -251,8 +290,12 @@ export default function EditMealScreen() {
     ]);
   };
 
+  // Nhãn chữ cho nguồn số dinh dưỡng, hiện ở thẻ kết quả.
   const sourceLabel = nutritionSourceLabel(nutritionSource, t);
 
+  // Không tìm thấy món thì dừng ở đây. Hay gặp khi món vừa bị xóa ở màn khác.
+  // Nhớ: cửa chặn này phải nằm SAU mọi hook ở trên. Đặt lên đầu hàm là
+  //      lần vẽ có món và lần vẽ không có món chạy số hook khác nhau, React vỡ ngay.
   if (!meal) {
     return <Screen><AppText variant="muted">{t.meals.mealNotFound}</AppText></Screen>;
   }

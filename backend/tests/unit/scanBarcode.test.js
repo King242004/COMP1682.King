@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra quét barcode dùng fetch response chuẩn và đổi sản phẩm đúng dạng app.
+// fetch được mock; test không gọi Open Food Facts thật.
 const { scanBarcode } = require("../../src/controllers/scanController");
 
 function response() {

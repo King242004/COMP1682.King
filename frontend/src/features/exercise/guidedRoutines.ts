@@ -6,6 +6,37 @@
 // Trả ra:     danh sách động tác đã nhân đủ số vòng
 // Khi lỗi:    mã lạ thì trả rỗng, màn hình hiện lời nhắc thay vì màn trắng
 
+// NGUỒN CỦA FILE NÀY. Cần phân biệt hai loại dữ liệu, vì chúng khác nhau hẳn.
+//
+// 1. CẤU TRÚC buổi tập, tức mấy phút, giữ giãn cơ mấy giây, lặp mấy lượt.
+//    Nguồn: Garber và cộng sự (2011), 'Quantity and Quality of Exercise for
+//    Developing and Maintaining Fitness in Apparently Healthy Adults',
+//    ACSM Position Stand, Medicine & Science in Sports & Exercise, 43(7).
+//    Ba con số dùng trực tiếp trong file này:
+//      - Buổi tập từ 10 phút trở lên được cộng dồn vào tổng của tuần. Đó là lý do
+//        khối gốc là 10 phút, và 20 với 30 phút chỉ là lặp lại khối đó.
+//      - Giãn cơ tĩnh giữ 10 tới 30 giây mỗi lần. File này dùng 25 giây.
+//      - Mỗi động tác giãn lặp 2 tới 4 lượt. File này dùng 2 lượt cho động tác
+//        có đổi bên, và 4 lượt cho động tác không đổi bên. Cả hai đều ra 100 giây.
+//    Tổng lượng mỗi tuần thì theo WHO (2020) Guidelines on physical activity and
+//    sedentary behaviour, 150 tới 300 phút cường độ vừa.
+//
+// 1b. SỐ GIÂY CỦA TỪNG BƯỚC thì KHÔNG có căn cứ sinh lý nào, phải nói rõ kẻo
+//    người đọc tưởng cả file đều có ACSM chống lưng. Toàn bộ 152 bước chỉ dùng
+//    bốn giá trị là 40, 60, 70 và 100 giây, và chúng được chọn NGƯỢC TỪ ĐÁP SỐ
+//    sao cho cộng lại đúng chẵn 600 giây: nhóm nhẹ là 100 nhân 6, còn nhóm nặng
+//    là 60 cộng 70 nhân 6 cộng 40 nhân 3. Không tài liệu nào nói squat phải 70
+//    giây hay nghỉ phải 40 giây. Chỉ ba con số ở mục 1 là có nguồn thật.
+//
+// 2. NỘI DUNG, tức chọn động tác nào và xếp thứ tự ra sao. Phần này do dự án
+//    biên soạn, KHÔNG có nguồn học thuật, và không được trình bày như một
+//    chương trình tập đã kiểm chứng lâm sàng. Toàn bộ là động tác cơ bản không
+//    dụng cụ, cùng loại với bộ bài tập mà NHS đăng công khai tại
+//    nhs.uk/live-well/exercise/strength-exercises.
+//
+// Nhớ: động tác ĐỘNG như xoay khớp, cat-cow, đi bộ tại chỗ thì KHÔNG ghi số giây
+//      giữ, vì khuyến nghị 10 tới 30 giây của ACSM chỉ áp cho giữ TĨNH.
+//
 // Phiên bản 20 và 30 phút lặp lại vòng tập, nên thời gian trên card luôn khớp bộ đếm.
 export type GuidedStep = {
   vi: string;
@@ -17,7 +48,7 @@ export type GuidedStep = {
 export type RoutineCategory = "everyday" | "recovery" | "strength" | "cardio";
 export type RoutineLevel = "light" | "moderate";
 
-export const ROUTINE_DURATIONS = [10, 15, 20, 30] as const;
+export const ROUTINE_DURATIONS = [10, 20, 30] as const;
 export type RoutineDuration = (typeof ROUTINE_DURATIONS)[number];
 
 export type GuidedRoutine = {
@@ -64,11 +95,11 @@ const ROUTINE_FAMILIES: RoutineFamily[] = [
     title: { vi: "Vận động giữa giờ", en: "Desk break" },
     description: { vi: "Thả lỏng cổ, vai và lưng sau khi ngồi lâu.", en: "Release your neck, shoulders and back after sitting." },
     steps10: [
-      { vi: "Nghiêng cổ sang hai bên", en: "Side neck stretches", seconds: 100 },
+      { vi: "Nghiêng cổ, giữ 25 giây mỗi bên, 2 lượt", en: "Side neck stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
       { vi: "Xoay vai ra sau", en: "Backward shoulder rolls", seconds: 100 },
-      { vi: "Mở ngực", en: "Chest opener", seconds: 100 },
+      { vi: "Mở ngực, giữ 25 giây, 4 lượt", en: "Chest opener, hold 25 seconds, 4 rounds", seconds: 100 },
       { vi: "Xoay thân trên", en: "Upper-body twists", seconds: 100 },
-      { vi: "Giãn hông khi đứng", en: "Standing hip stretch", seconds: 100 },
+      { vi: "Giãn hông khi đứng, giữ 25 giây mỗi bên, 2 lượt", en: "Standing hip stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
       { vi: "Đứng lên ngồi xuống chậm", en: "Slow sit-to-stands", seconds: 100 },
     ],
   },
@@ -96,12 +127,12 @@ const ROUTINE_FAMILIES: RoutineFamily[] = [
     title: { vi: "Giãn cơ cuối ngày", en: "Evening wind-down" },
     description: { vi: "Một nhịp chậm để thả lỏng cơ thể trước khi nghỉ ngơi.", en: "A slow routine to relax before you rest." },
     steps10: [
-      { vi: "Giãn cổ và vai", en: "Neck and shoulder stretch", seconds: 100 },
-      { vi: "Giãn tay và ngực", en: "Arm and chest stretch", seconds: 100 },
-      { vi: "Gập người về trước", en: "Forward fold", seconds: 100 },
-      { vi: "Mở hông nhẹ", en: "Gentle hip opener", seconds: 100 },
-      { vi: "Giãn đùi trước mỗi bên", en: "Quad stretch each side", seconds: 100 },
-      { vi: "Tư thế em bé và thở sâu", en: "Child's pose and deep breathing", seconds: 100 },
+      { vi: "Giãn cổ và vai, giữ 25 giây mỗi bên, 2 lượt", en: "Neck and shoulder stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Giãn tay và ngực, giữ 25 giây, 4 lượt", en: "Arm and chest stretch, hold 25 seconds, 4 rounds", seconds: 100 },
+      { vi: "Gập người về trước, giữ 25 giây, 4 lượt", en: "Forward fold, hold 25 seconds, 4 rounds", seconds: 100 },
+      { vi: "Mở hông nhẹ, giữ 25 giây mỗi bên, 2 lượt", en: "Gentle hip opener, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Giãn đùi trước, giữ 25 giây mỗi bên, 2 lượt", en: "Quad stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Tư thế em bé và thở sâu, giữ 25 giây, 4 lượt", en: "Child's pose with deep breathing, hold 25 seconds, 4 rounds", seconds: 100 },
     ],
   },
   {
@@ -115,9 +146,9 @@ const ROUTINE_FAMILIES: RoutineFamily[] = [
       { vi: "Thu cằm nhẹ", en: "Gentle chin tucks", seconds: 100 },
       { vi: "Trượt tay trên tường", en: "Wall slides", seconds: 100 },
       { vi: "Ép bả vai", en: "Shoulder blade squeezes", seconds: 100 },
-      { vi: "Mở ngực ở cửa", en: "Doorway chest opener", seconds: 100 },
+      { vi: "Mở ngực ở cửa, giữ 25 giây, 4 lượt", en: "Doorway chest opener, hold 25 seconds, 4 rounds", seconds: 100 },
       { vi: "Bird-dog – tay chân đối bên chậm", en: "Slow bird-dogs", seconds: 100 },
-      { vi: "Vươn dài cột sống", en: "Spine lengthening stretch", seconds: 100 },
+      { vi: "Vươn dài cột sống, giữ 25 giây, 4 lượt", en: "Spine lengthening stretch, hold 25 seconds, 4 rounds", seconds: 100 },
     ],
   },
   {
@@ -130,10 +161,10 @@ const ROUTINE_FAMILIES: RoutineFamily[] = [
     steps10: [
       { vi: "Thở sâu và thả lỏng vai", en: "Deep breathing and shoulder release", seconds: 100 },
       { vi: "Tư thế mèo–bò chậm", en: "Slow cat-cow", seconds: 100 },
-      { vi: "Luồn kim mở vai", en: "Thread-the-needle shoulder opener", seconds: 100 },
+      { vi: "Luồn kim mở vai, giữ 25 giây mỗi bên, 2 lượt", en: "Thread-the-needle shoulder opener, hold 25 seconds each side, 2 rounds", seconds: 100 },
       { vi: "Xoay hông khi nằm", en: "Lying hip rotations", seconds: 100 },
-      { vi: "Giãn đùi sau", en: "Hamstring stretch", seconds: 100 },
-      { vi: "Tư thế em bé", en: "Child's pose", seconds: 100 },
+      { vi: "Giãn đùi sau, giữ 25 giây mỗi bên, 2 lượt", en: "Hamstring stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Tư thế em bé, giữ 25 giây, 4 lượt", en: "Child's pose, hold 25 seconds, 4 rounds", seconds: 100 },
     ],
   },
   {
@@ -160,12 +191,12 @@ const ROUTINE_FAMILIES: RoutineFamily[] = [
     title: { vi: "Phục hồi thân dưới", en: "Lower-body recovery" },
     description: { vi: "Thả lỏng hông và chân sau một ngày vận động nhiều.", en: "Release your hips and legs after an active day." },
     steps10: [
-      { vi: "Kéo gối về ngực", en: "Knee-to-chest stretch", seconds: 100 },
-      { vi: "Giãn cơ hình số 4 mỗi bên", en: "Figure-four stretch each side", seconds: 100 },
+      { vi: "Kéo gối về ngực, giữ 25 giây mỗi bên, 2 lượt", en: "Knee-to-chest stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Giãn cơ hình số 4, giữ 25 giây mỗi bên, 2 lượt", en: "Figure-four stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
       { vi: "Xoay hông 90/90", en: "90/90 hip rotations", seconds: 100 },
-      { vi: "Giãn cơ gấp hông", en: "Hip flexor stretch", seconds: 100 },
-      { vi: "Giãn đùi sau", en: "Hamstring stretch", seconds: 100 },
-      { vi: "Giãn bắp chân", en: "Calf stretch", seconds: 100 },
+      { vi: "Giãn cơ gấp hông, giữ 25 giây mỗi bên, 2 lượt", en: "Hip flexor stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Giãn đùi sau, giữ 25 giây mỗi bên, 2 lượt", en: "Hamstring stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Giãn bắp chân, giữ 25 giây mỗi bên, 2 lượt", en: "Calf stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
     ],
   },
   {
@@ -177,11 +208,11 @@ const ROUTINE_FAMILIES: RoutineFamily[] = [
     description: { vi: "Giảm cảm giác căng cứng sau khi ngồi hoặc dùng điện thoại lâu.", en: "Ease stiffness after long periods of sitting or phone use." },
     steps10: [
       { vi: "Thu cằm và thở chậm", en: "Chin tucks with slow breathing", seconds: 100 },
-      { vi: "Nghiêng cổ mỗi bên", en: "Side neck stretches", seconds: 100 },
+      { vi: "Nghiêng cổ, giữ 25 giây mỗi bên, 2 lượt", en: "Side neck stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
       { vi: "Xoay vai chậm", en: "Slow shoulder rolls", seconds: 100 },
-      { vi: "Luồn kim mở vai", en: "Thread-the-needle stretch", seconds: 100 },
-      { vi: "Mở ngực", en: "Chest opener", seconds: 100 },
-      { vi: "Tư thế em bé vươn sang bên", en: "Side-reaching child's pose", seconds: 100 },
+      { vi: "Luồn kim mở vai, giữ 25 giây mỗi bên, 2 lượt", en: "Thread-the-needle stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Mở ngực, giữ 25 giây, 4 lượt", en: "Chest opener, hold 25 seconds, 4 rounds", seconds: 100 },
+      { vi: "Tư thế em bé vươn sang bên, giữ 25 giây mỗi bên, 2 lượt", en: "Side-reaching child's pose, hold 25 seconds each side, 2 rounds", seconds: 100 },
     ],
   },
   {
@@ -193,11 +224,11 @@ const ROUTINE_FAMILIES: RoutineFamily[] = [
     description: { vi: "Tập trung vào hông, lưng dưới và khả năng xoay người.", en: "Focus on your hips, lower back and rotational mobility." },
     steps10: [
       { vi: "Nghiêng chậu khi nằm", en: "Supine pelvic tilts", seconds: 100 },
-      { vi: "Kéo hai gối về ngực", en: "Double knee-to-chest stretch", seconds: 100 },
-      { vi: "Giãn cơ hình số 4 mỗi bên", en: "Figure-four stretch each side", seconds: 100 },
-      { vi: "Xoắn cột sống khi nằm", en: "Supine spinal twist", seconds: 100 },
+      { vi: "Kéo hai gối về ngực, giữ 25 giây, 4 lượt", en: "Double knee-to-chest stretch, hold 25 seconds, 4 rounds", seconds: 100 },
+      { vi: "Giãn cơ hình số 4, giữ 25 giây mỗi bên, 2 lượt", en: "Figure-four stretch, hold 25 seconds each side, 2 rounds", seconds: 100 },
+      { vi: "Xoắn cột sống khi nằm, giữ 25 giây mỗi bên, 2 lượt", en: "Supine spinal twist, hold 25 seconds each side, 2 rounds", seconds: 100 },
       { vi: "Chuyển hông 90/90", en: "90/90 hip switches", seconds: 100 },
-      { vi: "Tư thế em bé", en: "Child's pose", seconds: 100 },
+      { vi: "Tư thế em bé, giữ 25 giây, 4 lượt", en: "Child's pose, hold 25 seconds, 4 rounds", seconds: 100 },
     ],
   },
   {
@@ -406,20 +437,9 @@ function buildVariants(family: RoutineFamily): GuidedRoutine[] {
   const exerciseCount = family.steps10.filter((step) => !step.rest).length;
 
   return ROUTINE_DURATIONS.map((durationMin) => {
-    if (durationMin === 15) {
-      return {
-        key: `${family.key}${durationMin}`,
-        icon: family.icon,
-        durationMin,
-        exerciseCount,
-        category: family.category,
-        level: family.level,
-        title: family.title,
-        description: family.description,
-        steps: family.steps10.map((step) => ({ ...step, seconds: step.seconds * 1.5 })),
-      };
-    }
-
+    // Mọi mốc đều là bội số của 10 nên chỉ cần lặp khối gốc, không bao giờ
+    // phải nhân giãn số giây của từng bước. Nhờ vậy một lần giữ giãn cơ luôn
+    // đúng bằng số giây đã ghi trong lời hướng dẫn, dù chọn 10, 20 hay 30 phút.
     const rounds = durationMin / 10;
     const steps = Array.from({ length: rounds }, (_, index) =>
       family.steps10.map((step) => rounds === 1 ? { ...step } : {

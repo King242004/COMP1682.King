@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra chữ ký request relay chấp nhận payload mới và từ chối payload sửa/hết hạn.
+// Dữ liệu cố định khóa contract ký chung giữa backend và email-relay.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createSignature, verifySignature } = require("../src/requestSignature");

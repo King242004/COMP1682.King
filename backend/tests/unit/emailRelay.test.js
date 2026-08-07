@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra backend ký request OTP và xử lý response của email relay.
+// fetch được mock; test khóa payload, chữ ký, timeout và nhánh lỗi relay.
 const crypto = require("crypto");
 const { getEmailStatus, sendOTP } = require("../../src/services/emailRelayClient");
 

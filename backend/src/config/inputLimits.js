@@ -8,19 +8,6 @@
 //
 // Quy tắc của file: một giới hạn chỉ được khai ở ĐÂY, không nơi nào gõ lại số.
 //
-// File này giữ MỌI giới hạn độ dài của các ô người dùng nhập.
-// Quy tắc của file: một giới hạn chỉ được khai ở đây, không nơi nào gõ lại số.
-// Có hai loại số trong file:
-//   1. Giới hạn hiện hành, dùng cho dữ liệu mới. Giao diện dùng đúng bộ này.
-//   2. Trần lịch sử, chỉ dùng ở tầng model và ở đường sửa bản ghi cũ.
-//      Vài giới hạn đã được hạ xuống, nên bản ghi tạo trước đợt này có thể
-//      dài hơn số mới. Giữ trần cũ để người dùng vẫn sửa và lưu lại được
-//      bản ghi của chính mình, thay vì bị kẹt không thao tác nổi.
-// Nguyên tắc chung: giới hạn ở giao diện luôn NHỎ HƠN HOẶC BẰNG giới hạn ở đây,
-// nhờ vậy người dùng không bao giờ nhận lỗi độ dài từ server.
-// Bản song song cho giao diện là frontend/src/config/inputLimits.ts.
-// Có unit test đọc cả hai file và bắt hai bên phải khớp nhau.
-
 // Ô viết dài. Con số chọn theo chỗ mà chữ thật sự được hiển thị.
 const INPUT_LIMITS = {
   // Bài viết Community. Thẻ ngoài Feed chỉ hiện 3 dòng, đây là nhật ký món ăn

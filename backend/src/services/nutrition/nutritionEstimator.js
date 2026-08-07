@@ -12,17 +12,19 @@
 // CACHE_VERSION nằm trong khóa: đổi cách dựng câu lệnh thì tăng số này để mọi
 // kết quả cũ bị bỏ, thay vì trả về số tính theo luật cũ.
 // Khóa nhớ tạm dựng bằng cách chuẩn hóa chữ rồi băm SHA-256. Chuẩn hóa gồm bỏ
-// dấu cách thừa và hạ chữ thường, nên "Phở Bò" và "phở  bò" ra cùng một khóa và
 // chỉ tốn một lượt AI. CACHE_VERSION nằm trong khóa: đổi cách dựng câu lệnh thì
 // tăng số này để mọi kết quả cũ bị bỏ thay vì trả về số tính theo luật cũ.
 const crypto = require("crypto");
 
+// Nằm trong khóa nhớ tạm. Đổi cách dựng câu lệnh thì TĂNG số này,
 const CACHE_VERSION = "nutrition-v1";
 
+// và chỉ tốn một lượt AI.
 function normalizeNutritionText(value) {
   return String(value || "").normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+// Dựng khóa nhớ tạm bằng cách chuẩn hóa chữ rồi băm SHA-256.
 function nutritionEstimateKey({ items, language }) {
   const normalized = {
     version: CACHE_VERSION,
@@ -36,6 +38,7 @@ function nutritionEstimateKey({ items, language }) {
   return crypto.createHash("sha256").update(JSON.stringify(normalized)).digest("hex");
 }
 
+// Dựng câu lệnh hỏi AI về dinh dưỡng của các món người dùng gõ.
 function buildNutritionEstimatePrompt({ items, language }) {
   const languageName = language === "vi" ? "Vietnamese" : "English";
   const meal = {
@@ -72,6 +75,7 @@ Return ONLY valid JSON with this shape:
 }`;
 }
 
+// Dọn MỘT món trong kết quả AI. Ép mọi con số về số nguyên không âm.
 function normalizeNutritionItem(value) {
   if (!value || typeof value !== "object") throw new Error("Invalid nutrition estimate");
 
@@ -95,6 +99,8 @@ function normalizeNutritionItem(value) {
   };
 }
 
+// Dọn CẢ kết quả AI. Ghép lại đúng số món đã hỏi, thiếu món nào thì điền 0.
+// Không làm vậy thì app nhận về ít món hơn lúc gửi đi và điền lệch ô.
 function normalizeEstimatedNutrition(value, requestedItems) {
   if (!value || !Array.isArray(value.items) || value.items.length !== requestedItems.length)
     throw new Error("Invalid nutrition estimate");

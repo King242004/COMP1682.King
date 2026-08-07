@@ -1,3 +1,6 @@
+// ═══ FILE NÀY LÀM GÌ ═══
+// Kiểm tra hướng cân và bản xem trước mục tiêu calo trên frontend.
+// Kết quả cố định khóa frontend khớp công thức chính thức phía server.
 import {
   estimateCalorieGoal,
   resolveDraftWeightDirection,

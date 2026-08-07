@@ -1,5 +1,5 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Bảng chia việc: nhận địa chỉ nào thì giao cho hàm nào trong controller.
+// Ánh xạ /api/profile/* tới hàm trong controllers/profileController.js.
 //
 // Ai gọi tới: app.js, gắn cả file này vào /api/profile
 // Nhận vào:   request từ màn Hồ sơ, màn Mục tiêu, và bước thiết lập lần đầu
