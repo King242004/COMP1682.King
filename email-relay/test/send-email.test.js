@@ -59,7 +59,7 @@ test("delivers an authenticated request", async () => {
       deliveredMessage = message;
     },
   });
-  const timestamp = Date.now().toString();
+  const timestamp = String(Date.now());
   const req = {
     method: "POST",
     body: payload,
@@ -91,7 +91,7 @@ test("rejects a request with an invalid signature before sending", async () => {
     method: "POST",
     body: payload,
     headers: {
-      "x-mealmate-timestamp": Date.now().toString(),
+      "x-mealmate-timestamp": String(Date.now()),
       "x-mealmate-signature": "0".repeat(64),
     },
   };

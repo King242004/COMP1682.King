@@ -37,7 +37,7 @@ import { resolvePlannedRoutine } from "@/features/exercise/guidedRoutines";
 import { GenerateModal } from "@/features/plan/GenerateModal";
 import { GroceryModal } from "@/features/plan/GroceryModal";
 import { resolveLanguage, localeTag } from "@/utils/languageUtils";
-import { getUserErrorMessage } from "@/utils/errorUtils";
+import { getErrorMessage, getUserErrorMessage } from "@/utils/errorUtils";
 import { useT } from "@/i18n";
 import { theme, shadow } from "@/ui/theme";
 import { MEAL_TYPE_META } from "@/features/meals/mealTypeDisplay";
@@ -220,8 +220,8 @@ export default function WeeklyPlanScreen() {
     try {
       await generateWeekPlan(token, range[0], range[1], lang, taste || undefined);
       await load();
-    } catch (e: any) {
-      const quota = /quota/i.test(String(e?.message || ""));
+    } catch (error) {
+      const quota = /quota/i.test(getErrorMessage(error));
       Alert.alert(L.error, quota ? L.quota(aiResetWhen(t)) : L.genErr);
     } finally {
       setGenerating(false);
@@ -250,8 +250,8 @@ export default function WeeklyPlanScreen() {
       setGroceryChecked({});
       cacheGrocery(weekStart, lang, { groups, checked: {}, sig: planSigRef.current });
       setGroceryVisible(true);
-    } catch (e: any) {
-      const quota = /quota/i.test(String(e?.message || ""));
+    } catch (error) {
+      const quota = /quota/i.test(getErrorMessage(error));
       Alert.alert(L.error, quota ? L.quota(aiResetWhen(t)) : L.groceryErr);
     } finally {
       setGroceryLoading(false);

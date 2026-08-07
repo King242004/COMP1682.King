@@ -38,11 +38,8 @@ function normalizeScopeText(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    // Ch\u1eef \u0111 KH\u00d4NG c\u00f3 d\u1ea1ng t\u00e1ch r\u1eddi n\u00ean NFD kh\u00f4ng \u0111\u1ee5ng t\u1edbi n\u00f3, v\u00e0 d\u00f2ng b\u1ecf k\u00fd t\u1ef1
-    // l\u1ea1 b\u00ean d\u01b0\u1edbi s\u1ebd bi\u1ebfn n\u00f3 th\u00e0nh kho\u1ea3ng tr\u1eafng. Thi\u1ebfu d\u00f2ng n\u00e0y th\u00ec "h\u1ee3p \u0111\u1ed3ng"
-    // ra "hop ong" ch\u1ee9 kh\u00f4ng ra "hop dong", n\u00ean m\u1ecdi t\u1eeb kh\u00f3a c\u00f3 ch\u1eef d g\u1ed1c t\u1eeb \u0111
-    // \u0111\u1ec1u kh\u00f4ng bao gi\u1edd kh\u1edbp \u0111\u01b0\u1ee3c. \u0110\u1eb7t sau toLowerCase \u0111\u1ec3 lo lu\u00f4n ch\u1eef \u0110 hoa.
-    .replace(/\u0111/g, "d")
+    // NFD bỏ được dấu thanh nhưng không chuyển đ thành d, nên xử lý đ riêng.
+    .replace(/đ/g, "d")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }

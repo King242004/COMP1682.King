@@ -15,18 +15,13 @@ const PlanMeal = require("../../models/PlanMeal");
 const PlanWorkout = require("../../models/PlanWorkout");
 const WeightLog = require("../../models/WeightLog");
 const { autoGoal } = require("../nutrition/calorieGoal");
+const { dateKey } = require("../../utils/dateUtils");
 
 // Cộng hoặc trừ số ngày vào một chuỗi ngày dạng YYYY-MM-DD.
 function shiftDate(dateStr, days) {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// Đổi một mốc thời gian bất kỳ thành chuỗi ngày YYYY-MM-DD.
-function toDateKey(value) {
-  const d = new Date(value);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return dateKey(d);
 }
 
 // Đếm số ngày từ ngày này tới ngày kia, tính cả hai đầu.
@@ -79,7 +74,7 @@ async function buildContext(userId, date) {
   // Giờ tạo tài khoản lấy theo múi giờ máy chủ, lệch tối đa một ngày và đã bị
   // chặn trần 7 nên không ảnh hưởng kết quả.
   const eligibleDays = user?.createdAt
-    ? Math.min(7, Math.max(1, daysInclusive(toDateKey(user.createdAt), date)))
+    ? Math.min(7, Math.max(1, daysInclusive(dateKey(user.createdAt), date)))
     : 7;
 
   return {

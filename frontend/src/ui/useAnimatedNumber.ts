@@ -39,7 +39,7 @@ export function useAnimatedNumber(value: number, duration = 450): number {
     // eased là đường cong chậm dần, nên số lao nhanh lúc đầu rồi hãm lại lúc gần đích.
     const tick = () => {
       const p = Math.min(1, (Date.now() - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
+      const eased = 1 - (1 - p) ** 3;
       const current = Math.round(from + (value - from) * eased);
       displayRef.current = current;
       setDisplay(current);

@@ -140,7 +140,14 @@ const FOOD_ALIASES = [
 
 // Hạ chữ thường và bỏ dấu, để so tên món không phụ thuộc cách gõ.
 function normalizeFoodText(value) {
-  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/đ/g, "d").replace(/[^a-z0-9]+/g, " ").trim();
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    // NFD bỏ được dấu thanh nhưng không chuyển đ thành d, nên xử lý đ riêng.
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 // Lọc theo sở thích người dùng tự khai, ví dụ không ăn thịt gà.

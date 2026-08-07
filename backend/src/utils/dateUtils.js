@@ -9,6 +9,12 @@
 // Vì sao không dùng thẳng giờ máy chủ: máy chủ đặt ở Singapore. Người dùng
 // ghi món lúc 23h ở Việt Nam mà tính theo giờ máy chủ có thể nhảy sang ngày mai.
 //
+// Đổi một mốc thời gian thành khóa ngày địa phương dạng YYYY-MM-DD.
+function dateKey(value) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 // Tạo chuỗi ngày hôm nay dạng YYYY-MM-DD theo múi giờ thiết bị.
 // Offset lấy từ thiết bị qua header chung; thiếu hoặc sai thì dùng UTC.
 // Nơi dùng: chặn ghi dữ liệu cho ngày tương lai và lấy mặc định hôm nay.
@@ -22,4 +28,4 @@ function requestTodayKey(req, now) {
   return todayKey(req.get("x-timezone-offset"), now);
 }
 
-module.exports = { requestTodayKey, todayKey };
+module.exports = { dateKey, requestTodayKey, todayKey };

@@ -17,7 +17,7 @@ const { insightModels } = require("../config/geminiModels");
 const { generateWithFallback } = require("../services/aiClient");
 const { CONDITION_GUIDE } = require("../services/coach/coachContext");
 const { filterDishes } = require("../services/nutrition/foodSafetyFilter");
-const { requestTodayKey } = require("../utils/dateUtils");
+const { dateKey, requestTodayKey } = require("../utils/dateUtils");
 const { validateMealName, validateNutritionValues } = require("../validators/mealInputValidator");
 const { replacePlanRange } = require("../services/planReplacement");
 const {
@@ -91,7 +91,7 @@ exports.generatePlan = async (req, res) => {
   const cur = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
   while (cur <= end && dates.length < 14) {
-    dates.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`);
+    dates.push(dateKey(cur));
     cur.setDate(cur.getDate() + 1);
   }
   if (dates.length === 0) return res.status(400).json({ message: "Invalid date range." });

@@ -59,7 +59,7 @@ async function sendOTP(to, otp, purpose = "password_reset", language = "en") {
   }
 
   const payload = { to, otp: String(otp), purpose, language };
-  const timestamp = Date.now().toString();
+  const timestamp = String(Date.now());
   const signature = createRelaySignature(payload, timestamp, relayConfig.secret);
   const response = await fetch(relayConfig.url, {
     method: "POST",

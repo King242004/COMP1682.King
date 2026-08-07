@@ -19,7 +19,7 @@ const {
 } = require("../../src/services/nutrition/foodSafetyFilter");
 
 const stripDiacritics = (value) =>
-  value.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
 
 const DISHES = {
   gout: ["Tôm rang me", "Lòng heo luộc", "Cháo lòng", "Bò kho", "Ốc len xào dừa", "Hải sản nướng"],

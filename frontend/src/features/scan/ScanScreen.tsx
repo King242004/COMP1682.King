@@ -25,7 +25,7 @@ import { ProductSheet } from "@/features/scan/ProductSheet";
 import { ManualBarcodeModal } from "@/features/scan/ManualBarcodeModal";
 import { mealSlotByHour } from "@/features/meals/mealHelpers";
 import { resolveLanguage } from "@/utils/languageUtils";
-import { getUserErrorMessage } from "@/utils/errorUtils";
+import { getErrorMessage, getUserErrorMessage } from "@/utils/errorUtils";
 import { aiResetWhen } from "@/utils/aiQuota";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -138,7 +138,7 @@ export default function ScanScreen() {
     } catch (error) {
       // Người dùng tự bấm hủy thì không phải lỗi, không hiện thông báo.
       if (!(error instanceof Error) || error.name !== "AbortError") {
-        const message = error instanceof Error ? error.message : String(error ?? "");
+        const message = getErrorMessage(error);
         Alert.alert(
           t.scan.scanFailed,
           /quota/i.test(message)

@@ -53,7 +53,14 @@ function photoNotFood(language) {
 
 // Bỏ dấu câu và hạ chữ thường, để so hai câu trả lời có giống nhau không.
 function normalizeForComparison(value) {
-  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    // NFD bỏ được dấu thanh nhưng không chuyển đ thành d, nên xử lý đ riêng.
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 // Chặn Coach lặp lại y nguyên câu vừa nói lượt trước.

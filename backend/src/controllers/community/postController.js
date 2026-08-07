@@ -54,7 +54,7 @@ exports.createPost = async (req, res) => {
   if (files.length === 0) {
     return res.status(400).json({ message: "A post needs at least one photo." });
   }
-  if (caption !== undefined && caption !== null && typeof caption !== "string") {
+  if (caption != null && typeof caption !== "string") {
     return res.status(400).json({ message: "Caption must be text." });
   }
   // Bài MỚI dùng giới hạn hiện hành. Đường sửa bài ở dưới nới rộng hơn,

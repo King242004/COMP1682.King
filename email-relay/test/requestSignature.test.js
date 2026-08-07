@@ -15,7 +15,7 @@ const secret = "a-secure-relay-secret-with-at-least-32-characters";
 
 test("accepts a fresh signature", () => {
   const now = Date.now();
-  const timestamp = now.toString();
+  const timestamp = String(now);
   const signature = createSignature(payload, timestamp, secret);
 
   assert.equal(verifySignature(payload, timestamp, signature, secret, now), true);
@@ -23,7 +23,7 @@ test("accepts a fresh signature", () => {
 
 test("rejects modified payloads", () => {
   const now = Date.now();
-  const timestamp = now.toString();
+  const timestamp = String(now);
   const signature = createSignature(payload, timestamp, secret);
 
   assert.equal(
@@ -38,13 +38,13 @@ test("rejects modified payloads", () => {
 
 test("rejects expired and malformed signatures", () => {
   const now = Date.now();
-  const expiredTimestamp = (now - 6 * 60 * 1000).toString();
+  const expiredTimestamp = String(now - 6 * 60 * 1000);
   const expiredSignature = createSignature(payload, expiredTimestamp, secret);
 
   assert.equal(
     verifySignature(payload, expiredTimestamp, expiredSignature, secret, now),
     false
   );
-  assert.equal(verifySignature(payload, now.toString(), "invalid", secret, now), false);
+  assert.equal(verifySignature(payload, String(now), "invalid", secret, now), false);
 });
 // Tests signed relay requests.

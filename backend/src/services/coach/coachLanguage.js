@@ -22,7 +22,7 @@ const ENGLISH_WORDS = /\b(the|and|you|your|today|try|with|for|meal|health|calori
 const LANGUAGE_TARGET = /\b(tieng anh|english|tieng viet|vietnamese)\b(?! (?:food|dish|dishes|cuisine|restaurant|breakfast|coffee|people|style))/g;
 // MARKERS là các từ cho thấy người dùng đang nói VỀ ngôn ngữ trò chuyện,
 // gồm động từ nói năng, lời nhờ vả và mốc thời gian.
-const LANGUAGE_MARKERS = /\b(tra loi|noi chuyen|noi|nhan tin|chat|talk|speak|reply|answer|respond|write|viet|use|dung|switch|change|chuyen|doi|prefer|want|please|lam on|giup|nhe|nha|thoi|di|luon|tu gio|from now|instead|can we|could we|shall we|lets|let us)\b/;
+const LANGUAGE_MARKERS = /\b(tra loi|noi chuyen|noi|doc|nhan tin|chat|talk|speak|reply|answer|respond|write|viet|use|dung|switch|change|chuyen|doi|prefer|want|please|lam on|giup|nhe|nha|thoi|di|luon|tu gio|from now|instead|can we|could we|shall we|lets|let us)\b/;
 
 // Bỏ dấu và bỏ ký tự lạ để so khớp không phụ thuộc cách gõ có dấu hay không.
 function normalizeLanguageText(value) {
@@ -30,6 +30,8 @@ function normalizeLanguageText(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    // NFD bỏ được dấu thanh nhưng không chuyển đ thành d, nên xử lý đ riêng.
+    .replace(/đ/g, "d")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }

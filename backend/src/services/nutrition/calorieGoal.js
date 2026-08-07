@@ -18,6 +18,7 @@ const {
   KCAL_PER_KG_BODY_WEIGHT, WEEKLY_RATE_KG, WEIGHT_GOALS,
   MAINTAIN_WEIGHT_THRESHOLD_KG,
 } = require("../../config/nutritionConstants");
+const { dateKey } = require("../../utils/dateUtils");
 
 // Tách riêng khỏi calculateTDEE để màn Hồ sơ hiện được BMR cạnh TDEE.
 // Hai số chênh nhau đúng một biến là mức vận động, nên đặt cạnh nhau thì
@@ -115,8 +116,7 @@ function estimateGoalDate({ weight, targetWeight, actualRateKg, from = new Date(
   const days = Math.ceil((remainingKg / actualRateKg) * 7);
   const date = new Date(from.getTime());
   date.setDate(date.getDate() + days);
-  const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  return { days, date: key, remainingKg: Math.round(remainingKg * 10) / 10 };
+  return { days, date: dateKey(date), remainingKg: Math.round(remainingKg * 10) / 10 };
 }
 
 // Gộp các bước trên thành một. Đây là hàm mà profileController

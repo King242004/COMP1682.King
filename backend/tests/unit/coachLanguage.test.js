@@ -71,3 +71,23 @@ describe("Coach response language", () => {
     expect(languageSwitchReply("vi")).toBe("Được, từ giờ mình sẽ trả lời bằng tiếng Việt.");
   });
 });
+
+// Chữ đ không có dạng tách rời nên NFD không đụng tới, và dòng bỏ ký tự lạ
+// biến nó thành khoảng trắng. Thiếu bước đổi đ thành d thì "đổi" ra "oi",
+// không khớp từ khóa "doi", nên câu xin đổi ngôn ngữ bị bỏ qua rồi rơi
+// xuống cổng gác và bị coi là ngoài phạm vi.
+describe("câu xin đổi ngôn ngữ gõ đúng chính tả tiếng Việt", () => {
+  test.each([
+    ["đổi sang tiếng anh", "en"],
+    ["đổi qua tiếng anh", "en"],
+    ["đọc bằng tiếng anh", "en"],
+    ["đổi sang tiếng việt", "vi"],
+    ["đọc bằng tiếng việt", "vi"],
+  ])("%s -> %s", (message, expected) => {
+    expect(requestedLanguage(message)).toBe(expected);
+  });
+
+  test("gõ không dấu vẫn hiểu như cũ", () => {
+    expect(requestedLanguage("doi sang tieng anh")).toBe("en");
+  });
+});

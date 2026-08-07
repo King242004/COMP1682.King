@@ -68,7 +68,7 @@ exports.updateProfile = async (req, res) => {
   if (weight && (weight < profileLimits.weightKg.min || weight > profileLimits.weightKg.max))
     return res.status(400).json({ message: `Weight must be between ${profileLimits.weightKg.min} and ${profileLimits.weightKg.max} kg.` });
 
-  if (targetWeight !== undefined && targetWeight !== null && (targetWeight < profileLimits.weightKg.min || targetWeight > profileLimits.weightKg.max))
+  if (targetWeight != null && (targetWeight < profileLimits.weightKg.min || targetWeight > profileLimits.weightKg.max))
     return res.status(400).json({ message: `Target weight must be between ${profileLimits.weightKg.min} and ${profileLimits.weightKg.max} kg.` });
 
   if (height && (height < profileLimits.heightCm.min || height > profileLimits.heightCm.max))
@@ -94,32 +94,32 @@ exports.updateProfile = async (req, res) => {
   if (language && !["vi", "en"].includes(language))
     return res.status(400).json({ message: "Language must be vi or en." });
 
-  if (calorieGoal !== undefined && calorieGoal !== null &&
+  if (calorieGoal != null &&
       (typeof calorieGoal !== "number" || calorieGoal < profileLimits.calorieGoal.min || calorieGoal > profileLimits.calorieGoal.max))
     return res.status(400).json({ message: `Calorie goal must be between ${profileLimits.calorieGoal.min} and ${profileLimits.calorieGoal.max} kcal.` });
 
   // Tốc độ đổi cân nặng. Chấp nhận cả hai chiều nên chỉ kiểm độ lớn,
   // vì hướng giảm hay tăng được suy ra từ cân nặng mục tiêu chứ không từ dấu.
   const rateCeiling = Math.max(WEEKLY_RATE_KG.lose.max, WEEKLY_RATE_KG.gain.max);
-  if (weeklyRateKg !== undefined && weeklyRateKg !== null &&
+  if (weeklyRateKg != null &&
       (typeof weeklyRateKg !== "number" || weeklyRateKg < 0 || weeklyRateKg > rateCeiling))
     return res.status(400).json({ message: `Weekly rate must be between 0 and ${rateCeiling} kg.` });
 
-  if (weeklyWorkoutTarget !== undefined && weeklyWorkoutTarget !== null &&
+  if (weeklyWorkoutTarget != null &&
       (typeof weeklyWorkoutTarget !== "number" || weeklyWorkoutTarget < 0 || weeklyWorkoutTarget > 7))
     return res.status(400).json({ message: "Weekly workout target must be between 0 and 7." });
 
   // Khẩu vị: BÁO LỖI chứ không cắt bớt. Bản cũ dùng slice nên người dùng gõ dài
   // vẫn thấy lưu thành công trong khi phần đuôi đã biến mất, không báo một câu nào.
   // Trần ở đây là trần lịch sử, vì hồ sơ cũ có thể đang giữ chuỗi dài hơn số mới.
-  if (tastePreferences !== undefined && tastePreferences !== null &&
+  if (tastePreferences != null &&
       String(tastePreferences).trim().length > LEGACY_LIMITS.TASTE_PREFERENCES)
     return res.status(400).json({ message: `Taste preferences must be ${LEGACY_LIMITS.TASTE_PREFERENCES} characters or fewer.` });
 
-  if (name !== undefined && name !== null && typeof name !== "string")
+  if (name != null && typeof name !== "string")
     return res.status(400).json({ message: "Name must be text." });
 
-  if (name !== undefined && name !== null && String(name).trim().length > INPUT_LIMITS.DISPLAY_NAME)
+  if (name != null && String(name).trim().length > INPUT_LIMITS.DISPLAY_NAME)
     return res.status(400).json({ message: `Name must be ${INPUT_LIMITS.DISPLAY_NAME} characters or fewer.` });
 
   const currentProfile = await User.findById(req.user.id).select(
