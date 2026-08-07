@@ -50,6 +50,20 @@ const WEIGHT_GOALS = Object.freeze({
 // Danh sách giá trị của ba mục tiêu cân nặng, để model dùng làm enum.
 const WEIGHT_GOAL_VALUES = Object.freeze(Object.values(WEIGHT_GOALS));
 
+// Năm bệnh nền app hỗ trợ. Phải khớp CHÍNH XÁC các khóa của bảng RULES trong
+// services/nutrition/foodSafetyFilter, và có test khóa hai bên bằng nhau.
+// Vì sao khai ở đây: trước đây `conditions` là trường DUY NHẤT trong hồ sơ không
+// có enum, nên giá trị lạ ghi thẳng vào database rồi đi tới lớp lọc an toàn.
+// Không hiện là "none": giao diện chọn Không có thì gửi mảng RỖNG, chứ không
+// gửi một khóa tên none.
+const HEALTH_CONDITIONS = Object.freeze([
+  "diabetes",
+  "hypertension",
+  "gout",
+  "high_cholesterol",
+  "gastritis",
+]);
+
 // Quyết định thiết kế: chênh lệch nhỏ hơn nửa kg được xem là đang giữ cân.
 const MAINTAIN_WEIGHT_THRESHOLD_KG = 0.5;
 
@@ -159,6 +173,7 @@ module.exports = {
   DEFAULT_ACTIVITY_LEVEL,
   WEIGHT_GOALS,
   WEIGHT_GOAL_VALUES,
+  HEALTH_CONDITIONS,
   MAINTAIN_WEIGHT_THRESHOLD_KG,
   ATWATER_KCAL_PER_GRAM,
   CALORIE_FLOOR,

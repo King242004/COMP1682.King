@@ -1,11 +1,15 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Bảng lựa chọn trượt lên từ đáy màn hình.
 //
-// Ai gọi tới: TabBar, ở menu nút quét giữa thanh tab
+// Ai gọi tới: TabBar (menu nút quét), PostDetailScreen (menu bài đăng),
+//             WeightGoalsScreen (chọn số ngày tập mỗi tuần)
 // Nhận vào:   danh sách lựa chọn và hàm chạy khi chọn
 // Trả ra:     một bảng trượt lên, tự đóng sau khi chọn
 // Khi lỗi:    không có nhánh lỗi
-// Nơi dùng: menu nút quét ở thanh tab dưới.
+//
+// Nhớ: `icon` là TÙY CHỌN. Menu hành động thì mỗi dòng một icon riêng, còn menu
+//      chọn giá trị thì các dòng chỉ khác nhau ở con số nên để trống icon, và
+//      dùng luôn chỗ icon đó gắn dấu tích vào đúng dòng đang chọn.
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { theme, shadow } from "../theme";
@@ -13,7 +17,7 @@ import { AppText } from "./AppText";
 
 export type ActionItem = {
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
   destructive?: boolean;
   onPress: () => void;
 };
@@ -45,11 +49,13 @@ export function ActionSheet({
                 pressed && styles.rowPressed,
               ]}
             >
-              <Ionicons
-                name={item.icon}
-                size={22}
-                color={item.destructive ? theme.colors.danger : theme.colors.text}
-              />
+              {item.icon && (
+                <Ionicons
+                  name={item.icon}
+                  size={22}
+                  color={item.destructive ? theme.colors.danger : theme.colors.text}
+                />
+              )}
               <AppText style={[styles.label, item.destructive && styles.labelDanger]}>
                 {item.label}
               </AppText>

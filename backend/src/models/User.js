@@ -15,7 +15,7 @@
 //     Muốn lấy phải xin thêm bằng .select("+password"), chỉ lúc đăng nhập mới cần.
 //   conditions là danh sách bệnh nền, chính là thứ mà lớp lọc an toàn dựa vào.
 const mongoose = require("mongoose");
-const { WEIGHT_GOALS, WEIGHT_GOAL_VALUES } = require("../config/nutritionConstants");
+const { WEIGHT_GOALS, WEIGHT_GOAL_VALUES, HEALTH_CONDITIONS } = require("../config/nutritionConstants");
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -51,7 +51,10 @@ const userSchema = new mongoose.Schema(
       default: "moderate",
     },
     // Danh sách tình trạng sức khỏe, ví dụ tiểu đường hoặc cao huyết áp.
-    conditions: [{ type: String }],
+    // CÓ enum vì đây là trường nuôi thẳng lớp lọc an toàn. Trước đây nó là
+    // trường hồ sơ duy nhất không kiểm giá trị, nên một khóa lạ ghi được vào
+    // database rồi đi tới chỗ tra bảng bệnh nền.
+    conditions: [{ type: String, enum: HEALTH_CONDITIONS }],
     // Chưa đủ hồ sơ thì để rỗng chứ KHÔNG đặt sẵn một con số.
     // Bịa ra một mục tiêu mặc định sẽ khiến người dùng tưởng app đã tính cho mình.
     calorieGoal: { type: Number, default: null },

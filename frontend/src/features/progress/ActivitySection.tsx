@@ -183,9 +183,9 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
           </View>
         </View>
 
-        <AppText variant="subtle" style={styles.avgText}>
-          {(mode === "year" ? t.progress.avgKcalMonth : t.progress.avgKcalDay)}: {periodAvg.toLocaleString()} {t.common.kcal}
-        </AppText>
+        {/* Trung bình đã có ô riêng ở hàng thống kê bên dưới, cùng con số
+            `periodAvg`. Trước đây hiện ở cả hai chỗ cách nhau chưa tới một dòng.
+            Thẻ này chỉ giữ TỔNG của kỳ, đó mới là việc riêng của nó. */}
       </Card>
 
       {/* Mức duy trì tập luyện chỉ hiện ở chế độ Tuần. */}
@@ -254,7 +254,6 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 12 },
   totalValueRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
   totalValue: { fontSize: 32, color: theme.colors.accent2 },
-  avgText: { fontSize: 12 },
 
   // Khu vực mức duy trì tập luyện.
   consistencyCard: { padding: theme.space.lg, gap: theme.space.md },

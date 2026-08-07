@@ -70,20 +70,20 @@ const RULES = {
   // được ăn. CHƯA KIỂM ĐƯỢC TỪ BẢN GỐC: mức độ khuyến nghị là mạnh hay có điều
   // kiện, vì cả PubMed lẫn nhà xuất bản đều chặn tải; phần bằng chứng hạn chế và
   // số trang thì đã đối chiếu qua bản tóm tắt của AAFP.
-  gout: /tôm|tép|cua|ghẹ|ốc|nghêu|sò|hàu|hến|hải sản|mực|gan|lòng|tim|cật|óc|nội tạng|bò|bê|dê|cừu|bia|shrimp|prawn|crab|shellfish|mussel|oyster|clam|snail|squid|organ|liver|kidney|beef|lamb|beer/i,
+  gout: /(?<![\p{L}])(?:tôm|tép|cua|ghẹ|ốc|nghêu|sò|hàu|hến|hải sản|mực|gan|lòng|tim|cật|óc|nội tạng|bò|bê|dê|cừu|bia|shrimp|prawn|crab|shellfish|mussel|oyster|clam|snail|squid|organ|liver|kidney|beef|lamb|beer)(?![\p{L}])/iu,
   // Đường tự do. Nguồn: WHO (2015), Guideline: Sugars intake for adults and
   // children. Dưới 10 phần trăm tổng năng lượng, tốt hơn là dưới 5 phần trăm.
   // Đường tự do gồm cả siro, mật ong và nước quả ép, nên danh sách có si-rô và mứt.
-  diabetes: /chè|bánh kem|bánh ngọt|kẹo|nước ngọt|trà sữa|si-?rô|mứt|soda|cake|candy|milk tea|syrup|sweetened|donut|doughnut/i,
+  diabetes: /(?<![\p{L}])(?:chè|bánh kem|bánh ngọt|kẹo|nước ngọt|trà sữa|si-?rô|mứt|soda|cake|candy|milk tea|syrup|sweetened|donut|doughnut)(?![\p{L}])/iu,
   // Natri. Nguồn: WHO (2012), Guideline: Sodium intake for adults and children,
   // dưới 2000 mg natri tức dưới 5 g muối mỗi ngày. Danh sách nhắm vào THỰC PHẨM
   // CHẾ BIẾN vì WHO nêu khoảng ba phần tư natri khẩu phần đến từ nhóm này.
-  hypertension: /mắm|dưa muối|cà muối|kim chi|xúc xích|lạp xưởng|thịt nguội|giăm bông|khô bò|khô gà|mì gói|mì ăn liền|đồ hộp|sausage|ham|bacon|jerky|pickled|instant noodle|canned/i,
+  hypertension: /(?<![\p{L}])(?:mắm|dưa muối|cà muối|kim chi|xúc xích|lạp xưởng|thịt nguội|giăm bông|khô bò|khô gà|mì gói|mì ăn liền|đồ hộp|sausage|ham|bacon|jerky|pickled|instant noodle|canned)(?![\p{L}])/iu,
   // Chất béo bão hòa và chất béo chuyển hóa. Nguồn: WHO (2023), Saturated fatty
   // acid and trans-fatty acid intake for adults and children. Giảm hai nhóm này
   // làm giảm LDL với độ chắc chắn cao. Đó là lý do danh sách nhắm vào cách chế
   // biến chiên, rán, quay và vào nội tạng.
-  high_cholesterol: /chiên|rán|quay|mỡ|tóp mỡ|gan|lòng|óc|nội tạng|da gà|phá lấu|fried|organ|liver|lard|crackling/i,
+  high_cholesterol: /(?<![\p{L}])(?:chiên|rán|quay|mỡ|tóp mỡ|gan|lòng|óc|nội tạng|da gà|phá lấu|fried|organ|liver|lard|crackling)(?![\p{L}])/iu,
   // NHÓM CÓ BẰNG CHỨNG YẾU NHẤT, phải nói thẳng khi bảo vệ.
   // Nguồn: Ostadsharif và cộng sự, tổng quan hệ thống và phân tích gộp về thói quen
   // ăn uống với nguy cơ khó tiêu chức năng, Journal of Health, Population and
@@ -96,7 +96,33 @@ const RULES = {
   // Nhớ: cũng chính bài này thấy ăn NHIỀU BỮA HƠN làm GIẢM nguy cơ, OR 0,52 với
   // khoảng tin cậy 0,32 tới 0,86. Đó là lời khuyên dạng NÊN LÀM, mà bảng lọc một
   // chiều ở file này không diễn đạt được, giống hệt ca huyết áp thấp nêu ở trên.
-  gastritis: /cay|ớt|sa tế|kim chi|dưa chua|canh chua|gỏi chua|cà phê|rượu|bia|chanh|spicy|chili|sriracha|sour|pickled|coffee|alcohol|lemon/i,
+  gastritis: /(?<![\p{L}])(?:cay|ớt|sa tế|kim chi|dưa chua|canh chua|gỏi chua|cà phê|rượu|bia|chanh|spicy|chili|sriracha|sour|pickled|coffee|alcohol|lemon)(?![\p{L}])/iu,
+};
+
+// BẢN KHÔNG DẤU của bảng trên. Người Việt gõ điện thoại rất hay bỏ dấu, mà bảng
+// `RULES` có dấu nên "Tom rang me" từng lọt lưới trong khi "Tôm rang me" bị chặn,
+// cùng một món. Đây là lớp an toàn cho người có bệnh nên bỏ sót là hỏng đúng chỗ
+// nguy hiểm nhất.
+//
+// VÌ SAO KHÔNG bỏ dấu toàn bộ 108 từ khóa: bỏ dấu làm mất nghĩa của từ tiếng Việt
+// NGẮN. `bò` `bó` `bơ` `bỏ` đều thành `bo`, `dê` và `dễ` đều thành `de`. Thử bằng
+// máy cho thấy chuẩn hóa thô chặn nhầm 4 trên 15 món lành, ví dụ rau bó xôi và
+// bánh mì bơ bị coi là thịt bò. Đó là giới hạn của tiếng Việt, không sửa được.
+//
+// Nên bảng này CHỈ giữ những từ mà bỏ dấu vẫn còn nghĩa duy nhất, tức từ nhiều
+// chữ, từ dài, và từ tiếng Anh vốn không có dấu. Các từ ngắn dễ nhầm như
+// bò, dê, sò, ốc, gan, lòng, tim, cật, cua, cay, chè, kẹo, mắm chỉ khớp khi
+// người dùng gõ CÓ dấu, tức vẫn dùng bảng `RULES` ở trên.
+//
+// Ba từ đã phải bỏ khỏi bảng này vì va chạm thật, đo được bằng máy:
+//   `ham` tiếng Anh đụng `hầm` trong bò hầm và gà hầm
+//   `kho bo` và `kho ga` đụng `kho bò` và `kho gà`, tức món kho chứ không phải khô
+const RULES_PLAIN = {
+  gout: /\b(?:tom|ngheu|hai san|muc|noi tang|cuu|bia|shrimp|prawn|crab|shellfish|mussel|oyster|clam|snail|squid|organ|liver|kidney|beef|lamb|beer)\b/,
+  diabetes: /\b(?:banh kem|banh ngot|nuoc ngot|tra sua|si ?ro|soda|cake|candy|milk tea|syrup|sweetened|donut|doughnut)\b/,
+  hypertension: /\b(?:dua muoi|ca muoi|kim chi|xuc xich|lap xuong|thit nguoi|giam bong|mi goi|mi an lien|do hop|sausage|bacon|jerky|pickled|instant noodle|canned)\b/,
+  high_cholesterol: /\b(?:chien|top mo|noi tang|da ga|pha lau|fried|organ|liver|lard|crackling)\b/,
+  gastritis: /\b(?:ot|sa te|kim chi|dua chua|canh chua|goi chua|ca phe|bia|chanh|spicy|chili|sriracha|sour|pickled|coffee|alcohol|lemon)\b/,
 };
 
 // Một món có nhiều cách gọi, ví dụ tôm còn gọi là shrimp hay prawn.
@@ -145,8 +171,11 @@ function forbiddenFor(name, conditions = []) {
     // lọt qua phép kiểm truthy rồi chết ở `re.test`. `exerciseCatalog.js` đã
     // dùng đúng cách này từ trước, chỉ file này bị sót.
     if (!Object.hasOwn(RULES, c)) continue;
-    const re = RULES[c];
-    if (re.test(n)) return c;
+    // Thử HAI lần: tên món như người dùng gõ, rồi bản đã bỏ dấu.
+    // Lần một bắt được cả những từ ngắn mà bỏ dấu sẽ mất nghĩa, ví dụ bò và dê.
+    // Lần hai bắt được người gõ không dấu, kiểu "tom rang me".
+    if (RULES[c].test(n)) return c;
+    if (RULES_PLAIN[c].test(normalizeFoodText(n))) return c;
   }
   return null;
 }
@@ -165,4 +194,4 @@ function filterDishes(dishes, conditions = [], getName = (d) => d.name) {
   return { kept, removed };
 }
 
-module.exports = { RULES, forbiddenFor, filterDishes, forbiddenByTaste };
+module.exports = { RULES, RULES_PLAIN, normalizeFoodText, forbiddenFor, filterDishes, forbiddenByTaste };

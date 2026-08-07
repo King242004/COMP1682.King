@@ -363,21 +363,35 @@ exports.markWorkoutDone = async (req, res) => {
   const caloriesBurned = Math.round(met * user.weight * (durationMin / 60));
   const snapshot = buildExerciseSnapshot("guided", req.body.routineKey, routine, user.weight);
 
-  const exercise = await Exercise.create({
-    user: req.user.id,
-    name,
-    ...snapshot,
-    durationMin,
-    caloriesBurned,
-    date: pw.date,
-  });
+  // Giành quyền trước rồi mới ghi, cùng lý do với nút "Đã ăn" bên dưới:
+  // phép kiểm `pw.done` ở trên là đọc rồi mới ghi nên hai lượt bấm sát nhau
+  // đều lọt qua và tạo HAI buổi tập. Mọi phép kiểm khác đã chạy xong ở trên,
+  // nên tới đây chỉ còn đúng việc giành quyền.
+  const claimed = await PlanWorkout.findOneAndUpdate(
+    { _id: pw._id, user: req.user.id, done: false },
+    { done: true, name, met },
+    { new: true },
+  );
+  if (!claimed) return res.status(400).json({ message: "Already marked as done." });
 
-  pw.done = true;
-  pw.name = name;
-  pw.met = met;
-  await pw.save();
+  let exercise;
+  try {
+    exercise = await Exercise.create({
+      user: req.user.id,
+      name,
+      ...snapshot,
+      durationMin,
+      caloriesBurned,
+      date: claimed.date,
+    });
+  } catch (err) {
+    // Ghi hụt thì trả lại trạng thái chưa xong, kẻo buổi tập biến mất khỏi kế
+    // hoạch mà nhật ký cũng không có, tức mất luôn không ai biết.
+    await PlanWorkout.updateOne({ _id: claimed._id }, { done: false }).catch(() => {});
+    throw err;
+  }
 
-  res.json({ message: "Workout logged.", planWorkout: pw, exercise });
+  res.json({ message: "Workout logged.", planWorkout: claimed, exercise });
 };
 
 // Nút "Đã ăn" ở món trong kế hoạch tuần.
@@ -396,20 +410,37 @@ exports.markEaten = async (req, res) => {
   if (planMeal.date > requestTodayKey(req))
     return res.status(400).json({ message: "Cannot mark a future planned meal as eaten." });
 
-  const meal = await Meal.create({
-    user: req.user.id,
-    name: planMeal.name,
-    mealType: planMeal.mealType,
-    calories: planMeal.calories,
-    protein: planMeal.protein,
-    carbs: planMeal.carbs,
-    fat: planMeal.fat,
-    note: planMeal.note,
-    date: planMeal.date,
-  });
+  // GIÀNH QUYỀN TRƯỚC RỒI MỚI GHI. Phép kiểm `planMeal.done` ở trên là đọc rồi
+  // mới ghi, nên hai lượt gọi sát nhau đều đọc thấy chưa xong, đều đi qua, và
+  // ghi HAI món giống hệt vào nhật ký. Bấm nhanh hai cái lúc mạng chậm là dính.
+  // Một lượt findOneAndUpdate có điều kiện `done: false` thì database tự quyết
+  // ai thắng, lượt thua nhận null và bị từ chối.
+  const claimed = await PlanMeal.findOneAndUpdate(
+    { _id: planMeal._id, user: req.user.id, done: false },
+    { done: true },
+    { new: true },
+  );
+  if (!claimed) return res.status(400).json({ message: "This meal is already marked as eaten." });
 
-  planMeal.done = true;
-  await planMeal.save();
+  let meal;
+  try {
+    meal = await Meal.create({
+      user: req.user.id,
+      name: claimed.name,
+      mealType: claimed.mealType,
+      calories: claimed.calories,
+      protein: claimed.protein,
+      carbs: claimed.carbs,
+      fat: claimed.fat,
+      note: claimed.note,
+      date: claimed.date,
+    });
+  } catch (err) {
+    // Đã giành quyền nhưng ghi hụt. Trả lại trạng thái chưa xong, kẻo món biến
+    // mất khỏi kế hoạch mà nhật ký cũng không có gì, tức mất luôn không ai biết.
+    await PlanMeal.updateOne({ _id: claimed._id }, { done: false }).catch(() => {});
+    throw err;
+  }
 
-  res.json({ message: "Marked as eaten and logged to diary.", planMeal, meal });
+  res.json({ message: "Marked as eaten and logged to diary.", planMeal: claimed, meal });
 };

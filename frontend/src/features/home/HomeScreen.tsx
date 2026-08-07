@@ -17,7 +17,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useHealthDataRefresh } from "@/context/HealthDataRefreshContext";
 import { useMeals } from "@/features/meals/MealsContext";
-import { getExercisesByDate, deleteExercise, getExerciseHistory, type Exercise } from "@/features/exercise/exerciseApi";
+import { getExercisesByDate, deleteExercise, type Exercise } from "@/features/exercise/exerciseApi";
 import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/features/plan/planApi";
 import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/features/coach/coachApi";
 import { SuggestMealCard } from "@/features/plan/SuggestMealCard";
@@ -52,7 +52,6 @@ export default function HomeScreen() {
   const [totalBurned, setTotalBurned] = useState(0);
   const [coachInsight, setCoachInsight] = useState<CoachInsight | null>(null);
   const [planToday, setPlanToday] = useState<PlanMeal[]>([]);
-  const [weekActiveDays, setWeekActiveDays] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
 
@@ -86,21 +85,6 @@ export default function HomeScreen() {
       setTotalBurned(0);
     }
   }, [token, selectedDate]);
-
-  // Đếm số NGÀY có tập trong tuần đang xem, không phải số buổi.
-  // Đổ vào Set để một ngày tập ba buổi vẫn chỉ tính là một ngày.
-  // Đường đi: getExerciseHistory → apiClient → GET /exercise/history
-  //           → exerciseController.getExerciseHistory
-  const loadWeekActivity = useCallback(async () => {
-    if (!token) return;
-    try {
-      const days = getCurrentWeekDays(weekOffset);
-      const list = await getExerciseHistory(token, dateKey(days[0]), dateKey(days[6]));
-      setWeekActiveDays(new Set(list.map((e) => e.date)).size);
-    } catch {
-    // Giữ lại giá trị gần nhất nếu tải thất bại.
-    }
-  }, [token, weekOffset]);
 
   // Món dự kiến của HÔM NAY, lấy từ Kế hoạch tuần.
   // Truyền todayKey cho cả ngày đầu lẫn ngày cuối, tức xin đúng một ngày.
@@ -235,7 +219,6 @@ export default function HomeScreen() {
       fetchMealsByDate(selectedDate),
       fetchMealHistory(),
       loadExercises(),
-      loadWeekActivity(),
       loadInsight(true),
       loadPlanToday(),
     ]);
@@ -245,7 +228,6 @@ export default function HomeScreen() {
     fetchMealsByDate,
     fetchMealHistory,
     loadExercises,
-    loadWeekActivity,
     loadInsight,
     loadPlanToday,
   ]);
@@ -268,7 +250,6 @@ export default function HomeScreen() {
       void fetchMealsByDate(selectedDate).catch(() => {});
       void fetchMealHistory().catch(() => {});
       loadExercises();
-      loadWeekActivity();
       // MỞ TRANG CHỦ BƯỚC 4. So số revision với lần trước, để biết dữ liệu sức khỏe
       // có thật sự đổi hay chỉ là người dùng quay về màn này.
       // Chỉ khi đổi mới ép Coach gọi AI lại, kẻo mỗi lần bấm qua bấm lại là tốn một lượt.
@@ -282,8 +263,7 @@ export default function HomeScreen() {
       fetchMealsByDate,
       fetchMealHistory,
       loadExercises,
-      loadWeekActivity,
-      loadInsight,
+        loadInsight,
       loadPlanToday,
       revision,
     ])
@@ -291,7 +271,6 @@ export default function HomeScreen() {
 
   // Mục tiêu số buổi tập mỗi tuần do người dùng tự đặt trong hồ sơ.
   // Đây là dữ liệu để vẽ giao diện, nên đặt sau luồng tải và trước các giá trị hiển thị khác.
-  const weekTarget = user?.weeklyWorkoutTarget ?? null;
 
   // ══════════════════════════════════════════════════════════
   // XÓA BUỔI TẬP
@@ -318,8 +297,6 @@ export default function HomeScreen() {
             // Đường đi: deleteExercise → apiClient → DELETE /exercise/:id
             //           → exerciseController.deleteExercise
             await deleteExercise(token, item.id);
-            // Xóa xong thì đếm lại số ngày tập trong tuần, vì có thể vừa mất trọn một ngày.
-            loadWeekActivity();
             markHealthDataChanged();
           } catch {
             // Xóa hụt thì tải lại, cho dòng vừa giấu với con số calo về đúng như cũ.
@@ -677,23 +654,10 @@ export default function HomeScreen() {
               </AppText>
             </View>
 
-            {/* Các chấm so sánh số ngày tập trong tuần với mục tiêu.
-                Chưa đặt mục tiêu thì chỉ đếm số ngày đã tập, không vẽ chấm. */}
-            <View style={styles.weekDotsRow}>
-              {weekTarget != null &&
-                Array.from({ length: weekTarget }).map((_, i) => (
-                  <View key={i} style={[styles.weekDot, i < weekActiveDays && styles.weekDotOn]} />
-                ))}
-              <AppText variant="subtle" style={styles.weekDotsLabel}>
-                {weekTarget != null
-                  ? weekOffset === 0
-                    ? t.home.weekWorkouts(weekActiveDays, weekTarget)
-                    : t.home.viewedWeekWorkouts(weekActiveDays, weekTarget)
-                  : weekOffset === 0
-                    ? t.home.weekWorkoutsNoTarget(weekActiveDays)
-                    : t.home.viewedWeekWorkoutsNoTarget(weekActiveDays)}
-              </AppText>
-            </View>
+            {/* Thẻ này CHỈ nói về ngày đang chọn, giống mọi thẻ khác ở Trang chủ.
+                Phần theo tuần đã bỏ khỏi đây: nó trộn hai mốc thời gian trong một
+                thẻ nên đọc lướt dễ tưởng con số của tuần là của hôm nay, mà màn
+                Tiến trình vốn đã có bản đầy đủ hơn gồm biểu đồ và mục tiêu tuần. */}
 
             {/* Các bài tập đã ghi dùng cùng cách trình bày với nhật ký món. */}
             {exercises.map((ex) => (
@@ -937,10 +901,6 @@ const styles = StyleSheet.create({
 
   // Phần hoạt động.
   activityHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  weekDotsRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  weekDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.tint },
-  weekDotOn: { backgroundColor: theme.colors.accent },
-  weekDotsLabel: { fontSize: 11, marginLeft: 4 },
   flameBox: { backgroundColor: "rgba(255,138,61,0.12)" },
   burnedText: { fontWeight: "700" },
   workoutRow: {

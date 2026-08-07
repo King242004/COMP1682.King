@@ -50,6 +50,7 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { SectionLabel } from "@/ui/components/SectionLabel";
+import { ActionSheet } from "@/ui/components/ActionSheet";
 import { TextField } from "@/ui/components/TextField";
 import { DIGIT_LIMITS } from "@/config/inputLimits";
 
@@ -78,8 +79,9 @@ export default function WeightGoalsScreen() {
   const [calorieMode, setCalorieMode] = useState<CalorieMode>("automatic");
   const [calorieInput, setCalorieInput] = useState("");
   // null nghĩa là chưa đặt mục tiêu. App KHÔNG tự đoán hộ một con số,
-  // vì số buổi tập mỗi tuần là lựa chọn cá nhân, không phải ngưỡng sức khỏe.
+  // vì số ngày tập mỗi tuần là lựa chọn cá nhân, không phải ngưỡng sức khỏe.
   const [workoutTarget, setWorkoutTarget] = useState<number | null>(null);
+  const [workoutSheetOpen, setWorkoutSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -153,6 +155,20 @@ export default function WeightGoalsScreen() {
   }, [rateOptions, selectedDirection, selectedRate, stats?.rateBands]);
 
   const numberLabel = (value: number) => value.toLocaleString(locale, { maximumFractionDigits: 2 });
+
+  // Chữ hiện trên hàng, và danh sách trong menu trượt. Mục đang chọn mang dấu
+  // tích, bảy mục còn lại không có icon, nhờ ActionSheet cho icon là tùy chọn.
+  const labelForTarget = (value: number | null) =>
+    value == null ? t.weightGoals.workoutNone : t.weightGoals.workoutDays(value);
+  const workoutTargetLabel = labelForTarget(workoutTarget);
+  const workoutItems = WORKOUT_TARGET_OPTIONS.map((option) => ({
+    label: labelForTarget(option),
+    ...(workoutTarget === option ? { icon: "checkmark" as const } : {}),
+    onPress: () => {
+      setWorkoutTarget(option);
+      setSaveError("");
+    },
+  }));
   const previewTargetWeight = selectedDirection === "maintain" ? currentWeight : draftTargetWeight;
   const customCalorieGoal = calorieInput.trim() ? parseNumber(calorieInput) : null;
   const weightLimit = PROFILE_LIMITS.weightKg;
@@ -415,32 +431,17 @@ export default function WeightGoalsScreen() {
         <SectionLabel>{t.weightGoals.workoutSection}</SectionLabel>
         <Card style={styles.workoutCard}>
           <AppText variant="subtle" style={styles.hint}>{t.weightGoals.workoutHint}</AppText>
-          <View style={styles.workoutGrid}>
-            {WORKOUT_TARGET_OPTIONS.map((option) => {
-              const active = workoutTarget === option;
-              return (
-                <Pressable
-                  key={option ?? "none"}
-                  onPress={() => {
-                    setWorkoutTarget(option);
-                    setSaveError("");
-                  }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  style={({ pressed }) => [
-                    styles.workoutOption,
-                    option == null && styles.workoutOptionWide,
-                    active && styles.workoutOptionActive,
-                    pressed && styles.dim,
-                  ]}
-                >
-                  <AppText style={[styles.workoutText, active && styles.activeText]}>
-                    {option == null ? t.weightGoals.workoutNone : String(option)}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
+          <Pressable
+            onPress={() => setWorkoutSheetOpen(true)}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.workoutRow, pressed && styles.dim]}
+          >
+            <AppText style={styles.modeTitle}>{t.weightGoals.workoutRowLabel}</AppText>
+            <View style={styles.workoutValue}>
+              <AppText style={styles.activeText}>{workoutTargetLabel}</AppText>
+              <Ionicons name="chevron-down" size={18} color={theme.colors.primary} />
+            </View>
+          </Pressable>
         </Card>
 
         {saveError ? <AppText style={styles.error}>{saveError}</AppText> : null}
@@ -452,6 +453,12 @@ export default function WeightGoalsScreen() {
           left={<Ionicons name="checkmark" size={20} color="#FFFFFF" />}
         />
       </ScrollView>
+
+      <ActionSheet
+        visible={workoutSheetOpen}
+        onClose={() => setWorkoutSheetOpen(false)}
+        items={workoutItems}
+      />
     </Screen>
   );
 }
@@ -504,17 +511,12 @@ const styles = StyleSheet.create({
   rateName: { fontWeight: "700" },
   activeText: { color: theme.colors.primary },
   workoutCard: { padding: theme.space.lg, gap: theme.space.md },
-  workoutGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  workoutOption: {
-    minWidth: 46, alignItems: "center",
-    paddingVertical: theme.space.md, paddingHorizontal: theme.space.md,
-    borderWidth: 1, borderColor: theme.colors.border,
-    borderRadius: theme.radius.input, backgroundColor: theme.colors.tintSoft,
+  workoutRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    padding: theme.space.md, borderWidth: 1, borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
   },
-  // Ô "Không đặt" là chữ chứ không phải một chữ số nên cần rộng hơn.
-  workoutOptionWide: { flexGrow: 1 },
-  workoutOptionActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.tint },
-  workoutText: { fontWeight: "700" },
+  workoutValue: { flexDirection: "row", alignItems: "center", gap: 4 },
   metricRow: {
     flexDirection: "row", alignItems: "center",
     paddingVertical: theme.space.md, borderRadius: theme.radius.input, backgroundColor: theme.colors.tintSoft,

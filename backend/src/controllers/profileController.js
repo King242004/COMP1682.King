@@ -15,7 +15,7 @@ const {
 } = require("../services/nutrition/calorieGoal");
 const {
   PROFILE_LIMITS, WEEKLY_RATE_KG, WEIGHT_RATE_OPTIONS,
-  WEIGHT_GOALS, WEIGHT_GOAL_VALUES, MAINTAIN_WEIGHT_THRESHOLD_KG,
+  WEIGHT_GOALS, WEIGHT_GOAL_VALUES, MAINTAIN_WEIGHT_THRESHOLD_KG, HEALTH_CONDITIONS,
 } = require("../config/nutritionConstants");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
 
@@ -82,6 +82,14 @@ exports.updateProfile = async (req, res) => {
 
   if (activityLevel && !["sedentary", "moderate", "active"].includes(activityLevel))
     return res.status(400).json({ message: "Invalid activity level." });
+
+  // Chặn ngay ở cửa chứ không đợi model. Trường này nuôi thẳng lớp lọc an toàn,
+  // nên một khóa lạ lọt vào là đi tới chỗ tra bảng bệnh nền. Mảng RỖNG là hợp lệ,
+  // đó là cách giao diện gửi lên khi người dùng chọn Không có.
+  if (conditions !== undefined) {
+    if (!Array.isArray(conditions) || conditions.some((item) => !HEALTH_CONDITIONS.includes(item)))
+      return res.status(400).json({ message: "Invalid health condition." });
+  }
 
   if (language && !["vi", "en"].includes(language))
     return res.status(400).json({ message: "Language must be vi or en." });

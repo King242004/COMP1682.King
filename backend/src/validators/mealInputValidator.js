@@ -24,12 +24,20 @@ function validateMealName(input) {
     : { error: "Enter a valid meal name." };
 }
 
-function validateNutritionValues(input = {}) {
+function validateNutritionValues(input) {
+  // Giá trị mặc định của tham số CHỈ chạy khi truyền undefined, không chạy khi
+  // truyền null. Mà `req.body` bằng null là chuyện có thật: gửi đúng chữ null
+  // kèm Content-Type json là Express đặt body thành null. Bản cũ đọc thẳng
+  // `input.calories` nên ném TypeError, thành lỗi 500 thay vì lời từ chối 400.
+  const source = input && typeof input === "object" ? input : {};
   const value = {
-    calories: Number(input.calories),
-    protein: input.protein === undefined ? 0 : Number(input.protein),
-    carbs: input.carbs === undefined ? 0 : Number(input.carbs),
-    fat: input.fat === undefined ? 0 : Number(input.fat),
+    // Dùng == null để bắt CẢ null lẫn undefined. Calo là trường bắt buộc nên
+    // thiếu thì phải thành NaN rồi bị chặn ở dưới, chứ Number(null) ra 0 sẽ
+    // lặng lẽ ghi một bữa ăn 0 kcal vào nhật ký.
+    calories: source.calories == null ? NaN : Number(source.calories),
+    protein: source.protein == null ? 0 : Number(source.protein),
+    carbs: source.carbs == null ? 0 : Number(source.carbs),
+    fat: source.fat == null ? 0 : Number(source.fat),
   };
   if (!Number.isFinite(value.calories) || value.calories < 0 || value.calories > CALORIE_MAX)
     return { error: "Enter a valid calorie amount." };

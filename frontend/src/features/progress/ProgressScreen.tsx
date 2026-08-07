@@ -230,6 +230,17 @@ export default function ProgressScreen() {
                 )}
               </View>
 
+              {/* App KHÔNG lưu mục tiêu của từng ngày trong quá khứ, nên đường kẻ,
+                  màu cột và các dòng vượt hay thấp hơn bên dưới đều so với mục tiêu
+                  HIỆN TẠI. Đổi mục tiêu là cả biểu đồ cũ được chấm lại. Nói rõ chỗ
+                  này thay vì để người dùng tự đoán vì sao lịch sử đổi màu.
+                  Chế độ Năm gom theo tháng nên không có đường kẻ để giải thích. */}
+              {mode !== "year" && goal != null && (
+                <AppText variant="subtle" style={styles.goalBasis}>
+                  {t.progress.goalBasis(goal.toLocaleString(locale))}
+                </AppText>
+              )}
+
                 {/* Giá trị của cột người dùng vừa chọn. */}
               {selectedBar && (
                 <AppText variant="subtle" style={styles.selectedLine}>
@@ -413,6 +424,7 @@ const styles = StyleSheet.create({
   periodNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   periodLabel: { fontWeight: "700" },
   selectedLine: { fontSize: 12, fontWeight: "700", color: theme.colors.primary },
+  goalBasis: { fontSize: 11, lineHeight: 15 },
   // Tạo khoảng cách giữa phần chuyển kỳ và biểu đồ.
   chartBox: { marginTop: theme.space.sm },
   todayValueRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },

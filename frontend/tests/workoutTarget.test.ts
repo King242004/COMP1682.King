@@ -27,9 +27,18 @@ describe("mục tiêu buổi tập do người dùng đặt", () => {
     expect(source).not.toContain("activityLevel");
   });
 
-  test("màn Tiến trình đọc mục tiêu từ hồ sơ, giống Trang chủ", () => {
+  test("màn Tiến trình đọc mục tiêu từ hồ sơ", () => {
     expect(activitySection()).toContain("user?.weeklyWorkoutTarget ?? null");
-    expect(readSource("../src/features/home/HomeScreen.tsx")).toContain("user?.weeklyWorkoutTarget ?? null");
+  });
+
+  // Trang chủ chỉ nói về NGÀY đang chọn. Trước đây thẻ Vận động trộn thêm số
+  // liệu cả tuần vào cùng một thẻ, đọc lướt dễ tưởng con số của tuần là của
+  // hôm nay. Phần theo tuần thuộc về màn Tiến trình, nơi đã có sẵn khung tuần.
+  test("Trang chủ không kéo số liệu cả tuần vào thẻ của một ngày", () => {
+    const home = readSource("../src/features/home/HomeScreen.tsx");
+    expect(home).not.toContain("weeklyWorkoutTarget");
+    expect(home).not.toContain("weekActiveDays");
+    expect(home).not.toContain("getExerciseHistory");
   });
 
   test("chưa đặt mục tiêu thì màn Tiến trình không vẽ dòng đó", () => {
@@ -44,6 +53,25 @@ describe("mục tiêu buổi tập do người dùng đặt", () => {
 
   test("có lựa chọn bỏ trống, để app không ép người dùng phải đặt mục tiêu", () => {
     expect(goalsScreen()).toContain("workoutNone");
+  });
+
+  // Menu trượt dùng lại ActionSheet có sẵn thay vì đẻ ra kiểu điều khiển mới.
+  // Muốn vậy thì icon phải là TÙY CHỌN, vì tám dòng chỉ khác nhau ở con số.
+  test("dùng lại ActionSheet, và ActionSheet cho phép mục không có icon", () => {
+    expect(goalsScreen()).toContain("ActionSheet");
+    const sheet = readSource("../src/ui/components/ActionSheet.tsx");
+    expect(sheet).toMatch(/icon\?:\s*keyof typeof Ionicons\.glyphMap/);
+    expect(sheet).toContain("{item.icon && (");
+  });
+
+  // Con số này đem so với daysTrained, tức số NGÀY có tập, nên nhãn phải nói
+  // "ngày". Riêng actTotalWorkouts đếm số buổi thật nên vẫn là "buổi".
+  test("nhãn nói đúng đơn vị là ngày, không phải buổi", () => {
+    const vi = readSource("../src/i18n/vi.ts");
+    const line = vi.split("\n").find((row) => row.includes("actWeekTarget:")) ?? "";
+    expect(line).toContain("ngày/tuần");
+    expect(line).not.toContain("buổi");
+    expect(vi).toContain('workoutSection: "Ngày tập mỗi tuần"');
   });
 
   test("nhãn không gọi số của người dùng là gợi ý của app", () => {
