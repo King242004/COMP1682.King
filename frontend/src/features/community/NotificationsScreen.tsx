@@ -6,16 +6,10 @@
 // Trả ra:     danh sách thông báo, mở màn là đánh dấu đã đọc
 // Khi lỗi:    chưa có thông báo nào thì hiện lời nhắc, không hiện màn trống
 
-// LUỒNG XEM THÔNG BÁO, tự chạy khi mở màn
-// 1. api.getNotifications          (GET /community/notifications)
-// 2. notificationController.getNotifications trả tối đa 50 thông báo và bỏ mục có actor
-//    đã xóa tài khoản hoặc bài đã bị xóa
-// 3. api.markNotificationsRead     (POST /community/notifications/read)
-//    tự chạy ngay, không cần bấm nút, nên chấm đỏ tắt luôn
-// 4. danh sách hiện lên
-// Chỉ có hai loại thông báo: có người tim bài, và có người theo dõi mình.
-// Chạm vào thông báo tim thì mở bài, chạm vào thông báo theo dõi
-// thì mở trang cá nhân của người đó.
+// Chỉ có HAI loại thông báo: có người tim bài, và có người theo dõi mình.
+//
+// Nhớ: backend trả tối đa 50 thông báo, và đã bỏ sẵn mấy mục có người gửi
+//      đã xóa tài khoản hoặc bài đã bị xóa. Màn này không phải lọc lại.
 import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
@@ -32,9 +26,14 @@ import { AppText } from "@/ui/components/AppText";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
-// Danh sách hoạt động trong app gồm lượt thích và theo dõi.
-// Mở màn hình sẽ đánh dấu tất cả đã đọc và xóa số trên chuông Community.
-// Mỗi hàng có thể mở bài viết hoặc hồ sơ liên quan.
+// ══════════════════════════════════════════════════════════
+// XEM THÔNG BÁO
+//
+// Đến từ nút chuông ở thanh đầu Trang chủ và ở màn Cộng đồng.
+// Ba bước, đọc từ trên xuống là đúng thứ tự. Chặng chờ mạng ở BƯỚC 1.
+// Xong thì chấm đỏ trên chuông tắt mà người dùng không phải bấm nút nào.
+// ══════════════════════════════════════════════════════════
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
@@ -46,6 +45,12 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
+  // XEM THÔNG BÁO BƯỚC 1. Tải danh sách rồi ĐÁNH DẤU ĐÃ ĐỌC luôn trong cùng một lượt.
+  // Đường đi: getNotifications → apiClient → GET /community/notifications
+  //           → notificationController.getNotifications
+  // Đường đi: markNotificationsRead → apiClient → POST /community/notifications/read
+  //           → notificationController.markNotificationsRead
+  // mode chỉ quyết định hiện vòng xoay nào: giữa màn, hay ở đầu danh sách khi kéo làm mới.
   const load = useCallback(async (mode: "load" | "refresh" = "load") => {
     if (!token) return;
     const setBusy = mode === "refresh" ? setRefreshing : setLoading;
@@ -54,7 +59,11 @@ export default function NotificationsScreen() {
       const data = await getNotifications(token);
       setItems(data);
       setLoadError(false);
-      // Xóa số thông báo khi danh sách đã xuất hiện trên màn hình.
+      // Đánh dấu đã đọc NGAY sau khi danh sách hiện lên, không chờ người dùng bấm gì.
+      // Cố ý KHÔNG await và nuốt lỗi: đánh dấu hụt thì chỉ là chấm đỏ còn đó,
+      // không đáng để chặn cả màn.
+      // Nhớ: dòng này không xóa dấu chưa đọc trên từng dòng đang hiện, nên lần mở này
+      //      người dùng vẫn thấy dòng nào là mới. Lần mở sau mới hết dấu.
       markNotificationsRead(token).catch(() => {});
     } catch {
       setLoadError(true);
@@ -63,10 +72,11 @@ export default function NotificationsScreen() {
     }
   }, [token]);
 
-  // Tự tải thông báo mỗi lần mở màn, rồi đánh dấu đã đọc ngay.
-  // Nhờ vậy chấm đỏ trên chuông tắt mà không cần bấm nút nào.
+  // Tự chạy mỗi lần màn được nhìn thấy, không ai bấm.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  // XEM THÔNG BÁO BƯỚC 2. Chạm một dòng thì đi đâu tùy loại thông báo.
+  // Thông báo tim thì mở bài đó, còn lại, tức thông báo theo dõi, thì mở trang người đó.
   const openTarget = (n: Notification) => {
     if (n.type === "like" && n.postId) {
       router.push({ pathname: "/community/post-detail", params: { id: n.postId } });
@@ -75,6 +85,8 @@ export default function NotificationsScreen() {
     }
   };
 
+  // XEM THÔNG BÁO BƯỚC 3. Vẽ một dòng thông báo. Có HAI vùng chạm lồng nhau:
+  // chạm ảnh đại diện thì luôn mở trang người đó, chạm phần còn lại thì đi theo openTarget.
   const renderItem = ({ item }: { item: Notification }) => {
     return (
       <Pressable

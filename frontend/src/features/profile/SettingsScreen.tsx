@@ -6,21 +6,13 @@
 // Trả ra:     không trả gì, mỗi lựa chọn tự lưu ngay
 // Khi lỗi:    xóa tài khoản phải nhập mật khẩu và xác nhận, vì việc này KHÔNG lùi được
 
-// BỐN NHÓM CÀI ĐẶT
-//   Ngôn ngữ, chọn Tiếng Việt hoặc English. Lưu qua PUT /profile.
-//     Đổi ngôn ngữ làm Coach tải lại lịch sử của ngôn ngữ mới,
-//     và làm mọi lời nhắc được đặt lại bằng ngôn ngữ đó.
-//   Mục tiêu cân nặng, dẫn tới màn riêng để chỉnh đích cân, tốc độ và calo.
-//   Tài khoản riêng tư, bật lên thì bài đăng bị ẩn khỏi Community.
-//   Xóa tài khoản, đây là thao tác KHÔNG hoàn tác được.
-// LUỒNG XÓA TÀI KHOẢN
-// 1. Bấm Xóa tài khoản, hộp thoại yêu cầu nhập mật khẩu
-// 2. AuthContext.deleteAccount           (DELETE /user/account)
-// 3. Route gọi hàm deleteAccount trong backend/src/controllers/accountController.js;
-//    hàm này so mật khẩu,
-//    xóa ảnh qua cloudinary và xóa dữ liệu tài khoản
-//    rồi xóa dữ liệu ở tất cả các bảng, cuối cùng xóa tài khoản
-// 4. app tự đăng xuất và quay về màn Đăng nhập
+// Bốn nhóm cài đặt, mỗi nhóm một khối riêng trong thân file:
+//   Mục tiêu cân nặng, chỉ là lối vào một màn riêng, không xử lý gì ở đây.
+//   Ngôn ngữ, xem khối ĐỔI NGÔN NGỮ.
+//   Tài khoản riêng tư, bật lên thì bài đăng bị ẩn khỏi Cộng đồng.
+//   Xóa tài khoản, xem khối XÓA TÀI KHOẢN.
+//
+// Nhớ: mỗi lựa chọn TỰ LƯU ngay khi bấm, màn này không có nút Lưu chung.
 import { useCallback, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -50,6 +42,14 @@ function IconBox({ icon, bg, color }: { icon: string; bg?: string; color?: strin
   );
 }
 
+// ══════════════════════════════════════════════════════════
+// MỞ CÀI ĐẶT
+//
+// Đến từ màn Hồ sơ. Hai bước, đọc từ trên xuống là đúng thứ tự.
+// Xong thì hiện bốn nhóm cài đặt, mỗi nhóm tự lo phần của mình.
+// ══════════════════════════════════════════════════════════
+
+// MỞ CÀI ĐẶT BƯỚC 1. Lấy hồ sơ từ AuthContext, KHÔNG gọi mạng lấy lại.
 export default function SettingsScreen() {
   const { user, stats, updateProfile, deleteAccount } = useAuth();
   const router = useRouter();
@@ -63,11 +63,18 @@ export default function SettingsScreen() {
   const [isPrivate, setIsPrivate] = useState(!!user?.isPrivate);
   const [savingLang, setSavingLang] = useState(false);
 
-  // Tải lại số lời nhắc khi quay về vì lời nhắc được chỉnh ở màn riêng.
+  // MỞ CÀI ĐẶT BƯỚC 2. Đếm lại số lời nhắc đang bật, đọc từ bộ nhớ máy chứ không gọi mạng.
+  // Dùng useFocusEffect vì lời nhắc được chỉnh ở màn riêng, quay về đây phải đếm lại
+  // thì con số bên cạnh hàng Nhắc nhở mới đúng.
   useFocusEffect(useCallback(() => {
     void loadReminders().then((r) => setReminderCount(enabledCount(r))).catch(() => {});
   }, []));
 
+  // Gạt công tắc tài khoản riêng tư.
+  // Gạt trên màn NGAY cho bấm là thấy nhúc nhích, rồi mới gửi lên.
+  // Đường đi: AuthContext.updateProfile → authApi → apiClient → PUT /profile
+  //           → profileController.updateProfile
+  // Gửi hụt thì GẠT NGƯỢC LẠI, kẻo màn hiện riêng tư mà server vẫn để công khai.
   const togglePrivate = async (value: boolean) => {
     setIsPrivate(value);
     try {
@@ -79,23 +86,36 @@ export default function SettingsScreen() {
     }
   };
 
-  // Nếu chưa lưu lựa chọn thì dùng ngôn ngữ mặc định của thiết bị.
+  // Chưa lưu lựa chọn nào thì lấy ngôn ngữ mặc định của máy.
   const currentLang = resolveLanguage(user?.language);
+
+  // Hướng cân nặng để hiện bên cạnh hàng Mục tiêu. Suy từ cân hiện tại với cân đích,
+  // không đọc thẳng user.goal, vì hai số kia mới là thứ người dùng vừa đặt.
+  // Suy không ra thì mới lùi về giá trị backend đưa.
   const displayedDirection = resolveDraftWeightDirection(
     user?.weight ?? null,
     user?.targetWeight ?? null,
     stats?.maintainWeightThresholdKg,
   ) ?? stats?.weightDirection;
   const displayedGoal = displayedDirection ? WEIGHT_GOAL_BY_DIRECTION[displayedDirection] : user?.goal;
-  // Đổi ngôn ngữ app. Lưu qua PUT /profile chứ không chỉ lưu ở máy,
-  // vì AuthContext.updateProfile gửi nó tới profileController.updateProfile;
-  // coachController.chat đọc trường này để chọn ngôn ngữ trả lời.
-  // Đổi xong thì Coach tải lịch sử của ngôn ngữ mới, và các lời nhắc
-  // được đặt lại bằng ngôn ngữ đó.
+  // ══════════════════════════════════════════════════════════
+  // ĐỔI NGÔN NGỮ
+  //
+  // Đến từ hai nút Tiếng Việt và English. Hai bước, một chặng chờ mạng.
+  // Xong thì Coach tải lại lịch sử của ngôn ngữ mới, và các lời nhắc
+  // sẽ được đặt lại bằng ngôn ngữ đó khi người dùng đụng vào công tắc.
+  // ══════════════════════════════════════════════════════════
+
+  // ĐỔI NGÔN NGỮ BƯỚC 1. Bấm đúng ngôn ngữ đang dùng thì thoát luôn, khỏi gửi hụt một lượt.
   const handleSetLanguage = async (l: Lang) => {
     if (l === user?.language) return;
     setSavingLang(true);
     try {
+      // ĐỔI NGÔN NGỮ BƯỚC 2. Lưu LÊN SERVER chứ không chỉ lưu ở máy.
+      // Đường đi: AuthContext.updateProfile → authApi → apiClient → PUT /profile
+      //           → profileController.updateProfile
+      // Phải lên server vì coachController.chat đọc trường này để biết trả lời
+      // bằng tiếng gì. Chỉ lưu ở máy là Coach vẫn nói tiếng cũ.
       await updateProfile({ language: l });
     } catch (error) {
       Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.settings.failedLanguage));
@@ -104,12 +124,28 @@ export default function SettingsScreen() {
     }
   };
 
-  // Nút Xóa tài khoản đặt cuối nhóm thao tác vì đây là lối kết thúc phiên và không hoàn tác được.
+  // ══════════════════════════════════════════════════════════
+  // XÓA TÀI KHOẢN
+  //
+  // Đến từ nút Xóa tài khoản, đặt cuối màn vì đây là việc KHÔNG lùi lại được.
+  // Ba bước, đọc từ trên xuống là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 2.
+  // Xong thì app tự đăng xuất và quay về màn Đăng nhập.
+  // ══════════════════════════════════════════════════════════
+
+  // XÓA TÀI KHOẢN BƯỚC 1. Bắt nhập mật khẩu, không cho xóa bằng một cú bấm.
+  // Cờ deleting chặn bấm hai lần liên tiếp.
   const handleDeleteAccount = async () => {
     if (!deletePw || deleting) return;
     setDeleting(true);
     try {
+      // XÓA TÀI KHOẢN BƯỚC 2. Gửi đi rồi ĐỨNG ĐÂY CHỜ, đây là chặng lâu nhất.
+      // Đường đi: AuthContext.deleteAccount → authApi → apiClient
+      //           → DELETE /user/account → accountController.deleteAccount
+      // Bên đó so mật khẩu trước, rồi xóa ảnh trên Cloudinary, xóa dữ liệu ở mọi bảng,
+      // cuối cùng mới xóa tài khoản. Sai mật khẩu thì ném lỗi và KHÔNG xóa gì cả.
       await deleteAccount(deletePw);
+      // XÓA TÀI KHOẢN BƯỚC 3. Đóng hộp rồi về màn Đăng nhập.
+      // AuthContext đã tự đăng xuất ngay sau khi backend xóa xong.
       setDeleteVisible(false);
       router.replace("/auth/login");
     } catch (error) {
@@ -128,7 +164,7 @@ export default function SettingsScreen() {
       >
         <ScreenHeader title={t.settings.title} />
 
-        {/* GOALS */}
+        {/* Nhóm Mục tiêu. Chỉ là lối vào màn Mục tiêu cân nặng, không xử lý gì ở đây. */}
         <SectionLabel>{t.settings.goals}</SectionLabel>
         <Card style={styles.card}>
           <Pressable
@@ -147,7 +183,7 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        {/* INSIGHTS */}
+        {/* Nhóm Theo dõi. Lối vào màn Tiến trình và màn Nhắc nhở. */}
         <SectionLabel>{t.settings.insights}</SectionLabel>
         <Card style={styles.card}>
           <Pressable onPress={() => router.push("/profile/progress")} style={({ pressed }) => [styles.rowTappable, pressed && styles.dim]}>
@@ -177,7 +213,7 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        {/* SECURITY */}
+        {/* Nhóm Bảo mật. Lối vào màn Đổi mật khẩu. */}
         <SectionLabel>{t.settings.security}</SectionLabel>
         <Card style={styles.card}>
           <Pressable
@@ -192,7 +228,7 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        {/* LANGUAGE */}
+        {/* Nhóm Ngôn ngữ. Bấm là lưu ngay, xem khối ĐỔI NGÔN NGỮ ở trên. */}
         <SectionLabel>{t.settings.language}</SectionLabel>
         <Card style={styles.langCard}>
           <View style={styles.langHead}>
@@ -219,7 +255,7 @@ export default function SettingsScreen() {
           </View>
         </Card>
 
-        {/* PRIVACY */}
+        {/* Nhóm Riêng tư. Công tắc gạt là lưu ngay, không có nút Lưu. */}
         <SectionLabel>{t.settings.privacy}</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.rowStatic}>
@@ -253,7 +289,7 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
-        {/* ABOUT */}
+        {/* Nhóm Giới thiệu, và nút Xóa tài khoản đặt cuối cùng vì không lùi lại được. */}
         <AppText variant="subtle" style={styles.version}>MealMate · v1.0.0</AppText>
       </ScrollView>
 

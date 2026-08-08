@@ -12,9 +12,20 @@ import { useEffect, useState } from "react";
 export const OTP_RESEND_SECONDS = 60;
 export const nextOtpSecond = (seconds: number) => Math.max(0, seconds - 1);
 
+// ══════════════════════════════════════════════════════════
+// ĐẾM NGƯỢC NÚT GỬI LẠI
+//
+// Đến từ màn Đăng ký và màn Quên mật khẩu. Hai bước, không gọi mạng.
+// Xong thì màn đọc seconds, còn lớn hơn 0 thì khóa nút Gửi lại.
+// ══════════════════════════════════════════════════════════
+
+// ĐẾM NGƯỢC BƯỚC 1. Số giây còn lại. Bằng 0 nghĩa là bấm Gửi lại được rồi.
 export function useOtpCooldown() {
   const [seconds, setSeconds] = useState(0);
 
+  // ĐẾM NGƯỢC BƯỚC 2. Mỗi giây trừ một, tới 0 thì tự dừng nhờ dòng thoát ở đầu.
+  // Dùng setTimeout hẹn từng giây chứ không dùng setInterval, vì effect này
+  // chạy lại sau MỖI lần seconds đổi, nên chỉ cần hẹn đúng một nhịp.
   useEffect(() => {
     if (seconds <= 0) return;
     const timer = setTimeout(() => setSeconds(nextOtpSecond), 1000);

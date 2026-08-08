@@ -1,7 +1,24 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Ba việc của cửa vào app: gửi mã đăng ký, tạo tài khoản, và đăng nhập.
+//
+// Ai gọi tới: authRoutes, gắn vào /api/auth
+// Nhận vào:   email, mật khẩu, tên, và mã 6 số
+// Trả ra:     thẻ JWT kèm hồ sơ đã lọc, hoặc lỗi
+// Khi lỗi:    sai email hay sai mật khẩu đều trả CÙNG một câu chung chung,
+//             để người lạ không dò được email nào đã có tài khoản
 const bcrypt = require("bcryptjs");
 const { sendOTP } = require("../services/emailRelayClient");
+// ══════════════════════════════════════════════════════════
+// BA CỬA CỦA MÀN ĐĂNG NHẬP ĐĂNG KÝ
+//
+// Không phải luồng. Ba cửa độc lập, app gọi cửa nào tùy việc:
+// gửi mã đăng ký, tạo tài khoản, và đăng nhập.
+// 
+// Nhớ: mọi câu từ chối đều CHUNG CHUNG như nhau, không nói rõ sai email hay
+//      sai mật khẩu, để người lạ không dò được email nào đã có tài khoản.
+// ══════════════════════════════════════════════════════════
+
+// Bảng lưu mã 6 số đã băm, dùng cho luồng đăng ký.
 const OTP = require("../models/OTP");
 const User = require("../models/User");
 const { reserveOTP, verifyOTPCode } = require("../services/otpService");

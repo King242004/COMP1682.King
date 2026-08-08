@@ -263,6 +263,9 @@ export default function CoachScreen() {
     });
   };
 
+  // Nhãn cho dòng phân cách ngày giữa các tin nhắn.
+  // Hai ngày gần nhất gọi thẳng là Hôm nay với Hôm qua, xa hơn mới ghi ngày tháng.
+  // Không truyền iso thì coi như hôm nay.
   const dayLabelFor = (iso?: string) => {
     const d = iso ? dateKey(new Date(iso)) : todayKey();
     const now = new Date();

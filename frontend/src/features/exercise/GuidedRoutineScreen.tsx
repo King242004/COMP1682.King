@@ -5,18 +5,11 @@
 // Nhận vào:   mã bài tập và thời lượng đã chọn
 // Trả ra:     không trả gì, tập xong thì tự ghi một buổi tập vào nhật ký
 // Khi lỗi:    thoát giữa chừng thì KHÔNG ghi gì, chỉ tập hết mới tính
-
-// LUỒNG TẬP THEO HƯỚNG DẪN
-// 1. Chọn một bài từ màn Ghi buổi tập, mở màn này
-// 2. Bấm Bắt đầu, đồng hồ chạy theo từng bước
-// 3. Hết giờ một bước thì tự nhảy sang bước kế tiếp
-// 4. Xong bước cuối, chạy finish
-// 5. addExercise                  (POST /exercise)
-// 6. exerciseApi.addExercise gọi POST /exercises;
-//    exerciseController.addExercise tạo buổi tập và gọi computeBurned
-// 7. hiện thông báo rồi quay về màn trước
-// Nội dung các bài nằm ở features/exercise/guidedRoutines.ts.
-// finishedRef chặn ghi trùng, vì đồng hồ có thể chạm mốc cuối nhiều lần.
+//
+// Nội dung các bài nằm ở features/exercise/guidedRoutines.ts, màn này chỉ chạy đồng hồ.
+//
+// Nhớ: đồng hồ có thể chạm mốc cuối nhiều lần trong một nhịp vẽ, nên phải có
+//      finishedRef chặn, kẻo một buổi tập bị ghi thành hai ba lần.
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -35,6 +28,17 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
+// ══════════════════════════════════════════════════════════
+// TẬP THEO HƯỚNG DẪN
+//
+// Đến từ màn Ghi buổi tập và từ màn Kế hoạch tuần, mã bài đi theo đường dẫn.
+// Năm bước, đọc từ trên xuống là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 5.
+// Xong thì hiện thông báo rồi quay về màn trước.
+// ══════════════════════════════════════════════════════════
+
+// TẬP THEO HƯỚNG DẪN BƯỚC 1. Lấy mã bài từ đường dẫn rồi tra trong GUIDED_ROUTINES.
+// Bài nằm sẵn trong app, KHÔNG gọi mạng để tải.
+// previewOnly bằng "1" là chỉ xem trước, không cho bấm Bắt đầu.
 export default function GuidedRoutineScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
@@ -55,23 +59,30 @@ export default function GuidedRoutineScreen() {
   const [secondsLeft, setSecondsLeft] = useState(routine?.steps[0]?.seconds ?? 0);
   const [running, setRunning] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  // Cờ chặn ghi trùng. Để trong ref chứ không phải state, vì cần đổi giá trị
+  // và thấy ngay lập tức, chứ state thì phải chờ tới nhịp vẽ sau.
   const finishedRef = useRef(false);
 
+  // TẬP THEO HƯỚNG DẪN BƯỚC 2. Người dùng bấm Bắt đầu.
+  // started bật màn tập lên, running cho đồng hồ chạy. Tách hai cờ vì lúc tạm dừng
+  // thì running tắt nhưng started vẫn bật, màn tập không biến mất.
   const startSession = () => {
     setStarted(true);
     setRunning(true);
   };
 
-  // Đồng hồ đếm ngược cho bước đang tập. Chạy lại mỗi giây.
-  // Dọn đồng hồ khi thoát màn để không chạy nền.
+  // TẬP THEO HƯỚNG DẪN BƯỚC 3. Đồng hồ đếm ngược cho bước đang tập, mỗi giây trừ một.
+  // Dòng return dọn đồng hồ khi thoát màn hoặc khi tạm dừng, kẻo nó chạy nền mãi.
   useEffect(() => {
     if (!started || !running || !routine) return;
     const id = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
     return () => clearInterval(id);
   }, [started, running, routine]);
 
-  // Hết giờ một bước thì tự nhảy sang bước kế tiếp.
-  // Hết bước cuối thì gọi finish để ghi buổi tập.
+  // TẬP THEO HƯỚNG DẪN BƯỚC 4. Đồng hồ về 0 thì rẽ hai nhánh.
+  // Còn bước phía sau thì nhảy sang bước đó và nạp lại giờ.
+  // Hết bước cuối thì gọi finish, nhưng phải qua cửa finishedRef trước,
+  // vì effect này có thể chạy lại khi secondsLeft vẫn đang là 0.
   useEffect(() => {
     if (!started || !routine || secondsLeft > 0) return;
     if (stepIndex < routine.steps.length - 1) {
@@ -84,7 +95,15 @@ export default function GuidedRoutineScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft]);
 
-  // Chạy khi tập hết bước cuối.
+  // TẬP THEO HƯỚNG DẪN BƯỚC 5. Tập hết bước cuối thì ghi buổi tập.
+  // Rẽ hai đường tùy chỗ mở màn này:
+  //   Vào từ Kế hoạch tuần, có planWorkoutId, thì đánh dấu buổi đó đã xong.
+  //   Đường đi: markPlanWorkoutDone → apiClient → POST /plan/workout/:id/done
+  //             → planController.markWorkoutDone
+  //   Vào thẳng thì tạo một buổi tập mới cho hôm nay.
+  //   Đường đi: addExercise → apiClient → POST /exercise
+  //             → exerciseController.addExercise, bên đó tự tính calo đốt
+  // Chưa đăng nhập thì bỏ qua phần ghi, vẫn hiện lời chúc mừng cho tử tế.
   const finish = async () => {
     if (!routine) return;
     setRunning(false);
@@ -116,12 +135,15 @@ export default function GuidedRoutineScreen() {
     }
   };
 
+  // Nút Bỏ qua bước. Không tự nhảy bước, chỉ vặn đồng hồ về 0
+  // rồi để BƯỚC 4 ở trên lo, nhờ vậy chỉ có MỘT chỗ quyết định chuyện chuyển bước.
   const skipStep = () => {
     if (!routine) return;
-      // Effect sẽ chuyển sang bước tiếp theo hoặc kết thúc ở bước cuối.
-      setSecondsLeft(0);
+    setSecondsLeft(0);
   };
 
+  // Nút Thoát. Dừng đồng hồ TRƯỚC khi hỏi, kẻo đang đọc hộp thoại mà giờ vẫn chạy.
+  // Bấm Hủy thì cho chạy tiếp. Thoát giữa chừng là KHÔNG ghi gì cả.
   const quit = () => {
     setRunning(false);
     Alert.alert(t.exercise.quitTitle, t.exercise.quitMsg, [
@@ -138,9 +160,14 @@ export default function GuidedRoutineScreen() {
     );
   }
 
+  // Mấy giá trị để vẽ đồng hồ, tính lại mỗi nhịp vẽ.
   const step = routine.steps[stepIndex];
+  // Kẹp ở 0 vì đồng hồ có thể trừ xuống âm một nhịp trước khi BƯỚC 4 kịp chặn.
+  // Không kẹp là màn chớp một cái "-1" rồi mới nhảy bước.
   const mm = String(Math.floor(Math.max(0, secondsLeft) / 60)).padStart(2, "0");
   const ss = String(Math.max(0, secondsLeft) % 60).padStart(2, "0");
+  // Tiến độ theo SỐ BƯỚC đã qua, không theo thời gian. Cộng 1 vì bước đang tập
+  // cũng tính là đang chạy, nên bước cuối cho ra đúng 100 phần trăm.
   const progress = (stepIndex + 1) / routine.steps.length;
 
   if (!started) {

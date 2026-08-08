@@ -5,24 +5,14 @@
 // Nhận vào:   hoạt động đã chọn và thời lượng
 // Trả ra:     không trả gì, ghi xong thì quay lại màn trước
 // Khi lỗi:    chưa chọn hoạt động thì nút Lưu bị khóa
-
-// Màn có HAI lối, chọn ở đầu màn:
-// LỐI A, tập theo bài hướng dẫn trong app
-// 1. Chọn nhóm bài và độ dài buổi tập
-// 2. Danh sách bài lọc theo hai lựa chọn đó, dữ liệu nằm sẵn trong guidedRoutines
-// 3. Bấm một bài, sang màn GuidedRoutineScreen, màn đó mới là nơi ghi lại
-// LỐI B, ghi một hoạt động làm ngoài app
-// 1. Bấm mở hộp Ghi hoạt động khác
-// 2. Chọn hoạt động, số phút, và ngày hoàn thành trên lịch
-// 3. Bấm Lưu, chạy saveExternalActivity
-// 4. exerciseApi.addExercise          (POST /exercise)
-// 5. Route gọi hàm addExercise trong backend/src/controllers/exerciseController.js;
-//    hàm này gọi computeBurned
-//    để nhân MET với cân nặng và thời lượng
-// 6. markHealthDataChanged, nên Trang chủ và Tiến trình tự tải lại
-// Vì sao lối B bắt buộc phải có cân nặng: calo đốt tính từ MET và cân nặng thật.
-// Thiếu cân nặng thì exerciseController.addExercise trả PROFILE_WEIGHT_REQUIRED,
-// thay vì đoán một con số rồi ghi vào nhật ký.
+//
+// Màn có HAI đường, chọn ở đầu màn. Mỗi đường là một khối riêng trong thân file:
+// khối CHỌN BÀI TẬP cho bài hướng dẫn sẵn trong app, và khối GHI HOẠT ĐỘNG NGOÀI
+// cho việc đã làm ở ngoài. Chỉ đường thứ hai mới ghi thẳng vào nhật ký tại màn này.
+//
+// Nhớ: ghi hoạt động ngoài BẮT BUỘC phải có cân nặng trong hồ sơ, vì calo đốt
+//      tính từ hệ số MET nhân cân nặng thật. Thiếu thì backend trả
+//      PROFILE_WEIGHT_REQUIRED, chứ không đoán bừa một con số rồi ghi vào nhật ký.
 import { useMemo, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -74,6 +64,19 @@ export default function LogActivityScreen() {
   const [externalSaving, setExternalSaving] = useState(false);
   const [externalError, setExternalError] = useState("");
 
+  // ══════════════════════════════════════════════════════════
+  // CHỌN BÀI TẬP
+  //
+  // Đường thứ nhất. Ba bước, đọc từ trên xuống là đúng thứ tự. KHÔNG gọi mạng,
+  // vì các bài nằm sẵn trong guidedRoutines.ts.
+  // Xong thì sang màn GuidedRoutineScreen, màn ĐÓ mới là nơi ghi buổi tập.
+  // ══════════════════════════════════════════════════════════
+
+  // CHỌN BÀI TẬP BƯỚC 1 nằm ở hai state category với duration khai báo phía trên,
+  // người dùng bấm nhóm bài và độ dài buổi tập là hai state đó đổi.
+  //
+  // CHỌN BÀI TẬP BƯỚC 2. Lọc danh sách theo đúng hai lựa chọn đó.
+  // Bọc useMemo nên chỉ lọc lại khi một trong hai đổi, chứ không lọc mỗi nhịp vẽ.
   const selectedRoutines = useMemo(
     () => GUIDED_ROUTINES.filter(
       (routine) => routine.category === category && routine.durationMin === duration,
@@ -81,6 +84,19 @@ export default function LogActivityScreen() {
     [category, duration],
   );
 
+  // ══════════════════════════════════════════════════════════
+  // GHI HOẠT ĐỘNG NGOÀI
+  //
+  // Đường thứ hai, cho việc đã làm ở ngoài app. Ba bước, đọc từ trên xuống
+  // là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 3.
+  // Xong thì Trang chủ và màn Tiến trình tự tải lại.
+  // ══════════════════════════════════════════════════════════
+
+  // GHI NGOÀI BƯỚC 1 nằm ở nút mở hộp trong JSX, nó bật externalVisible lên.
+  //
+  // GHI NGOÀI BƯỚC 2. Mấy nhãn cho hộp chọn ngày, tính lại mỗi nhịp vẽ.
+  // Ghép "T00:00:00" để máy hiểu là giờ địa phương, thiếu đuôi đó thì máy hiểu
+  // là UTC và múi giờ âm sẽ hiện lùi mất một ngày.
   const externalDateLabel = new Date(`${externalDate}T00:00:00`).toLocaleDateString(locale, {
     weekday: "long",
     day: "numeric",
@@ -89,13 +105,19 @@ export default function LogActivityScreen() {
   });
   const calendarLabel = calendarMonth.toLocaleDateString(locale, { month: "long", year: "numeric" });
   const calendarDays = calendarMonthDays(calendarMonth);
+  // Bảy tên thứ cho đầu lưới lịch. Mượn tuần của ngày 1/1/2024 vì hôm đó là Thứ hai,
+  // mà lưới lịch của app cũng bắt đầu từ Thứ hai. Năm 2024 ở đây chỉ là cái cớ,
+  // không liên quan gì tới ngày người dùng đang chọn.
   const weekdayLabels = Array.from({ length: 7 }, (_, index) =>
     new Date(2024, 0, 1 + index).toLocaleDateString(locale, { weekday: "short" }),
   );
+  // Chặn lật sang tháng tương lai. Chỉ được ghi việc ĐÃ làm, không ghi trước.
   const now = new Date();
   const canGoNextMonth = calendarMonth.getFullYear() < now.getFullYear() ||
     (calendarMonth.getFullYear() === now.getFullYear() && calendarMonth.getMonth() < now.getMonth());
 
+  // Mở hoặc đóng lịch. Lúc MỞ thì kéo lịch về đúng tháng của ngày đang chọn,
+  // kẻo lần trước lật đi đâu mất, mở lại vẫn nằm ở tháng cũ đó.
   const toggleCalendar = () => {
     if (!datePickerVisible) {
       const selected = new Date(`${externalDate}T00:00:00`);
@@ -104,9 +126,12 @@ export default function LogActivityScreen() {
     setDatePickerVisible((visible) => !visible);
   };
 
-  // BƯỚC 3 CỦA LỐI B. Người dùng bấm Lưu trong hộp Ghi hoạt động khác.
-  // Chỉ gửi mã hoạt động, không gửi MET. exerciseController.addExercise tra MET từ
-  // của nó, nên app không thể gửi lên một chỉ số sai hay đã lỗi thời.
+  // GHI NGOÀI BƯỚC 3. Người dùng bấm Lưu trong hộp Ghi hoạt động khác.
+  // Đường đi: addExercise → apiClient → POST /exercise
+  //           → exerciseController.addExercise → computeBurned
+  // Chỉ gửi MÃ hoạt động, không gửi hệ số MET. Backend tự tra bảng của nó,
+  // nên app không thể đẩy lên một chỉ số sai hoặc đã lỗi thời.
+  // Xong thì gọi markHealthDataChanged, nhờ đó Trang chủ và Tiến trình tự tải lại.
   const saveExternalActivity = async () => {
     const activity = POPULAR_ACTIVITIES.find((item) => item.key === externalActivityKey);
     if (!token || !activity || externalSaving) return;

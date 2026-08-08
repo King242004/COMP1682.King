@@ -16,7 +16,20 @@ const { buildNutritionEstimatePrompt, normalizeEstimatedNutrition, nutritionEsti
 const NutritionEstimateCache = require("../models/NutritionEstimateCache");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
 
+// ══════════════════════════════════════════════════════════
+// HAI CỬA CỦA MÀN QUÉT
+//
+// Không phải luồng. Một cửa nhìn ảnh đoán món, một cửa tra mã vạch.
+// 
+// Nhớ: ẢNH KHÔNG BAO GIỜ được lưu lại. Ảnh chỉ sống trong đúng một request,
+//      gửi cho Gemini xong là bỏ.
+// ══════════════════════════════════════════════════════════
+
+// Giữ kết quả tra mã vạch trong 30 ngày. Số dinh dưỡng của một sản phẩm
+// đóng gói gần như không đổi, nên tra lại mỗi lần chỉ tổ chậm và tốn lượt.
 const NUTRITION_CACHE_MS = 30 * 24 * 60 * 60 * 1000;
+// Chờ tối đa 10 giây khi tra Open Food Facts. Đó là dịch vụ ngoài,
+// không chặn thời gian là nó chậm kéo cả request của mình chậm theo.
 const BARCODE_LOOKUP_TIMEOUT_MS = 10_000;
 
 // Nhận diện món từ ảnh và tra cứu barcode. Ảnh chỉ dùng cho request, không được lưu.

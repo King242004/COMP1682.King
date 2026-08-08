@@ -24,7 +24,7 @@ import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useMeals } from "@/features/meals/MealsContext";
-import { suggestNextMeal, getCachedSuggestions, cacheSuggestions, nextMealSlot, type MealSuggestions } from "@/features/plan/mealSuggestions";
+import { suggestNextMeal, getCachedSuggestions, cacheSuggestions, nextMealSlot, type MealSuggestions } from "@/features/coach/mealSuggestions";
 import type { PlanMeal } from "@/features/plan/planApi";
 import { todayKey } from "@/utils/dateUtils";
 import { aiResetWhen } from "@/utils/aiQuota";

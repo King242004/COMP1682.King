@@ -19,6 +19,16 @@ const {
 } = require("../config/nutritionConstants");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
 
+// ══════════════════════════════════════════════════════════
+// HAI CỬA VỀ HỒ SƠ
+//
+// Không phải luồng. Một cửa đọc hồ sơ, một cửa lưu hồ sơ.
+// 
+// Nhớ: đây là nơi DUY NHẤT chốt mục tiêu calo chính thức.
+//      App có tính một bản để xem trước, nhưng bản đó chỉ để hiện,
+//      và có thể lệch với bản này khi calorieGoal áp mức sàn.
+// ══════════════════════════════════════════════════════════
+
 // BMI bằng cân nặng chia cho bình phương chiều cao tính theo mét.
 const calculateBMI = (weight, height) => {
   if (!weight || !height) return null;
@@ -56,6 +66,8 @@ exports.getProfile = async (req, res) => {
   res.json({ user, stats: buildStats(user) });
 };
 
+// Lưu hồ sơ. Đây là nơi DUY NHẤT tính lại mục tiêu calo chính thức,
+// app chỉ tính bản xem trước rồi hiện tạm thôi.
 exports.updateProfile = async (req, res) => {
   const { name, gender, age, weight, height, goal, activityLevel, conditions, calorieGoal, avatar, language, tastePreferences, isPrivate, targetWeight, weeklyRateKg, weeklyWorkoutTarget } = req.body;
 

@@ -6,17 +6,16 @@
 // Trả ra:     tên hiển thị, biểu tượng, và màu
 // Khi lỗi:    không có nhánh lỗi
 
-// Mọi màn có nhắc tới bữa đều lấy từ đây, nên sáng, trưa, tối và bữa phụ
-// luôn cùng màu và cùng biểu tượng ở khắp app.
+// Mọi màn lấy từ đây nên bốn buổi luôn cùng màu và cùng biểu tượng khắp app
 export type MealTypeKey = "breakfast" | "lunch" | "dinner" | "snack";
 
 export type MealTypeMeta = {
   key: MealTypeKey;
-  // Tên biểu tượng trong bộ Ionicons.
+  // Tên biểu tượng trong bộ Ionicons
   icon: string;
-  // Màu của biểu tượng.
+  // Màu của biểu tượng
   color: string;
-  // Màu nền nhẹ phía sau biểu tượng.
+  // Màu nền nhẹ phía sau biểu tượng
   bg: string;
 };
 

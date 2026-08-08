@@ -5,14 +5,7 @@
 // Nhận vào:   hồ sơ người dùng và vài số liệu tóm tắt
 // Trả ra:     thẻ thông tin cá nhân và danh sách lối vào các màn con
 // Khi lỗi:    tải hồ sơ hỏng thì hiện lời nhắc, các lối vào vẫn bấm được
-
-// LUỒNG MỞ HỒ SƠ, tự chạy khi vào tab
-// 1. useFocusEffect gọi AuthContext.fetchProfile
-// 2. accountApi.fetchProfileRequest      (GET /profile)
-// 3. Route gọi hàm getProfile trong backend/src/controllers/profileController.js;
-//    hàm này gọi buildStats
-//    để tính BMI và TDEE rồi trả về
-// 4. màn hiện tên, ảnh đại diện, và ba chỉ số
+//
 // Các lối đi từ màn này: Sửa hồ sơ, Cài đặt, Tiến trình, Nhắc nhở,
 // Đổi mật khẩu, và nút Đăng xuất.
 import { useCallback, useState } from "react";
@@ -31,9 +24,13 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { SectionLabel } from "@/ui/components/SectionLabel";
 
+// Một dòng trong danh sách: icon, nhãn, giá trị, và mũi tên nếu bấm được.
+// Có onPress thì bọc Pressable, không có thì chỉ là một dòng chữ.
+// Nhờ vậy dòng chỉ để xem và dòng bấm được nhìn giống hệt nhau, chỉ khác cái mũi tên.
 function SettingRow({ icon, label, value, last, onPress }: {
   icon: string; label: string; value: string; last?: boolean; onPress?: () => void;
 }) {
+  // Dựng phần ruột ra biến trước, vì hai nhánh bên dưới đều dùng chung y hệt.
   const content = (
     <>
       <View style={styles.rowIcon}>
@@ -53,6 +50,14 @@ function SettingRow({ icon, label, value, last, onPress }: {
   );
 }
 
+// ══════════════════════════════════════════════════════════
+// MỞ HỒ SƠ
+//
+// Đến từ tab thứ tư. Hai bước, đọc từ trên xuống là đúng thứ tự.
+// Xong thì màn hiện tên, ảnh đại diện, và ba chỉ số tóm tắt.
+// ══════════════════════════════════════════════════════════
+
+// MỞ HỒ SƠ BƯỚC 1. Lấy hồ sơ với số liệu tóm tắt từ AuthContext.
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, stats, logout, fetchProfile, uploadAvatar } = useAuth();
@@ -60,27 +65,49 @@ export default function ProfileScreen() {
 
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  // Tự tải lại hồ sơ mỗi lần quay về tab này,
-  // để BMI và TDEE luôn khớp với số đo mới nhất.
+  // MỞ HỒ SƠ BƯỚC 2. Tự tải lại mỗi lần quay về tab này, không ai bấm.
+  // Đường đi: AuthContext.fetchProfile → authApi → apiClient → GET /profile
+  //           → profileController.getProfile → buildStats
+  // Bên đó tính BMI với TDEE rồi trả về, nên hai số đó luôn khớp số đo mới nhất
+  // chứ không phải bản cũ lưu trong máy.
+  // Nuốt lỗi vì hồ sơ cũ trong AuthContext vẫn dùng được, và các lối vào bên dưới
+  // đâu cần hồ sơ mới mà vẫn bấm được.
   useFocusEffect(useCallback(() => { void fetchProfile().catch(() => {}); }, [fetchProfile]));
 
+  // ══════════════════════════════════════════════════════════
+  // ĐỔI ẢNH ĐẠI DIỆN
+  //
+  // Đến từ việc chạm vào ảnh đại diện. Bốn bước, đọc từ trên xuống
+  // là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 4.
+  // Xong thì ảnh đổi ngay trên màn, vì AuthContext đã cập nhật hồ sơ.
+  // ══════════════════════════════════════════════════════════
 
-  // Chạm vào ảnh đại diện.
+  // ĐỔI ẢNH BƯỚC 1. Xin quyền đọc thư viện ảnh trước.
+  // Chưa cho quyền thì dừng hẳn, không mở được thư viện.
   const handlePickAvatar = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert(t.profile.permissionNeeded, t.profile.avatarPermMsg);
       return;
     }
+    // ĐỔI ẢNH BƯỚC 2. Mở thư viện, cho cắt ảnh vuông ngay tại đó.
+    // aspect [1,1] ép khung vuông vì avatar là hình tròn, ảnh chữ nhật sẽ bị cắt xấu.
+    // quality 0.8 nén bớt cho nhẹ, đỡ bị imageUpload ở backend từ chối vì quá nặng.
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
+    // ĐỔI ẢNH BƯỚC 3. Người dùng bấm hủy giữa chừng thì thoát êm, không báo lỗi gì.
     if (result.canceled || !result.assets?.[0]?.uri) return;
     setIsUploadingAvatar(true);
     try {
+      // ĐỔI ẢNH BƯỚC 4. Gửi ảnh lên rồi ĐỨNG ĐÂY CHỜ. Chặng này lâu vì phải tải file.
+      // Đường đi: AuthContext.uploadAvatar → authApi → apiClient → POST /user/avatar
+      //           → imageUpload → accountController.uploadAvatar → Cloudinary
+      // Bên đó đẩy ảnh lên Cloudinary, cắt vuông, xóa ảnh cũ, rồi trả về đường dẫn.
+      // App chỉ giữ ĐƯỜNG DẪN, không giữ file ảnh trong máy.
       await uploadAvatar(result.assets[0].uri);
     } catch (error) {
       Alert.alert(t.profile.uploadFailed, getUserErrorMessage(error, t, t.profile.uploadFailedMsg));
@@ -89,10 +116,14 @@ export default function ProfileScreen() {
     }
   };
 
-  // Nút Đăng xuất.
-  // Hỏi xác nhận rồi gọi AuthContext.logout, hàm đó xóa phiên,
-  // hủy mọi lời nhắc và dọn dữ liệu tạm của tài khoản.
-  // handleLogout chuyển sang /auth/login trước, rồi đợi animation xong mới dọn phiên.
+  // ══════════════════════════════════════════════════════════
+  // ĐĂNG XUẤT
+  //
+  // Đến từ nút Đăng xuất ở cuối màn. Ba bước, và THỨ TỰ ở đây là quan trọng.
+  // Xong thì app về màn Đăng nhập, phiên với lời nhắc đã bị dọn sạch.
+  // ══════════════════════════════════════════════════════════
+
+  // ĐĂNG XUẤT BƯỚC 1. Hỏi lại cho chắc.
   const handleLogout = () => {
     Alert.alert(t.profile.logout, t.profile.logoutMsg, [
       { text: t.common.cancel, style: "cancel" },
@@ -100,7 +131,11 @@ export default function ProfileScreen() {
         text: t.profile.logout,
         style: "destructive",
         onPress: () => {
+          // ĐĂNG XUẤT BƯỚC 2. Chuyển màn TRƯỚC, dọn phiên sau.
           router.replace("/auth/login");
+          // ĐĂNG XUẤT BƯỚC 3. Chờ hiệu ứng chuyển màn xong rồi mới dọn phiên.
+          // Dọn sớm là mấy màn đang mở render lại lúc chưa kịp thoát, nhìn giật một cái.
+          // logout xóa phiên, hủy mọi lời nhắc, và dọn dữ liệu tạm của tài khoản.
           InteractionManager.runAfterInteractions(() => {
             void logout().catch((error) => console.error("Could not clear auth session:", error));
           });

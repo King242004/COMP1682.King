@@ -10,6 +10,12 @@
 // tim mà bài đã bị xóa. Không lọc thì màn hình hiện dòng trống bấm vào không ra gì.
 const Notification = require("../../models/Notification");
 
+// ══════════════════════════════════════════════════════════
+// BA CỬA VỀ THÔNG BÁO
+//
+// Không phải luồng. Lấy danh sách, đếm số chưa đọc, và đánh dấu đã đọc.
+// ══════════════════════════════════════════════════════════
+
 // Bỏ qua thông báo mà người gây ra đã xóa tài khoản, hoặc thông báo tim
 // mà bài đã bị xóa, để màn hình không hiện dòng trống bấm vào không ra gì.
 exports.getNotifications = async (req, res) => {
@@ -46,6 +52,8 @@ exports.getNotifications = async (req, res) => {
   res.json({ notifications: items });
 };
 
+// Đếm thông báo chưa đọc, cho chấm đỏ trên chuông.
+// Dùng countDocuments chứ không tải cả danh sách rồi đếm, vì chỉ cần một con số.
 exports.getUnreadCount = async (req, res) => {
   const count = await Notification.countDocuments({ user: req.user.id, read: false });
   res.json({ count });

@@ -10,7 +10,8 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, View, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { ApiTimeoutError, apiRequest } from "@/utils/apiClient";
+import { ApiTimeoutError } from "@/utils/apiClient";
+import { resetPasswordRequest, sendPasswordOTP, verifyPasswordOTP } from "@/features/auth/authApi";
 import { getUserErrorMessage } from "@/utils/errorUtils";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
@@ -26,10 +27,17 @@ import { INPUT_LIMITS } from "@/config/inputLimits";
 
 type Step = "email" | "otp" | "password";
 const STEPS: Step[] = ["email", "otp", "password"];
-// Chờ 60 giây thay vì 45 giây mặc định vì accountController.sendPasswordOTP
-// còn gọi backend/src/services/emailRelayClient.js để gửi email thật.
-const OTP_REQUEST_TIMEOUT_MS = 60_000;
 
+// ══════════════════════════════════════════════════════════
+// ĐẶT LẠI MẬT KHẨU
+//
+// Đến từ liên kết Quên mật khẩu ở màn Đăng nhập. Bốn bước, đọc từ trên xuống
+// là đúng thứ tự. Cả bốn bước đều có chặng chờ mạng.
+// Xong thì quay về màn Đăng nhập để họ đăng nhập bằng mật khẩu mới.
+// ══════════════════════════════════════════════════════════
+
+// ĐẶT LẠI MẬT KHẨU BƯỚC 1. Nhận email, mã, và mật khẩu mới.
+// Ba bước hiện trên màn phân biệt bằng state step: email, otp, rồi password.
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const t = useT();
@@ -53,6 +61,10 @@ export default function ForgotPasswordScreen() {
 
   // accountController.sendPasswordOTP luôn trả câu chung chung, nên bước này thành công cả khi
   // email chưa có tài khoản. Đó là cố ý, để không lộ email nào đã đăng ký.
+  // ĐẶT LẠI MẬT KHẨU BƯỚC 2. Bấm Gửi mã.
+  // Đường đi: apiClient → POST /user/send-otp → accountController.sendPasswordOTP
+  //           → services/emailRelayClient.js → email relay
+  // Chờ lâu hơn mặc định vì còn phải chờ gửi email thật, xem hằng số ở đầu file.
   const handleSendOTP = async () => {
     if (!emailIsValid) {
       setError(t.auth.invalidEmail);
@@ -62,13 +74,7 @@ export default function ForgotPasswordScreen() {
     setNotice("");
     setIsLoading(true);
     try {
-      await apiRequest(
-        "/user/send-otp",
-        "POST",
-        { email: email.trim(), language },
-        undefined,
-        { timeoutMs: OTP_REQUEST_TIMEOUT_MS }
-      );
+      await sendPasswordOTP(email.trim(), language);
       setStep("otp");
       startOtpCooldown();
     } catch (error) {
@@ -78,6 +84,8 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  // Nút Gửi lại mã, chỉ bấm được khi đồng hồ đã về 0.
+  // Đi cùng đường với BƯỚC 2. Xóa ô mã cũ vì mã cũ đã hết hiệu lực.
   const handleResendOTP = async () => {
     if (resendSeconds > 0 || isLoading) return;
     setOtp("");
@@ -85,13 +93,7 @@ export default function ForgotPasswordScreen() {
     setNotice("");
     setIsLoading(true);
     try {
-      await apiRequest(
-        "/user/send-otp",
-        "POST",
-        { email: email.trim(), language },
-        undefined,
-        { timeoutMs: OTP_REQUEST_TIMEOUT_MS }
-      );
+      await sendPasswordOTP(email.trim(), language);
       startOtpCooldown();
       setNotice(t.auth.otpResent);
     } catch (error) {
@@ -101,6 +103,10 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  // ĐẶT LẠI MẬT KHẨU BƯỚC 3. Bấm Xác minh mã.
+  // Đường đi: apiClient → POST /user/verify-otp → accountController.verifyPasswordOTP
+  // Bước này CHỈ kiểm mã đúng hay sai, chưa đổi mật khẩu gì cả.
+  // Tách riêng để người dùng biết mã sai ngay, chứ đừng gõ xong mật khẩu mới mới báo.
   const handleVerifyOTP = async () => {
     if (!otpIsValid) {
       setError(t.auth.otpMustBe6);
@@ -109,7 +115,7 @@ export default function ForgotPasswordScreen() {
     setError("");
     setIsLoading(true);
     try {
-      await apiRequest("/user/verify-otp", "POST", { email: email.trim(), otp: otp.trim() });
+      await verifyPasswordOTP(email.trim(), otp.trim());
       setStep("password");
     } catch (error) {
       setError(getUserErrorMessage(error, t, t.auth.invalidOtp));
@@ -118,6 +124,10 @@ export default function ForgotPasswordScreen() {
     }
   };
 
+  // ĐẶT LẠI MẬT KHẨU BƯỚC 4. Bấm Đặt mật khẩu mới.
+  // Đường đi: apiClient → POST /user/reset-password → accountController.resetPassword
+  // Nhớ: phải gửi KÈM LẠI mã 6 số, dù BƯỚC 3 đã kiểm rồi.
+  //      Vì mỗi request là độc lập, backend không nhớ mình vừa kiểm mã xong.
   const handleResetPassword = async () => {
     if (newPassword.length < 6) {
       setError(t.auth.passwordTooShort);
@@ -138,13 +148,7 @@ export default function ForgotPasswordScreen() {
     setError("");
     setIsLoading(true);
     try {
-      // Gửi lại mã vì accountController.verifyOTP không tạo reset token;
-      // accountController.resetPassword kiểm OTP lần nữa rồi mới xóa mã.
-      await apiRequest("/user/reset-password", "POST", {
-        email: email.trim(),
-        otp: otp.trim(),
-        newPassword,
-      });
+      await resetPasswordRequest(email.trim(), otp.trim(), newPassword);
       Alert.alert(t.auth.resetSuccessTitle, t.auth.resetSuccessMsg, [
         { text: t.auth.signIn, onPress: () => router.replace("/auth/login") },
       ]);

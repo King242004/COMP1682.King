@@ -30,18 +30,28 @@ if (KEYS.length === 0) {
   console.log(`Gemini: ${KEYS.length} API key(s) loaded`);
 }
 
-// Mỗi khóa tạo một đường gọi riêng.
+// ══════════════════════════════════════════════════════════
+// DỰNG BẢNG ĐƯỜNG GỌI AI
+//
+// Không ai gọi, cả khối chạy MỘT LẦN lúc server nạp file này.
+// Ba bước, đọc từ trên xuống là đúng thứ tự.
+// Xong thì các controller lấy bảng ra, thử lần lượt từ trên xuống,
+// hỏng cách này thì tụt sang cách sau.
+// ══════════════════════════════════════════════════════════
+
+// DỰNG BẢNG BƯỚC 1. Mỗi khóa tạo một đường gọi riêng.
 const clients = KEYS.map((k) => new GoogleGenerativeAI(k));
 
-// Model là các bản Gemini khác nhau, con khỏe con nhẹ.
+// DỰNG BẢNG BƯỚC 2. Model là các bản Gemini khác nhau, con khỏe con nhẹ.
 // Đây là thứ tự gọi chứ không phải danh sách chọn: con đầu hỏng thì tụt xuống con sau.
 const TEXT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
+// Model cho việc nhìn ảnh đoán món. Hiện dùng đúng danh sách như phần chữ.
 const VISION_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
 // Chat giữ flash ở đầu vì câu trả lời cần model mạnh nhất. flash-lite nằm giữa
 // làm chỗ lui khi flash hết lượt, vì flash-latest hay chạm trần thời gian chờ.
 const CHAT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
 
-// Ghép mỗi khóa với mỗi model. Hiện có 3 khóa và 3 model nên ra 9 cách gọi.
+// DỰNG BẢNG BƯỚC 3. Ghép mỗi khóa với mỗi model. Hiện có 3 khóa và 3 model nên ra 9 cách gọi.
 // Cách này hỏng thì thử cách khác, nên hết lượt một khóa chưa làm app chết.
 function buildModels(names, generationConfig) {
   return clients.flatMap((client) =>

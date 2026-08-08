@@ -5,17 +5,11 @@
 // Nhận vào:   bật hay tắt từng bữa, và giờ muốn nhắc
 // Trả ra:     lịch do notificationService lưu bằng expo-notifications và AsyncStorage
 // Khi lỗi:    chưa cho phép thông báo thì công tắc tự tắt lại, không để bật giả
-
-// LUỒNG ĐẶT LỜI NHẮC
-// 1. Bật công tắc của một bữa, hoặc đổi giờ nhắc
-// 2. reminders.applyReminder
-// 3. hủy lời nhắc cũ của bữa đó trước
-// 4. notifications.scheduleDailyReminder xin quyền rồi đặt lịch mới
-// 5. lưu trạng thái vào bộ nhớ máy
-// Điểm quan trọng: luồng này không gọi apiClient. notificationService dùng
-// expo-notifications để hệ điều hành giữ lịch ngay trên điện thoại.
-// Vì vậy thông báo vẫn hiện dù món của bữa đó đã được ghi rồi.
-// Đăng xuất sẽ hủy toàn bộ lời nhắc, để không nhắc nhầm tài khoản khác.
+//
+// Nhớ: cả màn này KHÔNG gọi apiClient lần nào, không có gì lên server cả.
+//      Lịch do hệ điều hành giữ ngay trên máy, qua expo-notifications.
+//      Vì vậy thông báo vẫn kêu dù bữa đó đã ghi món rồi.
+//      Đăng xuất thì authSession hủy sạch, để không nhắc nhầm tài khoản khác.
 import { useCallback, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { useFocusEffect } from "expo-router";
@@ -31,6 +25,7 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 import { INPUT_LIMITS } from "@/config/inputLimits";
 
+// Icon cho từng bữa, chọn theo thời điểm trong ngày: mặt trời, trời râm, trăng, hạt.
 const ICONS: Record<MealKey, keyof typeof Ionicons.glyphMap> = {
   breakfast: "sunny-outline",
   lunch: "partly-sunny-outline",
@@ -38,6 +33,17 @@ const ICONS: Record<MealKey, keyof typeof Ionicons.glyphMap> = {
   snack: "nutrition-outline",
 };
 
+// ══════════════════════════════════════════════════════════
+// ĐẶT LỜI NHẮC
+//
+// Đến từ màn Hồ sơ. Bốn bước, đọc từ trên xuống là đúng thứ tự.
+// KHÔNG gọi mạng, chỉ nói chuyện với hệ điều hành qua reminderSettings.
+// Xong thì máy tự kêu vào giờ đã đặt, mỗi ngày một lần cho mỗi bữa đang bật.
+// ══════════════════════════════════════════════════════════
+
+// ĐẶT LỜI NHẮC BƯỚC 1. Đọc trạng thái bốn lời nhắc từ bộ nhớ máy khi mở màn.
+// Cờ busy chặn bấm chồng: đang đặt lịch một bữa thì khóa mọi công tắc khác,
+// kẻo hai lượt cùng ghi xuống máy và đè lên nhau.
 export default function RemindersScreen() {
   const t = useT();
   const [state, setState] = useState<ReminderMap>(emptyReminders());
@@ -48,22 +54,35 @@ export default function RemindersScreen() {
   // Tự đọc trạng thái bốn lời nhắc từ bộ nhớ máy khi mở màn.
   useFocusEffect(useCallback(() => { void loadReminders().then(setState).catch(() => {}); }, []));
 
+  // ĐẶT LỜI NHẮC BƯỚC 2. Dựng nội dung câu nhắc cho một bữa.
+  // Tên bữa lấy từ bảng dịch, thiếu thì lấy tạm mã bữa cho khỏi hiện chuỗi trống.
   const mealLabel = (key: MealKey) => t.labels.mealType[key] ?? key;
 
+  // Nội dung này đi thẳng xuống hệ điều hành và ĐÓNG BĂNG ở đó.
+  // Nghĩa là đổi ngôn ngữ app sau khi đặt lịch thì thông báo vẫn giữ tiếng cũ,
+  // tới khi người dùng đụng lại công tắc thì mới đặt lại và cập nhật.
   const notifContent = (key: MealKey) => ({
     title: t.settings.reminderNotifTitle(mealLabel(key)),
     body: t.settings.reminderNotifBody,
   });
 
+  // ĐẶT LỜI NHẮC BƯỚC 3. Người dùng gạt công tắc một bữa.
   const toggle = async (key: MealKey, value: boolean) => {
     if (busy) return;
     setBusy(true);
+    // Gạt công tắc trên màn NGAY, chưa chờ hệ điều hành, cho bấm là thấy nhúc nhích.
     setState((prev) => ({ ...prev, [key]: { ...prev[key], enabled: value } }));
     try {
+      // Giao cho reminderSettings rồi ĐỨNG ĐÂY CHỜ.
+      // Đường đi: applyReminder → notificationService.scheduleDailyReminder
+      //           → expo-notifications → hệ điều hành
+      // Bên đó hủy lịch cũ của bữa này trước, rồi mới đặt lịch mới và ghi xuống máy.
       const next = await applyReminder(
         state, key, { enabled: value, time: state[key].time }, notifContent(key)
       );
       setState(next);
+      // Xin bật mà kết quả trả về vẫn tắt nghĩa là người dùng chưa cho quyền thông báo.
+      // Công tắc đã tự về tắt ở dòng trên, giờ nói cho họ biết vì sao.
       if (value && !next[key].enabled) {
         Alert.alert(t.profile.permissionNeeded, t.settings.reminderPermMsg);
       }
@@ -72,18 +91,23 @@ export default function RemindersScreen() {
     }
   };
 
+  // ĐẶT LỜI NHẮC BƯỚC 4. Người dùng đổi giờ nhắc rồi bấm Lưu.
   const saveTime = async () => {
     if (!editing) return;
+    // Kiểm giờ TRƯỚC khi đóng hộp, sai thì báo rồi giữ nguyên hộp cho họ sửa.
     const parsed = parseTime(timeInput);
     if (!parsed) {
       Alert.alert(t.common.errorTitle, t.settings.invalidTime);
       return;
     }
+    // Chép ra biến riêng vì dòng dưới xóa editing đi, mà đoạn sau vẫn cần biết bữa nào.
     const key = editing;
     const time = formatTime(parsed[0], parsed[1]);
     setEditing(null);
     setBusy(true);
     try {
+      // Giữ nguyên trạng thái bật tắt, chỉ đổi giờ. Đang tắt thì đổi giờ xong vẫn tắt.
+      // Đường đi giống hệt BƯỚC 3, cũng qua applyReminder.
       setState(await applyReminder(state, key, { enabled: state[key].enabled, time }, notifContent(key)));
     } finally {
       setBusy(false);

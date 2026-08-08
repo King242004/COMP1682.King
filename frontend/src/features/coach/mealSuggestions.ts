@@ -1,13 +1,16 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Adapter giữa SuggestMealCard và coachApi.suggestMeal, có lưu tạm kết quả.
+// Địa chỉ /coach/suggest-meal, kèm phần lưu tạm kết quả trong máy.
 //
-// Ai gọi tới: SuggestMealCard
+// Ai gọi tới: SuggestMealCard bên src/features/plan
 // Nhận vào:   ngày, bữa, và ngôn ngữ
 // Trả ra:     món được gợi ý
 // Khi lỗi:    AI hết lượt thì trả QUOTA, thẻ hiện lời nhắc thử lại sau
-
-// Ngoài gọi mạng, nó lưu tạm kết quả theo ngày, bữa và ngôn ngữ,
-// vì mỗi lần gợi ý tốn một lượt gọi AI.
+//
+// File này nằm cùng thư mục với coachApi.ts vì địa chỉ nó gọi thuộc nhóm
+// /coach, dù màn hình dùng nó lại nằm bên plan. Trước đây nó nằm bên plan
+// và ghi chú nói nó gọi qua coachApi.suggestMeal, nhưng hàm đó chưa từng có.
+//
+// Lưu tạm kết quả theo ngày, bữa và ngôn ngữ, vì mỗi lần gợi ý tốn một lượt AI.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/apiClient";
 import { stripMarkdown } from "@/features/coach/coachApi";

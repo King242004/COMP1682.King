@@ -15,6 +15,18 @@ const { INPUT_LIMITS } = require("../config/inputLimits");
 const cloudinary = require("../config/cloudinary");
 const { sendOTP } = require("../services/emailRelayClient");
 const User = require("../models/User");
+// ══════════════════════════════════════════════════════════
+// CÁC CỬA VỀ TÀI KHOẢN
+//
+// Không phải luồng. Mấy cửa độc lập: đổi tên, đổi ảnh đại diện, đổi mật khẩu,
+// quên mật khẩu, và xóa tài khoản.
+// 
+// Nhớ: xóa tài khoản là việc KHÔNG lùi được. Nó phải dọn dữ liệu ở MỌI bảng
+//      và xóa cả ảnh trên Cloudinary, sót chỗ nào là rác nằm lại vĩnh viễn.
+// ══════════════════════════════════════════════════════════
+
+// Từ đây xuống là các bảng cần dọn khi xóa tài khoản.
+// Thiếu một bảng là dữ liệu của người đã xóa còn nằm lại trong database.
 const OTP = require("../models/OTP");
 const Meal = require("../models/Meal");
 const Exercise = require("../models/Exercise");
@@ -29,6 +41,8 @@ const NutritionEstimateCache = require("../models/NutritionEstimateCache");
 const { reserveOTP, verifyOTPCode } = require("../services/otpService");
 const { OTP_PURPOSE, OTP_TTL_MS, generateOTP, hashOTP, normalizeEmail, waitForResponseFloor } = require("../utils/otpSecurity");
 const { createAuthToken } = require("../utils/authToken");
+// Chốt ngôn ngữ email. Chỉ có tiếng Việt hoặc tiếng Anh,
+// giá trị lạ thì rơi về tiếng Anh.
 const resolveEmailLanguage = (value) => value === "vi" ? "vi" : "en";
 
 // Đẩy ảnh lên kho ảnh và cắt vuông 300x300 ngay lúc tải lên.
@@ -234,6 +248,9 @@ exports.deleteAccount = async (req, res) => {
     Post.find({ user: uid }).select("imagePublicId images"),
     ChatMessage.find({ user: uid }).select("imagePublicId"),
   ]);
+  // Gom mã ảnh trên Cloudinary của cả tài khoản: ảnh đại diện và ảnh mọi bài đăng.
+  // Phải gom trước khi xóa dữ liệu, kẻo xóa xong là mất đường tìm lại ảnh,
+  // và ảnh nằm lại trên Cloudinary mãi mãi.
   const publicIds = [
     user.avatarPublicId,
     ...posts.flatMap((p) => [p.imagePublicId, ...(p.images || []).map((i) => i.publicId)]),

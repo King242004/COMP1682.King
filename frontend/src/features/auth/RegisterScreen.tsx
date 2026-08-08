@@ -5,6 +5,9 @@
 // Nhận vào:   tên, email, mật khẩu, và mã 6 số
 // Trả ra:     không trả gì, tạo xong thì đi thẳng sang bước Thiết lập lần đầu
 // Khi lỗi:    email đã có tài khoản thì báo chung chung, không nói rõ để tránh lộ tài khoản
+//
+// Nhớ: chỉ có MỘT màn nhưng hai bước, phân biệt bằng state step.
+//      step là "details" thì hiện form thông tin, là "verify" thì hiện ô nhập mã.
 
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -25,6 +28,16 @@ import { INPUT_LIMITS } from "@/config/inputLimits";
 
 type RegisterStep = "details" | "verify";
 
+// ══════════════════════════════════════════════════════════
+// ĐĂNG KÝ
+//
+// Đến từ liên kết Đăng ký ở màn Đăng nhập. Bốn bước, đọc từ trên xuống
+// là đúng thứ tự. Hai chặng chờ mạng, ở BƯỚC 2 xin mã và BƯỚC 3 tạo tài khoản.
+// Xong thì đi thẳng sang màn Thiết lập lần đầu, KHÔNG phải đăng nhập lại,
+// vì backend đã trả thẻ về ngay lúc tạo tài khoản.
+// ══════════════════════════════════════════════════════════
+
+// ĐĂNG KÝ BƯỚC 1. Nhận thông tin người dùng gõ.
 export default function RegisterScreen() {
   const router = useRouter();
   const { requestRegistrationOTP, register } = useAuth();
@@ -53,6 +66,8 @@ export default function RegisterScreen() {
     return null;
   };
 
+  // Điều kiện bật nút. Lỏng hơn hàm kiểm ở trên, chỉ để nút đừng mờ mãi.
+  // Hai bước dùng chung một nút, nên phải xét step để biết đang kiểm cái gì.
   const canSubmit = useMemo(() => {
     if (isLoading) return false;
     if (step === "verify") return isValidOtp(otp);
@@ -62,6 +77,12 @@ export default function RegisterScreen() {
       && isStrongPassword(password);
   }, [email, isLoading, name, otp, password, step]);
 
+  // ĐĂNG KÝ BƯỚC 2. Bấm nút Gửi mã.
+  // Kiểm hết tại máy trước, sai thì báo ngay chứ đừng để họ chờ một lượt mạng rồi mới biết.
+  // Đường đi: AuthContext.requestRegistrationOTP → authApi → apiClient
+  //           → POST /auth/register/send-otp → authController.sendRegistrationOTP
+  //           → otpService → email relay
+  // Gửi xong thì đổi step sang verify và bật đồng hồ đếm ngược nút Gửi lại.
   const handleSendCode = async () => {
     const validationError = validateDetails();
     if (validationError) {
@@ -83,6 +104,11 @@ export default function RegisterScreen() {
     }
   };
 
+  // ĐĂNG KÝ BƯỚC 3. Bấm nút Tạo tài khoản, kèm mã 6 số vừa nhận trong email.
+  // Đường đi: AuthContext.register → authApi → apiClient → POST /auth/register
+  //           → authController.register
+  // Bên đó so mã, tạo tài khoản, rồi trả THẺ về luôn. Nhờ vậy dòng dưới đi thẳng
+  // sang màn Thiết lập lần đầu mà không phải qua màn Đăng nhập.
   const handleCreateAccount = async () => {
     if (!isValidOtp(otp)) {
       setError(t.auth.otpMustBe6);
@@ -102,6 +128,8 @@ export default function RegisterScreen() {
     }
   };
 
+  // ĐĂNG KÝ BƯỚC 4. Nút Gửi lại mã, chỉ bấm được khi đồng hồ đã về 0.
+  // Đi cùng một đường với BƯỚC 2. Xóa ô mã cũ đi, vì mã cũ đã hết hiệu lực.
   const handleResend = async () => {
     if (resendSeconds > 0 || isLoading) return;
     setError("");
@@ -119,6 +147,8 @@ export default function RegisterScreen() {
     }
   };
 
+  // Nút Đổi email, quay ngược về bước nhập thông tin.
+  // Dọn sạch mã, lỗi, lời nhắc và đồng hồ, coi như bắt đầu lại từ đầu.
   const handleChangeEmail = () => {
     setStep("details");
     setOtp("");

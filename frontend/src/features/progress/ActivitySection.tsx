@@ -5,9 +5,9 @@
 // Nhận vào:   khoảng ngày đang xem
 // Trả ra:     tổng thời gian tập, calo đốt, và danh sách buổi tập
 // Khi lỗi:    gọi mạng riêng nên hỏng thì chỉ phần này báo lỗi, phần món ăn vẫn chạy
-
-// Gọi mạng riêng chứ không dùng chung với món ăn, vì hai nhóm dữ liệu
-// nằm ở hai bảng khác nhau trong database.
+//
+// Nhớ: phần này TỰ gọi mạng lấy buổi tập, không dùng chung lượt gọi với phần món ăn,
+//      vì hai nhóm dữ liệu nằm ở hai bảng khác nhau trong database.
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -25,10 +25,19 @@ type Mode = "week" | "month" | "year";
 type BurnDay = { key: string; label: string; fullLabel: string; isToday: boolean; isFuture: boolean; burned: number; count: number };
 type BurnMonth = { key: string; label: string; burned: number; count: number; isFuture: boolean };
 
+// ══════════════════════════════════════════════════════════
+// HAI HÀM GOM SỐ
+//
+// Không phải luồng. Hai hàm gom danh sách buổi tập thô thành từng ngày
+// hoặc từng tháng. Cả hai đều được gọi ở khối XEM HOẠT ĐỘNG bên dưới.
+// ══════════════════════════════════════════════════════════
+
+// Đệm số 0 cho đủ hai chữ số, để tháng 3 ra "03" chứ không ra "3".
 const pad = (n: number) => String(n).padStart(2, "0");
 
-// Mỗi ngày trong khoảng có một dòng, từ ngày cũ nhất đến hôm nay.
-// `locale` giúp nhãn theo ngôn ngữ ứng dụng thay vì ngôn ngữ điện thoại.
+// Gom theo NGÀY, dùng cho chế độ Tuần và Tháng.
+// Mỗi ngày trong khoảng có một dòng, kể cả ngày không tập, để biểu đồ đủ cột.
+// locale để nhãn theo ngôn ngữ trong app, không theo ngôn ngữ điện thoại.
 function buildBurnDays(exercises: Exercise[], windowDays: Date[], locale?: string): BurnDay[] {
   const todayK = dateKey(new Date());
   const todayStart = new Date();
@@ -48,7 +57,8 @@ function buildBurnDays(exercises: Exercise[], windowDays: Date[], locale?: strin
   });
 }
 
-// Tổng calo tiêu hao của 12 tháng dùng cho biểu đồ Năm.
+// Gom theo THÁNG, dùng riêng cho chế độ Năm. Luôn đủ 12 tháng, tháng chưa tới
+// thì đánh dấu isFuture để biểu đồ vẽ mờ đi chứ không giấu cột.
 function buildBurnMonths(exercises: Exercise[], year: number, locale?: string): BurnMonth[] {
   const now = new Date();
   const out: BurnMonth[] = [];
@@ -68,8 +78,17 @@ function buildBurnMonths(exercises: Exercise[], year: number, locale?: string): 
   return out;
 }
 
-// Phần hoạt động có cách bố trí giống tab calo: chuyển khoảng thời gian, biểu đồ,
-// tổng và trung bình calo tiêu hao, mức duy trì tập luyện và các số liệu.
+// ══════════════════════════════════════════════════════════
+// XEM HOẠT ĐỘNG
+//
+// Đến từ màn Tiến trình, tab Hoạt động. Bốn bước, đọc từ trên xuống
+// là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 2.
+// Bố cục giống hệt tab Calo: thanh chuyển khoảng, biểu đồ, rồi các con số.
+// ══════════════════════════════════════════════════════════
+
+// XEM HOẠT ĐỘNG BƯỚC 1. Màn Tiến trình đưa xuống khoảng ngày đang xem.
+// Phần này KHÔNG tự quản khoảng ngày, chỉ nhận rồi dùng, để tab Calo với tab
+// Hoạt động luôn xem cùng một khoảng.
 export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey, onSelectKey, periodLabel, onShiftPeriod, nextDisabled }: {
   mode: Mode;
   anchor: Date;
@@ -91,7 +110,13 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
   const start = mode === "year" ? `${year}-01-01` : dateKey(windowDays[0]);
   const end = mode === "year" ? `${year}-12-31` : dateKey(windowDays[windowDays.length - 1]);
 
-  // Dùng chuỗi ngày ổn định làm phụ thuộc thay vì dùng chính mảng.
+  // XEM HOẠT ĐỘNG BƯỚC 2. Tải buổi tập của khoảng đang xem.
+  // Đường đi: getExerciseHistory → apiClient → GET /exercise/history
+  //           → exerciseController.getExerciseHistory
+  // Mảng phụ thuộc dùng hai CHUỖI start với end, không dùng mảng windowDays,
+  // vì mảng dựng mới mỗi nhịp vẽ nên effect sẽ chạy vô tận.
+  // Cờ alive chặn kết quả về muộn: đổi khoảng liên tục thì lượt cũ về sau
+  // sẽ không được đặt vào state nữa.
   useEffect(() => {
     if (!token) return;
     let alive = true;
@@ -108,6 +133,8 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
   // và lệch hẳn với Trang chủ vốn đã đọc đúng trường trong hồ sơ.
   const weekTarget = user?.weeklyWorkoutTarget ?? null;
 
+  // XEM HOẠT ĐỘNG BƯỚC 3. Gom danh sách thô thành từng ngày, và thêm từng tháng
+  // nếu đang ở chế độ Năm. Hai hàm gom nằm ở đầu file.
   const burnDays = buildBurnDays(exercises, windowDays, locale);
   const burnMonths = mode === "year" ? buildBurnMonths(exercises, year, locale) : [];
 
@@ -115,6 +142,8 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
   const bars: Bar[] = mode === "year"
     ? burnMonths.map((mt, i) => ({ key: mt.key, label: String(i + 1), fullLabel: mt.label, value: mt.burned, color: theme.colors.accent2, dim: mt.isFuture }))
     : burnDays.map((d, i) => ({ key: d.key, label: t.labels.daysShort[i], value: d.burned, color: theme.colors.accent2, dim: d.isFuture }));
+  // XEM HOẠT ĐỘNG BƯỚC 4. Cột cao nhất, dùng làm mốc để tính chiều cao các cột kia.
+  // Đuôi "|| 1" chặn trường hợp cả khoảng không tập buổi nào, tránh chia cho 0.
   const maxValue = (mode === "year"
     ? Math.max(0, ...burnMonths.map((mt) => mt.burned))
     : burnDays.reduce((m, d) => Math.max(m, d.burned), 0)) || 1;

@@ -12,6 +12,8 @@
 // aiLimiter đếm riêng theo từng người dùng nên bắt buộc phải đặt SAU cửa đăng nhập.
 const rateLimit = require("express-rate-limit");
 
+// Khuôn chung để dựng một bộ đếm lượt. Mọi bộ đếm bên dưới đều nặn từ đây,
+// nên đổi cách đếm chỉ phải sửa một chỗ.
 function createLimiter(limit, message, options = {}) {
   return rateLimit({
     windowMs: 15 * 60 * 1000,

@@ -39,14 +39,25 @@ import { INPUT_LIMITS, DIGIT_LIMITS } from "@/config/inputLimits";
 type Step = "intro" | "goal" | "body" | "health";
 const STEPS: Step[] = ["intro", "goal", "body", "health"];
 
-// Công thức và hệ số nay nằm ở src/config/nutrition.ts, không gõ lại tại đây.
-// Hai con số này chỉ để xem trước; profileController.updateProfile sẽ tính lại
-// mục tiêu chính thức từ cùng dữ liệu khi hồ sơ được lưu.
+// ══════════════════════════════════════════════════════════
+// THIẾT LẬP LẦN ĐẦU
+//
+// Đến từ màn Đăng ký, ngay sau khi tạo tài khoản xong. Năm bước,
+// đọc từ trên xuống là đúng thứ tự. Chỉ MỘT chặng chờ mạng, ở BƯỚC 5.
+// Xong thì vào thẳng Trang chủ.
+//
+// Nhớ: TDEE và mục tiêu calo hiện trên màn chỉ để XEM TRƯỚC, tính tại máy.
+//      Số chính thức do profileController tính lại lúc lưu, và có thể lệch.
+// ══════════════════════════════════════════════════════════
 
+// THIẾT LẬP BƯỚC 1. Dựng ba bảng lựa chọn cho ba màn hỏi.
+// Phải dựng trong thân hàm chứ không để ngoài file, vì nhãn lấy từ bảng dịch,
+// mà bảng dịch đổi theo ngôn ngữ đang chọn.
 export function OnboardingFlow() {
   const router = useRouter();
   const { updateProfile } = useAuth();
   const t = useT();
+  // Lối tắt tới cụm chữ của phần Thiết lập, bên dưới gọi tới rất nhiều lần.
   const L = t.onboarding;
 
   const GOALS: { key: WeightGoal; icon: string; label: string }[] = [
@@ -54,11 +65,13 @@ export function OnboardingFlow() {
     { key: "gain_weight", icon: "barbell", label: t.labels.goal.gain_weight },
     { key: "maintain_weight", icon: "leaf", label: t.labels.goal.maintain_weight },
   ];
+  // Ba mức vận động, dùng ở màn hỏi số đo.
   const ACTIVITIES = [
     { key: "sedentary", label: t.labels.activity.sedentary },
     { key: "moderate", label: t.labels.activity.moderate },
     { key: "active", label: t.labels.activity.active },
   ];
+  // Năm bệnh nền, phải khớp với RULES trong backend foodSafetyFilter.js.
   const CONDITIONS = [
     { key: "diabetes", label: t.labels.condition.diabetes },
     { key: "hypertension", label: t.labels.condition.hypertension },
@@ -67,7 +80,10 @@ export function OnboardingFlow() {
     { key: "gastritis", label: t.labels.condition.gastritis },
   ];
 
+  // THIẾT LẬP BƯỚC 2. Giữ câu trả lời của cả bốn màn trong một chỗ.
+  // step cho biết đang ở màn nào, mảng STEPS ở đầu file quyết định thứ tự.
   const [step, setStep] = useState<Step>("intro");
+  // Mặc định là giữ cân, mức trung tính nhất, không đẩy người dùng theo hướng nào.
   const [goal, setGoal] = useState<WeightGoal>("maintain_weight");
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [age, setAge] = useState("");
@@ -80,18 +96,24 @@ export function OnboardingFlow() {
 
   const stepIndex = STEPS.indexOf(step);
 
-  // TDEE ước tính thay đổi ngay khi người dùng nhập dữ liệu.
+  // THIẾT LẬP BƯỚC 3. Tính thử TDEE với mục tiêu calo, đổi ngay theo từng phím gõ.
+  // Thiếu bất kỳ số nào thì trả null, và màn giấu phần xem trước đi
+  // chứ KHÔNG hiện một con số bịa.
   const w = Number(weight), h = Number(height), a = Number(age);
   const tdee = gender && w > 0 && h > 0 && a > 0 ? estimateTDEE(w, h, a, gender, activity) : null;
   const goalCal = gender ? estimateCalorieGoal(tdee, gender, goal) : null;
 
+  // THIẾT LẬP BƯỚC 4. Bật tắt một bệnh nền. Chọn được nhiều bệnh cùng lúc.
   const toggleCondition = (c: string) =>
     setConditions((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
 
+  // Vào Trang chủ. Dùng replace chứ không push, để vuốt ngược không quay lại đây.
   const goHome = () => router.replace("/tabs");
 
-  // Lưu câu trả lời qua AuthContext.updateProfile; profileController.updateProfile
-  // gọi calorieGoal.autoGoal khi đủ số đo.
+  // THIẾT LẬP BƯỚC 5. Bấm Xong ở màn cuối.
+  // Đường đi: AuthContext.updateProfile → authApi → apiClient → PUT /profile
+  //           → profileController.updateProfile → services/nutrition/calorieGoal.js
+  // Bên đó tính lại mục tiêu calo chính thức từ đúng bộ số này.
   const finish = async () => {
     if (saving) return;
     setSaving(true);

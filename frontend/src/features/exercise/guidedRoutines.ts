@@ -433,6 +433,8 @@ const ROUTINE_FAMILIES: RoutineFamily[] = [
   },
 ];
 
+// Từ MỘT khối gốc 10 phút, đẻ ra đủ ba bản 10, 20 và 30 phút.
+// Viết tay cả ba bản thì sửa một bước phải sửa ba chỗ, dễ lệch.
 function buildVariants(family: RoutineFamily): GuidedRoutine[] {
   const exerciseCount = family.steps10.filter((step) => !step.rest).length;
 

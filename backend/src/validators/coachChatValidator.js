@@ -12,9 +12,23 @@ const { LEGACY_LIMITS } = require("../config/inputLimits");
 
 // Trần tin nhắn người dùng gửi trong một lượt.
 const MAX_MESSAGE_CHARS = LEGACY_LIMITS.COACH_MESSAGE;
+// Trần ảnh, đếm theo ký tự base64 chứ không theo byte, vì ảnh gửi lên dạng chuỗi.
+// Base64 phình khoảng một phần ba, nên 6 triệu ký tự cỡ 4.5 MB ảnh thật.
 const MAX_IMAGE_BASE64_CHARS = 6_000_000;
+// Chỉ nhận năm định dạng này. heic với heif là định dạng ảnh mặc định của iPhone.
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
+// ══════════════════════════════════════════════════════════
+// KIỂM TIN NHẮN COACH
+//
+// Đến từ coachController, chạy TRƯỚC khi gọi Gemini.
+// Ba bước, đọc từ trên xuống là đúng thứ tự.
+// Chặn ở đây thì đỡ tốn một lượt gọi AI cho dữ liệu vốn đã hỏng.
+// ══════════════════════════════════════════════════════════
+
+// KIỂM TIN NHẮN BƯỚC 1. Kiểm KIỂU trước, phải là chuỗi hoặc bỏ trống.
+// Kiểm kiểu trước khi ép chuỗi, kẻo gửi lên một object thì String() ra
+// "[object Object]" và lọt qua mọi cửa kiểm bên dưới.
 function validateCoachChat(body = {}) {
   if (body.message != null && typeof body.message !== "string") {
     return { error: "Message must be text." };
@@ -23,10 +37,12 @@ function validateCoachChat(body = {}) {
     return { error: "Image data is invalid." };
   }
 
+  // KIỂM TIN NHẮN BƯỚC 2. Giờ mới ép về chuỗi và cắt khoảng trắng.
   const message = String(body.message || "").trim();
   const image = String(body.image || "");
   const mimeType = String(body.mimeType || "image/jpeg").toLowerCase();
 
+  // KIỂM TIN NHẮN BƯỚC 3. Phải có ít nhất một trong hai, chữ hoặc ảnh.
   if (!message && !image) return { error: "Message or image is required." };
   if (message.length > MAX_MESSAGE_CHARS) {
     return { error: `Message must be ${MAX_MESSAGE_CHARS} characters or fewer.` };

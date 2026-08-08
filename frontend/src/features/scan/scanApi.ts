@@ -1,6 +1,6 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Adapter giữa ScanScreen/AddMealScreen và scanRoutes/scanController; ngoài HTTP còn nén ảnh,
-// không giữ state và không vẽ gì.
+// Danh sách địa chỉ backend của phần quét món, kèm phần nén ảnh trước khi gửi.
+// Không giữ state và không vẽ gì.
 //
 // Ai gọi tới: ScanScreen (quét ảnh, quét mã vạch),
 //             AddMealScreen (nút Ước tính khi gõ tay tên món)
@@ -68,7 +68,8 @@ export const BARCODE_SETTINGS = { barcodeTypes: [...BARCODE_TYPES] } as {
   barcodeTypes: ("ean13" | "ean8" | "upc_a" | "upc_e" | "code128")[];
 };
 
-// File này nối ScanScreen với backend/src/routes/scanRoutes.js.
+// File này KHÔNG gọi fetch. Nó nhờ apiFetch bên src/utils/apiClient.ts,
+// chỗ đó lo địa chỉ server, thẻ đăng nhập, múi giờ, hạn chờ và lỗi 401.
 
 export async function compressImage(uri: string): Promise<string> {
   try {

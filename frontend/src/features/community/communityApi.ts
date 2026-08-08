@@ -73,6 +73,21 @@ export type Notification = {
   postThumb: string | null;
 };
 
+// ══════════════════════════════════════════════════════════
+// CÁC CỬA GỌI MẠNG CỦA CỘNG ĐỒNG
+//
+// Không phải luồng. Mỗi hàm là một cửa riêng, màn nào cần gì thì gọi cái đó.
+// Tất cả đều đi qua apiClient rồi sang communityRoutes bên backend.
+// Lỗi thì để nguyên cho ném lên, màn hình gọi tự lo phần hiện thông báo.
+//
+// Nhớ: hàm nào có gửi ẢNH thì phải dùng FormData và gọi thẳng apiFetch,
+//      không dùng apiRequest được, vì apiRequest ép kiểu nội dung thành JSON.
+// ══════════════════════════════════════════════════════════
+
+// Nhét thông tin món vào FormData, dùng khi bài có kèm ảnh.
+// Phải rải thành từng trường phẳng chứ không gửi cả object, vì FormData
+// chỉ chở được chuỗi và file, không hiểu object lồng nhau.
+// Mấy trường có thể trống thì bỏ hẳn nếu không có, chứ đừng gửi chuỗi "undefined".
 function appendMeal(form: FormData, meal: MealSnapshot) {
   form.append("mealName", meal.name);
   form.append("calories", String(meal.calories));
@@ -256,8 +271,12 @@ export async function updatePost(
   newImageUris?: string[];
   }
 ): Promise<FeedPost> {
+  // Cắt bớt cho khớp trần ảnh mà backend đang kiểm, gửi thừa cũng bị từ chối.
   const newUris = (input.newImageUris || []).slice(0, MAX_POST_IMAGES);
 
+  // Rẽ hai đường tùy có ảnh mới hay không.
+  // Không có ảnh mới thì gửi JSON thường, nhẹ và nhanh hơn hẳn.
+  // Có ảnh mới thì rơi xuống nhánh dưới, gửi FormData kèm file.
   if (newUris.length === 0) {
     const data = await apiRequest(
       `/community/posts/${postId}`,

@@ -62,11 +62,24 @@ function Bullet({ text }: { text: string }) {
   );
 }
 
+// ══════════════════════════════════════════════════════════
+// XEM TRỢ GIÚP
+//
+// Đến từ màn Cài đặt. Hai bước, không gọi mạng.
+// Toàn bộ nội dung nằm trong bảng dịch, màn này chỉ lo chọn tab rồi hiện chữ.
+// ══════════════════════════════════════════════════════════
+
+// XEM TRỢ GIÚP BƯỚC 1. Lấy nguyên cụm chữ trợ giúp ra biến L cho đỡ dài dòng,
+// vì bên dưới phải gọi tới nó rất nhiều lần.
 export default function HelpScreen() {
   const t = useT();
+  // Lối tắt tới cụm chữ trợ giúp, bên dưới gọi tới rất nhiều lần.
   const L = t.help;
   const [tab, setTab] = useState<TabKey>("intro");
 
+  // XEM TRỢ GIÚP BƯỚC 2. Năm tab, xếp theo thứ tự nên đọc:
+  // giới thiệu, rồi BMI, BMR, TDEE, cuối cùng là cách app chốt mục tiêu calo.
+  // Mỗi tab sau dựa vào tab trước, nên ĐỪNG đảo thứ tự.
   const tabs: { key: TabKey; label: string }[] = [
     { key: "intro", label: L.tabIntro },
     { key: "bmi", label: L.tabBmi },

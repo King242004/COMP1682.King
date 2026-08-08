@@ -6,16 +6,9 @@
 // Trả ra:     không trả gì, lưu xong thì quay lại chi tiết bài
 // Khi lỗi:    postController.updatePost kiểm author, nên sửa bài người khác vẫn bị chặn
 
-// LUỒNG SỬA BÀI
-// 1. Tải lại bài cần sửa, điền sẵn vào các ô
-// 2. Sửa chú thích, đổi loại bài, thêm hoặc bớt ảnh
-// 3. Bấm Lưu, api.updatePost                (PATCH /community/posts/:id)
-// 4. postController.updatePost cập nhật rồi trả Post mới
-// HAI CÁCH GỬI, api.updatePost tự chọn
-//   Không thêm ảnh mới thì gửi JSON thường cho nhẹ.
-//   Có thêm ảnh mới thì gửi kèm file, và gửi thêm keepUrls là danh sách
-//     ảnh cũ muốn giữ. Ảnh cũ nào không nằm trong danh sách đó
-//     sẽ bị postController.updatePost xóa khỏi Cloudinary.
+// Nhớ: keepUrls là danh sách ảnh CŨ muốn giữ lại. Ảnh cũ nào KHÔNG nằm trong
+//      danh sách đó sẽ bị postController.updatePost xóa hẳn khỏi Cloudinary.
+//      Nên đừng bỏ sót, bỏ sót là mất ảnh thật chứ không phải chỉ ẩn đi.
 import { useState, useEffect } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -56,12 +49,17 @@ export default function PostEditScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Tải bài cần sửa rồi điền sẵn vào các ô.
+  // Tải lịch sử món, để hàng chọn món đính kèm có dữ liệu.
+  // Đường đi: MealsContext.fetchMealHistory → mealsApi → apiClient
+  //           → GET /meals/history → mealController.getMealHistory
   useEffect(() => {
     void fetchMealHistory().catch(() => {});
   }, [fetchMealHistory]);
 
-  // Đồng bộ danh sách ảnh vào state khi bài đã tải xong.
+  // Tải bài cần sửa rồi điền sẵn vào các ô.
+  // Đường đi: getPost → apiClient → GET /community/posts/:id → postController.getPost
+  // Bài đời cũ chỉ lưu TÊN món dưới dạng chuỗi, bài mới lưu hẳn bản ghi món,
+  // nên phải rẽ hai nhánh khi đổ vào form.
   useEffect(() => {
     if (!token || !id) return;
     getPost(token, id)
@@ -82,22 +80,41 @@ export default function PostEditScreen() {
       .catch(() => setLoadError(true));
   }, [token, id]);
 
+  // ══════════════════════════════════════════════════════════
+  // SỬA BÀI
+  //
+  // Đến từ nút Sửa ở màn Chi tiết bài, chỉ chủ bài mới thấy nút đó.
+  // Ba bước, đọc từ trên xuống là đúng thứ tự. Chặng chờ mạng ở BƯỚC 3.
+  // Xong thì quay về màn Chi tiết bài, màn đó tự tải lại nội dung mới.
+  // ══════════════════════════════════════════════════════════
+
+  // SỬA BÀI BƯỚC 1. Đếm ảnh. Tính cả ảnh CŨ giữ lại lẫn ảnh MỚI vừa chọn,
+  // vì bài sau khi sửa gồm cả hai loại.
   const totalImages = keepUrls.length + newUris.length;
+  // Tám món gần đây, mỗi tên một lần, cho hàng chọn nhanh món đính kèm.
   const recentMeals = recentUniqueMeals(historyMeals, 8);
 
+  // SỬA BÀI BƯỚC 2. Bài phải còn ít nhất một ảnh. Xóa hết ảnh thì nút Lưu mờ đi.
   const canSave = totalImages > 0 && !saving;
 
+  // Gỡ món đính kèm. Xóa cả hai chỗ vì bài cũ lưu tên món dưới dạng chuỗi,
+  // còn bài mới lưu hẳn mã món. Chỉ xóa một chỗ là còn sót lại cái kia.
   const removeAttachedMeal = () => {
     setLegacyDishName("");
     setSelectedMeal(null);
   };
 
+  // Chọn món mới thì xóa luôn tên món kiểu cũ, cùng lý do như trên.
   const selectMeal = (meal: PostMealChoice) => {
     setSelectedMeal(meal);
     setLegacyDishName("");
   };
 
-  // Nút Lưu của màn sửa bài.
+  // SỬA BÀI BƯỚC 3. Người dùng bấm Lưu.
+  // Đường đi: updatePost → apiClient → PATCH /community/posts/:id
+  //           → postController.updatePost
+  // Không có ảnh mới thì gửi JSON thường, có ảnh mới thì gửi FormData,
+  // chỗ rẽ đường nằm trong communityApi.updatePost.
   const handleSave = async () => {
     if (!token || !id || !canSave) return;
     setSaving(true);

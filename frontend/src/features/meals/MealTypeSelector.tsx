@@ -6,7 +6,6 @@
 // Trả ra:     bốn nút sáng, trưa, tối, bữa phụ
 // Khi lỗi:    không có nhánh lỗi
 
-// Nhờ đó cùng một thao tác luôn có cùng thiết kế.
 import { Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
@@ -20,6 +19,7 @@ export function MealTypeSelector({ value, onChange }: {
 }) {
   const t = useT();
   return (
+    // Ra màn: một hàng bốn nút, nút đang chọn đổi viền và nền sang màu chính
     <View style={styles.row}>
       {MEAL_TYPE_META.map((mt) => {
         const active = value === mt.key;

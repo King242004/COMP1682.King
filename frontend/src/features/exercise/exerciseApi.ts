@@ -5,10 +5,13 @@
 // Nhận vào:   mã hoạt động và thời lượng
 // Trả ra:     Exercise do exerciseController tạo, gồm caloriesBurned đã tính
 // Khi lỗi:    ném lỗi lên cho màn hình tự hiện thông báo
-
-// Frontend chỉ gửi mã hoạt động hoặc mã bài hướng dẫn. exerciseController.addExercise
-// tra MET từ backend/src/config/exerciseMet.js rồi gọi computeBurned.
+//
+// Nhớ: app KHÔNG tự tính calo đốt và KHÔNG gửi con số đó lên.
+//      App chỉ gửi mã hoạt động hoặc mã bài hướng dẫn, rồi backend tra hệ số MET
+//      trong config/exerciseMet.js và tự tính với cân nặng trong hồ sơ.
+//      Làm vậy để calo đốt luôn khớp cân nặng mới nhất, không phải số đóng băng lúc ghi.
 import { apiRequest } from "@/utils/apiClient";
+import { withId } from "@/utils/apiTypes";
 
 export type Exercise = {
   id: string;
@@ -18,19 +21,15 @@ export type Exercise = {
   caloriesBurned: number;
   date: string;
 };
+// Bản backend trả về. Khác bản app dùng đúng một chỗ: mã món tên là _id.
 type RawExercise = Omit<Exercise, "id"> & { _id: string };
 
-
-function mapExercise(e: RawExercise): Exercise {
-  return {
-    id: e._id,
-    name: e.name,
-    met: e.met,
-    durationMin: e.durationMin,
-    caloriesBurned: e.caloriesBurned,
-    date: e.date,
-  };
-}
+// ══════════════════════════════════════════════════════════
+// BỐN CỬA GỌI MẠNG
+// Mỗi hàm là một cửa riêng, màn nào cần gì thì gọi cái đó
+// Cả bốn đều đi qua apiClient rồi sang exerciseRoutes bên backend
+// Lỗi thì để nguyên cho ném lên, màn hình gọi tự lo phần hiện thông báo
+// ══════════════════════════════════════════════════════════
 
 // Lấy buổi tập của một ngày. Gọi GET /exercise kèm ngày.
 // exerciseController.getExercisesByDate trả kèm totalBurned đã cộng sẵn.
@@ -39,7 +38,7 @@ export async function getExercisesByDate(
   date: string
 ): Promise<{ exercises: Exercise[]; totalBurned: number }> {
   const data = await apiRequest<{ exercises: RawExercise[]; totalBurned: number }>(`/exercise?date=${date}`, "GET", undefined, token);
-  return { exercises: (data.exercises || []).map(mapExercise), totalBurned: data.totalBurned || 0 };
+  return { exercises: (data.exercises || []).map(withId), totalBurned: data.totalBurned || 0 };
 }
 
 // Ghi một buổi tập. Gọi POST /exercise.
@@ -52,7 +51,7 @@ export async function addExercise(
   )
 ): Promise<Exercise> {
   const data = await apiRequest<{ exercise: RawExercise }>("/exercise", "POST", input, token);
-  return mapExercise(data.exercise);
+  return withId(data.exercise);
 }
 
 // Xóa một buổi tập. Gọi DELETE /exercise/:id.
@@ -69,5 +68,5 @@ export async function getExerciseHistory(
 ): Promise<Exercise[]> {
   const range = startDate && endDate ? `?startDate=${startDate}&endDate=${endDate}` : "";
   const data = await apiRequest<{ exercises: RawExercise[] }>(`/exercise/history${range}`, "GET", undefined, token);
-  return (data.exercises || []).map(mapExercise);
+  return (data.exercises || []).map(withId);
 }

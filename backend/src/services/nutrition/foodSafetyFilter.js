@@ -1,3 +1,13 @@
+// ══════════════════════════════════════════════════════════
+// LỌC MÓN THEO BỆNH NỀN
+//
+// Không phải luồng. Bảng luật, cộng mấy hàm lọc.
+// Đến từ coachController và planController, chạy SAU khi AI đã trả lời.
+// 
+// Nhớ: đây là LỚP CHẮN THỨ HAI. Lớp thứ nhất chỉ là lời dặn trong câu lệnh,
+//      mà AI thì vẫn quên được. Lớp này chạy ở server nên người dùng không tắt được.
+// ══════════════════════════════════════════════════════════
+
 // ═══ FILE NÀY LÀM GÌ ═══
 // LỚP AN TOÀN THỨ HAI. Lọc bỏ món không hợp với bệnh nền của người dùng.
 //
@@ -192,6 +202,7 @@ function filterDishes(dishes, conditions = [], getName = (d) => d.name) {
   // Tách làm hai danh sách: món giữ lại, và món bị loại kèm lý do.
   // Trả cả hai để nơi gọi biết đã bỏ những gì chứ không im lặng cắt bớt.
   const kept = [];
+  // Danh sách món bị loại, để nơi gọi biết đã bỏ đi những gì.
   const removed = [];
   for (const d of dishes) {
     const hit = forbiddenFor(getName(d), conditions);

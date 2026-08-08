@@ -6,20 +6,13 @@
 // Trả ra:     danh sách bài, chia trang, cuộn tới đâu tải tới đó
 // Khi lỗi:    chưa theo dõi ai thì mời sang Khám phá, không hiện màn trống
 
-// LUỒNG XEM FEED, tự chạy khi vào tab
-// 1. useFocusEffect gọi hàm tải theo tab đang chọn
-// 2. getFeed hoặc getExplore hoặc getSavedPosts   (GET /community/posts/...)
-// 3. Route gọi hàm getFeed trong backend/src/controllers/community/feedController.js;
-//    hàm này lọc bài của tài khoản
-//    riêng tư, chia trang và tính sẵn
-//    số tim và hai cờ đã tim đã lưu
-// 4. danh sách hiện lên, cuộn tới cuối thì tải trang kế tiếp
-// BA TAB
-//   Đang theo dõi, chỉ bài của người mình theo dõi.
-//   Khám phá, bài của tất cả mọi người.
-//   Đã lưu, bài mình đã bấm lưu.
+// Hai tab: Đang theo dõi chỉ hiện bài của người mình theo dõi, còn Khám phá
+// hiện bài của mọi người. Bài Đã lưu nằm ở màn Trang cá nhân, không ở đây.
 // Các lối đi từ màn này: Tạo bài, Chi tiết bài, Trang cá nhân,
 // Khám phá người dùng, và Thông báo.
+//
+// Nhớ: mỗi tab có bộ nhớ đệm RIÊNG, và tab kia được tải trước ở nền.
+//      Nhờ vậy chuyển tab là thấy nội dung ngay, không phải chờ một lượt mạng.
 import { useState, useCallback, useRef } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
@@ -43,6 +36,17 @@ type TabCache = {
   loadError: boolean;
 };
 
+// ══════════════════════════════════════════════════════════
+// XEM FEED
+//
+// Đến từ tab thứ hai. Bốn bước, đọc từ trên xuống là đúng thứ tự.
+// Chặng chờ mạng nằm ở BƯỚC 2, và có thể chạy hai lượt một lúc cho hai tab.
+// Xong thì hiện lưới hai cột, cuộn tới cuối thì tải trang kế tiếp.
+// ══════════════════════════════════════════════════════════
+
+// XEM FEED BƯỚC 1. Dựng state, mỗi tab một bộ riêng.
+// Mở tab Khám phá trước chứ không mở Đang theo dõi, vì người mới chưa theo dõi ai,
+// mở feed rỗng ra là tưởng app hỏng.
 export default function CommunityScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
@@ -58,20 +62,41 @@ export default function CommunityScreen() {
   const [loadingMoreByTab, setLoadingMoreByTab] = useState<Record<Tab, boolean>>({ feed: false, explore: false });
   // Số thông báo chưa đọc hiển thị trên biểu tượng chuông.
   const [unread, setUnread] = useState(0);
+  // Sáu ref canh chừng việc tải, mỗi ref giữ hai giá trị cho hai tab.
+  // Để trong ref chứ không phải state vì hai lý do: đổi giá trị phải thấy NGAY
+  // chứ không chờ nhịp vẽ sau, và mấy số này không hiện ra màn nên đổi chúng
+  // cũng chẳng cần vẽ lại.
+  //
+  // Đang ở trang mấy, và còn trang sau hay không.
   const pageRef = useRef<Record<Tab, number>>({ feed: 1, explore: 1 });
+  // Khởi đầu để true, vì chưa gọi lần nào thì cứ coi như còn bài để tải.
   const hasMoreRef = useRef<Record<Tab, boolean>>({ feed: true, explore: true });
+  // Tab này đã từng tải xong lần nào chưa. Dùng để chọn kiểu tải ở BƯỚC 3.
   const loadedRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
+  // Hai cờ chặn tải chồng: một cho trang đầu, một cho trang tiếp theo.
   const inFlightRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
+  // Cờ thứ hai, riêng cho việc tải trang tiếp theo khi cuộn tới cuối.
   const loadingMoreRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
+  // Đánh số từng lượt gọi, để bỏ kết quả về muộn thay vì đè lên bản mới hơn.
   const requestIdRef = useRef<Record<Tab, number>>({ feed: 0, explore: 0 });
+  // Ba lối tắt tới dữ liệu của tab ĐANG mở, cho phần JSX bên dưới đỡ dài dòng.
   const posts = tabCache[tab].posts;
   const loading = loadingByTab[tab] && posts.length === 0;
   const loadError = tabCache[tab].loadError;
 
-  // Hàm tải dùng chung. mode quyết định loại vòng tải được hiển thị.
-  // refresh điều khiển RefreshControl, các chế độ khác dùng vòng tải ở giữa.
-  // Không bật refreshing khi focus vì có thể làm vòng tải bị kẹt lúc chuyển màn.
-  // Nếu tải lỗi thì giữ các bài cũ thay vì xóa feed.
+  // XEM FEED BƯỚC 2. Hàm tải dùng chung cho cả hai tab và cả bốn kiểu tải.
+  // Đường đi: getFeed hoặc getExplore → apiClient → GET /community/posts/...
+  //           → feedController.getFeed hoặc getExplore
+  // Bên đó lọc bỏ bài của tài khoản riêng tư, chia trang, và tính sẵn
+  // số tim cùng hai cờ đã tim, đã lưu.
+  //
+  // Bốn kiểu tải, khác nhau ở chỗ hiện vòng xoay nào:
+  //   load     lần đầu, vòng xoay giữa màn
+  //   refresh  kéo xuống làm mới, vòng xoay ở đầu danh sách
+  //   more     cuộn tới cuối, vòng xoay ở chân danh sách
+  //   prefetch tải ngầm cho tab kia, KHÔNG hiện vòng xoay nào cả
+  // Không bật vòng xoay kéo làm mới lúc quay về màn, vì nó hay kẹt khi chuyển màn.
+  // Tải lỗi thì GIỮ bài cũ trên màn, chứ không xóa sạch feed.
   const load = useCallback(async (which: Tab, mode: LoadMode = "load") => {
     if (!token) return;
     // Không tải trang tiếp theo trước khi trang đầu hoàn tất.
@@ -140,7 +165,9 @@ export default function CommunityScreen() {
     }
   }, [token]);
 
-  // Giữ kết quả gần nhất của từng tab và tải trước tab còn lại để chuyển tab ngay.
+  // XEM FEED BƯỚC 3. Tự chạy mỗi lần màn được nhìn thấy, không ai bấm.
+  // Tab đang mở: đã tải rồi thì làm mới ngầm, chưa tải thì tải kiểu có vòng xoay.
+  // Tab còn lại: tải ngầm nếu chưa từng tải, để chuyển tab là thấy nội dung ngay.
   useFocusEffect(useCallback(() => {
     load(tab, loadedRef.current[tab] ? "prefetch" : "load");
     const other: Tab = tab === "explore" ? "feed" : "explore";
@@ -152,6 +179,16 @@ export default function CommunityScreen() {
     if (token) getUnreadCount(token).then(setUnread).catch(() => {});
   }, [token]));
 
+  // ══════════════════════════════════════════════════════════
+  // BẤM TIM
+  //
+  // Đến từ nút tim trên một ô bài. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Xong thì tim đổi màu và số tim đổi theo, ở CẢ HAI tab.
+  // ══════════════════════════════════════════════════════════
+
+  // BẤM TIM BƯỚC 1. Sửa một bài ở CẢ HAI bộ nhớ đệm cùng lúc.
+  // Phải sửa cả hai vì một bài có thể đang nằm trong cả Đang theo dõi lẫn Khám phá,
+  // chỉ sửa một bên là chuyển tab thấy tim ngược lại.
   const updatePostAcrossTabs = (postId: string, update: (post: FeedPost) => FeedPost) => {
     setTabCache((current) => ({
       feed: {
@@ -165,8 +202,7 @@ export default function CommunityScreen() {
     }));
   };
 
-  // Nút tim trên một ô bài. Đổi giao diện trước rồi mới gọi mạng,
-  // lỗi thì trả về như cũ.
+  // BẤM TIM BƯỚC 2. Đổi tim với số tim trên màn NGAY, chưa chờ backend.
   const onLike = async (post: FeedPost) => {
     if (!token) return;
     updatePostAcrossTabs(post.id, (current) => ({
@@ -175,6 +211,11 @@ export default function CommunityScreen() {
       likeCount: current.likeCount + (current.isLiked ? -1 : 1),
     }));
     try {
+      // BẤM TIM BƯỚC 3. Giờ mới gửi lệnh thật rồi CHỜ.
+      // Đường đi: toggleLike → apiClient → POST /community/posts/:id/like
+      //           → postController.toggleLike
+      // Backend trả về số tim THẬT, nên đặt lại theo số đó chứ không giữ số mình đoán.
+      // Cần vậy vì lúc mình đang bấm có thể có người khác cũng vừa bấm tim bài đó.
       const res = await toggleLike(token, post.id);
       updatePostAcrossTabs(post.id, (current) => ({
         ...current,
@@ -182,7 +223,7 @@ export default function CommunityScreen() {
         likeCount: res.likeCount,
       }));
     } catch {
-      // Trả lại trạng thái cũ nếu yêu cầu thất bại.
+      // Gửi hụt thì lật ngược về đúng giá trị lúc chưa bấm.
       updatePostAcrossTabs(post.id, (current) => ({
         ...current,
         isLiked: post.isLiked,
@@ -191,11 +232,12 @@ export default function CommunityScreen() {
     }
   };
 
+  // XEM FEED BƯỚC 4. Chạm một ô thì sang màn Chi tiết bài, chỉ truyền mã bài.
   const openDetail = (item: FeedPost) =>
     router.push({ pathname: "/community/post-detail", params: { id: item.id } });
 
-  // Hai tab dùng lưới hai cột và hiện thời gian dưới mỗi ô.
-  // Hành động lưu và xóa nằm trong chi tiết bài viết.
+  // Vẽ một ô bài. Cả hai tab dùng chung lưới hai cột, có hiện thời gian dưới ô.
+  // Ở đây chỉ có chạm và bấm tim. Lưu bài và xóa bài nằm ở màn Chi tiết bài.
   const renderPost = ({ item }: { item: FeedPost }) => (
     <PostTile
       post={item}

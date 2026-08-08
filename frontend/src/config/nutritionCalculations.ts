@@ -14,6 +14,17 @@
 
 // Số kcal mà một gam mỗi chất sinh năng lượng tạo ra.
 // Nguồn: hệ số Atwater tổng quát, FAO (2003), Food and Nutrition Paper 77.
+// ══════════════════════════════════════════════════════════
+// HẰNG SỐ VÀ CÔNG THỨC DINH DƯỠNG
+//
+// Không phải luồng. Một chỗ duy nhất giữ mọi hằng số và công thức của app,
+// để không nơi nào gõ lại một con số rồi lệch với nơi khác.
+//
+// Nhớ: mấy hàm ở đây chỉ để XEM TRƯỚC trên màn. Con số chính thức luôn do
+//      backend tính lại trong services/nutrition/calorieGoal.js, và có thể lệch
+//      khi backend áp mức sàn calo.
+// ══════════════════════════════════════════════════════════
+
 export const ATWATER_KCAL_PER_GRAM = { protein: 4, carbs: 4, fat: 9 };
 
 // Lượng đạm cần mỗi ngày, tính theo gam trên mỗi kg cân nặng.
@@ -145,11 +156,14 @@ export function estimateCalorieGoal(
   weeklyRateKg?: number | null,
 ): number | null {
   if (!tdee) return null;
+  // Mức SÀN calo, khác nhau theo giới tính. Mọi nhánh bên dưới đều kẹp ở mức này,
+  // nên giảm cân nhanh cỡ nào thì mục tiêu cũng không tụt xuống dưới sàn.
   const floor = gender === "male" ? CALORIE_FLOOR.male : CALORIE_FLOOR.female;
   if (goal === "lose_weight") {
     const rate = weeklyRateKg && weeklyRateKg > 0
       ? Math.min(weeklyRateKg, WEEKLY_RATE_KG.lose.max)
       : WEEKLY_RATE_KG.lose.default;
+    // Đổi kg mỗi tuần ra kcal cần hụt mỗi NGÀY, nên chia cho 7.
     const delta = (rate * KCAL_PER_KG_BODY_WEIGHT) / 7;
     return Math.round(Math.max(floor, tdee - delta));
   }
@@ -157,6 +171,7 @@ export function estimateCalorieGoal(
     const rate = weeklyRateKg && weeklyRateKg > 0
       ? Math.min(weeklyRateKg, WEEKLY_RATE_KG.gain.max)
       : WEEKLY_RATE_KG.gain.default;
+    // Cùng cách tính với nhánh giảm cân, chỉ khác dấu: cộng thêm thay vì trừ đi.
     const delta = (rate * KCAL_PER_KG_BODY_WEIGHT) / 7;
     return Math.round(Math.max(floor, tdee + delta));
   }
@@ -178,11 +193,16 @@ export function macroTargets(calorieGoal: number | null | undefined, weightKg?: 
   // Kẹp đạm ở trần AMDR, vì đạm neo vào cân nặng nên không tự co lại
   // khi mục tiêu calo bị mức sàn chặn.
   const proteinCeilingG = (goal * PROTEIN_MAX_RATIO_OF_CALORIES) / ATWATER_KCAL_PER_GRAM.protein;
+  // Lấy số nhỏ hơn giữa đạm theo cân nặng và trần đạm theo calo.
   const proteinG = Math.min(rawProteinG, proteinCeilingG);
 
+  // Chất béo lấy theo TỶ LỆ phần trăm calo, không neo vào cân nặng như đạm.
   const fatG = (goal * FAT_RATIO_OF_CALORIES) / ATWATER_KCAL_PER_GRAM.fat;
 
+  // Tinh bột lấy phần calo CÒN LẠI, tính sau cùng chứ không đặt tỷ lệ riêng.
+  // Nhờ vậy ba chất cộng lại luôn vừa khít mục tiêu calo, không dư không thiếu.
   const usedKcal = proteinG * ATWATER_KCAL_PER_GRAM.protein + fatG * ATWATER_KCAL_PER_GRAM.fat;
+  // Kẹp ở 0 phòng khi đạm với béo đã ăn hết mục tiêu, tránh ra số âm.
   const carbsG = Math.max(0, (goal - usedKcal) / ATWATER_KCAL_PER_GRAM.carbs);
 
   return {

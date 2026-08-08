@@ -728,7 +728,7 @@ export const en = {
   },
 
   weightGoals: {
-    title: "Weight goal",
+    title: "Your goal",
     subtitle: "Choose your weight direction, target weight and how MealMate calculates your calorie goal.",
     summary: "Current plan",
     currentWeight: "Current",

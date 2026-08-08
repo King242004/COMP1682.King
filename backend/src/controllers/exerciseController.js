@@ -19,6 +19,15 @@ const {
 } = require("../config/exerciseCatalog");
 const { LEGACY_LIMITS } = require("../config/inputLimits");
 
+// ══════════════════════════════════════════════════════════
+// BỐN CỬA VỀ BUỔI TẬP
+//
+// Không phải luồng. Bốn cửa độc lập: thêm, lấy theo ngày, lấy theo khoảng, và xóa.
+// 
+// Nhớ: app KHÔNG gửi calo đốt lên. App chỉ gửi MÃ hoạt động, còn calo do
+//      bên này tự tra hệ số MET rồi nhân với cân nặng trong hồ sơ.
+// ══════════════════════════════════════════════════════════
+
 // Công thức calo tiêu hao: mức nặng nhẹ của bài tập nhân cân nặng nhân số giờ.
 // Mức nặng nhẹ là MET. addExercise tra mã trong config/exerciseMet.js,
 // không nhận giá trị MET từ exerciseApi.addExercise.
@@ -80,6 +89,8 @@ exports.addExercise = async (req, res) => {
   res.status(201).json({ message: "Workout logged.", exercise });
 };
 
+// Lấy buổi tập của ĐÚNG một ngày, kèm tổng calo đã đốt cộng sẵn.
+// Cộng sẵn ở đây để app khỏi phải tự cộng lại.
 exports.getExercisesByDate = async (req, res) => {
   const { date } = req.query;
 
@@ -92,6 +103,8 @@ exports.getExercisesByDate = async (req, res) => {
   res.json({ date, exercises, totalBurned });
 };
 
+// Lấy buổi tập trong một khoảng ngày. Màn Tiến trình và thẻ Hoạt động
+// ở Trang chủ đều gọi vào đây, chỉ khác khoảng ngày truyền lên.
 exports.getExerciseHistory = async (req, res) => {
   const { startDate, endDate } = req.query;
 
@@ -104,6 +117,7 @@ exports.getExerciseHistory = async (req, res) => {
   res.json({ exercises });
 };
 
+// Xóa một buổi tập. Chỉ chủ buổi tập mới xóa được, kiểm ở mấy dòng dưới.
 exports.deleteExercise = async (req, res) => {
   const exercise = await Exercise.findById(req.params.id);
 

@@ -25,6 +25,16 @@ export function ManualBarcodeModal({ visible, onClose, onSubmit }: {
   const t = useT();
   const [code, setCode] = useState("");
 
+  // ══════════════════════════════════════════════════════════
+  // NHẬP MÃ VẠCH TAY
+  //
+  // Đến từ màn Quét, khi camera không đọc được mã. Hai bước, không gọi mạng.
+  // Xong thì trả mã lên cho màn Quét, màn ĐÓ mới là nơi tra Open Food Facts.
+  // ══════════════════════════════════════════════════════════
+
+  // NHẬP MÃ VẠCH BƯỚC 1. Kiểm mã rồi mới trả lên.
+  // Mã vạch chuẩn dài 8 tới 14 chữ số, gồm EAN-8, UPC-A và EAN-13.
+  // Sai thì báo rồi GIỮ NGUYÊN ô nhập cho họ sửa, đừng bắt gõ lại từ đầu.
   const submit = () => {
     const trimmed = code.trim();
     if (!/^\d{8,14}$/.test(trimmed)) {
@@ -35,6 +45,8 @@ export function ManualBarcodeModal({ visible, onClose, onSubmit }: {
     onSubmit(trimmed);
   };
 
+  // NHẬP MÃ VẠCH BƯỚC 2. Bấm hủy hoặc chạm ra ngoài thì xóa ô rồi đóng.
+  // Xóa ô để lần mở sau là ô trống, chứ không còn mã cũ nằm đó.
   const cancel = () => {
     setCode("");
     onClose();

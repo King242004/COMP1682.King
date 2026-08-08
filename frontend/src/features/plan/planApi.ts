@@ -10,6 +10,7 @@
 // trong bộ nhớ máy, để mở lại không phải chờ và không tốn lượt gọi AI.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest } from "@/utils/apiClient";
+import { withId } from "@/utils/apiTypes";
 import { ROUTINE_CATEGORIES, type RoutineCategory } from "@/features/exercise/guidedRoutines";
 
 // Chờ tối đa 2 phút. Tạo kế hoạch cả tuần là lượt gọi AI nặng nhất app.
@@ -55,21 +56,8 @@ export type PlanWeekCache = {
 
 export type GroceryCache = { groups: GroceryGroup[]; checked: Record<string, boolean>; sig: string };
 
-// Đổi JSON PlanMeal do planController trả với _id sang PlanMeal frontend dùng id.
-function mapPlan(p: RawPlanMeal): PlanMeal {
-  return {
-    id: p._id,
-    name: p.name,
-    mealType: p.mealType,
-    calories: p.calories,
-    protein: p.protein,
-    carbs: p.carbs,
-    fat: p.fat,
-    note: p.note,
-    date: p.date,
-    done: p.done,
-  };
-}
+// Đổi _id thành id. Hàm chung ở src/utils/apiTypes.ts, không liệt kê trường nào.
+const mapPlan = (p: RawPlanMeal): PlanMeal => withId(p);
 
 // Đổi JSON PlanWorkout do planController trả sang PlanDayWorkout.
 // Trả null khi dữ liệu không đủ để bấm nút Xong, ví dụ thiếu thời lượng.

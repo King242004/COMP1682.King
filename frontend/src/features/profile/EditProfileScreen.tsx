@@ -1,24 +1,16 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Màn Sửa hồ sơ. File BẮT ĐẦU của hai luồng: lưu hồ sơ, và đổi ảnh đại diện.
+// Màn Sửa hồ sơ. File BẮT ĐẦU của luồng lưu hồ sơ.
 //
 // Ai gọi tới: ProfileScreen
-// Nhận vào:   thông tin cá nhân và ảnh mới
+// Nhận vào:   tên, giới tính, tuổi, cân, cao, mức vận động, bệnh nền, khẩu vị
 // Trả ra:     không trả gì, lưu xong thì quay lại và mục tiêu calo được tính lại
-// Khi lỗi:    imageUpload middleware từ chối ảnh quá nặng, màn hiện thông báo
-
-// LUỒNG LƯU HỒ SƠ
-// 1. Sửa các ô rồi bấm Lưu
-// 2. AuthContext.updateProfile
-// 3. accountApi.updateProfileRequest     (PUT /profile)
-// 4. profileController.updateProfile kiểm giới hạn và gọi calorieGoal.autoGoal
-// 5. quay về màn Hồ sơ với dữ liệu mới
-// LUỒNG ĐỔI ẢNH ĐẠI DIỆN
-// 1. Chạm vào ảnh, chọn chụp mới hoặc lấy từ thư viện
-// 2. AuthContext.uploadAvatar
-// 3. accountApi.uploadAvatarRequest      (POST /user/avatar, gửi kèm file)
-// 4. accountController.uploadAvatar upload Cloudinary, cắt vuông rồi xóa ảnh cũ
-// 5. hồ sơ nhận đường dẫn ảnh mới, ảnh đổi ngay trên màn hình
-// Đổi tên đi theo PUT /user/name vì accountController.changeName có luật kiểm riêng.
+// Khi lỗi:    số ngoài khoảng cho phép thì báo tại chỗ và KHÔNG gửi lượt nào lên server
+//
+// Đổi ảnh đại diện KHÔNG nằm ở màn này, nó ở ProfileScreen.
+//
+// Nhớ: bấm Lưu MỘT lần nhưng có thể gửi HAI lượt lên server, xem khối LƯU HỒ SƠ.
+//      Đổi tên đi đường riêng qua PUT /user/name, vì accountController.changeName
+//      có luật kiểm tên riêng mà profileController không có.
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -35,7 +27,11 @@ import { TextField } from "@/ui/components/TextField";
 import { INPUT_LIMITS, DIGIT_LIMITS } from "@/config/inputLimits";
 import { PROFILE_LIMITS } from "@/config/nutritionCalculations";
 
+// Ba mức vận động. Backend nhân TDEE với hệ số tương ứng của mức này.
 const ACTIVITY_KEYS = ["sedentary", "moderate", "active"] as const;
+// Năm bệnh app có hỗ trợ, cộng thêm mục "không có".
+// Nhớ: danh sách này phải khớp với RULES trong backend services/nutrition/foodSafetyFilter.js.
+//      Thêm bệnh ở đây mà bên đó không có luật lọc thì chọn xong chẳng có tác dụng gì.
 const CONDITION_KEYS = ["diabetes", "hypertension", "gout", "high_cholesterol", "gastritis", "none"] as const;
 
 export default function EditProfileScreen() {
@@ -53,6 +49,15 @@ export default function EditProfileScreen() {
   const [conditions, setConditions] = useState<string[]>(user?.conditions ?? []);
   const [taste, setTaste] = useState(user?.tastePreferences ?? "");
 
+  // ══════════════════════════════════════════════════════════
+  // CHỌN BỆNH NỀN
+  //
+  // Không phải luồng. Hai hàm nhỏ lo riêng hàng chọn bệnh, vì hàng này
+  // có một luật riêng: mục "không có" LOẠI TRỪ mọi mục khác.
+  // ══════════════════════════════════════════════════════════
+
+  // Bấm "không có" thì xóa sạch danh sách. Bấm một bệnh thì bật tắt bệnh đó,
+  // đồng thời gỡ "không có" ra, vì không thể vừa có bệnh vừa không có bệnh.
   const toggleCondition = (c: string) => {
     if (c === "none") { setConditions([]); return; }
     setConditions((prev) =>
@@ -60,22 +65,33 @@ export default function EditProfileScreen() {
     );
   };
 
+  // "không có" KHÔNG được lưu thành một mục trong mảng, nó chỉ là mảng rỗng.
+  // Vì vậy phải xét riêng, chứ tra includes như mấy mục kia thì luôn ra sai.
   const isConditionActive = (c: string) => (c === "none" ? conditions.length === 0 : conditions.includes(c));
 
-  // Nút Lưu của màn sửa hồ sơ.
+  // ══════════════════════════════════════════════════════════
+  // LƯU HỒ SƠ
+  //
+  // Đến từ nút Lưu của màn này. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Nhớ: một lần bấm có thể gửi HAI lượt lên server, xem BƯỚC 2.
+  // Xong thì quay về màn Hồ sơ, và mục tiêu calo đã được backend tính lại.
+  // ══════════════════════════════════════════════════════════
+
+  // LƯU HỒ SƠ BƯỚC 1. Kiểm hết tại máy trước, sai chỗ nào báo chỗ đó rồi dừng.
+  // Khoảng hợp lệ lấy từ PROFILE_LIMITS, bản gốc nằm ở backend nutritionConstants.js.
+  // KHÔNG gõ lại số ở đây, kẻo lệch với luật mà profileController đang kiểm.
   const handleSave = async () => {
     const trimmedName = name.trim();
     if (!trimmedName || trimmedName.length < 2) {
       Alert.alert(t.editProfile.invalidName, t.editProfile.nameMin);
       return;
     }
-    // \p{L} = any Unicode letter (supports Vietnamese, Chinese, etc.)
+    // \p{L} nghĩa là chữ cái của MỌI ngôn ngữ, nên tên tiếng Việt có dấu vẫn qua được.
+    // Chặn số và ký tự lạ, chỉ cho chữ cái với khoảng trắng.
     if (!/^[\p{L}\s]+$/u.test(trimmedName)) {
       Alert.alert(t.editProfile.invalidName, t.editProfile.nameLettersOnly);
       return;
     }
-    // Khoảng hợp lệ lấy từ PROFILE_LIMITS; bản gốc nằm ở backend/src/config/nutritionConstants.js.
-    // Không gõ lại số để tránh lệch với profileController.updateProfile.
     const ageLimit = PROFILE_LIMITS.age;
     const weightLimit = PROFILE_LIMITS.weightKg;
     const heightLimit = PROFILE_LIMITS.heightCm;
@@ -93,6 +109,16 @@ export default function EditProfileScreen() {
     }
     setIsSaving(true);
     try {
+      // LƯU HỒ SƠ BƯỚC 2. Gửi đi rồi ĐỨNG ĐÂY CHỜ. Có thể là hai lượt liên tiếp.
+      //
+      // Lượt một chỉ chạy KHI TÊN CÓ ĐỔI, vì tên đi đường riêng.
+      // Đường đi: AuthContext.changeName → authApi → apiClient → PUT /user/name
+      //           → accountController.changeName
+      //
+      // Lượt hai luôn chạy, gửi phần còn lại của hồ sơ.
+      // Đường đi: AuthContext.updateProfile → authApi → apiClient → PUT /profile
+      //           → profileController.updateProfile → services/nutrition/calorieGoal.js
+      // Bên đó kiểm lại mọi giới hạn rồi tính lại mục tiêu calo từ hồ sơ mới.
       if (trimmedName !== user?.name) await changeName(trimmedName);
       const result = await updateProfile({
         gender: gender || undefined,
@@ -104,6 +130,8 @@ export default function EditProfileScreen() {
         // Chuỗi rỗng sẽ xóa sở thích ăn uống đã lưu trước đó.
         tastePreferences: taste.trim(),
       });
+      // LƯU HỒ SƠ BƯỚC 3. Backend có TỰ đổi mục tiêu thì báo rồi mới quay về,
+      // để người dùng đọc xong mới thoát màn. Không đổi thì quay về luôn.
       if (result?.adjustedGoal) {
         Alert.alert(
           t.weight.goalAdjustedTitle,
@@ -130,10 +158,10 @@ export default function EditProfileScreen() {
         <ScreenHeader title={t.editProfile.title} />
 
         <Card style={styles.card}>
-          {/* Name */}
+          {/* Ô tên. Đây là ô DUY NHẤT đi đường riêng khi lưu, xem BƯỚC 2. */}
           <TextField label={t.editProfile.nameLabel} placeholder={t.editProfile.namePlaceholder} value={name} onChangeText={setName} autoCapitalize="words" maxLength={INPUT_LIMITS.DISPLAY_NAME} />
 
-          {/* Gender */}
+          {/* Giới tính. Chỉ có hai lựa chọn vì công thức TDEE của backend chỉ nhận hai. */}
           <View style={styles.field}>
             <AppText variant="muted">{t.profile.gender}</AppText>
             <View style={styles.genderRow}>
@@ -171,7 +199,8 @@ export default function EditProfileScreen() {
             </View>
           </View>
 
-          {/* Conditions */}
+          {/* Bệnh nền, chọn được nhiều mục. Backend dùng danh sách này để lọc bớt
+              món trong gợi ý của Coach và của Kế hoạch tuần. */}
           <View style={styles.field}>
             <AppText variant="muted">{t.editProfile.healthConditions}</AppText>
             <View style={styles.chipWrap}>

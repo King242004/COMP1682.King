@@ -140,8 +140,12 @@ const POPULAR_ACTIVITY_KEYS = [
   "table_tennis",
 ] as const;
 
+// Trải phẳng mọi nhóm thành một mảng, chỉ để tra theo mã ở dòng dưới.
 const ALL_ACTIVITIES = ACTIVITY_GROUPS.flatMap((group) => group.items);
 
+// Danh sách hoạt động phổ biến, hiện sẵn ở màn Ghi buổi tập.
+// Tra từ mã sang bản đầy đủ. Gõ sai một mã là NÉM LỖI ngay lúc nạp file,
+// cố ý làm vậy để bắt lỗi lúc code, chứ đừng để màn hiện ra một ô trống.
 export const POPULAR_ACTIVITIES: Activity[] = POPULAR_ACTIVITY_KEYS.map((key) => {
   const activity = ALL_ACTIVITIES.find((item) => item.key === key);
   if (!activity) throw new Error(`Missing popular activity: ${key}`);

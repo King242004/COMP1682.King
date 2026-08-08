@@ -6,11 +6,7 @@
 // Trả ra:     các ô nhập kèm nhãn nguồn số liệu
 // Khi lỗi:    gõ chữ vào ô số thì hiện lỗi ngay tại ô đó
 
-// Vì sao tách ra: hai màn trước đây chép nguyên phần này của nhau, gồm cả khối
-// hiển thị lẫn hơn hai chục dòng style giống hệt. Sửa màu hay cỡ chữ ở một bên
-// mà quên bên kia là hai màn lệch nhau ngay.
-// Phần TIÊU ĐỀ và nhãn nguồn KHÔNG nằm ở đây, vì ba chỗ dùng có tiêu đề khác
-// nhau: hai màn hiện tên món, còn thẻ tổng ở màn Thêm món hiện tổng cả bữa.
+// Tiêu đề KHÔNG nằm ở đây vì ba chỗ dùng có tiêu đề khác nhau
 import { StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -20,9 +16,8 @@ import { DIGIT_LIMITS } from "@/config/inputLimits";
 
 export type NutritionField = "calories" | "protein" | "carbs" | "fat";
 
-// Khối CHỈ ĐỌC: số calo lớn, ba ô macro, rồi phần mô tả và cảnh báo nếu có.
-// approximate bật thì thêm dấu ngã trước số calo, để người dùng thấy đây là
-// số AI ước tính chứ không phải số đo chính xác.
+// Ra màn: số calo lớn, ba ô đạm tinh bột chất béo, mô tả và cảnh báo nếu có
+// approximate bật thì thêm dấu ngã trước calo để báo đây là số AI đoán
 export function NutritionSummary({ approximate, calories, protein, carbs, fat, description, disclaimer }: {
   approximate: boolean;
   calories: string | number;
@@ -58,11 +53,8 @@ export function NutritionSummary({ approximate, calories, protein, carbs, fat, d
   );
 }
 
-// Thẻ kết quả của MỘT món: khung có vạch ngăn phía trên, hàng tiêu đề kèm nhãn
-// nguồn, rồi các con số. Hai màn dùng chung nguyên thẻ này.
-// Thẻ TỔNG cả bữa ở màn Thêm món không dùng hàm này mà gọi thẳng NutritionSummary,
-// vì nó nằm trong một Card riêng và tiêu đề của nó là tổng cả bữa chứ không phải
-// một món. Ghép chung sẽ phải thêm cờ điều kiện mà không bớt được dòng nào.
+// Ra màn: thẻ kết quả của MỘT món, có vạch ngăn, tiêu đề kèm nhãn nguồn, rồi số
+// Thẻ TỔNG cả bữa không dùng hàm này mà gọi thẳng NutritionSummary
 export function NutritionResultCard({ sourceLabel, approximate, calories, protein, carbs, fat, description, disclaimer }: {
   sourceLabel: string;
   approximate: boolean;
@@ -93,10 +85,8 @@ export function NutritionResultCard({ sourceLabel, approximate, calories, protei
   );
 }
 
-// Khối NHẬP TAY: bốn ô số, dùng khi người dùng muốn tự gõ thay vì để AI ước tính.
-// errorFor là một HÀM chứ không phải một object, vì hai màn lưu lỗi theo hai
-// kiểu khác nhau: màn Thêm món gắn mã món vào khóa lỗi để phân biệt tám món,
-// còn màn Sửa món chỉ có một món nên dùng thẳng tên ô.
+// Ra màn: bốn ô calo, đạm, tinh bột, chất béo cho gõ tay
+// errorFor là HÀM vì màn Thêm món gắn mã món vào khóa lỗi còn màn Sửa món thì không
 export function NutritionManualFields({ values, onChange, onBlur, errorFor }: {
   values: Record<NutritionField, string>;
   onChange: (field: NutritionField, value: string) => void;
@@ -105,10 +95,8 @@ export function NutritionManualFields({ values, onChange, onBlur, errorFor }: {
 }) {
   const t = useT();
 
-  // Khuôn chung của một ô số. Viết một lần rồi gọi bốn lần ở JSX dưới.
-  // Bàn phím để decimal-pad nên chỉ gõ được số với dấu chấm.
-  // Ô calo cho nhiều chữ số hơn ba ô kia, vì calo lên tới hàng nghìn còn ba chất thì không.
-  // Kiểm số chạy lúc RỜI ô, không phải lúc đang gõ, kẻo mới gõ chữ đầu đã bị mắng.
+  // Khuôn chung của một ô số, viết một lần rồi gọi bốn lần ở JSX dưới
+  // Ô calo cho nhiều chữ số hơn ba ô kia, và kiểm số chạy lúc RỜI ô
   const field = (name: NutritionField, label: string, placeholder: string) => (
     <TextField
       label={label}

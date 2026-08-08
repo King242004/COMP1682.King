@@ -5,18 +5,12 @@
 // Nhận vào:   số cân nặng người dùng gõ
 // Trả ra:     không trả gì, ghi xong thì biểu đồ và mục tiêu calo tự cập nhật
 // Khi lỗi:    parseKg chặn sớm; weightController.logWeight kiểm lại request
-
-// LUỒNG GHI CÂN NẶNG
-// 1. Bấm nút Ghi cân nặng, hộp nhập mở ra
-// 2. Nhập số rồi bấm lưu, chạy onLog
-// 3. logWeight                    (POST /weight)
-// 4. Route gọi hàm logWeight trong backend/src/controllers/weightController.js;
-//    hàm này lưu một lần cân cho mỗi ngày
-// 5. nếu là lần cân mới nhất thì cập nhật luôn cân nặng trong hồ sơ,
-//    và tính lại mục tiêu calo nếu người dùng để app tự tính
-// 6. tải lại danh sách, biểu đồ vẽ lại
-// Hai việc khác trong phần này: xóa một lần cân và xem biểu đồ đường.
-// Cân nặng mục tiêu cùng tốc độ được chỉnh ở màn Mục tiêu cân nặng riêng.
+//
+// Ba việc trong phần này: ghi một lần cân, xóa một lần cân, và xem biểu đồ đường.
+// Cân nặng mục tiêu cùng tốc độ thì chỉnh ở màn Mục tiêu cân nặng riêng.
+//
+// Nhớ: mỗi ngày chỉ giữ MỘT lần cân, ghi lần hai trong ngày là đè lên lần đầu.
+//      Luật đó nằm ở backend, weightController lo, màn này không kiểm.
 import { useState, useEffect, useCallback } from "react";
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -35,6 +29,15 @@ import { getWeights, logWeight, deleteWeight, type WeightHistory } from "./weigh
 import { WeightChart } from "./WeightChart";
 import { DIGIT_LIMITS } from "@/config/inputLimits";
 
+// ══════════════════════════════════════════════════════════
+// HỘP NHẬP KG
+//
+// Không phải luồng. Một mảnh giao diện tách riêng, chỉ lo phần nhìn.
+// Nó KHÔNG kiểm số và KHÔNG gọi mạng, chỉ đưa chuỗi thô ra cho nơi gọi lo.
+// Dùng ở khối GHI CÂN NẶNG bên dưới.
+// ══════════════════════════════════════════════════════════
+
+// Hộp nhập một số cân, có nút Hủy và nút Lưu.
 function KgModal({ visible, title, sub, initial, onCancel, onSave }: {
   visible: boolean;
   title: string;
@@ -89,6 +92,16 @@ export function WeightSection() {
   const t = useT();
   const weightLimit = PROFILE_LIMITS.weightKg;
 
+  // ══════════════════════════════════════════════════════════
+  // BỐN HÀM ĐỒ NGHỀ
+  //
+  // Không phải luồng. Hai luồng bên dưới đều mượn của khối này.
+  // Chỉ có hàm load là gọi mạng, ba hàm kia chạy tại máy.
+  // ══════════════════════════════════════════════════════════
+
+  // Báo cho người dùng biết backend vừa TỰ ĐỔI mục tiêu của họ.
+  // Xảy ra khi cân mới vượt qua cân mục tiêu, ví dụ đang giảm cân mà đã nhẹ hơn đích,
+  // lúc đó backend chuyển mục tiêu sang giữ cân. Không đổi thì không báo gì.
   const showGoalAdjustment = (adjustedGoal?: WeightGoal) => {
     if (!adjustedGoal) return;
     Alert.alert(t.weight.goalAdjustedTitle, t.weight.goalAdjusted(t.labels.goal[adjustedGoal]));
@@ -98,19 +111,27 @@ export function WeightSection() {
   const [loading, setLoading] = useState(true);
   const [logVisible, setLogVisible] = useState(false);
 
+  // Tải cả lịch sử cân: danh sách lần cân, cân hiện tại, cân mục tiêu.
+  // Đường đi: getWeights → apiClient → GET /weight → weightController.getWeights
+  // Nuốt lỗi vì phần này nằm lẫn trong màn Tiến trình, hỏng thì im chứ đừng
+  // ném hộp thoại lên chắn cả màn.
   const load = useCallback(async () => {
     if (!token) return;
     try {
       setHistory(await getWeights(token));
     } catch {
+      // Giữ nguyên dữ liệu lần trước, hiện bản cũ còn hơn hiện màn trống.
     } finally {
+      // Để trong finally nên hỏng cũng tắt vòng xoay, không kẹt mãi ở màn chờ.
       setLoading(false);
     }
   }, [token]);
 
-  // Tự tải danh sách cân nặng khi mở phần này.
+  // Tự tải khi phần này được nhìn thấy. Dùng useFocusEffect nên quay lại tab
+  // là tải lại, nhờ đó cân ghi ở màn khác cũng hiện ra ngay.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  // Đọc chuỗi người dùng gõ ra số kg. Ngoài khoảng cho phép thì trả null.
   const parseKg = (raw: string): number | null => {
     // Chấp nhận dấu phẩy thập phân thường dùng trong tiếng Việt.
     const n = Number(raw.replace(",", "."));
@@ -118,25 +139,63 @@ export function WeightSection() {
     return n;
   };
 
+  // Hai hàm đặt nhãn, dùng ở hộp thoại xác nhận xóa và ở phần JSX.
+  // Cả hai đều theo ngôn ngữ đã chọn trong app, không theo ngôn ngữ điện thoại.
+  // Ghép "T00:00:00" để máy hiểu là giờ địa phương, thiếu đuôi đó thì máy hiểu
+  // là UTC và múi giờ âm sẽ hiện lùi mất một ngày.
+  const dLabel = (d: string) =>
+    new Date(d + "T00:00:00").toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric" });
+  // Số kg, cắt còn tối đa hai chữ số sau dấu thập phân.
+  const numberLabel = (value: number) =>
+    value.toLocaleString(locale, { maximumFractionDigits: 2 });
+
+  // ══════════════════════════════════════════════════════════
+  // GHI CÂN NẶNG
+  //
+  // Đến từ nút Ghi cân nặng, người dùng gõ số trong KgModal rồi bấm Lưu.
+  // Bốn bước, đọc từ trên xuống là đúng thứ tự. BƯỚC 2 là chặng chờ mạng.
+  // Xong thì biểu đồ vẽ lại, và mục tiêu calo ở Trang chủ cũng đổi theo.
+  // ══════════════════════════════════════════════════════════
+
+  // GHI CÂN NẶNG BƯỚC 1. Nhận chuỗi thô từ hộp nhập, kiểm số ngay tại máy.
+  // Sai thì báo rồi dừng, GIỮ NGUYÊN hộp nhập cho người dùng sửa,
+  // chứ đóng hộp lại là họ phải gõ lại từ đầu.
   const onLog = async (raw: string) => {
     const kg = parseKg(raw);
     if (kg == null) {
       Alert.alert(t.common.errorTitle, t.weight.invalidKg(String(weightLimit.min), String(weightLimit.max)));
       return;
     }
+    // Số hợp lệ rồi thì mới đóng hộp nhập.
     setLogVisible(false);
     try {
+      // GHI CÂN NẶNG BƯỚC 2. Gửi đi rồi ĐỨNG ĐÂY CHỜ.
+      // Đường đi: logWeight → apiClient → POST /weight → weightController.logWeight
+      // Bên đó lưu một lần cân cho mỗi ngày. Nếu đây là lần cân mới nhất thì
+      // cập nhật luôn cân nặng trong hồ sơ, và tính lại mục tiêu calo
+      // nếu người dùng đang để app tự tính.
       const result = await logWeight(token!, kg);
+      // GHI CÂN NẶNG BƯỚC 3. Tải lại hai thứ, chạy song song vì không phụ thuộc nhau.
+      // load lấy danh sách mới cho biểu đồ, fetchProfile lấy mục tiêu calo mới
+      // để Trang chủ vẽ lại vòng calo cho đúng.
       await Promise.all([load(), fetchProfile()]);
+      // GHI CÂN NẶNG BƯỚC 4. Backend có tự đổi mục tiêu thì báo cho người dùng biết.
+      // Báo SAU khi đã tải lại, để họ đóng hộp thoại ra là thấy số mới luôn.
       showGoalAdjustment(result.adjustedGoal);
     } catch (error) {
       Alert.alert(t.common.errorTitle, getUserErrorMessage(error, t, t.weight.saveFailed));
     }
   };
 
-  // Xóa một lần cân.
-  // weightController.deleteWeight lấy lần cân còn lại mới nhất để cập nhật lại hồ sơ,
-  // vì nếu xóa đúng lần mới nhất thì hồ sơ đang giữ một số không còn tồn tại.
+  // ══════════════════════════════════════════════════════════
+  // XÓA LẦN CÂN
+  //
+  // Đến từ nút thùng rác trên một dòng trong danh sách lần cân.
+  // Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Xong thì biểu đồ vẽ lại, và hồ sơ có thể lùi về một số cân cũ hơn.
+  // ══════════════════════════════════════════════════════════
+
+  // XÓA LẦN CÂN BƯỚC 1. Hỏi lại cho chắc, có kèm ngày để khỏi xóa nhầm dòng.
   const onDelete = (id: string, date: string) => {
     Alert.alert(t.weight.deleteTitle, t.weight.deleteMsg(dLabel(date)), [
       { text: t.common.cancel, style: "cancel" },
@@ -145,7 +204,15 @@ export function WeightSection() {
         style: "destructive",
         onPress: async () => {
           try {
+            // XÓA LẦN CÂN BƯỚC 2. Gửi lệnh xóa rồi ĐỨNG ĐÂY CHỜ.
+            // Đường đi: deleteWeight → apiClient → DELETE /weight/:id
+            //           → weightController.deleteWeight
+            // Bên đó lấy lần cân CÒN LẠI mới nhất để cập nhật lại hồ sơ.
+            // Phải làm vậy vì nếu xóa đúng lần mới nhất thì hồ sơ đang giữ
+            // một con số không còn tồn tại nữa.
             const result = await deleteWeight(token!, id);
+            // XÓA LẦN CÂN BƯỚC 3. Tải lại danh sách với hồ sơ, rồi báo nếu mục tiêu đổi.
+            // Giống hệt BƯỚC 3 và 4 của khối GHI CÂN NẶNG ở trên.
             await Promise.all([load(), fetchProfile()]);
             showGoalAdjustment(result.adjustedGoal);
           } catch {
@@ -156,11 +223,8 @@ export function WeightSection() {
     ]);
   };
 
-  const dLabel = (d: string) =>
-    new Date(d + "T00:00:00").toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric" });
-  const numberLabel = (value: number) =>
-    value.toLocaleString(locale, { maximumFractionDigits: 2 });
-
+  // Lần đầu tải mà chưa có gì trong tay thì hiện vòng xoay.
+  // Có history rồi thì lần tải sau không hiện nữa, cứ để bản cũ đó cho đỡ chớp màn.
   if (loading && !history) {
     return (
       <View style={styles.loadingBox}>
@@ -245,10 +309,10 @@ export function WeightSection() {
           <AppText variant="h2">{t.weight.entries}</AppText>
           <View style={styles.list}>
             {[...logs].reverse().map((l) => (
-              <View key={l._id} style={styles.row}>
+              <View key={l.id} style={styles.row}>
                 <AppText variant="body2" style={styles.rowDate}>{dLabel(l.date)}</AppText>
                 <AppText variant="body2" style={styles.rowKg}>{l.weightKg} kg</AppText>
-                <Pressable onPress={() => onDelete(l._id, l.date)} hitSlop={10} style={({ pressed }) => pressed && styles.dim}>
+                <Pressable onPress={() => onDelete(l.id, l.date)} hitSlop={10} style={({ pressed }) => pressed && styles.dim}>
                   <Ionicons name="trash-outline" size={16} color={theme.colors.subtle} />
                 </Pressable>
               </View>

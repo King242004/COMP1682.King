@@ -12,6 +12,16 @@
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 
+// ══════════════════════════════════════════════════════════
+// CỬA NHẬN ẢNH
+//
+// Không phải luồng. Một khuôn dựng bộ nhận ảnh, cộng một bộ đếm lượt.
+// Đến từ mấy route có tải ảnh: ảnh đại diện, ảnh bài đăng, ảnh quét món.
+// 
+// Nhớ: ảnh giữ trong BỘ NHỚ chứ không ghi ra đĩa, vì đẩy thẳng lên Cloudinary.
+// ══════════════════════════════════════════════════════════
+
+// Chỉ nhận mấy định dạng ảnh này. Chặn ở đây để file lạ không lên tới Cloudinary.
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -20,6 +30,8 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/heif",
 ]);
 
+// Dựng một bộ nhận ảnh với trần dung lượng và trần số file truyền vào.
+// Giữ ảnh trong bộ nhớ chứ không ghi ra đĩa, vì ảnh đẩy thẳng lên Cloudinary.
 function createImageUpload({ maxFileBytes, maxFiles = 1, maxFields = 10 }) {
   return multer({
     storage: multer.memoryStorage(),
@@ -41,6 +53,8 @@ function createImageUpload({ maxFileBytes, maxFiles = 1, maxFields = 10 }) {
   });
 }
 
+// Bộ đếm lượt riêng cho việc tải ảnh, chặt hơn bộ đếm chung,
+// vì mỗi lượt tải ảnh tốn băng thông và tốn lượt Cloudinary.
 function imageUploadLimiter(limit) {
   return rateLimit({
     windowMs: 15 * 60 * 1000,

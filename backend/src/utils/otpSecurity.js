@@ -13,19 +13,33 @@
 //     nên kẻ tấn công không đoán được mã qua tốc độ trả lời.
 const { createHmac, randomInt, timingSafeEqual } = require("crypto");
 
-// Bốn con số cấu hình cho mã xác minh:
-// Bốn con số cấu hình: mã sống 10 phút, sai tối đa 5 lần,
-// chờ 1 phút giữa hai lần gửi, và mọi phản hồi mất ít nhất 1.2 giây.
+// ══════════════════════════════════════════════════════════
+// HẰNG SỐ VÀ HÀM AN TOÀN CHO MÃ 6 SỐ
+//
+// Không phải luồng. Mấy hằng số cấu hình, và mấy hàm tính thuần.
+// Đến từ otpService, authController, accountController. Gọi cái nào cũng được.
+// ══════════════════════════════════════════════════════════
+
+// Hai lý do dùng mã. Băm mã có nhét lý do vào, nên mã của luồng đăng ký
+// KHÔNG dùng lại được cho luồng quên mật khẩu.
 const OTP_PURPOSE = Object.freeze({
   REGISTRATION: "registration",
   PASSWORD_RESET: "password_reset",
 });
 
+// Mã sống 10 phút rồi hết hiệu lực.
 const OTP_TTL_MS = 10 * 60 * 1000;
+// Gõ sai quá 5 lần là mã chết luôn, phải xin mã mới. Chặn dò mò từng số.
 const OTP_MAX_ATTEMPTS = 5;
+// Chờ 1 phút mới cho xin mã lần nữa. Chặn spam email.
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+// Mọi phản hồi mất ÍT NHẤT 1.2 giây, kể cả khi biết ngay là sai.
+// Không có mức sàn này thì người tấn công đo thời gian trả lời là đoán được
+// email nào có tài khoản, vì email không tồn tại sẽ trả về nhanh hơn hẳn.
 const OTP_RESPONSE_FLOOR_MS = 1200;
 
+// Đưa email về một dạng chuẩn: cắt khoảng trắng, hạ chữ thường.
+// Phải dùng ở MỌI chỗ đụng tới email, kẻo "A@x.com" với "a@x.com" ra hai chuỗi băm khác nhau.
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }

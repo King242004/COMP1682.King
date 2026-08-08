@@ -9,14 +9,25 @@
 // Vì sao tách riêng: mealController.js và planController.js cùng gọi vào đây,
 // nên luồng thêm món và luồng kế hoạch luôn dùng chung một bộ giới hạn.
 // Nếu mỗi bên tự kiểm thì rất dễ lệch nhau.
-// mealController và planController cùng gọi file này để luồng tạo và sửa món
-// luôn dùng chung giới hạn calo, protein, carb và fat.
 const { INPUT_LIMITS, LEGACY_LIMITS, DIGIT_LIMITS } = require("../config/inputLimits");
 const { MEAL_TYPES, NUTRITION_SOURCES } = require("../config/mealEnums");
 
+// ══════════════════════════════════════════════════════════
+// KIỂM DỮ LIỆU MÓN
+//
+// Không phải luồng. Mấy hàm kiểm độc lập, gọi cái nào cũng được.
+// Đến từ mealController và planController, hai bên dùng CHUNG bộ luật này
+// nên luồng thêm món và luồng kế hoạch không bao giờ lệch nhau.
+// ══════════════════════════════════════════════════════════
+
+// Trần calo và trần ba chất, suy ra từ số chữ số mà ô nhập bên app cho gõ.
+// Tính ra từ DIGIT_LIMITS chứ không gõ số cứng, để app với backend luôn khớp.
 const CALORIE_MAX = 10 ** DIGIT_LIMITS.CALORIE - 1;
+// Trần ba chất, cùng cách tính với trần calo ngay trên.
 const MACRO_MAX = 10 ** DIGIT_LIMITS.MACRO - 1;
 
+// Tên món phải từ 2 tới trần ký tự. Cắt khoảng trắng trước khi đếm,
+// nên gõ toàn dấu cách cũng bị chặn.
 function validateMealName(input) {
   const value = typeof input === "string" ? input.trim() : "";
   return value.length >= 2 && value.length <= LEGACY_LIMITS.MEAL_NAME
@@ -24,6 +35,7 @@ function validateMealName(input) {
     : { error: "Enter a valid meal name." };
 }
 
+// Kiểm bốn số dinh dưỡng. Trả về value đã ép kiểu, hoặc error nếu hỏng.
 function validateNutritionValues(input) {
   // Giá trị mặc định của tham số CHỈ chạy khi truyền undefined, không chạy khi
   // truyền null. Mà `req.body` bằng null là chuyện có thật: gửi đúng chữ null

@@ -1,34 +1,20 @@
 // ═══ FILE NÀY LÀM GÌ ═══
-// Adapter HTTP giữa MealsContext và backend/src/routes/mealRoutes.js; không giữ state.
+// Danh sách địa chỉ backend của phần món ăn. Không giữ state, không tự gọi mạng.
 //
 // Ai gọi tới: MealsContext, không màn hình nào gọi thẳng vào đây
 // Nhận vào:   món cần gửi đi, và thẻ đăng nhập
 // Trả ra:     Meal do mealController lưu, đã đổi tên trường cho hợp với app
 // Khi lỗi:    ném lỗi lên cho MealsContext, rồi màn hình mới hiện thông báo
+//
+// File này KHÔNG gọi fetch. Nó nhờ apiRequest bên src/utils/apiClient.ts,
+// chỗ đó lo địa chỉ server, thẻ đăng nhập, múi giờ, hạn chờ và lỗi 401.
 import type { DailyTotals, Meal, NewMeal, RawMeal, UpdateMeal } from "@/features/meals/mealTypes";
 import { apiRequest } from "../../utils/apiClient";
+import { withId } from "../../utils/apiTypes";
 
-// Backend gọi mã là _id còn app gọi là id, nên phải đổi tên trường ở đây.
-// Đổi ở một chỗ duy nhất để các màn hình không phải biết tới _id.
-function mapMeal(meal: RawMeal): Meal {
-  return {
-    id: meal._id,
-    name: meal.name,
-    calories: meal.calories,
-    protein: meal.protein,
-    carbs: meal.carbs,
-    fat: meal.fat,
-    portionAmount: meal.portionAmount,
-    portionUnit: meal.portionUnit,
-    portionText: meal.portionText,
-    nutritionSource: meal.nutritionSource,
-    mealType: meal.mealType,
-    image: meal.image,
-    note: meal.note,
-    date: meal.date,
-    createdAt: meal.createdAt,
-  };
-}
+// Đổi _id của MongoDB thành id. Hàm chung ở src/utils/apiTypes.ts,
+// không liệt kê trường nào nên thêm trường mới vào Meal cũng không phải sửa đây.
+const mapMeal = (meal: RawMeal): Meal => withId(meal);
 
 // ─── ĐỌC NHẬT KÝ ───
 
@@ -48,7 +34,7 @@ export async function fetchMealsByDateRequest(
   };
 }
 
-// Gọi GET /meals/history lấy toàn bộ lịch sử, không giới hạn khoảng ngày.
+// Gọi GET /meals/history lấy toàn bộ lịch sử, không giới hạn khoảng ngày
 export async function fetchMealHistoryRequest(token: string): Promise<Meal[]> {
   const data = await apiRequest<{ meals: RawMeal[] }>(
     "/meals/history",
@@ -61,9 +47,7 @@ export async function fetchMealHistoryRequest(token: string): Promise<Meal[]> {
 
 // ─── THÊM, SỬA VÀ XÓA MÓN ───
 
-// Đến từ MealsContext.addMeal. Đường đi tiếp: apiClient → POST /meals.
-// mealController.addMeal trả luôn CẢ NGÀY qua readDay, kèm tổng mới,
-// nhờ vậy MealsContext không phải gọi thêm một lượt GET nữa.
+// Đường một món. Đi tiếp: src/utils/apiClient.ts, rồi POST /meals
 export async function addMealRequest(
   meal: NewMeal,
   token: string
@@ -77,8 +61,8 @@ export async function addMealRequest(
   return { meals: data.day.meals.map(mapMeal), totals: data.day.totals };
 }
 
-// Bản nhiều món. Đến từ MealsContext.addMeals.
-// Đường đi tiếp: apiClient → POST /meals/batch. Cũng trả về cả ngày y như trên.
+// Nút Lưu ở AddMealScreen đi vào đây, tối đa 8 món một lần
+// Đi tiếp: src/utils/apiClient.ts, rồi POST /meals/batch
 export async function addMealsRequest(
   meals: NewMeal[],
   token: string
@@ -92,8 +76,7 @@ export async function addMealsRequest(
   return { meals: data.day.meals.map(mapMeal), totals: data.day.totals };
 }
 
-// Gọi PUT /meals/:id. Trả về món sau khi sửa, vì MealsContext cần nó
-// để thay tại chỗ trong danh sách mà không phải tải lại từ mạng.
+// Gọi PUT /meals/:id, trả về món đã sửa để MealsContext thay tại chỗ
 export async function updateMealRequest(
   id: string,
   updates: UpdateMeal,
@@ -103,7 +86,7 @@ export async function updateMealRequest(
   return mapMeal(data.meal);
 }
 
-// Gọi DELETE /meals/:id.
+// Gọi DELETE /meals/:id
 export async function deleteMealRequest(id: string, token: string): Promise<void> {
   await apiRequest(`/meals/${id}`, "DELETE", undefined, token);
 }

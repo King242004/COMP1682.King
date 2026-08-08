@@ -28,6 +28,16 @@ const { normalizeCoachText, resolveRequestedLanguage, requestedLanguage, languag
 const { requestTodayKey } = require("../utils/dateUtils");
 const { MEAL_TYPES } = require("../config/mealEnums");
 
+// ══════════════════════════════════════════════════════════
+// CÁC CỬA CỦA AI COACH
+//
+// Không phải luồng. Mấy cửa độc lập: chấm điểm sức khỏe, trò chuyện,
+// đọc và xóa lịch sử, ghi món từ tin nhắn, và gợi ý món.
+// 
+// Nhớ: mọi cửa gọi AI đều phải qua coachScope kiểm phạm vi TRƯỚC.
+//      Hỏi ngoài phạm vi thì chặn ngay, đừng tốn một lượt gọi Gemini.
+// ══════════════════════════════════════════════════════════
+
 // Đoán bữa đang tới dựa trên giờ hiện tại. Bản giống hệt bên frontend
 // nằm ở features/meals/mealHelpers.ts, hai bên phải cho ra cùng kết quả.
 function mealTypeByHour(h) {
@@ -41,6 +51,8 @@ function mealTypeByHour(h) {
 // Tìm bữa kế tiếp chưa ăn. Bắt đầu từ bữa hợp với giờ hiện tại rồi nhảy tiếp
 // nếu bữa đó đã ghi món rồi.
 function nextSlotToSuggest(hour, eatenTypes) {
+  // Đoán bữa kế tiếp: bắt đầu từ bữa hợp với giờ hiện tại, rồi nhảy tới
+  // khi gặp bữa chưa ăn. Ăn hết cả bốn bữa thì idx vượt mảng, nơi gọi tự lo.
   const order = ["breakfast", "lunch", "snack", "dinner"];
   let idx = order.indexOf(mealTypeByHour(hour));
   while (idx < order.length && eatenTypes.has(order[idx])) idx++;
@@ -334,6 +346,8 @@ exports.suggestMeal = async (req, res) => {
       language,
       (correctionPrompt) => generateWithFallback(insightModels, correctionPrompt)
     );
+    // Lọc bỏ gợi ý thiếu tên hoặc thiếu calo. AI thỉnh thoảng trả về mục rỗng,
+    // để lọt xuống app là hiện một thẻ món trống trơn.
     const mapped = (Array.isArray(parsed.suggestions) ? parsed.suggestions : [])
       .filter((s) => s && s.name && s.calories != null)
       .map((s, index) => ({
@@ -362,6 +376,9 @@ exports.suggestMeal = async (req, res) => {
 // Lọc theo ngôn ngữ để khi đổi ngôn ngữ, màn Coach không lẫn tin của ngôn ngữ kia.
 exports.getHistory = async (req, res) => {
   const language = req.query.language === "vi" ? "vi" : "en";
+  // Lấy tối đa 100 tin gần nhất của ĐÚNG ngôn ngữ đang chọn.
+  // Lấy giảm dần rồi đảo lại, vì cần 100 tin MỚI nhất chứ không phải 100 tin đầu tiên.
+  // Lọc theo ngôn ngữ nên đổi tiếng là thấy một mạch hội thoại khác.
   const msgs = (
     await ChatMessage.find({ user: req.user.id, language }).sort({ createdAt: -1 }).limit(100)
   ).reverse();

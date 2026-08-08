@@ -30,6 +30,13 @@ async function addNotification({ user, actor, type, post = null }) {
   }
 }
 
+// ══════════════════════════════════════════════════════════
+// ĐỒ NGHỀ DÙNG CHUNG CỦA CỘNG ĐỒNG
+//
+// Không phải luồng. Mấy hàm dùng chung cho bốn controller của Cộng đồng:
+// kiểm quyền xem, dựng bài để trả về, tải ảnh, và tạo thông báo.
+// ══════════════════════════════════════════════════════════
+
 // Đẩy một ảnh bài đăng lên kho ảnh, thu về tối đa 1080 pixel chiều ngang.
 function uploadToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
@@ -46,6 +53,8 @@ function uploadToCloudinary(buffer) {
 // Bài cũ chỉ có một ảnh nên phải gộp về cùng dạng mảng ảnh.
 function shapePost(post, currentUserId) {
   const author = post.user || {};
+  // Gom danh sách ảnh của bài. Bài đời cũ chỉ có MỘT ảnh ở trường image,
+  // bài mới có mảng images, nên phải đọc được cả hai kiểu.
   const images = (post.images || []).length
     ? post.images.map((image) => image.url)
     : post.image

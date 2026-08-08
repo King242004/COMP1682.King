@@ -5,17 +5,13 @@
 // Nhận vào:   khoảng ngày người dùng chọn, theo tuần hoặc tháng
 // Trả ra:     biểu đồ calo, chuỗi ngày ghi món, hoạt động, và cân nặng
 // Khi lỗi:    một phần hỏng thì phần đó báo lỗi riêng, các phần khác vẫn hiện
-
-// LUỒNG XEM TIẾN TRÌNH, tự chạy khi mở màn
-// 1. useEffect gọi MealsContext.fetchMealHistory
-// 2. mealsApi.fetchMealHistoryRequest    (GET /meals/history)
-// 3. Route gọi hàm getMealHistory trong backend/src/controllers/mealController.js;
-//    hàm này trả toàn bộ lịch sử món
-// 4. progress/summary.ts gom món theo ngày, theo tháng, tính tổng và tỷ lệ
-// 5. các thành phần con vẽ biểu đồ cột, lưới nhiệt và hàng đều đặn
-// Ba chế độ xem: Tuần, Tháng, Năm. Đổi chế độ chỉ tính lại từ dữ liệu
-// đã tải, KHÔNG gọi mạng thêm.
-// Ba phần khác trong màn này: Hoạt động, Cân nặng, và chuỗi ngày dài nhất.
+//
+// Màn có ba tab: Calo, Hoạt động, Cân nặng. Chỉ tab Calo nằm trong file này,
+// hai tab kia giao cho ActivitySection và WeightSection, và hai phần đó TỰ gọi mạng.
+//
+// Nhớ: file này chỉ gọi mạng ĐÚNG MỘT LẦN, lúc mở màn, lấy trọn lịch sử món.
+//      Đổi chế độ Tuần, Tháng, Năm hay lật kỳ đều chỉ tính lại từ dữ liệu đã có,
+//      KHÔNG gọi mạng thêm lần nào nữa.
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -40,6 +36,16 @@ import { ConsistencyRow } from "@/features/progress/ConsistencyRow";
 type Tab = "calories" | "activity" | "weight";
 type Mode = "week" | "month" | "year";
 
+// ══════════════════════════════════════════════════════════
+// XEM TIẾN TRÌNH
+//
+// Đến từ màn Hồ sơ. Năm bước, đọc từ trên xuống là đúng thứ tự.
+// Chỉ có MỘT chặng chờ mạng, ở BƯỚC 2. Từ BƯỚC 3 trở đi là tính tại máy.
+// Xong thì vẽ biểu đồ cột hoặc lưới nhiệt, kèm các con số tổng và trung bình.
+// ══════════════════════════════════════════════════════════
+
+// XEM TIẾN TRÌNH BƯỚC 1. Chốt khoảng ngày đang xem.
+// anchor là một ngày bất kỳ trong kỳ, hai mũi tên ở BƯỚC 5 sẽ dời nó đi.
 export default function ProgressScreen() {
   const { user } = useAuth();
   // historyMeals chứa mọi ngày đã ghi, còn meals chỉ chứa ngày đang chọn.
@@ -70,7 +76,11 @@ export default function ProgressScreen() {
     { key: "weight", label: t.weight.tab, icon: "scale-outline" },
   ];
 
-  // Tự tải toàn bộ lịch sử món khi mở màn, mọi biểu đồ đều tính từ đây.
+  // XEM TIẾN TRÌNH BƯỚC 2. Chặng chờ mạng DUY NHẤT của file này.
+  // Đường đi: MealsContext.fetchMealHistory → mealsApi → apiClient
+  //           → GET /meals/history → mealController.getMealHistory
+  // Tải trọn lịch sử một lần, rồi mọi biểu đồ đều tính từ đống dữ liệu đó.
+  // Nuốt lỗi vì MealsContext còn giữ bản cũ, hiện bản cũ hơn là hiện màn trắng.
   useEffect(() => { void fetchMealHistory().catch(() => {}); }, [fetchMealHistory]);
 
   // Chưa đủ hồ sơ thì mục tiêu là rỗng. Không thay bằng con số mặc định.
@@ -79,6 +89,8 @@ export default function ProgressScreen() {
   // so với mục tiêu đều bị ẩn, nên giá trị 0 ở đây không bao giờ hiện ra.
   const goalScale = goal ?? 0;
 
+  // XEM TIẾN TRÌNH BƯỚC 3. Gom món theo ngày, rồi đếm chuỗi ngày dài nhất.
+  // Tất cả tính từ historyMeals đã tải ở BƯỚC 2, không gọi mạng thêm.
   const summaries = buildDaySummaries(historyMeals, goal, windowDays, locale);
   const daysWithMeals = summaries.filter((s) => s.calories > 0);
   const eligibleMealDates = streakEligibleDates(historyMeals);
@@ -89,7 +101,9 @@ export default function ProgressScreen() {
       : eligibleMealDates.filter((date) => periodKeys.has(date));
   const longestStreak = longestMealStreak(periodMealDates);
 
-  // Biểu đồ dùng cột theo ngày cho tuần hoặc tháng, theo tháng cho năm.
+  // XEM TIẾN TRÌNH BƯỚC 4. Dựng các cột cho biểu đồ.
+  // Chế độ Năm thì 12 cột theo tháng, hai chế độ kia thì mỗi ngày một cột.
+  // Màu cột nói lên tình trạng: cam là vượt mục tiêu, xanh lá là đạt, còn lại màu chính.
   const yearMonths = mode === "year" ? getYearMonthTotals(historyMeals, anchor.getFullYear(), locale) : [];
   const bars: Bar[] = mode === "year"
     ? yearMonths.map((mt, i) => ({ key: mt.key, label: String(i + 1), fullLabel: mt.label, value: mt.calories, color: theme.colors.primary, dim: mt.isFuture }))
@@ -100,8 +114,12 @@ export default function ProgressScreen() {
         color: goal != null && d.calories > goal ? theme.colors.accent2 : d.onTrack ? theme.colors.accent : theme.colors.primary,
         dim: d.isFuture,
       }));
-  // Đưa mục tiêu vào thang đo để đường mục tiêu luôn nằm trong biểu đồ.
+  // Cột cao nhất trong khoảng đang xem, dùng làm mốc tính chiều cao các cột kia.
   const rawMax = bars.reduce((m, b) => Math.max(m, b.value), 0);
+  // Kéo thang đo lên ít nhất bằng mục tiêu, để ĐƯỜNG MỤC TIÊU luôn nằm trong khung.
+  // Không làm vậy thì tuần nào ăn ít hơn mục tiêu là đường đó bị đẩy ra ngoài, mất hút.
+  // Chế độ Năm không có đường mục tiêu nên bỏ qua.
+  // Đuôi "|| 1" chặn trường hợp cả khoảng không ăn gì, tránh chia cho 0.
   const maxValue = (mode === "year" ? rawMax : Math.max(rawMax, goalScale)) || 1;
 
   // Tính tổng và trung bình theo ngày hoặc theo tháng tùy chế độ.
@@ -111,14 +129,18 @@ export default function ProgressScreen() {
   const periodAvg = unitsWithData > 0 ? Math.round(periodTotal / unitsWithData) : 0;
   const heroCaloriesAnimated = useAnimatedNumber(periodTotal);
 
+  // Số ngày ăn bám sát mục tiêu, hiện ở hàng đều đặn.
   const daysOnTrack = summaries.filter((s) => s.onTrack).length;
 
-  // Macro trung bình theo ngày ở tuần và tháng, theo tháng ở chế độ năm.
-  // Cách tính này khớp với số calo trung bình bên cạnh.
+  // Macro trung bình. Chỉ chia cho số đơn vị CÓ dữ liệu, không chia cho cả kỳ,
+  // kẻo ghi 2 ngày trong tuần lại bị chia cho 7 và ra con số thấp hẳn đi.
+  // Cách tính này khớp đúng với số calo trung bình bên cạnh.
   const macroUnits: { protein: number; carbs: number; fat: number }[] =
     mode === "year" ? yearMonths.filter((mt) => mt.calories > 0) : daysWithMeals;
+  // Khuôn chung cho cả ba chất. pick chỉ ra lấy trường nào trong mỗi đơn vị.
   const heroMacro = (pick: (u: { protein: number; carbs: number; fat: number }) => number) =>
     macroUnits.length > 0 ? Math.round(macroUnits.reduce((sum, u) => sum + pick(u), 0) / macroUnits.length) : 0;
+  // Ba số macro trung bình, hiện ở thẻ đầu màn.
   const heroProtein = heroMacro((u) => u.protein);
   const heroCarbs = heroMacro((u) => u.carbs);
   const heroFat = heroMacro((u) => u.fat);
@@ -130,12 +152,15 @@ export default function ProgressScreen() {
   const selectedBar = selectedKey ? bars.find((b) => b.key === selectedKey) ?? null : null;
   const selectedSummary = selectedKey ? summaries.find((s) => s.key === selectedKey) ?? null : null;
 
-  // Nhãn và xử lý của nút chuyển kỳ.
+  // XEM TIẾN TRÌNH BƯỚC 5. Nhãn kỳ và hai nút lật kỳ.
+  // Nhãn đổi theo chế độ: tuần ghi khoảng ngày, tháng ghi tháng và năm, năm ghi số năm.
   const periodLabel = mode === "week"
     ? `${windowDays[0].toLocaleDateString(locale, { day: "numeric", month: "short" })} – ${windowDays[6].toLocaleDateString(locale, { day: "numeric", month: "short" })}`
     : mode === "month"
     ? anchor.toLocaleDateString(locale, { month: "long", year: "numeric" })
     : String(anchor.getFullYear());
+  // Lùi hoặc tiến một kỳ. Bước nhảy tùy chế độ: 7 ngày, 1 tháng, hay 1 năm.
+  // Xóa ô đang chọn vì ô đó thuộc kỳ cũ, giữ lại là chi tiết bên dưới trỏ nhầm ngày.
   const shiftPeriod = (delta: 1 | -1) => {
     const d = new Date(anchor);
     if (mode === "week") d.setDate(d.getDate() + delta * 7);

@@ -48,6 +48,47 @@ export function registerRequest(
   return apiRequest("/auth/register", "POST", { name, email, password, otp, language: language ?? undefined });
 }
 
+// ─── QUÊN MẬT KHẨU VÀ ĐỔI MẬT KHẨU ───
+
+// Gọi POST /user/send-otp, dùng cho cả lần gửi đầu lẫn lần bấm gửi lại.
+// Chờ tới 60 giây thay vì 45 giây mặc định, vì accountController.sendPasswordOTP
+// còn gọi services/emailRelayClient.js để gửi email thật.
+export async function sendPasswordOTP(email: string, language: "vi" | "en"): Promise<void> {
+  await apiRequest(
+    "/user/send-otp",
+    "POST",
+    { email, language },
+    undefined,
+    { timeoutMs: 60_000 }
+  );
+}
+
+// Gọi POST /user/verify-otp. Không cần thẻ đăng nhập vì người dùng chưa vào được app.
+export async function verifyPasswordOTP(email: string, otp: string): Promise<void> {
+  await apiRequest("/user/verify-otp", "POST", { email, otp });
+}
+
+// Gọi POST /user/reset-password. Phải gửi LẠI mã một lần nữa, vì
+// accountController.verifyOTP không phát thẻ tạm, còn resetPassword kiểm mã
+// lần nữa rồi mới xóa. Bỏ otp đi là backend từ chối.
+export async function resetPasswordRequest(
+  email: string,
+  otp: string,
+  newPassword: string
+): Promise<void> {
+  await apiRequest("/user/reset-password", "POST", { email, otp, newPassword });
+}
+
+// Gọi POST /user/change-password. Hàm DUY NHẤT trong nhóm này cần thẻ đăng nhập,
+// vì chỉ đổi được khi đã vào app. Backend phát thẻ mới, màn hình cần nó để thay phiên.
+export function changePasswordRequest(
+  currentPassword: string,
+  newPassword: string,
+  token: string
+): Promise<{ token: string }> {
+  return apiRequest("/user/change-password", "POST", { currentPassword, newPassword }, token);
+}
+
 // ─── HỒ SƠ ───
 
 // Gọi GET /profile. Trả về hồ sơ kèm BMI và TDEE.

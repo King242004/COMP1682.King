@@ -395,7 +395,7 @@ export const vi: Strings = {
   },
 
   weightGoals: {
-    title: "Mục tiêu cân nặng",
+    title: "Mục tiêu của bạn",
     subtitle: "Chọn hướng thay đổi, cân nặng mục tiêu và cách MealMate tính calo cho bạn.",
     summary: "Kế hoạch hiện tại",
     currentWeight: "Hiện tại",

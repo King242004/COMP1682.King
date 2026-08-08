@@ -6,19 +6,13 @@
 // Trả ra:     nội dung bài, kèm nút tim, lưu, và hai nút riêng của bài món ăn
 // Khi lỗi:    bài đã bị xóa thì hiện thẻ trạng thái thay vì màn trắng
 
-// LUỒNG MỞ CHI TIẾT
-// 1. Chạm một bài ở feed, mở màn này kèm mã bài
-// 2. api.getPost                    (GET /community/posts/:id)
-// 3. postController.getPost gọi communityHelpers.canViewUser rồi trả bài
-// 4. hiện ảnh, chú thích, và các nút
-// CÁC NÚT TRONG MÀN
-//   Tim gọi POST /community/posts/:id/like; postController.toggleLike tạo hoặc gỡ Notification.
-//   Lưu bài, gọi POST /community/posts/:id/save, không tạo thông báo.
-//   Hỏi Coach cách làm, chỉ có ở bài món ăn, chuyển sang tab Coach kèm câu hỏi.
-//     Coach được báo nguồn là community để nói rõ đây chỉ là cách nấu tham khảo,
-//     không phải công thức của người đăng.
-//   Thêm vào nhật ký, chỉ có ở bài món ăn, sang màn Thêm món điền sẵn tên.
+// Sáu nút trong màn, mỗi nút một khối riêng hoặc một ghi chú riêng bên dưới:
+//   Tim và Lưu bài, hai nút này luôn hiện.
+//   Hỏi Coach cách làm và Thêm vào nhật ký, chỉ hiện ở bài có món ăn.
 //   Sửa và Xóa, chỉ chủ bài mới thấy.
+//
+// Nhớ: nút Hỏi Coach có gửi kèm nguồn là community, để Coach nói rõ đây chỉ là
+//      cách nấu tham khảo, KHÔNG phải công thức của người đăng bài.
 import { useState, useCallback } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
@@ -37,6 +31,15 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
+// ══════════════════════════════════════════════════════════
+// MỞ CHI TIẾT BÀI
+//
+// Đến từ màn Cộng đồng, từ PostTile, và từ Trang cá nhân. Mã bài đi theo đường dẫn.
+// Ba bước, đọc từ trên xuống là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 2.
+// Xong thì hiện ảnh, chú thích, và các nút.
+// ══════════════════════════════════════════════════════════
+
+// MỞ CHI TIẾT BÀI BƯỚC 1. Lấy mã bài từ đường dẫn.
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -50,6 +53,9 @@ export default function PostDetailScreen() {
   const [imageIndex, setImageIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
 
+  // MỞ CHI TIẾT BÀI BƯỚC 2. Tải bài theo mã. Đây là màn DUY NHẤT gọi lấy một bài lẻ,
+  // vì lưới ở màn Cộng đồng chỉ có bản rút gọn, thiếu ảnh đầy đủ và thiếu ghi chú.
+  // Đường đi: getPost → apiClient → GET /community/posts/:id → postController.getPost
   const load = useCallback(async () => {
     if (!token || !id) return;
     try {
@@ -60,12 +66,22 @@ export default function PostDetailScreen() {
     }
   }, [token, id]);
 
-  // Tự tải lại bài mỗi lần quay về màn, để số tim và nội dung
-  // luôn khớp sau khi sửa bài hoặc người khác bấm tim.
+  // MỞ CHI TIẾT BÀI BƯỚC 3. Tự chạy mỗi lần màn được nhìn thấy, không ai bấm.
+  // Nhờ vậy sửa bài xong quay về là thấy nội dung mới, và số tim cũng khớp
+  // kể cả khi người khác vừa bấm tim trong lúc mình đi màn khác.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  // Nút tim. Đổi giao diện trước rồi gọi mạng, lỗi thì trả về như cũ.
-  // postController.toggleLike tạo thông báo cho chủ bài, hoặc gỡ khi bỏ tim.
+  // ══════════════════════════════════════════════════════════
+  // BỐN NÚT TRÊN BÀI
+  //
+  // Không phải luồng. Bốn nút độc lập, bấm cái nào cũng được.
+  // Hai nút đầu gọi mạng, hai nút sau chỉ chuyển màn.
+  // ══════════════════════════════════════════════════════════
+
+  // Nút tim. Đổi giao diện TRƯỚC rồi mới gọi mạng, gửi hụt thì lật ngược lại.
+  // Đường đi: toggleLike → apiClient → POST /community/posts/:id/like
+  //           → postController.toggleLike
+  // Bên đó còn tạo một thông báo cho chủ bài, hoặc gỡ thông báo đó khi bỏ tim.
   const onLike = async () => {
     if (!token || !post) return;
     const prev = post;
@@ -78,7 +94,10 @@ export default function PostDetailScreen() {
     }
   };
 
-  // Nút lưu bài. Khác nút tim ở chỗ không tạo thông báo cho ai.
+  // Nút lưu bài. Cách làm giống hệt nút tim, chỉ khác hai điểm:
+  // không tạo thông báo cho ai, và bài lưu chỉ mình thấy ở tab Đã lưu.
+  // Đường đi: toggleSave → apiClient → POST /community/posts/:id/save
+  //           → postController.toggleSave
   const onSave = async () => {
     if (!token || !post) return;
     const prev = post;
@@ -91,9 +110,11 @@ export default function PostDetailScreen() {
     }
   };
 
-  // Nút Xóa, chỉ chủ bài thấy.
-  // Hỏi xác nhận rồi gọi DELETE; postController.deletePost xóa Cloudinary images
-  // và các Notification trỏ tới Post.
+  // Nút Xóa, chỉ chủ bài thấy. Hỏi lại cho chắc vì xóa là mất hẳn.
+  // Đường đi: deletePost → apiClient → DELETE /community/posts/:id
+  //           → postController.deletePost
+  // Bên đó xóa cả ảnh trên Cloudinary lẫn mọi thông báo trỏ tới bài này,
+  // kẻo còn lại thông báo bấm vào thì rơi vào bài không tồn tại.
   const onDelete = () => {
     Alert.alert(t.community.deletePostTitle, t.community.deletePostMsg, [
       { text: t.common.cancel, style: "cancel" },
@@ -113,6 +134,8 @@ export default function PostDetailScreen() {
     ]);
   };
 
+  // Nút Hỏi Coach cách nấu. Không gọi mạng ở đây, chỉ nhảy sang tab Coach
+  // kèm sẵn câu hỏi, rồi màn Coach tự lo phần gọi AI.
   const askCoachHow = () => {
     const dishName = post?.dishName || post?.meal?.name;
     if (!dishName) return;
@@ -127,6 +150,9 @@ export default function PostDetailScreen() {
     });
   };
 
+  // Nút Ghi vào nhật ký. Cũng không gọi mạng, chỉ mở màn Thêm món đã điền sẵn.
+  // Bài có kèm món thì chép luôn bốn số dinh dưỡng sang, khỏi phải nhờ AI ước tính lại.
+  // Bài chỉ có tên món thì để trống bốn số đó, màn Thêm món sẽ tự lo.
   const addToDiary = () => {
     const dishName = post?.dishName || post?.meal?.name;
     if (!dishName) return;

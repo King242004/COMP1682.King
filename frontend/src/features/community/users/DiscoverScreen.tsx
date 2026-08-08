@@ -22,6 +22,15 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { INPUT_LIMITS } from "@/config/inputLimits";
 
+// ══════════════════════════════════════════════════════════
+// TÌM NGƯỜI
+//
+// Đến từ màn Cộng đồng. Bốn bước, đọc từ trên xuống là đúng thứ tự.
+// Chặng chờ mạng ở BƯỚC 4, nhưng chỉ chạy sau khi người dùng ngừng gõ 350 ms.
+// Xong thì hiện danh sách người, mỗi dòng có nút Theo dõi.
+// ══════════════════════════════════════════════════════════
+
+// TÌM NGƯỜI BƯỚC 1. Ô tìm trống thì hiện danh sách gợi ý, gõ vào thì hiện kết quả tìm.
 export default function DiscoverScreen() {
   const { token } = useAuth();
   const t = useT();
@@ -31,10 +40,18 @@ export default function DiscoverScreen() {
   const [suggestions, setSuggestions] = useState<DiscoverUser[]>([]);
   const [loading, setLoading] = useState(false);
   const { isFollowing, toggleFollow, clearFollowOverrides } = useFollowToggle(token);
+  // Ba ref canh chừng việc gõ và việc gọi mạng, không phải dữ liệu để hiện.
+  // Mã của bộ đếm giờ đang chờ, giữ để lát nữa còn hủy được.
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Đánh số từng lượt tìm, để bỏ kết quả về muộn thay vì đè lên bản mới hơn.
   const reqIdRef = useRef(0);
+  // Bản sao chữ đang gõ, cho mấy hàm chạy trễ đọc được giá trị mới nhất.
   const queryRef = useRef("");
 
+  // TÌM NGƯỜI BƯỚC 4. Gửi đi rồi ĐỨNG ĐÂY CHỜ.
+  // Đường đi: searchUsers → apiClient → GET /community/users/search?q=...
+  //           → socialController.searchUsers
+  // Nằm dưới chỗ gọi ở BƯỚC 3, nhưng chạy sau, vì BƯỚC 3 hẹn giờ mới gọi tới đây.
   const runSearch = useCallback(async (q: string) => {
     if (!token) return;
     const id = ++reqIdRef.current;
@@ -51,15 +68,18 @@ export default function DiscoverScreen() {
     }
   }, [token]);
 
-  // Chờ người dùng ngừng gõ để tránh gọi mạng theo từng phím.
+  // TÌM NGƯỜI BƯỚC 3. Mỗi phím gõ vào đây, nhưng KHÔNG gọi mạng ngay.
+  // Hủy hẹn giờ cũ rồi hẹn lại 350 ms, nên gõ liên tục thì chỉ lượt cuối được gọi.
+  // Không có bước này là gõ "Nam" bắn ba lượt gọi mạng.
   const onChangeQuery = (text: string) => {
     setQuery(text);
     queryRef.current = text;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = text.trim();
     if (!q) {
-    // Làm cho mọi yêu cầu tìm kiếm đang chạy trở thành dữ liệu cũ.
-    reqIdRef.current++;
+      // Xóa trắng ô tìm thì tăng số thứ tự, để mọi lượt đang bay coi như đã cũ.
+      // Không làm vậy là kết quả cũ về sau và đè lên danh sách gợi ý.
+      reqIdRef.current++;
       setResults([]);
       setLoading(false);
       return;
@@ -68,7 +88,12 @@ export default function DiscoverScreen() {
     debounceRef.current = setTimeout(() => runSearch(q), 350);
   };
 
-  // Tải lại gợi ý hoặc kết quả tìm kiếm khi quay lại màn.
+  // TÌM NGƯỜI BƯỚC 2. Tải danh sách gợi ý mỗi lần màn được nhìn thấy.
+  // Đường đi: getSuggestions → apiClient → GET /community/suggestions
+  //           → socialController.getSuggestions
+  // clearFollowOverrides xóa mấy nút Theo dõi đang giữ trạng thái tạm,
+  // vì danh sách vừa tải về đã mang trạng thái thật rồi.
+  // Đang có chữ trong ô tìm thì tìm lại luôn, để kết quả không bị cũ.
   useFocusEffect(useCallback(() => {
     if (!token) return;
     getSuggestions(token)

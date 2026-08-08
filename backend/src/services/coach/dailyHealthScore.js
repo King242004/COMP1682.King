@@ -16,8 +16,22 @@
 const { HEALTH_SCORE_WEIGHTS, CALORIE_SCORE_DEVIATION, PROTEIN_G_PER_KG,
   PROTEIN_RATIO_WHEN_WEIGHT_UNKNOWN, ATWATER_KCAL_PER_GRAM } = require("../../config/nutritionConstants");
 
+// ══════════════════════════════════════════════════════════
+// CHẤM ĐIỂM SỨC KHỎE
+//
+// Không phải luồng. Một hàm chấm, cộng mấy hàm phụ.
+// Đến từ coachController.getInsight.
+// 
+// Nhớ: chấm hoàn toàn bằng CÔNG THỨC, KHÔNG nhờ AI.
+//      Nhờ vậy cùng một ngày dữ liệu thì luôn ra cùng một điểm.
+// ══════════════════════════════════════════════════════════
+
+// Chấm điểm sức khỏe của một ngày, thang 100.
+// Bốn phần: calo, đạm, vận động, và đều đặn. Trọng số nằm ở bảng ngay dưới.
+// Nhớ: chấm hoàn toàn bằng CÔNG THỨC, không nhờ AI, nên cùng dữ liệu là cùng điểm.
 function computeHealthScore(ctx) {
   const { profile, today, week } = ctx;
+  // Lối tắt tới bảng trọng số, bên dưới gọi tới rất nhiều lần.
   const W = HEALTH_SCORE_WEIGHTS;
   const goal = profile.calorieGoal;
   // Không có mục tiêu thì không chấm được, và không được bịa ra một mục tiêu.

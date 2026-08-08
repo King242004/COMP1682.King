@@ -1,3 +1,13 @@
+// ══════════════════════════════════════════════════════════
+// CHỐT HÔM NAY LÀ NGÀY NÀO
+//
+// Không phải luồng. Mấy hàm tính ngày thuần.
+// 
+// Nhớ: server nằm ở Singapore còn người dùng ở đâu cũng có. Vì vậy KHÔNG được
+//      lấy ngày của server, phải lấy theo múi giờ mà app gửi kèm mỗi request
+//      trong header x-timezone-offset.
+// ══════════════════════════════════════════════════════════
+
 // ═══ FILE NÀY LÀM GÌ ═══
 // Trả lời một câu hỏi: hôm nay là ngày nào, theo múi giờ của MÁY người dùng.
 //
@@ -24,6 +34,9 @@ function todayKey(timezoneOffsetMinutes = 0, now = new Date()) {
   return new Date(now.getTime() - safeOffset * 60_000).toISOString().slice(0, 10);
 }
 
+// Bản gọn cho controller: móc luôn múi giờ ra khỏi header của request.
+// Header x-timezone-offset do apiClient bên app gắn vào MỌI request.
+// App không gửi header đó thì todayKey ở trên tự lùi về 0, tức tính theo giờ UTC.
 function requestTodayKey(req, now) {
   return todayKey(req.get("x-timezone-offset"), now);
 }

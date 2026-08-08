@@ -32,7 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Cần vì hàm lo thẻ hết hạn ở dưới chỉ đăng ký một lần duy nhất.
   // Nó mà đọc state thường thì mãi thấy giá trị của lần dựng đầu tiên.
   const userRef = useRef<User | null>(null);
+  // Thẻ đăng nhập. Ref này còn kiêm cửa chặn gọi hai lần khi thẻ hết hạn.
   const tokenRef = useRef<string | null>(null);
+  // Ngôn ngữ, để câu báo thẻ hết hạn hiện đúng tiếng người dùng đang chọn.
   const langRef = useRef<string | null>(null);
   userRef.current = user;
   tokenRef.current = token;

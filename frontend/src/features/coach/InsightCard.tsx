@@ -16,12 +16,24 @@ import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import type { CoachInsight } from "@/features/coach/coachApi";
 
+// ══════════════════════════════════════════════════════════
+// VẼ THẺ ĐIỂM SỨC KHỎE
+//
+// Đến từ màn Coach. Ba bước, đọc từ trên xuống là đúng thứ tự.
+// KHÔNG gọi mạng, điểm do màn Coach tải về rồi đưa xuống.
+// ══════════════════════════════════════════════════════════
+
+// Màu theo mức điểm: từ 75 trở lên là xanh lá, từ 50 là cam, dưới nữa là đỏ.
+// Chỉ có ba mức, không có mức trung gian nào khác.
 function scoreColor(score: number) {
   if (score >= 75) return theme.colors.accent;
   if (score >= 50) return theme.colors.accent2;
   return theme.colors.danger;
 }
 
+// VẼ THẺ ĐIỂM BƯỚC 1. Nhận điểm cùng bốn cờ trạng thái từ màn Coach.
+// Bốn trạng thái rỗng khác nhau, xử lý ở phần trên của hàm: đang tải,
+// hồ sơ chưa đủ, gọi hỏng, và chưa ghi món nào hôm nay.
 export function InsightCard({ insight, loading, sending, failText, profileIncomplete, onCompleteProfile, onLogMeal, onAskTip }: {
   insight: CoachInsight | null;
   loading: boolean;
@@ -67,7 +79,11 @@ export function InsightCard({ insight, loading, sending, failText, profileIncomp
     );
   }
 
+  // VẼ THẺ ĐIỂM BƯỚC 2. Tới đây là chắc chắn có điểm, dựng dữ liệu để vẽ.
   const color = scoreColor(insight.score);
+  // VẼ THẺ ĐIỂM BƯỚC 3. Bốn dòng điểm thành phần, mỗi dòng gồm nhãn, điểm, và trọng số.
+  // Trọng số do backend đưa xuống chứ app không tự đặt, nên đổi cách chấm ở backend
+  // là màn này hiện theo luôn, khỏi phải sửa gì.
   const scoreRows = [
     [t.coach.scoreCalorie, insight.breakdown.calorie, insight.weights.calorie],
     [t.coach.scoreProtein, insight.breakdown.protein, insight.weights.protein],

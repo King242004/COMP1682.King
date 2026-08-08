@@ -6,15 +6,9 @@
 // Trả ra:     không trả gì, đăng xong thì quay lại danh sách bài
 // Khi lỗi:    bài không có ảnh nào thì nút Đăng bị khóa
 
-// LUỒNG ĐĂNG BÀI
-// 1. Chọn ảnh, tối đa 10 tấm, qua PhotoPickerModal
-// 2. Viết chú thích, có thể gắn thêm một món ăn
-// 3. Bấm Đăng, chạy handleSubmit
-// 4. api.createPost gói ảnh và chữ vào FormData  (POST /community/posts)
-// 5. postController.createPost upload từng ảnh qua communityHelpers.uploadImage rồi tạo Post
-// 6. quay về màn Community, bài mới nằm trên đầu
-// Gắn món là tùy chọn và chỉ lấy từ nhật ký để luôn mang theo
-// khẩu phần cùng số dinh dưỡng đã được người đăng xác nhận.
+// Nhớ: món đính kèm chỉ lấy được TỪ NHẬT KÝ, không cho gõ tay.
+//      Làm vậy để bài luôn mang theo khẩu phần và số dinh dưỡng mà chính
+//      người đăng đã xác nhận, chứ không phải một con số gõ đại.
 import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -48,22 +42,39 @@ export default function PostCreateScreen() {
   const [posting, setPosting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Tải lịch sử món để phần chọn món từ nhật ký có dữ liệu.
-  // Chỉ chạy một lần khi mở màn.
+  // ══════════════════════════════════════════════════════════
+  // ĐĂNG BÀI
+  //
+  // Đến từ nút cộng ở màn Cộng đồng. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Hai chặng chờ mạng: BƯỚC 1 tải món cũ, và BƯỚC 3 đăng bài.
+  // Xong thì quay về màn Cộng đồng, bài mới nằm ở đầu danh sách.
+  // ══════════════════════════════════════════════════════════
+
+  // ĐĂNG BÀI BƯỚC 1. Tải lịch sử món để hàng chọn món đính kèm có dữ liệu.
+  // Đường đi: MealsContext.fetchMealHistory → mealsApi → apiClient
+  //           → GET /meals/history → mealController.getMealHistory
+  // Dùng useEffect nên chỉ chạy MỘT lần lúc mở màn, đủ dùng vì rời màn là màn dựng lại.
   useEffect(() => { void fetchMealHistory().catch(() => {}); }, [fetchMealHistory]);
 
-  // Giới hạn số ảnh trong một bài viết dạng vuốt ngang.
+  // ĐĂNG BÀI BƯỚC 2. Mở bộ chọn ảnh. Trần số ảnh do PhotoPickerModal lo,
+  // ở đây chỉ bật cờ cho nó hiện lên.
   const pickImages = () => setPickerOpen(true);
 
+  // Bỏ một ảnh khỏi danh sách. Ảnh chưa lên server nên chỉ cần lọc khỏi mảng.
   const removeImage = (uri: string) => setImageUris((prev) => prev.filter((u) => u !== uri));
 
+  // Bài BẮT BUỘC phải có ảnh. Chưa chọn ảnh nào thì nút Đăng mờ đi.
   const canPost = imageUris.length > 0 && !posting;
 
+  // Đính một món từ nhật ký vào bài. Món là tùy chọn, không có cũng đăng được.
   const selectMeal = (meal: PostMealChoice) => {
     setSelectedMeal(meal);
   };
 
-  // Nút Đăng, điểm bắt đầu của luồng đăng bài.
+  // ĐĂNG BÀI BƯỚC 3. Người dùng bấm Đăng.
+  // Đường đi: createPost → apiClient → POST /community/posts
+  //           → postController.createPost → Cloudinary
+  // Gửi bằng FormData vì có kèm file ảnh.
   const handlePost = async () => {
     if (!token || !canPost) return;
     setPosting(true);

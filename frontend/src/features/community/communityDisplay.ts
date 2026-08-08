@@ -35,6 +35,17 @@ export function mealPortionLabel(meal: {
   return unit || null;
 }
 
+// ══════════════════════════════════════════════════════════
+// ĐỔI DỮ LIỆU RA CHỮ ĐỂ HIỆN
+//
+// Không phải luồng. Mấy hàm nhỏ đổi dữ liệu thô thành chữ cho người đọc.
+// Gọi cái nào cũng được, không cái nào gọi mạng.
+// ══════════════════════════════════════════════════════════
+
+// Đổi mốc thời gian thành cặp số với đơn vị, kiểu 5 với "m".
+// Chỉ trả số thô, KHÔNG ghép chữ, vì việc ghép chữ tùy ngôn ngữ nên để hàm dưới lo.
+// Bốn mốc: dưới 1 phút là "vừa xong", rồi tới phút, giờ, ngày. Không có tuần hay tháng,
+// bài cũ hơn một tháng vẫn hiện kiểu "45d".
 function timeAgoParts(iso: string): { n: number; unit: TimeAgoUnit } {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return { n: 0, unit: "now" };

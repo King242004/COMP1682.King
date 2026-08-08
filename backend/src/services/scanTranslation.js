@@ -1,3 +1,13 @@
+// ══════════════════════════════════════════════════════════
+// DỊCH TÊN MÓN AI TRẢ VỀ
+//
+// Không phải luồng. Mấy hàm dò xem AI có trả lời sai ngôn ngữ hay không,
+// và dịch lại nếu có.
+// 
+// Nhớ: Gemini thỉnh thoảng trả tên món bằng tiếng Anh dù đã dặn nói tiếng Việt.
+//      File này bắt lại chuyện đó, chứ không sửa được cách AI nghĩ.
+// ══════════════════════════════════════════════════════════
+
 // ═══ FILE NÀY LÀM GÌ ═══
 // Lớp chắn ngôn ngữ cho Quét ảnh, chạy SAU khi AI đã nhận diện xong.
 //
@@ -15,6 +25,8 @@
 const VIETNAMESE_DIACRITICS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
 // Tên món tiếng Việt KHÔNG DẤU hay gặp, để bắt trường hợp AI trả về không dấu.
 const VIETNAMESE_FOOD_WORDS = /\b(com|ga|bo|heo|lon|ca|tom|bun|pho|mi|dau|hu|chien|xao|nuong|luoc|hap|sot|canh|chen|to|dia|phan|mieng)\b/i;
+// Mấy từ tiếng Anh hay gặp trong tên món mà AI trả về.
+// Dò thấy một từ trong đây là biết AI đang trả lời sai ngôn ngữ, phải dịch lại.
 const ENGLISH_FOOD_WORDS = /\b(small|medium|large|bowl|plate|serving|piece|pieces|cup|fried|spicy|with|sauce|tofu|rice|chicken|beef|pork|fish|noodle|noodles|soup|grilled|steamed|roasted)\b/i;
 
 // Gom tên món và mô tả khẩu phần của mọi ứng viên thành một chuỗi để dò.

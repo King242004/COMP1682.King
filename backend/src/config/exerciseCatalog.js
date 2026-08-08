@@ -23,6 +23,15 @@
 // thấp hơn. Năm mốc đang dùng: 02101 giãn cơ nhẹ, 02150 yoga,
 // 02022 calisthenics mức vừa, 17190 đi bộ mức vừa, và 15110 đấm bao cát.
 
+// ══════════════════════════════════════════════════════════
+// BẢNG HOẠT ĐỘNG VÀ CÔNG THỨC ĐỐT CALO
+//
+// Không phải luồng. Mấy bảng tra, cộng công thức tính calo đốt.
+// Đến từ exerciseController và planController.
+// 
+// Nhớ: mọi chỉ số MET đều có nguồn, ghi ngay dưới đây. Không số nào tự nghĩ ra.
+// ══════════════════════════════════════════════════════════
+
 // Các hoạt động ngoài app được ghi nhận trong khảo sát 392 sinh viên nội trú
 // Đại học Cần Thơ: Dang và cộng sự (2025), DOI 10.46827/ejpe.v12i6.6045.
 const EXTERNAL_ACTIVITIES = {
@@ -46,8 +55,11 @@ const EXTERNAL_ACTIVITIES = {
   table_tennis: { met: 4.0, code: "15660" },
 };
 
+// Nguồn của MỌI chỉ số MET trong file này. Không có số nào tự nghĩ ra.
 const MET_SOURCE = "Herrmann et al. (2024), Adult Compendium of Physical Activities";
 
+// Bảng nhóm bài tập có hướng dẫn. Mỗi nhóm ghi kèm MET và mã tra cứu
+// trong bộ Compendium nêu ở dòng trên.
 const GUIDED_FAMILIES = {
   wakeUp: { category: "everyday", met: 2.3, code: "02101" },
   deskReset: { category: "everyday", met: 2.3, code: "02101" },
@@ -73,6 +85,8 @@ const GUIDED_FAMILIES = {
 
 // Mọi mốc là bội số của khối 10 phút. Phải khớp ROUTINE_DURATIONS bên frontend.
 const GUIDED_DURATIONS = [10, 20, 30];
+// Trải bảng nhóm bài ở trên thành từng bài riêng, mỗi thời lượng một mã.
+// Sinh ra từ bảng gốc chứ không gõ tay, để thêm một nhóm là có đủ ba mốc luôn.
 const GUIDED_ROUTINES = Object.fromEntries(
   Object.entries(GUIDED_FAMILIES).flatMap(([familyKey, family]) =>
     GUIDED_DURATIONS.map((durationMin) => [
@@ -82,15 +96,21 @@ const GUIDED_ROUTINES = Object.fromEntries(
   ),
 );
 
+// Tra hoạt động làm ngoài app theo mã. Dùng Object.hasOwn chứ không
+// đọc thẳng, để mã lạ kiểu "toString" không moi ra được thứ trong prototype.
 const getExternalActivity = (key) =>
   typeof key === "string" && Object.hasOwn(EXTERNAL_ACTIVITIES, key)
     ? EXTERNAL_ACTIVITIES[key]
     : null;
+// Tra bài tập có hướng dẫn. Cùng cách làm với hàm ngay trên.
 const getGuidedRoutine = (key) =>
   typeof key === "string" && Object.hasOwn(GUIDED_ROUTINES, key)
     ? GUIDED_ROUTINES[key]
     : null;
 
+// Chụp lại một bản ghi buổi tập để lưu xuống database.
+// Chụp cả MET và cân nặng tại thời điểm ghi, nên sau này đổi cân nặng
+// cũng không làm số calo của buổi tập cũ nhảy lung tung.
 const buildExerciseSnapshot = (sourceType, sourceKey, reference, weightKg) => ({
   sourceType,
   sourceKey,
@@ -100,6 +120,9 @@ const buildExerciseSnapshot = (sourceType, sourceKey, reference, weightKg) => ({
   weightKgAtLog: weightKg,
 });
 
+// Công thức đốt calo: MET nhân cân nặng nhân số GIỜ tập.
+// Chia 60 vì thời lượng truyền vào tính bằng phút.
+// Đây là chỗ DUY NHẤT tính calo đốt, app không tự tính rồi gửi lên.
 const computeBurned = (met, durationMin, weightKg) =>
   Math.round(Number(met) * Number(weightKg) * (Number(durationMin) / 60));
 

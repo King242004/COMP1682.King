@@ -12,9 +12,22 @@
 // Mỗi lần gọi đều ký bằng khóa bí mật để relay biết đúng là app mình gọi.
 const crypto = require("crypto");
 
+// ══════════════════════════════════════════════════════════
+// GỬI EMAIL QUA RELAY RIÊNG
+//
+// Không phải luồng. Một hàm gửi mã, một hàm báo trạng thái cấu hình.
+// 
+// Nhớ: KHÔNG dùng Gmail SMTP và KHÔNG dùng Brevo. App gửi qua một relay riêng
+//      bằng HTTPS, cấu hình ở EMAIL_RELAY_URL và EMAIL_RELAY_SECRET.
+// ══════════════════════════════════════════════════════════
+
+// Hai lý do được phép gửi mã. Chặn ở đây để không ai nhờ relay gửi thư linh tinh.
 const ALLOWED_PURPOSES = new Set(["registration", "password_reset"]);
+// Hai ngôn ngữ email. Ngoài hai cái này thì relay không có mẫu thư.
 const ALLOWED_LANGUAGES = new Set(["vi", "en"]);
 
+// Đọc cấu hình relay từ .env. Thiếu một trong hai thì trả null,
+// nơi gọi thấy null là biết chưa cấu hình email.
 const getRelayConfig = () => {
   const url = process.env.EMAIL_RELAY_URL?.trim();
   const secret = process.env.EMAIL_RELAY_SECRET?.trim();
@@ -46,6 +59,8 @@ const createRelaySignature = (payload, timestamp, secret) => {
     .digest("hex");
 };
 
+// Báo cho endpoint kiểm tra biết email đã cấu hình xong hay chưa.
+// Chỉ trả có hay không, KHÔNG trả địa chỉ hay khóa bí mật ra ngoài.
 const getEmailStatus = () => {
   const configured = Boolean(getRelayConfig());
   return { provider: configured ? "relay" : "none", configured };

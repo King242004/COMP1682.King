@@ -19,7 +19,7 @@ import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/features/auth/AuthContext";
-import { apiRequest } from "@/utils/apiClient";
+import { changePasswordRequest } from "@/features/auth/authApi";
 import { getUserErrorMessage } from "@/utils/errorUtils";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -53,12 +53,7 @@ export default function ChangePasswordScreen() {
     if (next !== confirm) return Alert.alert(t.common.errorTitle, t.auth.passwordsNoMatch);
     setSaving(true);
     try {
-      const result = await apiRequest<{ token: string }>(
-        "/user/change-password",
-        "POST",
-        { currentPassword: current, newPassword: next },
-        token ?? undefined
-      );
+      const result = await changePasswordRequest(current, next, token ?? "");
       await replaceSessionToken(result.token);
       Alert.alert(t.auth.resetSuccessTitle, t.settings.passwordChanged, [
         { text: t.common.ok, onPress: () => router.back() },

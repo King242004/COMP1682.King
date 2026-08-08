@@ -16,6 +16,16 @@ const { privateUserIds, shapePost } = require("./communityHelpers");
 // Cả bốn đều chia trang theo cùng một cách: xin thêm 1 bài so với số cần,
 // nếu lấy về dư thì biết là còn trang sau, rồi cắt bớt bài dư đi.
 
+// ══════════════════════════════════════════════════════════
+// CÁC CỬA LẤY DANH SÁCH BÀI
+//
+// Không phải luồng. Bốn cửa: feed người mình theo dõi, khám phá,
+// bài đã lưu, và bài của một người.
+// 
+// Nhớ: cả bốn đều phải LỌC BỎ bài của tài khoản riêng tư, nhưng luôn chừa
+//      bài của chính người đang xem ra. Quên lọc là lộ bài của người để riêng tư.
+// ══════════════════════════════════════════════════════════
+
 // Tab Đang theo dõi.
 exports.getFeed = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -46,6 +56,8 @@ exports.getFeed = async (req, res) => {
 exports.getExplore = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);
+  // Lấy danh sách tài khoản riêng tư để loại bài của họ khỏi feed.
+  // Chừa chính mình ra, kẻo bật riêng tư xong là không thấy bài của mình nữa.
   const hidden = (await privateUserIds()).filter((id) => id.toString() !== req.user.id);
 
   const posts = await Post.find({ user: { $nin: hidden } })
@@ -94,6 +106,8 @@ exports.getUserPosts = async (req, res) => {
 exports.getSavedPosts = async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 20);
+  // Cùng cách lọc với hàm feed ở trên: bỏ bài của tài khoản riêng tư,
+  // nhưng luôn chừa bài của CHÍNH mình ra.
   const hidden = (await privateUserIds()).filter((id) => id.toString() !== req.user.id);
 
   const posts = await Post.find({ saves: req.user.id, user: { $nin: hidden } })

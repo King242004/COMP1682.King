@@ -49,11 +49,24 @@ export function PostMealSelector({
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
+  // ══════════════════════════════════════════════════════════
+  // CHỌN MÓN ĐÍNH KÈM
+  //
+  // Đến từ màn Tạo bài và màn Sửa bài. Hai bước, không gọi mạng.
+  // Danh sách món do màn cha đưa xuống, đây chỉ lo phần chọn.
+  // ══════════════════════════════════════════════════════════
+
+  // CHỌN MÓN BƯỚC 1. Ghép danh sách để hiện.
+  // Tên món đang chọn, đã hạ chữ thường, để so trùng tên ở dòng dưới.
   const selectedName = selectedMeal?.name.trim().toLocaleLowerCase();
+  // Món đang chọn mà KHÔNG nằm trong tám món gần đây thì phải chèn nó lên đầu,
+  // kẻo mở ra không thấy món mình đã chọn. Đồng thời lọc bỏ món trùng TÊN với nó,
+  // để không hiện hai dòng giống hệt nhau.
   const choices: PostMealChoice[] = selectedMeal && !recentMeals.some((meal) => meal.id === selectedMeal.id)
     ? [selectedMeal, ...recentMeals.filter((meal) => meal.name.trim().toLocaleLowerCase() !== selectedName)]
     : recentMeals;
 
+  // CHỌN MÓN BƯỚC 2. Chọn xong thì tự thu danh sách lại, đỡ phải bấm thêm một lần để đóng.
   const selectMeal = (meal: PostMealChoice) => {
     onSelectMeal(meal);
     setExpanded(false);

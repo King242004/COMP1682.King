@@ -16,6 +16,8 @@ import { apiRequest } from "@/utils/apiClient";
 import type { Lang } from "@/utils/languageUtils";
 import { todayKey } from "@/utils/dateUtils";
 
+// Chờ tới 120 giây cho mọi lệnh gọi AI, gấp gần ba lần mức mặc định 45 giây
+// của apiClient. Cần dài vậy vì Gemini chạy lâu, nhất là lần đầu khi Render vừa ngủ dậy.
 const AI_TIMEOUT_MS = 120_000;
 
 export type CoachInsight = {
@@ -54,6 +56,17 @@ export type CachedInsight = { insight: CoachInsight; at: number };
 // ─── CHUẨN HÓA DỮ LIỆU HIỂN THỊ ───
 
 // Cần hàm này vì app hiện chữ thuần, không dựng Markdown.
+// ══════════════════════════════════════════════════════════
+// CÁC CỬA GỌI COACH
+//
+// Không phải luồng. Mỗi hàm là một cửa riêng, màn nào cần gì thì gọi cái đó.
+// Bốn hàm đầu đi ra mạng, hai hàm cuối chỉ đọc ghi bộ nhớ đệm trong máy.
+//
+// Nhớ: mọi lệnh ra mạng ở đây đều truyền AI_TIMEOUT_MS, KHÔNG dùng mức mặc định.
+// ══════════════════════════════════════════════════════════
+
+// Bóc mấy ký tự định dạng mà AI hay chèn vào, như dấu sao đậm hay dấu thăng tiêu đề.
+// Cần vì app hiện chữ thô, không dựng markdown, để nguyên là người dùng thấy đầy dấu sao.
 export function stripMarkdown(s: string): string {
   return (s || "")
     .replace(/\*\*/g, "")

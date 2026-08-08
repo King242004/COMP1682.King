@@ -20,6 +20,16 @@ const {
 } = require("../../config/nutritionConstants");
 const { dateKey } = require("../../utils/dateUtils");
 
+// ══════════════════════════════════════════════════════════
+// TÍNH MỤC TIÊU CALO
+//
+// Không phải luồng. Chuỗi hàm tính, gọi nối nhau: BMR rồi TDEE rồi mục tiêu.
+// Đến từ profileController. Đây là bản CHÍNH THỨC, app chỉ có bản xem trước.
+// 
+// Nhớ: hệ số mức vận động ĐÃ bao gồm phần vận động thường ngày.
+//      Vì vậy KHÔNG được trừ thêm calo của buổi tập, trừ nữa là tính hai lần.
+// ══════════════════════════════════════════════════════════
+
 // Tách riêng khỏi calculateTDEE để màn Hồ sơ hiện được BMR cạnh TDEE.
 // Hai số chênh nhau đúng một biến là mức vận động, nên đặt cạnh nhau thì
 // người dùng thấy ngay vì sao chọn mức vận động lại làm đổi mọi thứ.
@@ -32,6 +42,9 @@ function calculateBMR(weight, height, age, gender) {
   return m.weightFactor * weight + m.heightFactor * height - m.ageFactor * age + offset;
 }
 
+// Tính TDEE, tức calo tiêu hao cả ngày. Lấy BMR nhân hệ số mức vận động.
+// Nhớ: hệ số này ĐÃ bao gồm phần vận động thường ngày, nên chỗ khác
+//       KHÔNG được trừ thêm calo của buổi tập nữa, trừ nữa là tính hai lần.
 function calculateTDEE(weight, height, age, gender, activityLevel) {
   const bmr = calculateBMR(weight, height, age, gender);
   if (bmr === null) return null;
@@ -61,10 +74,13 @@ function resolveWeightDirection({ goal, currentWeight, targetWeight }) {
   return "maintain";
 }
 
+// Đổi hướng cân nặng thành tên mục tiêu mà database đang lưu.
 function resolveWeightGoal(profile) {
   return WEIGHT_GOALS[resolveWeightDirection(profile)];
 }
 
+// Chốt tốc độ kg mỗi tuần. Giữ cân thì luôn là 0.
+// Số người dùng gửi lên bị KẸP trong khoảng cho phép, nên gửi số quá nhanh cũng vô ích.
 function resolveRate(weightDirection, weeklyRateKg) {
   if (weightDirection === "maintain") return 0;
   const band = weightDirection === "lose" ? WEEKLY_RATE_KG.lose : WEEKLY_RATE_KG.gain;

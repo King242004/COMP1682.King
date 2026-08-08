@@ -11,23 +11,16 @@
 // xuống dưới. Câu cảnh báo nói rõ phần mềm dừng ở đâu và vì sao, chứ không
 // tuyên bố gì về cơ thể người dùng.
 //
-// LUỒNG ĐẶT MỤC TIÊU
-// 1. Mở màn, useFocusEffect gọi lại hồ sơ để lấy số mới nhất
-// 2. Chọn hướng là giảm, giữ, hay tăng cân
-// 3. Nhập cân nặng đích
-// 4. Chọn tốc độ kg mỗi tuần trong stats.rateOptions do profileController trả
-// 5. Màn hiện thử mục tiêu calo, tính tại chỗ bằng estimateCalorieGoal
-// 6. Bấm Lưu, chạy saveGoal
-// 7. AuthContext.updateProfile        (PUT /profile)
-// 8. profileController.updateProfile gọi calorieGoal.js và trả hồ sơ mới
-// BA điều dễ hiểu nhầm ở màn này:
-// Hướng và cân đích ràng buộc lẫn nhau. Chọn hướng thì ô cân đích được chuẩn bị
-// sẵn, còn gõ cân đích thì hướng tự đổi theo. Người dùng đi đường nào cũng được.
-// Con số calo trên màn chỉ là XEM TRƯỚC, tính bằng config/nutritionCalculations.ts.
-// Con số lưu chính thức do backend/src/services/nutrition/calorieGoal.js tính lại sau
-// khi lưu; preview có thể lệch khi calorieGoal.buildCalorieGoal áp mức sàn calo.
-// Chọn tự động gửi calorieGoal=null để profileController.updateProfile gọi autoGoal.
-// Chọn tự đặt gửi con số người dùng gõ để profileController.updateProfile bật customGoal.
+// BA điều dễ hiểu nhầm ở màn này, nhớ kỹ ba cái này:
+//
+// 1. Hướng và cân đích RÀNG BUỘC LẪN NHAU. Chọn hướng thì ô cân đích được chuẩn bị
+//    sẵn, còn gõ cân đích thì hướng tự đổi theo. Người dùng đi đường nào cũng được.
+// 2. Con số calo trên màn chỉ là XEM TRƯỚC, tính tại máy bằng nutritionCalculations.ts.
+//    Con số lưu chính thức do backend tính lại trong services/nutrition/calorieGoal.js.
+//    Hai số có thể LỆCH NHAU, khi calorieGoal.buildCalorieGoal áp mức sàn calo.
+// 3. Chọn tự động thì gửi calorieGoal là null, đó KHÔNG phải xóa mục tiêu,
+//    mà là bảo profileController tự tính lại từ TDEE.
+//    Chọn tự đặt thì gửi con số người dùng gõ, và backend bật cờ customGoal.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -56,6 +49,7 @@ import { DIGIT_LIMITS } from "@/config/inputLimits";
 
 type CalorieMode = "automatic" | "custom";
 const DIRECTIONS: WeightDirection[] = ["lose", "maintain", "gain"];
+// Icon cho ba nút hướng. Mũi tên xuống là giảm, gạch ngang là giữ, mũi tên lên là tăng.
 const DIRECTION_ICONS = {
   lose: "trending-down",
   maintain: "remove",
@@ -66,8 +60,23 @@ const DIRECTION_ICONS = {
 // Trần 7 khớp luật trong profileController.updateProfile.
 const WORKOUT_TARGET_OPTIONS: (number | null)[] = [null, 1, 2, 3, 4, 5, 6, 7];
 
+// Đọc số từ ô nhập. Đổi dấu phẩy thành dấu chấm, vì người Việt hay gõ "65,5".
 const parseNumber = (value: string) => Number(value.trim().replace(",", "."));
 
+// ══════════════════════════════════════════════════════════
+// ĐẶT MỤC TIÊU
+//
+// Đến từ màn Hồ sơ, qua địa chỉ /profile/goals.
+// Sáu bước, đọc từ trên xuống là đúng thứ tự. Hai chặng chờ mạng,
+// một ở BƯỚC 1 tải hồ sơ, một ở BƯỚC 6 lưu.
+// Xong thì quay về màn Hồ sơ, và vòng calo ở Trang chủ đổi theo mục tiêu mới.
+// ══════════════════════════════════════════════════════════
+
+// ĐẶT MỤC TIÊU BƯỚC 1. Mỗi lần quay lại màn thì tải lại hồ sơ.
+// Cần vì cân nặng có thể vừa được ghi ở màn Tiến trình, mà mọi phép tính
+// ở màn này đều dựa vào cân nặng hiện tại.
+// Đường đi: AuthContext.fetchProfile → authApi → apiClient → GET /profile
+//           → profileController.getProfile
 export default function WeightGoalsScreen() {
   const { user, stats, updateProfile, fetchProfile } = useAuth();
   const router = useRouter();
@@ -85,11 +94,12 @@ export default function WeightGoalsScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  // Workflow tự chạy: mỗi lần quay lại màn thì tải lại hồ sơ, vì cân nặng có thể
-  // vừa được ghi ở màn Tiến trình và mọi phép tính ở đây đều dựa vào nó.
+  // Không ai bấm, tự chạy mỗi lần màn được nhìn thấy. Nuốt lỗi vì hồ sơ cũ
+  // trong AuthContext vẫn dùng được, hiện bản cũ hơn là chắn màn bằng thông báo.
   useFocusEffect(useCallback(() => { void fetchProfile().catch(() => {}); }, [fetchProfile]));
 
-  // Workflow tự chạy: đổ hồ sơ vừa tải về vào form.
+  // ĐẶT MỤC TIÊU BƯỚC 2. Đổ hồ sơ vừa tải về vào form. Cũng tự chạy, không ai bấm.
+  // Chạy lại mỗi khi một trong tám giá trị ở mảng phụ thuộc phía dưới đổi.
   useEffect(() => {
     setTargetInput(user?.targetWeight == null ? "" : String(user.targetWeight));
     setSelectedDirection(
@@ -118,14 +128,22 @@ export default function WeightGoalsScreen() {
   const draftTargetWeight = targetInput.trim() ? parseNumber(targetInput) : null;
   const threshold = stats?.maintainWeightThresholdKg;
 
+  // ĐẶT MỤC TIÊU BƯỚC 3. Hướng và cân đích ràng buộc lẫn nhau, hai chiều.
+  //
+  // Chiều thứ nhất, GÕ CÂN ĐÍCH thì hướng tự đổi. Suy ra hướng từ cân hiện tại
+  // với cân đích, nhưng phải chênh quá threshold mới tính là giảm hay tăng,
+  // chênh vài lạng thì vẫn là giữ cân.
   const targetDirection = resolveDraftWeightDirection(currentWeight, draftTargetWeight, threshold);
 
-  // Hai cách đặt mục tiêu chạy cùng nhau: chọn hướng sẽ chuẩn bị ô cân phù hợp,
-  // còn nhập cân đích sẽ tự cập nhật lại hướng ngay trên màn hình.
+  // Hướng suy ra ở trên đổi thì gạt luôn nút hướng cho khớp.
   useEffect(() => {
     if (targetDirection) setSelectedDirection(targetDirection);
   }, [targetDirection]);
 
+  // Chiều thứ hai, BẤM NÚT HƯỚNG thì ô cân đích được chuẩn bị sẵn.
+  // Chọn giữ cân thì điền luôn cân hiện tại, vì đích chính là số đó.
+  // Chọn hướng ngược với cân đang gõ thì XÓA TRẮNG ô, kẻo giữ lại một con số
+  // mâu thuẫn với hướng vừa chọn.
   const chooseDirection = (direction: WeightDirection) => {
     setSelectedDirection(direction);
     setSaveError("");
@@ -136,14 +154,17 @@ export default function WeightGoalsScreen() {
     }
   };
 
+  // ĐẶT MỤC TIÊU BƯỚC 4. Danh sách tốc độ kg mỗi tuần cho hướng đang chọn.
+  // Danh sách do BACKEND đưa qua stats.rateOptions, app không tự nghĩ ra mức nào.
+  // Giữ cân thì không có tốc độ nào cả, trả mảng rỗng.
   const rateOptions = useMemo(
     () => selectedDirection === "maintain" ? [] : stats?.rateOptions?.[selectedDirection] ?? [],
     [selectedDirection, stats?.rateOptions],
   );
 
-  // Workflow tự chạy: giữ tốc độ đang chọn luôn nằm trong danh sách hợp lệ.
-  // Giữ cân thì tốc độ đúng bằng 0. Đổi hướng mà tốc độ cũ không còn trong danh
-  // sách của hướng mới thì lấy stats.rateBands do profileController.getProfile trả.
+  // Tự chạy, giữ cho tốc độ đang chọn luôn nằm trong danh sách hợp lệ.
+  // Giữ cân thì ép tốc độ về 0. Đổi hướng mà tốc độ cũ không còn trong danh sách
+  // của hướng mới thì lấy mức mặc định trong stats.rateBands, cũng do backend đưa.
   useEffect(() => {
     if (selectedDirection === "maintain") {
       setSelectedRate(0);
@@ -154,6 +175,7 @@ export default function WeightGoalsScreen() {
     }
   }, [rateOptions, selectedDirection, selectedRate, stats?.rateBands]);
 
+  // Số kg, cắt còn tối đa hai chữ số sau dấu thập phân, theo ngôn ngữ đang chọn.
   const numberLabel = (value: number) => value.toLocaleString(locale, { maximumFractionDigits: 2 });
 
   // Chữ hiện trên hàng, và danh sách trong menu trượt. Mục đang chọn mang dấu
@@ -188,6 +210,10 @@ export default function WeightGoalsScreen() {
       && customCalorieGoal <= calorieLimit.max);
   const rateIsValid = selectedDirection === "maintain" || selectedRate != null;
   const canSave = currentWeightIsValid && targetWeightIsValid && customCaloriesAreValid && rateIsValid;
+  // ĐẶT MỤC TIÊU BƯỚC 5. Tính thử mục tiêu calo để hiện ngay trên màn.
+  // Nhớ: con số này chỉ để XEM TRƯỚC, tính tại máy. Số lưu chính thức do backend
+  //      tính lại ở BƯỚC 6, và có thể lệch khi backend áp mức sàn calo.
+  // Thiếu giới tính thì không tính được, trả null và màn hiện lời mời hoàn tất hồ sơ.
   const gender = user?.gender === "male" || user?.gender === "female" ? user.gender : null;
   const automaticCalorieGoal = gender
     ? estimateCalorieGoal(
@@ -204,9 +230,11 @@ export default function WeightGoalsScreen() {
     ? Math.round(Math.abs(previewTargetWeight - currentWeight) * 10) / 10
     : null;
 
-  // BƯỚC 6 CỦA LUỒNG. Người dùng bấm Lưu.
-  // Gửi calorieGoal=null để profileController.updateProfile tính
-  // lại từ TDEE chứ không phải là xóa mục tiêu.
+  // ĐẶT MỤC TIÊU BƯỚC 6. Người dùng bấm Lưu.
+  // Đường đi: AuthContext.updateProfile → authApi → apiClient → PUT /profile
+  //           → profileController.updateProfile → services/nutrition/calorieGoal.js
+  // Nhớ: chọn tự động thì gửi calorieGoal là null. Đó KHÔNG phải xóa mục tiêu,
+  //      mà là bảo backend tự tính lại từ TDEE.
   const saveGoal = async () => {
     if (!canSave || previewTargetWeight == null) return;
 
