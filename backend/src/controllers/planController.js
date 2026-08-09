@@ -299,7 +299,7 @@ exports.markWorkoutDone = async (req, res) => {
   const claimed = await PlanWorkout.findOneAndUpdate(
     { _id: pw._id, user: req.user.id, done: false },
     { done: true, name, met },
-    { new: true },
+    { returnDocument: "after" },
   );
   if (!claimed) return res.status(400).json({ message: "Already marked as done." });
 
@@ -347,7 +347,7 @@ exports.markEaten = async (req, res) => {
   const claimed = await PlanMeal.findOneAndUpdate(
     { _id: planMeal._id, user: req.user.id, done: false },
     { done: true },
-    { new: true },
+    { returnDocument: "after" },
   );
   if (!claimed) return res.status(400).json({ message: "This meal is already marked as eaten." });
 

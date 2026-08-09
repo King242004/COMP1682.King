@@ -1,18 +1,20 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Kiểm tra hồi quy toàn tuyến HTTP trên server và MongoDB thử nghiệm.
-// Chạy bởi npm run test:api; tạo dữ liệu tạm, gọi route thật, rồi dọn dữ liệu đã tạo.
-// ═══ FILE NÀY LÀM GÌ ═══
-// Kiểm tra hồi quy toàn tuyến HTTP trên server và MongoDB thử nghiệm.
-// Chạy bởi npm run test:api; tạo dữ liệu tạm, gọi route thật, rồi dọn dữ liệu đã tạo.
+// Chạy bởi npm run test:api; tự mở server cổng ngẫu nhiên, gọi route thật, rồi dọn dữ liệu tạm.
 require("dotenv").config();
+const { once } = require("node:events");
 const mongoose = require("mongoose");
+const { createApp } = require("../../src/app");
 const Meal = require("../../src/models/Meal");
 const OTP = require("../../src/models/OTP");
+const PlanMeal = require("../../src/models/PlanMeal");
 const Post = require("../../src/models/Post");
 const { autoGoal } = require("../../src/services/nutrition/calorieGoal");
 const { OTP_PURPOSE, OTP_TTL_MS, hashOTP, normalizeEmail } = require("../../src/utils/otpSecurity");
 
-const BASE = process.env.API_BASE_URL || "http://localhost:5000/api";
+let baseUrl;
+let server;
+const cleanupAccounts = [];
 let pass = 0, fail = 0;
 
 function check(name, cond, extra = "") {
@@ -23,7 +25,7 @@ function check(name, cond, extra = "") {
 async function api(path, method = "GET", body, token, rawBody) {
   let res;
   try {
-    res = await fetch(`${BASE}${path}`, {
+    res = await fetch(`${baseUrl}${path}`, {
       method,
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: rawBody !== undefined ? rawBody : body ? JSON.stringify(body) : undefined,
@@ -63,7 +65,7 @@ async function apiUpload(path, fields, files, token) {
   for (const [field, name] of files) {
     form.append(field, new Blob([TINY_JPEG], { type: "image/jpeg" }), name);
   }
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${baseUrl}${path}`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: form,
@@ -75,7 +77,7 @@ async function apiUpload(path, fields, files, token) {
 async function apiInvalidImageUpload(path, token) {
   const form = new FormData();
   form.append("images", new Blob(["not an image"], { type: "text/plain" }), "fake.txt");
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${baseUrl}${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: form,
@@ -96,7 +98,25 @@ const shift = (days) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
+async function shutdown() {
+  if (server?.listening) await new Promise((resolve) => server.close(resolve));
+  await mongoose.disconnect().catch(() => {});
+}
+
+async function cleanupAfterCrash() {
+  for (const account of [...cleanupAccounts].reverse()) {
+    if (!account.token) continue;
+    await api("/user/account", "DELETE", { password: account.password }, account.token).catch(() => null);
+  }
+}
+
 (async () => {
+  await mongoose.connect(process.env.MONGODB_URI);
+  const app = createApp();
+  server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  baseUrl = `http://127.0.0.1:${server.address().port}/api`;
+
   const email = `apitest_${Date.now()}@test.com`;
   const PW1 = "Test123", PW2 = "Test456";
 
@@ -108,8 +128,13 @@ const shift = (days) => {
   check("register with wrong OTP 400", wrongCode.status === 400, `got ${wrongCode.status}`);
   const reg = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1, otp: registrationCode });
   check("register 201", reg.status === 201, `got ${reg.status}`);
-  const userId = reg.data.user._id;
+  if (reg.status !== 201 || !reg.data?.user || !reg.data?.token)
+    throw new Error(`Registration setup failed with status ${reg.status}`);
+  const userId = reg.data.user.id || reg.data.user._id;
+  if (!userId) throw new Error("Registration response has no user id");
   let token = reg.data.token;
+  const mainCleanup = { token, password: PW1 };
+  cleanupAccounts.push(mainCleanup);
   const existingRequest = await api("/auth/register/send-otp", "POST", { email });
   check("registration OTP request hides existing account with generic 200", existingRequest.status === 200);
   const dup = await api("/auth/register", "POST", { name: "Api Test", email, password: PW1, otp: registrationCode });
@@ -163,15 +188,17 @@ const shift = (days) => {
   check("delete workout 200", exDel?.status === 200);
 
   console.log("- PLAN (markEaten time rule) -");
-  const pToday = await api("/plan", "POST", { name: "Món plan hôm nay", mealType: "dinner", calories: 450, date: todayKey() }, token);
-  check("add plan meal today 201", pToday.status === 201);
-  const pFuture = await api("/plan", "POST", { name: "Món plan mai", mealType: "lunch", calories: 500, date: shift(1) }, token);
-  check("add plan meal future 201 (plans CAN be future)", pFuture.status === 201);
-  const eatFut = await api(`/plan/${pFuture.data.planMeal._id}/eaten`, "POST", undefined, token);
+  // PlanMeal thật được tạo bởi /plan/generate. Seed trực tiếp để test luật Đã ăn
+  // mà không gọi Gemini và không cần khôi phục endpoint POST /plan đã xóa.
+  const [pToday, pFuture] = await PlanMeal.create([
+    { user: userId, name: "Món plan hôm nay", mealType: "dinner", calories: 450, date: todayKey() },
+    { user: userId, name: "Món plan mai", mealType: "lunch", calories: 500, date: shift(1) },
+  ]);
+  const eatFut = await api(`/plan/${pFuture._id}/eaten`, "POST", undefined, token);
   check("eat FUTURE plan 400", eatFut.status === 400);
-  const eatNow = await api(`/plan/${pToday.data.planMeal._id}/eaten`, "POST", undefined, token);
+  const eatNow = await api(`/plan/${pToday._id}/eaten`, "POST", undefined, token);
   check("eat today plan 200 + diary meal created", eatNow.status === 200 && eatNow.data.meal?._id);
-  const eatTwice = await api(`/plan/${pToday.data.planMeal._id}/eaten`, "POST", undefined, token);
+  const eatTwice = await api(`/plan/${pToday._id}/eaten`, "POST", undefined, token);
   check("eat twice 400 (idempotent)", eatTwice.status === 400);
   const grocEmpty = await api("/plan/grocery", "POST", { startDate: shift(10), endDate: shift(12), language: "vi" }, token);
   check("grocery with empty range 400", grocEmpty.status === 400);
@@ -204,9 +231,16 @@ const shift = (days) => {
   check("wrong current password 400", cpWrong.status === 400);
   const cpOk = await api("/user/change-password", "POST", { currentPassword: PW1, newPassword: PW2 }, token);
   check("change password 200", cpOk.status === 200);
+  if (cpOk.status === 200) {
+    mainCleanup.password = PW2;
+    mainCleanup.token = cpOk.data?.token || mainCleanup.token;
+  }
   const reLogin = await api("/auth/login", "POST", { email, password: PW2 });
   check("login with NEW password 200", reLogin.status === 200);
+  if (reLogin.status !== 200 || !reLogin.data?.token)
+    throw new Error(`Login setup failed with status ${reLogin.status}`);
   token = reLogin.data.token;
+  mainCleanup.token = token;
 
   console.log("- OTP (no real email sent) -");
   const otpUnknown = await api("/user/send-otp", "POST", { email: "khongtontai_" + Date.now() + "@test.com" });
@@ -283,6 +317,8 @@ const shift = (days) => {
   const viewerReg = await api("/auth/register", "POST", { name: "Privacy Viewer", email: viewerEmail, password: PW1, otp: viewerCode });
   check("register privacy viewer 201", viewerReg.status === 201, `got ${viewerReg.status}`);
   const viewerToken = viewerReg.data?.token;
+  const viewerCleanup = { token: viewerToken, password: PW1 };
+  cleanupAccounts.push(viewerCleanup);
 
   if (postId && viewerToken) {
     const savePublic = await api(`/community/posts/${postId}/save`, "POST", undefined, viewerToken);
@@ -312,6 +348,7 @@ const shift = (days) => {
   if (viewerToken) {
     const deleteViewer = await api("/user/account", "DELETE", { password: PW1 }, viewerToken);
     check("privacy viewer cleanup 200", deleteViewer.status === 200, `got ${deleteViewer.status}`);
+    if (deleteViewer.status === 200) viewerCleanup.token = null;
   } else {
     check("privacy viewer cleanup 200", false, "skipped, no viewer token");
   }
@@ -325,16 +362,18 @@ const shift = (days) => {
   check("wrong password 400", delWrong.status === 400);
   const delOk = await api("/user/account", "DELETE", { password: PW2 }, token);
   check("delete account 200", delOk.status === 200);
+  if (delOk.status === 200) mainCleanup.token = null;
   const ghostLogin = await api("/auth/login", "POST", { email, password: PW2 });
   check("login after delete fails 400", ghostLogin.status === 400);
   const remainingMeals = await Meal.countDocuments({ user: userId });
   check("all meal data erased after delete", remainingMeals === 0, `got ${remainingMeals}`);
 
   console.log(`\n${pass}/${pass + fail} PASS${fail ? ` - ${fail} FAIL` : ""}`);
-  await mongoose.disconnect();
+  await shutdown();
   process.exit(fail ? 1 : 0);
 })().catch(async (e) => {
   console.error("Test crashed:", e.message);
-  await mongoose.disconnect().catch(() => {});
+  await cleanupAfterCrash();
+  await shutdown();
   process.exit(1);
 });
