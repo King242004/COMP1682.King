@@ -8,24 +8,24 @@
 // Khi lỗi:    chưa có mục tiêu calo thì mời hoàn tất hồ sơ.
 //             AI hết lượt thì báo thử lại sau, kế hoạch cũ vẫn còn nguyên.
 //
-// LUỒNG TẠO KẾ HOẠCH AN TOÀN
-// 1. Bấm nút Tạo, GenerateModal mở ra cho chọn phạm vi và ghi chú khẩu vị
-// 2. Bấm xác nhận, chạy runGenerate ở file này
-// 3. generateWeekPlan          (POST /plan/generate)
-// 4. Route gọi hàm generatePlan trong backend/src/controllers/planController.js;
-//    hàm này đọc hồ sơ và BỆNH NỀN
-// 5. LỚP AN TOÀN 1, đưa bệnh nền vào câu lệnh gửi cho Gemini
-// 6. Gemini trả các món cho từng ngày
-// 7. LỚP AN TOÀN 2, services/nutrition/foodSafetyFilter.js lọc lại theo tên món
-// 8. planReplacement.replacePlanRange ghi bản mới rồi xóa kế hoạch cũ trong khoảng ngày
-// 9. màn này tải lại và hiện kế hoạch
+// Bấm nút Tạo thì hộp chọn phạm vi và ghi chú khẩu vị mở ra. Xác nhận thì đi:
+//   src/features/plan/planApi.ts → src/utils/apiClient.ts
+//   → backend/src/routes/planRoutes.js, POST /plan/generate
+//   → backend/src/controllers/planController.js đọc hồ sơ và BỆNH NỀN
+//   → LỚP AN TOÀN 1, nhét bệnh nền vào câu lệnh gửi cho Gemini
+//   → Gemini trả các món cho từng ngày
+//   → LỚP AN TOÀN 2, backend/src/services/nutrition/foodSafetyFilter.js
+//     lọc lại theo tên món, phòng khi Gemini bỏ sót
+//   → ghi bản mới rồi xóa kế hoạch cũ trong khoảng ngày đó
+//   → màn này tải lại và hiện kế hoạch
 // Vì sao cần hai lớp: lớp 1 chỉ là lời dặn, AI có thể quên.
 // Lớp 2 chạy trong planController.generatePlan sau phản hồi AI nên app không bỏ qua được.
 // Giới hạn phải nói rõ khi bảo vệ: lớp 2 chỉ đọc TÊN món,
 // không phân tích được nguyên liệu, nên đây là lưới chắn thêm
 // chứ không phải bảo đảm y khoa.
-// BIẾN KẾ HOẠCH THÀNH DỮ LIỆU THẬT
-//   "Đã ăn" gọi POST /plan/:id/eaten; planController.markEaten tạo Meal từ món kế hoạch.
+//
+// Kế hoạch biến thành dữ liệu thật khi bấm "Đã ăn": POST /plan/:id/eaten,
+// planController.markEaten tạo một Meal từ món kế hoạch đó.
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -46,19 +46,9 @@ import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
-import { dateKey } from "@/utils/dateUtils";
+import { dateKey, mondayOf, todayKey as todayKeyOf } from "@/utils/dateUtils";
 import { aiResetWhen } from "@/utils/aiQuota";
 
-
-// Tìm Thứ hai của tuần chứa base rồi dịch chuyển theo weekOffset.
-function mondayOf(base: Date, weekOffset: number) {
-  const d = new Date(base);
-  d.setHours(0, 0, 0, 0);
-  // JavaScript đánh số Chủ nhật là 0.
-  const dow = d.getDay();
-  d.setDate(d.getDate() - ((dow + 6) % 7) + weekOffset * 7);
-  return d;
-}
 
 export default function WeeklyPlanScreen() {
   const router = useRouter();
@@ -71,7 +61,7 @@ export default function WeeklyPlanScreen() {
   // Viết tắt cụm chữ của phần Kế hoạch, màn này dùng rất nhiều lần.
   const L = t.plan;
 
-  const [todayKey, setTodayKey] = useState(dateKey(new Date()));
+  const [todayKey, setTodayKey] = useState(todayKeyOf());
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [plan, setPlan] = useState<PlanMeal[]>([]);
@@ -150,7 +140,7 @@ export default function WeeklyPlanScreen() {
   // Đặt ngay sau hàm load để luồng mở màn đọc liền nhau: dựng khoảng tuần → tải → đặt state.
   useFocusEffect(
     useCallback(() => {
-      const fresh = dateKey(new Date());
+      const fresh = todayKeyOf();
       if (fresh !== todayKey) setTodayKey(fresh);
       load();
     }, [load, todayKey])
@@ -625,7 +615,7 @@ export default function WeeklyPlanScreen() {
                             onPress={() => onDelete(item)}
                             hitSlop={10}
                             accessibilityRole="button"
-                            accessibilityLabel={t.a11y.deletePlanned}
+                            accessibilityLabel={t.a11y.removePlanned}
                             style={({ pressed }) => pressed && styles.dim}
                           >
                             <Ionicons name="trash-outline" size={18} color={theme.colors.subtle} />
@@ -724,7 +714,7 @@ const styles = StyleSheet.create({
     alignItems: "center", gap: 5,
     backgroundColor: theme.colors.surface,
   },
-  dayChipPlanned: { backgroundColor: "rgba(8,145,178,0.10)" },
+  dayChipPlanned: { backgroundColor: theme.colors.tint },
   dayChipPast: { opacity: 0.52 },
   dayChipSelected: { backgroundColor: theme.colors.primary },
   dayChipPressed: { transform: [{ scale: 0.94 }] },

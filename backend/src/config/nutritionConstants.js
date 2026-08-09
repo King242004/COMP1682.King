@@ -36,6 +36,11 @@ const ACTIVITY_MULTIPLIERS = {
   active: 2.25,
 };
 
+// Ba khóa mức vận động, lấy thẳng từ bảng hệ số ở trên chứ không gõ lại.
+// Model User và profileController đều dùng danh sách này, nên thêm một mức mới
+// vào ACTIVITY_MULTIPLIERS là cả hai nơi nhận ngay, không có bản chép tay nào lệch.
+const ACTIVITY_LEVELS = Object.freeze(Object.keys(ACTIVITY_MULTIPLIERS));
+
 // Mức vận động mặc định khi hồ sơ chưa khai. Chọn mức giữa cho an toàn.
 const DEFAULT_ACTIVITY_LEVEL = "moderate";
 
@@ -170,6 +175,7 @@ const PROFILE_LIMITS = {
 module.exports = {
   MIFFLIN_ST_JEOR,
   ACTIVITY_MULTIPLIERS,
+  ACTIVITY_LEVELS,
   DEFAULT_ACTIVITY_LEVEL,
   WEIGHT_GOALS,
   WEIGHT_GOAL_VALUES,

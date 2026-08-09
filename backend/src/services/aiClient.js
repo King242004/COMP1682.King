@@ -10,9 +10,9 @@
 // Hai mốc thời gian: mỗi lần thử chờ tối đa 12 giây, cả lượt chờ tối đa 40 giây.
 // Có hạn để một câu hỏi hỏng không treo người dùng mãi.
 //
+// Trần cho MỘT lần thử.
 const ATTEMPT_TIMEOUT_MS = 12_000;
-// Trần cho CẢ lượt gọi, tính hết mọi lần thử. Có trần để một câu hỏi hỏng
-// không treo người dùng mãi.
+// Trần cho CẢ lượt gọi, tính hết mọi lần thử.
 const TOTAL_TIMEOUT_MS = 40_000;
 
 // Bọc một lời hứa bằng đồng hồ đếm ngược. Quá giờ là bỏ, không chờ nữa.

@@ -8,17 +8,25 @@
 //
 // Cân nặng mới nhất ở đây luôn được đồng bộ ngược vào trường weight của User,
 // để chỗ nào cần cân nặng hiện tại thì đọc một chỗ là đủ.
-const mongoose = require("mongoose");
-
-// Bảng nhật ký cân nặng.
+//
 // Nơi ghi vào: phần Cân nặng trong màn Tiến trình.
-// Nơi đọc ra: biểu đồ cân nặng, và phần dữ liệu đưa cho Coach.
+// Nơi đọc ra:  biểu đồ cân nặng, và phần dữ liệu đưa cho Coach.
+// Mỗi người mỗi ngày chỉ có ĐÚNG một lần cân, cân lại trong ngày thì ghi đè.
+const mongoose = require("mongoose");
+const { PROFILE_LIMITS } = require("../config/nutritionConstants");
 const weightLogSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     // Ngày theo định dạng YYYY-MM-DD.
     date: { type: String, required: true },
-    weightKg: { type: Number, required: true, min: 20, max: 300 },
+    // Khoảng cân nặng hợp lệ lấy từ nutritionConstants, đúng bộ số mà
+    // weightController đang kiểm. Gõ tay ở đây là hai nơi có thể lệch nhau.
+    weightKg: {
+      type: Number,
+      required: true,
+      min: PROFILE_LIMITS.weightKg.min,
+      max: PROFILE_LIMITS.weightKg.max,
+    },
   },
   { timestamps: true }
 );

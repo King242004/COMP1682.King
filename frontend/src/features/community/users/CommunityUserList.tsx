@@ -8,7 +8,7 @@
 
 // Nhận dữ liệu cùng trạng thái follow từ màn cha, rồi giao từng dòng cho UserRow.
 import type { ReactElement } from "react";
-import { FlatList } from "react-native";
+import { FlatList, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { theme } from "@/ui/theme";
 import { UserRow } from "./UserRow";
@@ -35,12 +35,7 @@ export function CommunityUserList({
     <FlatList
       data={users}
       keyExtractor={(user) => user.id}
-      contentContainerStyle={{
-        paddingHorizontal: theme.space.lg,
-        paddingTop: 60,
-        paddingBottom: 40,
-        gap: theme.space.sm,
-      }}
+      contentContainerStyle={styles.content}
       alwaysBounceVertical
       keyboardShouldPersistTaps={keepKeyboard ? "handled" : undefined}
       ListHeaderComponent={header}
@@ -57,3 +52,12 @@ export function CommunityUserList({
     />
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: theme.space.lg,
+    paddingTop: 60,
+    paddingBottom: 40,
+    gap: theme.space.sm,
+  },
+});

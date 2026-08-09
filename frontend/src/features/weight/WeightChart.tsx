@@ -7,7 +7,7 @@
 // Khi lỗi:    dưới hai điểm thì không vẽ đường, chỉ hiện lời nhắc ghi thêm
 //
 // Nhớ: tự vẽ bằng SVG chứ KHÔNG dùng thư viện biểu đồ, để khỏi thêm phụ thuộc.
-//      Cũng vì vậy mà phải tự đổi số kg ra tọa độ, xem BƯỚC 3 bên dưới.
+//      Cũng vì vậy mà phải tự đổi số kg ra tọa độ, xem hai hàm x và y.
 import { useState } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
@@ -21,15 +21,13 @@ const PAD_X = 34;
 // Khoảng trống phía trên và dưới đường biểu đồ.
 const PAD_Y = 18;
 
-// ══════════════════════════════════════════════════════════
 // VẼ BIỂU ĐỒ CÂN
 //
-// Đến từ WeightSection và màn Tiến trình. Bốn bước, đọc từ trên xuống
-// là đúng thứ tự. Không gọi mạng, chỉ tính tọa độ rồi vẽ.
+// Đến từ WeightSection và màn Tiến trình.
+// Không gọi mạng, chỉ tính tọa độ rồi vẽ.
 // Xong thì ra một đường gấp khúc, kèm hai vạch mốc và một vạch mục tiêu.
-// ══════════════════════════════════════════════════════════
 
-// VẼ BIỂU ĐỒ BƯỚC 1. Nơi gọi đưa danh sách lần cân vào, đã xếp từ cũ tới mới.
+// Nơi gọi đưa danh sách lần cân vào, đã xếp từ cũ tới mới.
 // Nơi gọi cũng đã lo chuyện dưới hai điểm thì đừng gọi tới đây.
 export function WeightChart({ logs, targetWeight, locale }: {
   // Dữ liệu từ cũ đến mới. Component cha đảm bảo có ít nhất hai điểm.
@@ -43,7 +41,7 @@ export function WeightChart({ logs, targetWeight, locale }: {
   // để tính tỷ lệ các điểm trên biểu đồ cho khớp mọi cỡ màn hình.
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
-  // VẼ BIỂU ĐỒ BƯỚC 2. Tìm khoảng kg cần vẽ, tức số nhỏ nhất và lớn nhất.
+  // Tìm khoảng kg cần vẽ, tức số nhỏ nhất và lớn nhất.
   // Nhét cả cân mục tiêu vào rồi mới tìm, kẻo mục tiêu nằm ngoài khoảng
   // thì vạch mục tiêu bị vẽ tràn ra khỏi khung.
   const values = logs.map((l) => l.weightKg);
@@ -53,7 +51,7 @@ export function WeightChart({ logs, targetWeight, locale }: {
   // Nới phạm vi khi dữ liệu quá phẳng để đường biểu đồ vẫn dễ nhìn.
   if (max - min < 2) { min -= 1; max += 1; }
 
-  // VẼ BIỂU ĐỒ BƯỚC 3. Hai hàm đổi dữ liệu ra tọa độ điểm ảnh.
+  // Hai hàm đổi dữ liệu ra tọa độ điểm ảnh.
   // plotW với plotH là vùng vẽ thật, đã trừ lề trái dành cho nhãn kg.
   const plotW = width - PAD_X - 8;
   const plotH = H - PAD_Y * 2;
@@ -65,7 +63,7 @@ export function WeightChart({ logs, targetWeight, locale }: {
   // không lật thì cân nặng hơn lại vẽ thấp hơn, nhìn ngược hẳn.
   const y = (v: number) => PAD_Y + (1 - (v - min) / (max - min)) * plotH;
 
-  // VẼ BIỂU ĐỒ BƯỚC 4. Ghép tọa độ thành chuỗi cho Polyline, kiểu "x1,y1 x2,y2 ...".
+  // Ghép tọa độ thành chuỗi cho Polyline, kiểu "x1,y1 x2,y2 ...".
   const points = logs.map((l, i) => `${x(i)},${y(l.weightKg)}`).join(" ");
   // Điểm cuối được vẽ đậm hơn, vì đó là cân hiện tại.
   const last = logs[logs.length - 1];

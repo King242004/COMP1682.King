@@ -42,14 +42,12 @@ function IconBox({ icon, bg, color }: { icon: string; bg?: string; color?: strin
   );
 }
 
-// ══════════════════════════════════════════════════════════
 // MỞ CÀI ĐẶT
 //
-// Đến từ màn Hồ sơ. Hai bước, đọc từ trên xuống là đúng thứ tự.
+// Đến từ màn Hồ sơ.
 // Xong thì hiện bốn nhóm cài đặt, mỗi nhóm tự lo phần của mình.
-// ══════════════════════════════════════════════════════════
 
-// MỞ CÀI ĐẶT BƯỚC 1. Lấy hồ sơ từ AuthContext, KHÔNG gọi mạng lấy lại.
+// Lấy hồ sơ từ AuthContext, KHÔNG gọi mạng lấy lại.
 export default function SettingsScreen() {
   const { user, stats, updateProfile, deleteAccount } = useAuth();
   const router = useRouter();
@@ -63,7 +61,7 @@ export default function SettingsScreen() {
   const [isPrivate, setIsPrivate] = useState(!!user?.isPrivate);
   const [savingLang, setSavingLang] = useState(false);
 
-  // MỞ CÀI ĐẶT BƯỚC 2. Đếm lại số lời nhắc đang bật, đọc từ bộ nhớ máy chứ không gọi mạng.
+  // Đếm lại số lời nhắc đang bật, đọc từ bộ nhớ máy chứ không gọi mạng.
   // Dùng useFocusEffect vì lời nhắc được chỉnh ở màn riêng, quay về đây phải đếm lại
   // thì con số bên cạnh hàng Nhắc nhở mới đúng.
   useFocusEffect(useCallback(() => {
@@ -98,20 +96,18 @@ export default function SettingsScreen() {
     stats?.maintainWeightThresholdKg,
   ) ?? stats?.weightDirection;
   const displayedGoal = displayedDirection ? WEIGHT_GOAL_BY_DIRECTION[displayedDirection] : user?.goal;
-  // ══════════════════════════════════════════════════════════
   // ĐỔI NGÔN NGỮ
   //
   // Đến từ hai nút Tiếng Việt và English. Hai bước, một chặng chờ mạng.
   // Xong thì Coach tải lại lịch sử của ngôn ngữ mới, và các lời nhắc
   // sẽ được đặt lại bằng ngôn ngữ đó khi người dùng đụng vào công tắc.
-  // ══════════════════════════════════════════════════════════
 
-  // ĐỔI NGÔN NGỮ BƯỚC 1. Bấm đúng ngôn ngữ đang dùng thì thoát luôn, khỏi gửi hụt một lượt.
+  // Bấm đúng ngôn ngữ đang dùng thì thoát luôn, khỏi gửi hụt một lượt.
   const handleSetLanguage = async (l: Lang) => {
     if (l === user?.language) return;
     setSavingLang(true);
     try {
-      // ĐỔI NGÔN NGỮ BƯỚC 2. Lưu LÊN SERVER chứ không chỉ lưu ở máy.
+      // Lưu LÊN SERVER chứ không chỉ lưu ở máy.
       // Đường đi: AuthContext.updateProfile → authApi → apiClient → PUT /profile
       //           → profileController.updateProfile
       // Phải lên server vì coachController.chat đọc trường này để biết trả lời
@@ -124,27 +120,25 @@ export default function SettingsScreen() {
     }
   };
 
-  // ══════════════════════════════════════════════════════════
   // XÓA TÀI KHOẢN
   //
   // Đến từ nút Xóa tài khoản, đặt cuối màn vì đây là việc KHÔNG lùi lại được.
-  // Ba bước, đọc từ trên xuống là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 2.
+  // Một chặng chờ mạng, lúc lưu thay đổi.
   // Xong thì app tự đăng xuất và quay về màn Đăng nhập.
-  // ══════════════════════════════════════════════════════════
 
-  // XÓA TÀI KHOẢN BƯỚC 1. Bắt nhập mật khẩu, không cho xóa bằng một cú bấm.
+  // Bắt nhập mật khẩu, không cho xóa bằng một cú bấm.
   // Cờ deleting chặn bấm hai lần liên tiếp.
   const handleDeleteAccount = async () => {
     if (!deletePw || deleting) return;
     setDeleting(true);
     try {
-      // XÓA TÀI KHOẢN BƯỚC 2. Gửi đi rồi ĐỨNG ĐÂY CHỜ, đây là chặng lâu nhất.
+      // Gửi đi rồi ĐỨNG ĐÂY CHỜ, đây là chặng lâu nhất.
       // Đường đi: AuthContext.deleteAccount → authApi → apiClient
       //           → DELETE /user/account → accountController.deleteAccount
       // Bên đó so mật khẩu trước, rồi xóa ảnh trên Cloudinary, xóa dữ liệu ở mọi bảng,
       // cuối cùng mới xóa tài khoản. Sai mật khẩu thì ném lỗi và KHÔNG xóa gì cả.
       await deleteAccount(deletePw);
-      // XÓA TÀI KHOẢN BƯỚC 3. Đóng hộp rồi về màn Đăng nhập.
+      // Đóng hộp rồi về màn Đăng nhập.
       // AuthContext đã tự đăng xuất ngay sau khi backend xóa xong.
       setDeleteVisible(false);
       router.replace("/auth/login");

@@ -13,12 +13,10 @@
 //     nên kẻ tấn công không đoán được mã qua tốc độ trả lời.
 const { createHmac, randomInt, timingSafeEqual } = require("crypto");
 
-// ══════════════════════════════════════════════════════════
 // HẰNG SỐ VÀ HÀM AN TOÀN CHO MÃ 6 SỐ
 //
-// Không phải luồng. Mấy hằng số cấu hình, và mấy hàm tính thuần.
+// Mấy hằng số cấu hình, và mấy hàm tính thuần.
 // Đến từ otpService, authController, accountController. Gọi cái nào cũng được.
-// ══════════════════════════════════════════════════════════
 
 // Hai lý do dùng mã. Băm mã có nhét lý do vào, nên mã của luồng đăng ký
 // KHÔNG dùng lại được cho luồng quên mật khẩu.

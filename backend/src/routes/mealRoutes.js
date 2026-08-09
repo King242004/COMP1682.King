@@ -24,9 +24,9 @@ const router = express.Router();
 
 // Mọi địa chỉ dưới đây đều phải qua protect trước, tức phải có thẻ đăng nhập.
 router.use(protect);
-// LUỒNG LƯU MÓN, đường một món. Đi tiếp mealController.addMeal.
+// Đường một món. Đi tiếp: backend/src/controllers/mealController.js
 router.post("/", addMeal);
-// LUỒNG LƯU MÓN, đường nhiều món. Nút Lưu ở AddMealScreen đi vào ĐÂY,
+// Đường nhiều món. Nút Lưu ở AddMealScreen đi vào ĐÂY,
 // vì một lần lưu ghi được tối đa 8 món. Đi tiếp mealController.addMeals.
 router.post("/batch", addMeals);
 router.get("/", getMealsByDate);

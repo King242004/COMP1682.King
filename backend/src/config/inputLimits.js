@@ -58,11 +58,29 @@ const INPUT_LIMITS = {
   // Mã vạch. Đúng bằng luật EAN và UPC mà scanController đang kiểm.
   BARCODE: 14,
 
+  // Số chữ số ít nhất của một mã vạch, đúng bằng EAN-8.
+  // Đi cặp với BARCODE ở trên, hai số này dựng nên luật 8 tới 14 chữ số.
+  BARCODE_MIN: 8,
+
+  // Số món tối đa của MỘT lần lưu, và của MỘT lượt nhờ AI ước tính.
+  // Số này phải khớp bốn nơi: mealController.addMeals, scanController.estimateNutrition,
+  // và hai chỗ kiểm trong frontend/src/features/meals/AddMealScreen.tsx.
+  MEAL_ITEMS: 8,
+
+  // Trần của calo và của mỗi chất trong MỘT món. Bốn chữ số nên tối đa 9999.
+  // mealInputValidator bên backend và mealHelpers bên frontend cùng dùng số này.
+  NUTRITION_VALUE: 9999,
+
   // Giờ nhắc bữa, dạng HH:MM.
   REMINDER_TIME: 5,
 
   // Mã xác minh gửi qua email. generateOTP luôn sinh đúng 6 chữ số.
   OTP_CODE: 6,
+
+  // Số ảnh tối đa của MỘT bài Community. Số này phải khớp ba nơi:
+  // multer trong communityRoutes, phần kiểm trong postController,
+  // và MAX_POST_IMAGES bên frontend/src/features/community/communityApi.ts.
+  POST_IMAGES: 10,
 };
 
 // Số CHỮ SỐ tối đa của các ô nhập số. Khoảng giá trị hợp lệ vẫn do
@@ -82,8 +100,8 @@ const DIGIT_LIMITS = {
   CALORIE_GOAL: 5,
 };
 
-// Trần lịch sử. Chỉ dùng ở model và ở đường sửa bản ghi cũ.
-// KHÔNG dùng bộ này cho dữ liệu mới, và không đưa nó ra giao diện.
+// Trần tương thích cho dữ liệu lịch sử và các API vẫn có thể nhận lại giá trị cũ.
+// Không đưa bộ này ra giao diện, vì ô nhập mới dùng giới hạn chặt hơn ở INPUT_LIMITS.
 const LEGACY_LIMITS = {
   POST_CAPTION: 500,
   MEAL_NAME: 100,

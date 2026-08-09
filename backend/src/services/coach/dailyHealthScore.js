@@ -1,8 +1,8 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Chấm điểm sức khỏe trong ngày, thang 100.
 //
-// Ai gọi tới: coachController, khi app xin điểm cho thẻ ở Trang chủ
-// Nhận vào:   món đã ăn, buổi tập, mục tiêu calo của ngày đó
+// Ai gọi tới: coachController.getInsight, khi app xin điểm cho thẻ ở Trang chủ
+// Nhận vào:   nguyên khối ngữ cảnh do coachContext.buildContext dựng ra
 // Trả ra:     điểm tổng, kèm breakdown chia bốn phần
 // Khi lỗi:    thiếu dữ liệu phần nào thì phần đó 0 điểm, không bịa số
 //
@@ -16,19 +16,7 @@
 const { HEALTH_SCORE_WEIGHTS, CALORIE_SCORE_DEVIATION, PROTEIN_G_PER_KG,
   PROTEIN_RATIO_WHEN_WEIGHT_UNKNOWN, ATWATER_KCAL_PER_GRAM } = require("../../config/nutritionConstants");
 
-// ══════════════════════════════════════════════════════════
-// CHẤM ĐIỂM SỨC KHỎE
-//
-// Không phải luồng. Một hàm chấm, cộng mấy hàm phụ.
-// Đến từ coachController.getInsight.
-// 
-// Nhớ: chấm hoàn toàn bằng CÔNG THỨC, KHÔNG nhờ AI.
-//      Nhờ vậy cùng một ngày dữ liệu thì luôn ra cùng một điểm.
-// ══════════════════════════════════════════════════════════
-
-// Chấm điểm sức khỏe của một ngày, thang 100.
-// Bốn phần: calo, đạm, vận động, và đều đặn. Trọng số nằm ở bảng ngay dưới.
-// Nhớ: chấm hoàn toàn bằng CÔNG THỨC, không nhờ AI, nên cùng dữ liệu là cùng điểm.
+// Bốn phần điểm: calo, đạm, vận động, và đều đặn. Trọng số nằm ở bảng W bên dưới.
 function computeHealthScore(ctx) {
   const { profile, today, week } = ctx;
   // Lối tắt tới bảng trọng số, bên dưới gọi tới rất nhiều lần.
@@ -61,6 +49,7 @@ function computeHealthScore(ctx) {
   // Tài khoản 2 ngày ghi đủ cả 2 ngày phải được điểm tối đa, vì họ không
   // bỏ sót ngày nào kể từ lúc cài app. Chặn trần 1 để dữ liệu lạ không vượt điểm.
   // Không dùng `|| 7` vì số 0 sẽ bị coi là thiếu dữ liệu rồi nhảy về 7.
+  // Đây là chỗ DUY NHẤT kẹp con số này, coachContext gửi sang số ngày thô.
   const rawEligible = Number.isFinite(week.eligibleDays) ? week.eligibleDays : 7;
   const eligibleDays = Math.min(7, Math.max(1, rawEligible));
   const consistencyScore = Math.round(W.consistency * Math.min(week.loggedDays / eligibleDays, 1));

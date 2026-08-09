@@ -68,14 +68,13 @@ async function buildContext(userId, date) {
   const activeDays = new Set(weekExercises.map((e) => e.date)).size;
   const weekBurned = weekExercises.reduce((s, e) => s + e.caloriesBurned, 0);
 
-  // Số ngày mà tài khoản THỰC SỰ có thể ghi món, tính cả hôm nay, tối đa 7.
+  // Số ngày mà tài khoản THỰC SỰ có thể ghi món, tính cả hôm nay.
   // Điểm đều đặn chia cho số này chứ không chia cứng cho 7, vì đòi dữ liệu
   // của những ngày người dùng còn chưa cài app là phạt oan người mới.
-  // Giờ tạo tài khoản lấy theo múi giờ máy chủ, lệch tối đa một ngày và đã bị
-  // chặn trần 7 nên không ảnh hưởng kết quả.
-  const eligibleDays = user?.createdAt
-    ? Math.min(7, Math.max(1, daysInclusive(dateKey(user.createdAt), date)))
-    : 7;
+  // Giờ tạo tài khoản lấy theo múi giờ máy chủ nên lệch tối đa một ngày.
+  // Việc kẹp số này vào khoảng 1 tới 7 để ở dailyHealthScore, là nơi DUY NHẤT
+  // dùng nó. Trước đây kẹp cả hai nơi, sửa một chỗ là hai chỗ lệch luật.
+  const eligibleDays = user?.createdAt ? daysInclusive(dateKey(user.createdAt), date) : 7;
 
   return {
     profile: {

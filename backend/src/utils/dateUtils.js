@@ -1,24 +1,16 @@
-// ══════════════════════════════════════════════════════════
-// CHỐT HÔM NAY LÀ NGÀY NÀO
-//
-// Không phải luồng. Mấy hàm tính ngày thuần.
-// 
-// Nhớ: server nằm ở Singapore còn người dùng ở đâu cũng có. Vì vậy KHÔNG được
-//      lấy ngày của server, phải lấy theo múi giờ mà app gửi kèm mỗi request
-//      trong header x-timezone-offset.
-// ══════════════════════════════════════════════════════════
-
 // ═══ FILE NÀY LÀM GÌ ═══
 // Trả lời một câu hỏi: hôm nay là ngày nào, theo múi giờ của MÁY người dùng.
 //
-// Ai gọi tới: mealController, planController, coachController, exerciseController
+// Ai gọi tới: mealController, planController, coachController, exerciseController,
+//             weightController, services/coach/coachContext, services/nutrition/calorieGoal
 // Nhận vào:   độ lệch múi giờ mà app gửi kèm trong tiêu đề request
 // Trả ra:     chuỗi ngày dạng YYYY-MM-DD
 // Khi lỗi:    thiếu hoặc sai độ lệch thì dùng giờ quốc tế UTC
 //
 // Vì sao không dùng thẳng giờ máy chủ: máy chủ đặt ở Singapore. Người dùng
 // ghi món lúc 23h ở Việt Nam mà tính theo giờ máy chủ có thể nhảy sang ngày mai.
-//
+// Múi giờ lấy từ header x-timezone-offset mà apiClient gắn vào MỌI request.
+
 // Đổi một mốc thời gian thành khóa ngày địa phương dạng YYYY-MM-DD.
 function dateKey(value) {
   const date = new Date(value);

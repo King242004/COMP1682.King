@@ -41,22 +41,18 @@ export default function PostCreateScreen() {
   const [selectedMeal, setSelectedMeal] = useState<PostMealChoice | null>(null);
   const [posting, setPosting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-
-  // ══════════════════════════════════════════════════════════
   // ĐĂNG BÀI
   //
-  // Đến từ nút cộng ở màn Cộng đồng. Ba bước, đọc từ trên xuống là đúng thứ tự.
-  // Hai chặng chờ mạng: BƯỚC 1 tải món cũ, và BƯỚC 3 đăng bài.
+  // Đến từ nút cộng ở màn Cộng đồng.
+  // Hai chặng chờ mạng, một lúc tải món cũ và một lúc đăng bài.
   // Xong thì quay về màn Cộng đồng, bài mới nằm ở đầu danh sách.
-  // ══════════════════════════════════════════════════════════
-
-  // ĐĂNG BÀI BƯỚC 1. Tải lịch sử món để hàng chọn món đính kèm có dữ liệu.
+  // Tải lịch sử món để hàng chọn món đính kèm có dữ liệu.
   // Đường đi: MealsContext.fetchMealHistory → mealsApi → apiClient
   //           → GET /meals/history → mealController.getMealHistory
   // Dùng useEffect nên chỉ chạy MỘT lần lúc mở màn, đủ dùng vì rời màn là màn dựng lại.
   useEffect(() => { void fetchMealHistory().catch(() => {}); }, [fetchMealHistory]);
 
-  // ĐĂNG BÀI BƯỚC 2. Mở bộ chọn ảnh. Trần số ảnh do PhotoPickerModal lo,
+  // Mở bộ chọn ảnh. Trần số ảnh do PhotoPickerModal lo,
   // ở đây chỉ bật cờ cho nó hiện lên.
   const pickImages = () => setPickerOpen(true);
 
@@ -71,7 +67,7 @@ export default function PostCreateScreen() {
     setSelectedMeal(meal);
   };
 
-  // ĐĂNG BÀI BƯỚC 3. Người dùng bấm Đăng.
+  // Người dùng bấm Đăng.
   // Đường đi: createPost → apiClient → POST /community/posts
   //           → postController.createPost → Cloudinary
   // Gửi bằng FormData vì có kèm file ảnh.

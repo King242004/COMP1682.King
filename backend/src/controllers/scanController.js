@@ -15,18 +15,14 @@ const { hasLanguageMismatch, buildLanguageCorrectionPrompt, mergeLocalizedText }
 const { buildNutritionEstimatePrompt, normalizeEstimatedNutrition, nutritionEstimateKey } = require("../services/nutrition/nutritionEstimator");
 const NutritionEstimateCache = require("../models/NutritionEstimateCache");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
-
-// ══════════════════════════════════════════════════════════
-// HAI CỬA CỦA MÀN QUÉT
+// BA CỬA TRẢ LỜI "MÓN NÀY BAO NHIÊU CALO"
+// scanPhoto nhìn ảnh, scanBarcode tra mã vạch, estimateNutrition đọc tên món gõ tay.
 //
-// Không phải luồng. Một cửa nhìn ảnh đoán món, một cửa tra mã vạch.
-// 
 // Nhớ: ẢNH KHÔNG BAO GIỜ được lưu lại. Ảnh chỉ sống trong đúng một request,
 //      gửi cho Gemini xong là bỏ.
-// ══════════════════════════════════════════════════════════
-
-// Giữ kết quả tra mã vạch trong 30 ngày. Số dinh dưỡng của một sản phẩm
-// đóng gói gần như không đổi, nên tra lại mỗi lần chỉ tổ chậm và tốn lượt.
+// Giữ kết quả ƯỚC TÍNH MÓN trong 30 ngày, dùng cho estimateNutrition bên dưới.
+// Hỏi lại đúng tên món với khẩu phần cũ thì trả ngay, không tốn lượt AI.
+// Mã vạch KHÔNG dùng đệm này, nó hỏi thẳng Open Food Facts mỗi lần.
 const NUTRITION_CACHE_MS = 30 * 24 * 60 * 60 * 1000;
 // Chờ tối đa 10 giây khi tra Open Food Facts. Đó là dịch vụ ngoài,
 // không chặn thời gian là nó chậm kéo cả request của mình chậm theo.
@@ -136,8 +132,8 @@ exports.estimateNutrition = async (req, res) => {
     : [];
   const language = req.body.language === "vi" ? "vi" : "en";
 
-  if (items.length < 1 || items.length > 8)
-    return res.status(400).json({ message: "Enter between 1 and 8 meal items." });
+  if (items.length < 1 || items.length > INPUT_LIMITS.MEAL_ITEMS)
+    return res.status(400).json({ message: `Enter between 1 and ${INPUT_LIMITS.MEAL_ITEMS} meal items.` });
   // Trần lịch sử, cùng bộ với mealInputValidator, vì màn Thêm món có thể gửi lại
   // đúng chuỗi đã lưu của một bản ghi cũ để ước tính lại dinh dưỡng.
   if (items.some((item) => item.name.length < 2 || item.name.length > LEGACY_LIMITS.MEAL_NAME))
@@ -182,7 +178,10 @@ exports.estimateNutrition = async (req, res) => {
 exports.scanBarcode = async (req, res) => {
   const { barcode } = req.body;
 
-  if (!barcode || String(barcode).length > INPUT_LIMITS.BARCODE || !/^\d{8,14}$/.test(barcode))
+  // Luật 8 tới 14 chữ số dựng từ hằng số, không gõ thẳng vào regex,
+  // để ManualBarcodeModal bên app và chỗ này không bao giờ lệch nhau.
+  const barcodePattern = new RegExp(`^\\d{${INPUT_LIMITS.BARCODE_MIN},${INPUT_LIMITS.BARCODE}}$`);
+  if (!barcode || String(barcode).length > INPUT_LIMITS.BARCODE || !barcodePattern.test(barcode))
     return res.status(400).json({ message: "Invalid barcode format." });
 
   try {
@@ -220,7 +219,7 @@ exports.scanBarcode = async (req, res) => {
         protein: Math.round((nutriments.proteins_100g || 0) * ratio * 10) / 10,
         carbs: Math.round((nutriments.carbohydrates_100g || 0) * ratio * 10) / 10,
         fat: Math.round((nutriments.fat_100g || 0) * ratio * 10) / 10,
-        // Per 100g reference for users to recalculate
+        // Giữ mốc 100g để người dùng tự quy lại theo khẩu phần của mình
         per100g: {
           calories: Math.round(nutriments["energy-kcal_100g"] || 0),
           protein: Math.round((nutriments.proteins_100g || 0) * 10) / 10,

@@ -14,8 +14,8 @@
 //   estimateNutrition  POST /scan/estimate  tên và khẩu phần, AI trả calo cùng ba chất
 // Ảnh được thu nhỏ và nén TRƯỚC khi gửi. Ảnh gốc của điện thoại quá nặng nên
 // vừa lâu vừa dễ vượt giới hạn của scanUploadLimiter trong scanRoutes.js.
-import * as ImageManipulator from "expo-image-manipulator";
 import { apiFetch } from "@/utils/apiClient";
+import { compressForUpload } from "@/utils/imageCompress";
 import type { Lang } from "@/utils/languageUtils";
 
 export type ScanMode = "photo" | "barcode";
@@ -71,17 +71,11 @@ export const BARCODE_SETTINGS = { barcodeTypes: [...BARCODE_TYPES] } as {
 // File này KHÔNG gọi fetch. Nó nhờ apiFetch bên src/utils/apiClient.ts,
 // chỗ đó lo địa chỉ server, thẻ đăng nhập, múi giờ, hạn chờ và lỗi 401.
 
+// Phép nén thật nằm ở utils/imageCompress, dùng chung với ảnh gửi cho Coach.
+// Nén hỏng thì trả lại ảnh gốc, vì gửi ảnh nặng vẫn hơn là không gửi được gì.
 export async function compressImage(uri: string): Promise<string> {
-  try {
-    const result = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 1024 } }],
-      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG },
-    );
-    return result.uri;
-  } catch {
-    return uri;
-  }
+  const result = await compressForUpload(uri);
+  return result?.uri ?? uri;
 }
 
 // Gửi language để scanController.scanPhoto đưa ngôn ngữ vào vision prompt.

@@ -18,41 +18,23 @@ import { resolveLanguage, localeTag } from "@/utils/languageUtils";
 import { useT, type Strings } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { MEAL_TYPE_BY_KEY } from "@/features/meals/mealTypeDisplay";
-import { dateKey } from "@/utils/dateUtils";
+import { isLoggedOnSameDay, relativeDayLabel, timeHHMM } from "@/utils/dateUtils";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { Card } from "@/ui/components/Card";
 
-// ══════════════════════════════════════════════════════════
 // HAI HÀM ĐẶT NHÃN. Đổi mốc thời gian ra chữ cho dễ đọc
-// ══════════════════════════════════════════════════════════
-
-// Rút giờ phút ra khỏi mốc thời gian đầy đủ, để hiện cạnh tên món
-function hhmm(iso: string) {
-  const d = new Date(iso);
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
-}
 
 // Nhãn tiêu đề nhóm ngày, hai ngày gần nhất ghi thẳng Hôm nay với Hôm qua
 // Ghép T00:00:00 để máy hiểu là giờ địa phương, thiếu là múi giờ âm lùi mất một ngày
 function dateLabel(dateStr: string, t: Strings, locale?: string) {
-  const d = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return t.meals.today;
-  if (d.toDateString() === yesterday.toDateString()) return t.meals.yesterday;
-  return d.toLocaleDateString(locale, { weekday: "long", month: "short", day: "numeric" });
+  return relativeDayLabel(dateStr, t.meals, locale, { weekday: "long", month: "short", day: "numeric" });
 }
 
-// ══════════════════════════════════════════════════════════
 // Đến từ màn Hồ sơ và liên kết Xem tất cả ở Trang chủ
 // Ra màn: các nhóm ngày, chạm một món là mở màn Chi tiết món
-// ══════════════════════════════════════════════════════════
 
 // Lấy danh sách từ MealsContext, không tự giữ state riêng
 export default function MealHistoryScreen() {
@@ -117,7 +99,7 @@ export default function MealHistoryScreen() {
             <AppText variant="subtle" style={styles.groupLabel}>{group.label}</AppText>
             {group.meals.map((item) => {
               // Chỉ hiện giờ lưu khi món ghi đúng ngày đã ăn, ghi bù thì không
-              const loggedSameDay = dateKey(new Date(item.createdAt)) === item.date;
+              const loggedSameDay = isLoggedOnSameDay(item.createdAt, item.date);
               return (
                 <Pressable
                   key={item.id}
@@ -143,7 +125,7 @@ export default function MealHistoryScreen() {
                         {loggedSameDay && (
                           <View style={styles.metaItem}>
                             <Ionicons name="time" size={13} color={theme.colors.subtle} />
-                            <AppText variant="subtle">{hhmm(item.createdAt)}</AppText>
+                            <AppText variant="subtle">{timeHHMM(item.createdAt)}</AppText>
                           </View>
                         )}
                         {item.mealType && (

@@ -20,28 +20,10 @@ export function resolvedFollowState(
 ): boolean {
   return overrides[user.id] ?? user.isFollowing ?? false;
 }
-
-export function mealPortionLabel(meal: {
-  portionAmount?: number | null;
-  portionUnit?: string;
-  portionText?: string;
-}): string | null {
-  const text = meal.portionText?.trim();
-  if (text) return text;
-  const amount = meal.portionAmount;
-  const unit = meal.portionUnit?.trim();
-  if (amount != null && unit) return `${amount} ${unit}`;
-  if (amount != null) return String(amount);
-  return unit || null;
-}
-
-// ══════════════════════════════════════════════════════════
 // ĐỔI DỮ LIỆU RA CHỮ ĐỂ HIỆN
 //
-// Không phải luồng. Mấy hàm nhỏ đổi dữ liệu thô thành chữ cho người đọc.
+// Mấy hàm nhỏ đổi dữ liệu thô thành chữ cho người đọc.
 // Gọi cái nào cũng được, không cái nào gọi mạng.
-// ══════════════════════════════════════════════════════════
-
 // Đổi mốc thời gian thành cặp số với đơn vị, kiểu 5 với "m".
 // Chỉ trả số thô, KHÔNG ghép chữ, vì việc ghép chữ tùy ngôn ngữ nên để hàm dưới lo.
 // Bốn mốc: dưới 1 phút là "vừa xong", rồi tới phút, giờ, ngày. Không có tuần hay tháng,

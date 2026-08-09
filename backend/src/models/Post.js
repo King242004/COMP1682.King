@@ -8,6 +8,9 @@
 // Trả ra:     một dòng Post đã kiểm hợp lệ
 // Khi lỗi:    thiếu người đăng hoặc ảnh sai hình dạng thì Mongoose chặn lại
 //
+// Nơi ghi vào: màn Tạo bài và màn Sửa bài trong Community.
+// Nơi đọc ra:  bốn danh sách bài của Community, và màn Chi tiết bài.
+//
 // Ba trường dễ nhầm:
 //   dishName là TÊN món, có thể có mà không kèm dinh dưỡng.
 //   meal là phần dinh dưỡng, chỉ có khi người dùng chọn món từ nhật ký.
@@ -16,6 +19,7 @@
 // chỉ là đếm độ dài mảng, không cần truy vấn thêm bảng khác.
 const mongoose = require("mongoose");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
+const { nutritionSnapshotFields } = require("./nutritionFields");
 const { NUTRITION_SOURCES } = require("../config/mealEnums");
 
 const postSchema = new mongoose.Schema(
@@ -36,10 +40,7 @@ const postSchema = new mongoose.Schema(
     dishName: { type: String, trim: true, maxlength: LEGACY_LIMITS.MEAL_NAME, default: null },
     meal: {
       name: { type: String },
-      calories: { type: Number, min: 0 },
-      protein: { type: Number, min: 0 },
-      carbs: { type: Number, min: 0 },
-      fat: { type: Number, min: 0 },
+      ...nutritionSnapshotFields,
       portionAmount: { type: Number, default: null, min: 0 },
       portionUnit: { type: String, default: "", trim: true, maxlength: INPUT_LIMITS.PORTION_UNIT },
       portionText: { type: String, default: "", trim: true, maxlength: LEGACY_LIMITS.PORTION_TEXT },

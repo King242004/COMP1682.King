@@ -71,7 +71,7 @@ exports.createPost = async (req, res) => {
   // Tải từng ảnh lên Cloudinary. Hỏng giữa chừng thì dọn sạch ảnh đã lên.
   const images = [];
   try {
-    for (const file of files.slice(0, 10)) {
+    for (const file of files.slice(0, INPUT_LIMITS.POST_IMAGES)) {
       images.push(await uploadToCloudinary(file.buffer));
     }
   } catch {
@@ -82,16 +82,22 @@ exports.createPost = async (req, res) => {
 
   const meal = mealSnapshot(req.body);
 
-  const post = await Post.create({
-    user: req.user.id,
-    caption: caption ? caption.trim() : "",
-    image: images[0]?.url || null,
-    imagePublicId: images[0]?.publicId || null,
-    images,
-    dishName: normalizedDishName || undefined,
-    meal,
-    likes: [],
-  });
+  let post;
+  try {
+    post = await Post.create({
+      user: req.user.id,
+      caption: caption ? caption.trim() : "",
+      image: images[0]?.url || null,
+      imagePublicId: images[0]?.publicId || null,
+      images,
+      dishName: normalizedDishName || undefined,
+      meal,
+      likes: [],
+    });
+  } catch (error) {
+    await Promise.allSettled(images.map((image) => cloudinary.uploader.destroy(image.publicId)));
+    throw error;
+  }
 
   await post.populate("user", "name avatar");
   res.status(201).json({ message: "Posted.", post: shapePost(post, req.user.id) });
@@ -154,6 +160,8 @@ exports.updatePost = async (req, res) => {
   }
 
   const files = req.files || [];
+  let addedImages = [];
+  let droppedImages = [];
   if (req.body.keepUrls !== undefined || files.length > 0) {
     // Bài đời cũ chỉ có một ảnh ở trường image, bài mới có mảng images.
     // Gộp cả hai kiểu về một danh sách để xử lý chung.
@@ -184,12 +192,11 @@ exports.updatePost = async (req, res) => {
     if (keptImages.length + files.length === 0) {
       return res.status(400).json({ message: "A post needs at least one photo." });
     }
-    if (keptImages.length + files.length > 10) {
-      return res.status(400).json({ message: "A post can carry at most 10 photos." });
+    if (keptImages.length + files.length > INPUT_LIMITS.POST_IMAGES) {
+      return res.status(400).json({ message: `A post can carry at most ${INPUT_LIMITS.POST_IMAGES} photos.` });
     }
 
     // Ảnh mới thêm trong lần sửa này. Giữ riêng để hỏng thì dọn lại đúng chúng.
-    const addedImages = [];
     try {
       for (const file of files) {
         addedImages.push(await uploadToCloudinary(file.buffer));
@@ -203,11 +210,8 @@ exports.updatePost = async (req, res) => {
 
     // Xóa khỏi kho những ảnh cũ người dùng đã bỏ ra.
     const keptIds = new Set(keptImages.map((image) => image.publicId).filter(Boolean));
-    const droppedImages = currentImages.filter(
+    droppedImages = currentImages.filter(
       (image) => image.publicId && !keptIds.has(image.publicId)
-    );
-    await Promise.allSettled(
-      droppedImages.map((image) => cloudinary.uploader.destroy(image.publicId))
     );
 
     post.images = [...keptImages, ...addedImages];
@@ -220,7 +224,17 @@ exports.updatePost = async (req, res) => {
     return res.status(400).json({ message: "A post needs a caption, photo, or meal." });
   }
 
-  await post.save();
+  try {
+    await post.save();
+  } catch (error) {
+    await Promise.allSettled(
+      addedImages.map((image) => cloudinary.uploader.destroy(image.publicId))
+    );
+    throw error;
+  }
+  await Promise.allSettled(
+    droppedImages.map((image) => cloudinary.uploader.destroy(image.publicId))
+  );
   await post.populate("user", "name avatar");
   res.json({ message: "Post updated.", post: shapePost(post, req.user.id) });
 };

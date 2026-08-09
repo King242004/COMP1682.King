@@ -40,26 +40,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   tokenRef.current = token;
   langRef.current = user?.language ?? languagePreference;
 
-  // ══════════════════════════════════════════════════════════
   // TỰ ĐỌC PHIÊN CŨ
-  // Không ai bấm, tự chạy lúc mở app. Cả 4 bước nằm gọn ở đây, không gọi mạng.
-  // Xong thì app/index.tsx nhìn user với isLoading để chọn /tabs hay /auth/login.
-  // ══════════════════════════════════════════════════════════
+  // Không ai bấm, tự chạy lúc mở app, không gọi mạng
+  // Xong thì app/index.tsx nhìn user với isLoading để chọn /tabs hay /auth/login
 
-  // ĐỌC PHIÊN BƯỚC 1. Chạy đúng một lần lúc mở app, nhờ mảng rỗng [] ở cuối.
-  // Có khối này thì mở app mới không phải đăng nhập lại.
+  // Chạy đúng một lần lúc mở app nhờ mảng rỗng ở cuối
+  // Có khối này thì mở app mới không phải đăng nhập lại
   useEffect(() => {
     // Tách thành hàm riêng vì useEffect không nhận hàm async trực tiếp.
     async function loadAuth() {
       try {
-        // ĐỌC PHIÊN BƯỚC 2. Đọc từ máy qua authSession, không gọi mạng.
+        // Đọc từ máy qua authSession, không gọi mạng
         // Cho chạy song song vì hai cái không phụ thuộc nhau.
         const [session, storedLanguage] = await Promise.all([
           loadStoredAuthSession(),
           loadStoredLanguagePreference(),
         ]);
         setLanguagePreferenceState(storedLanguage);
-        // ĐỌC PHIÊN BƯỚC 3. Có phiên cũ thì đặt vào state.
+        // Có phiên cũ thì đặt vào state
         // Không có thì user vẫn rỗng, app sẽ đưa về màn Đăng nhập.
         if (session) {
           setToken(session.token);
@@ -69,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Dữ liệu lưu hỏng thì xóa sạch. Thà bắt đăng nhập lại còn hơn kẹt màn trắng.
         await clearStoredAuthSession().catch(() => {});
       } finally {
-        // ĐỌC PHIÊN BƯỚC 4. Báo đã đọc xong. Để trong finally nên lỗi cũng chạy.
+        // Báo đã đọc xong, để trong finally nên lỗi cũng chạy tới đây
         // Thiếu dòng này là app/index.tsx chờ mãi, màn hình đứng trắng.
         setIsLoading(false);
       }
@@ -77,24 +75,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadAuth();
   }, []);
 
-  // ══════════════════════════════════════════════════════════
   // ĐĂNG NHẬP
-  // Đến từ LoginScreen.tsx. Ba bước, đọc từ trên xuống là đúng thứ tự.
-  // Xong thì LoginScreen tự chuyển sang /tabs.
-  // ══════════════════════════════════════════════════════════
+  // Đến từ LoginScreen.tsx, xong thì màn đó tự chuyển sang /tabs
 
-  // ĐĂNG NHẬP BƯỚC 1. LoginScreen bấm nút xong gọi thẳng vào đây.
   const login = async (email: string, password: string) => {
-    // ĐĂNG NHẬP BƯỚC 2. authApi.loginRequest gửi POST /auth/login qua apiClient;
-    // Route này gọi hàm login trong backend/src/controllers/authController.js;
-    // hàm đó kiểm mật khẩu, lưu ngôn ngữ và trả AuthSession.
+    // Đi tiếp: src/features/auth/authApi.ts, rồi POST /auth/login
+    // Backend kiểm mật khẩu, lưu ngôn ngữ và trả về thẻ đăng nhập kèm hồ sơ
     // Gửi kèm ngôn ngữ ngay từ đây nên KHÔNG phải gọi thêm lượt PUT /profile nữa.
     // Sai mật khẩu là dòng này ném lỗi, LoginScreen bắt rồi hiện.
     const data = await loginRequest(email, password, languagePreference);
     await saveSession(data);
   };
 
-  // ĐĂNG NHẬP BƯỚC 3. Lưu thẻ với hồ sơ. Đăng ký cũng dùng lại hàm này.
+  // Lưu thẻ với hồ sơ, đăng ký cũng dùng lại hàm này
   // Ghi qua authSession xong mới đổi state để lỗi lưu không tạo phiên chỉ tồn tại trên giao diện.
   const saveSession = useCallback(async (session: AuthSession) => {
     await saveStoredAuthSession(session);
@@ -104,20 +97,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(session.token);
   }, []);
 
-  // ══════════════════════════════════════════════════════════
   // ĐĂNG KÝ
-  // Đến từ RegisterScreen.tsx. Hai bước: xin mã, rồi gửi mã kèm thông tin.
-  // Xong thì dùng lại BƯỚC 3 của khối ĐĂNG NHẬP, nên có thẻ luôn, không phải đăng nhập lại.
-  // ══════════════════════════════════════════════════════════
+  // Đến từ RegisterScreen.tsx, hai chặng là xin mã rồi gửi mã kèm thông tin
+  // Xong thì dùng lại saveSession của khối trên, nên có thẻ luôn
 
-  // ĐĂNG KÝ BƯỚC 1. Xin mã 6 số rồi CHỜ.
-  // Đường đi: sendRegistrationOTP → apiClient → POST /auth/register/send-otp → authController.sendRegistrationOTP → otpService → email relay
+  // Xin mã 6 số rồi CHỜ
+  // Đi tiếp: authApi.ts, POST /auth/register/send-otp, rồi email relay gửi mã
   const requestRegistrationOTP = async (email: string) => {
     await sendRegistrationOTP(email, resolveLanguage(languagePreference ?? user?.language));
   };
 
-  // ĐĂNG KÝ BƯỚC 2. authApi.registerRequest gửi POST /auth/register qua apiClient;
-  // Route này gọi hàm register trong backend/src/controllers/authController.js
+  // Gửi mã kèm thông tin. Đi tiếp: authApi.ts, rồi POST /auth/register
   // để kiểm OTP và tạo tài khoản.
   // Gửi kèm ngôn ngữ luôn, cùng lý do như đăng nhập.
   // authController.register trả AuthSession nên xong bước này là vào app ngay.
@@ -126,13 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveSession(data);
   };
 
-  // ══════════════════════════════════════════════════════════
   // ĐĂNG XUẤT VÀ THẺ HẾT HẠN
   // Hai lối vào, cùng một đích:
   //   ProfileScreen.tsx     người dùng bấm nút Đăng xuất rồi chuyển sang /auth/login
   //   utils/apiClient.ts    tự gọi khi một route riêng tư trả 401
   // Cả hai lối đều chuyển sang /auth/login trước khi dọn state và bộ nhớ phiên.
-  // ══════════════════════════════════════════════════════════
 
   // Lối một: người dùng bấm Đăng xuất ở ProfileScreen, gọi thẳng hàm này.
   // Nhớ: xóa ref trước rồi mới xóa state. State đổi không có hiệu lực ngay đâu.
@@ -145,23 +133,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearStoredAccountData();
   }, []);
 
-  // Lối hai: thẻ hết hạn, không ai bấm cả.
-  // Đăng ký callback vào apiClient.setOnUnauthorized để mọi response 401 dùng chung một lối logout.
-  // Bốn bước bên trong, và THỨ TỰ là quan trọng, xem từng mốc bên dưới.
-  // Nhớ: phải đứng sau logout, vì mảng phụ thuộc ở cuối có nhắc tới nó.
+  // Lối hai: thẻ hết hạn, không ai bấm cả
+  // Gửi hàm này xuống cho apiClient giữ, để mọi lỗi 401 dùng chung một lối ra
+  // THỨ TỰ bốn việc bên trong là quan trọng, xem chú thích từng dòng
+  // Nhớ: phải đứng sau logout, vì mảng phụ thuộc ở cuối có nhắc tới nó
   useEffect(() => {
     setOnUnauthorized(() => {
-      // THẺ HẾT HẠN BƯỚC 1. Xóa ref ngay, và chặn luôn lần gọi thứ hai.
-      // Nhiều request cùng dính 401 mà không chặn là hiện hai ba cái thông báo.
+      // Xóa ref ngay, và chặn luôn lần gọi thứ hai
+      // Nhiều request cùng dính 401 mà không chặn là hiện hai ba thông báo
       if (!tokenRef.current) return;
       tokenRef.current = null;
-      // THẺ HẾT HẠN BƯỚC 2. Đưa về màn Đăng nhập trước, cho người dùng thấy ngay.
+      // Đưa về màn Đăng nhập TRƯỚC, cho người dùng thấy ngay
       router.replace("/auth/login");
-      // THẺ HẾT HẠN BƯỚC 3. Báo cho người dùng biết vì sao bị đá ra.
+      // Rồi mới báo vì sao bị đá ra
       const t = resolveLanguage(langRef.current) === "vi" ? vi : en;
       Alert.alert(t.auth.sessionExpiredTitle, t.auth.sessionExpiredMsg);
-      // THẺ HẾT HẠN BƯỚC 4. Đăng xuất SAU CÙNG, và chờ hiệu ứng chuyển màn xong.
-      // Đăng xuất sớm là mấy màn đang mở render lại lúc chưa kịp thoát, nhìn giật.
+      // Đăng xuất SAU CÙNG, và chờ hiệu ứng chuyển màn xong
+      // Đăng xuất sớm là mấy màn đang mở vẽ lại lúc chưa kịp thoát, nhìn giật
       InteractionManager.runAfterInteractions(() => {
         void logout().catch((error) => console.error("Could not clear expired auth session:", error));
       });
@@ -179,14 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(nextToken);
   };
 
-  // ══════════════════════════════════════════════════════════
   // HỒ SƠ VÀ CÀI ĐẶT
-  // Khối này KHÔNG có mốc BƯỚC, và đó là cố ý: nó không phải một luồng
-  // liền mạch, chỉ là mấy việc lẻ gom lại, gọi cái nào cũng được, không có thứ tự.
+  // Mấy việc lẻ gom lại, gọi cái nào cũng được, không có thứ tự bắt buộc.
   // Đến từ ProfileScreen, EditProfileScreen, SettingsScreen, Thiết lập lần đầu.
   // Đi tiếp qua authApi → apiClient → backend/src/controllers/profileController.js
   // hoặc backend/src/controllers/accountController.js tùy thao tác.
-  // ══════════════════════════════════════════════════════════
 
   const setLanguagePreference = useCallback(async (language: Lang) => {
     setLanguagePreferenceState(language);
@@ -204,7 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(next);
   }, []);
 
-  // Tải hồ sơ qua authApi.fetchProfileRequest → GET /profile → profileController.getProfile.
+  // Tải hồ sơ qua authApi.fetchProfileRequest → GET /profile → profileController.getProfile,
   // để lấy BMI và TDEE mới nhất chứ không dùng bản cũ trong máy.
   // Nhớ: phải đứng sau mergeAndStoreUser, vì mảng phụ thuộc có nhắc tới nó.
   const fetchProfile = useCallback(async () => {

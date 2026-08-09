@@ -18,21 +18,14 @@ const {
   computeBurned,
 } = require("../config/exerciseCatalog");
 const { LEGACY_LIMITS } = require("../config/inputLimits");
-
-// ══════════════════════════════════════════════════════════
 // BỐN CỬA VỀ BUỔI TẬP
 //
-// Không phải luồng. Bốn cửa độc lập: thêm, lấy theo ngày, lấy theo khoảng, và xóa.
-// 
+// Bốn cửa độc lập: thêm, lấy theo ngày, lấy theo khoảng, và xóa.
+//
 // Nhớ: app KHÔNG gửi calo đốt lên. App chỉ gửi MÃ hoạt động, còn calo do
 //      bên này tự tra hệ số MET rồi nhân với cân nặng trong hồ sơ.
-// ══════════════════════════════════════════════════════════
-
-// Công thức calo tiêu hao: mức nặng nhẹ của bài tập nhân cân nặng nhân số giờ.
-// Mức nặng nhẹ là MET. addExercise tra mã trong config/exerciseMet.js,
-// không nhận giá trị MET từ exerciseApi.addExercise.
-// ─── Add Exercise ─────────────────────────────────────────────────────────────
-// addExercise gọi computeBurned tại file này; request từ app không chứa caloriesBurned.
+// ─── GHI MỘT BUỔI TẬP ───
+// Tra hệ số MET theo mã hoạt động, rồi gọi computeBurned trong exerciseCatalog.
 exports.addExercise = async (req, res) => {
   const { name, activityKey, routineKey, durationMin, date } = req.body;
 

@@ -44,7 +44,7 @@ export async function cancelNotification(id: string | null | undefined) {
   try {
     await Notifications.cancelScheduledNotificationAsync(id);
   } catch {
-  // Bỏ qua vì lỗi hủy lịch cũ không được làm gián đoạn việc đặt lịch mới.
+    // Bỏ qua vì lỗi hủy lịch cũ không được làm gián đoạn việc đặt lịch mới.
   }
 }
 

@@ -11,20 +11,18 @@ import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { theme } from "@/ui/theme";
 
-// ══════════════════════════════════════════════════════════
 // BA CHẤM ĐANG GÕ
 //
 // Đến từ màn Coach, hiện ngay khi bấm gửi và biến mất khi AI trả lời xong.
 // Hai bước, không gọi mạng, chỉ nhấp nháy tại chỗ.
-// ══════════════════════════════════════════════════════════
 
-// BA CHẤM BƯỚC 1. Ba giá trị độ mờ chạy được, cùng bắt đầu ở 0.3 tức mờ nhất.
+// Ba giá trị độ mờ chạy được, cùng bắt đầu ở 0.3 tức mờ nhất.
 // Để trong useRef nên vẽ lại bao nhiêu lần cũng vẫn là ba giá trị đó,
 // chứ dựng mới mỗi lần là hiệu ứng nhảy về đầu liên tục.
 export function TypingDots() {
   // Ba giá trị riêng, vì ba chấm sáng lệch pha nhau chứ không cùng nhịp.
   const dots = useRef([new Animated.Value(0.3), new Animated.Value(0.3), new Animated.Value(0.3)]).current;
-  // BA CHẤM BƯỚC 2. Chạy ba vòng lặp mờ tỏ, mỗi chấm trễ hơn chấm trước 160 ms.
+  // Chạy ba vòng lặp mờ tỏ, mỗi chấm trễ hơn chấm trước 160 ms.
   // Nhờ độ trễ đó mà ba chấm sáng nối đuôi nhau thay vì nhấp nháy cùng lúc.
   // Dòng return dọn cả ba vòng lặp khi component biến mất, kẻo chúng chạy nền mãi.
   useEffect(() => {

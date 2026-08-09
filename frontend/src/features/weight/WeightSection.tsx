@@ -28,14 +28,13 @@ import { PROFILE_LIMITS, resolveDraftWeightDirection, type WeightGoal } from "@/
 import { getWeights, logWeight, deleteWeight, type WeightHistory } from "./weightApi";
 import { WeightChart } from "./WeightChart";
 import { DIGIT_LIMITS } from "@/config/inputLimits";
+import { parseDecimal } from "@/utils/numberUtils";
 
-// ══════════════════════════════════════════════════════════
 // HỘP NHẬP KG
 //
-// Không phải luồng. Một mảnh giao diện tách riêng, chỉ lo phần nhìn.
+// Một mảnh giao diện tách riêng, chỉ lo phần nhìn.
 // Nó KHÔNG kiểm số và KHÔNG gọi mạng, chỉ đưa chuỗi thô ra cho nơi gọi lo.
 // Dùng ở khối GHI CÂN NẶNG bên dưới.
-// ══════════════════════════════════════════════════════════
 
 // Hộp nhập một số cân, có nút Hủy và nút Lưu.
 function KgModal({ visible, title, sub, initial, onCancel, onSave }: {
@@ -92,12 +91,10 @@ export function WeightSection() {
   const t = useT();
   const weightLimit = PROFILE_LIMITS.weightKg;
 
-  // ══════════════════════════════════════════════════════════
   // BỐN HÀM ĐỒ NGHỀ
   //
-  // Không phải luồng. Hai luồng bên dưới đều mượn của khối này.
+  // Hai luồng bên dưới đều mượn của khối này.
   // Chỉ có hàm load là gọi mạng, ba hàm kia chạy tại máy.
-  // ══════════════════════════════════════════════════════════
 
   // Báo cho người dùng biết backend vừa TỰ ĐỔI mục tiêu của họ.
   // Xảy ra khi cân mới vượt qua cân mục tiêu, ví dụ đang giảm cân mà đã nhẹ hơn đích,
@@ -133,8 +130,8 @@ export function WeightSection() {
 
   // Đọc chuỗi người dùng gõ ra số kg. Ngoài khoảng cho phép thì trả null.
   const parseKg = (raw: string): number | null => {
-    // Chấp nhận dấu phẩy thập phân thường dùng trong tiếng Việt.
-    const n = Number(raw.replace(",", "."));
+    // Phép đọc số nằm ở utils/numberUtils, nó lo luôn dấu phẩy thập phân.
+    const n = parseDecimal(raw);
     if (!raw.trim() || isNaN(n) || n < weightLimit.min || n > weightLimit.max) return null;
     return n;
   };
@@ -149,15 +146,13 @@ export function WeightSection() {
   const numberLabel = (value: number) =>
     value.toLocaleString(locale, { maximumFractionDigits: 2 });
 
-  // ══════════════════════════════════════════════════════════
   // GHI CÂN NẶNG
   //
   // Đến từ nút Ghi cân nặng, người dùng gõ số trong KgModal rồi bấm Lưu.
-  // Bốn bước, đọc từ trên xuống là đúng thứ tự. BƯỚC 2 là chặng chờ mạng.
+  // Có một chặng chờ mạng, lúc gửi số cân lên.
   // Xong thì biểu đồ vẽ lại, và mục tiêu calo ở Trang chủ cũng đổi theo.
-  // ══════════════════════════════════════════════════════════
 
-  // GHI CÂN NẶNG BƯỚC 1. Nhận chuỗi thô từ hộp nhập, kiểm số ngay tại máy.
+  // Nhận chuỗi thô từ hộp nhập, kiểm số ngay tại máy.
   // Sai thì báo rồi dừng, GIỮ NGUYÊN hộp nhập cho người dùng sửa,
   // chứ đóng hộp lại là họ phải gõ lại từ đầu.
   const onLog = async (raw: string) => {
@@ -169,17 +164,17 @@ export function WeightSection() {
     // Số hợp lệ rồi thì mới đóng hộp nhập.
     setLogVisible(false);
     try {
-      // GHI CÂN NẶNG BƯỚC 2. Gửi đi rồi ĐỨNG ĐÂY CHỜ.
+      // Gửi đi rồi ĐỨNG ĐÂY CHỜ.
       // Đường đi: logWeight → apiClient → POST /weight → weightController.logWeight
       // Bên đó lưu một lần cân cho mỗi ngày. Nếu đây là lần cân mới nhất thì
       // cập nhật luôn cân nặng trong hồ sơ, và tính lại mục tiêu calo
       // nếu người dùng đang để app tự tính.
       const result = await logWeight(token!, kg);
-      // GHI CÂN NẶNG BƯỚC 3. Tải lại hai thứ, chạy song song vì không phụ thuộc nhau.
+      // Tải lại hai thứ, chạy song song vì không phụ thuộc nhau.
       // load lấy danh sách mới cho biểu đồ, fetchProfile lấy mục tiêu calo mới
       // để Trang chủ vẽ lại vòng calo cho đúng.
       await Promise.all([load(), fetchProfile()]);
-      // GHI CÂN NẶNG BƯỚC 4. Backend có tự đổi mục tiêu thì báo cho người dùng biết.
+      // Backend có tự đổi mục tiêu thì báo cho người dùng biết.
       // Báo SAU khi đã tải lại, để họ đóng hộp thoại ra là thấy số mới luôn.
       showGoalAdjustment(result.adjustedGoal);
     } catch (error) {
@@ -187,15 +182,12 @@ export function WeightSection() {
     }
   };
 
-  // ══════════════════════════════════════════════════════════
   // XÓA LẦN CÂN
   //
   // Đến từ nút thùng rác trên một dòng trong danh sách lần cân.
-  // Ba bước, đọc từ trên xuống là đúng thứ tự.
   // Xong thì biểu đồ vẽ lại, và hồ sơ có thể lùi về một số cân cũ hơn.
-  // ══════════════════════════════════════════════════════════
 
-  // XÓA LẦN CÂN BƯỚC 1. Hỏi lại cho chắc, có kèm ngày để khỏi xóa nhầm dòng.
+  // Hỏi lại cho chắc, có kèm ngày để khỏi xóa nhầm dòng.
   const onDelete = (id: string, date: string) => {
     Alert.alert(t.weight.deleteTitle, t.weight.deleteMsg(dLabel(date)), [
       { text: t.common.cancel, style: "cancel" },
@@ -204,15 +196,15 @@ export function WeightSection() {
         style: "destructive",
         onPress: async () => {
           try {
-            // XÓA LẦN CÂN BƯỚC 2. Gửi lệnh xóa rồi ĐỨNG ĐÂY CHỜ.
+            // Gửi lệnh xóa rồi ĐỨNG ĐÂY CHỜ.
             // Đường đi: deleteWeight → apiClient → DELETE /weight/:id
             //           → weightController.deleteWeight
             // Bên đó lấy lần cân CÒN LẠI mới nhất để cập nhật lại hồ sơ.
             // Phải làm vậy vì nếu xóa đúng lần mới nhất thì hồ sơ đang giữ
             // một con số không còn tồn tại nữa.
             const result = await deleteWeight(token!, id);
-            // XÓA LẦN CÂN BƯỚC 3. Tải lại danh sách với hồ sơ, rồi báo nếu mục tiêu đổi.
-            // Giống hệt BƯỚC 3 và 4 của khối GHI CÂN NẶNG ở trên.
+            // Tải lại danh sách với hồ sơ, rồi báo nếu mục tiêu đổi.
+            // Giống hệt phần tải lại và báo mục tiêu của khối GHI CÂN NẶNG ở trên.
             await Promise.all([load(), fetchProfile()]);
             showGoalAdjustment(result.adjustedGoal);
           } catch {
@@ -280,7 +272,7 @@ export function WeightSection() {
         </View>
       </Card>
 
-      {/* Trend chart — needs at least 2 points to draw a line */}
+      {/* Biểu đồ xu hướng, phải có ít nhất 2 điểm mới vẽ được đường */}
       {logs.length >= 2 ? (
         <Card style={styles.chartCard}>
           <View style={styles.chartHead}>

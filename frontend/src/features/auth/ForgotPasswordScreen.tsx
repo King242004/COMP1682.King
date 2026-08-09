@@ -16,7 +16,7 @@ import { getUserErrorMessage } from "@/utils/errorUtils";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
 import { resolveLanguage } from "@/utils/languageUtils";
-import { isStrongPassword, isValidEmail, isValidOtp } from "@/features/auth/authValidation";
+import { isStrongPassword, isValidEmail, isValidOtp, passwordErrorMessage } from "@/features/auth/authValidation";
 import { useOtpCooldown } from "@/features/auth/useOtpCooldown";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -28,16 +28,13 @@ import { INPUT_LIMITS } from "@/config/inputLimits";
 type Step = "email" | "otp" | "password";
 const STEPS: Step[] = ["email", "otp", "password"];
 
-// ══════════════════════════════════════════════════════════
 // ĐẶT LẠI MẬT KHẨU
 //
-// Đến từ liên kết Quên mật khẩu ở màn Đăng nhập. Bốn bước, đọc từ trên xuống
-// là đúng thứ tự. Cả bốn bước đều có chặng chờ mạng.
-// Xong thì quay về màn Đăng nhập để họ đăng nhập bằng mật khẩu mới.
-// ══════════════════════════════════════════════════════════
+// Đến từ liên kết Quên mật khẩu ở màn Đăng nhập.
+// Ba chặng nằm gọn trong một màn, mỗi chặng đều phải chờ mạng.
+// Xong thì quay về màn Đăng nhập để đăng nhập bằng mật khẩu mới.
 
-// ĐẶT LẠI MẬT KHẨU BƯỚC 1. Nhận email, mã, và mật khẩu mới.
-// Ba bước hiện trên màn phân biệt bằng state step: email, otp, rồi password.
+// Ba chặng hiện trên màn phân biệt bằng state step: email, otp, rồi password
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const t = useT();
@@ -59,12 +56,13 @@ export default function ForgotPasswordScreen() {
   const passwordIsValid = isStrongPassword(newPassword) && newPassword === confirmPassword;
   const canContinue = step === "email" ? emailIsValid : step === "otp" ? otpIsValid : passwordIsValid;
 
-  // accountController.sendPasswordOTP luôn trả câu chung chung, nên bước này thành công cả khi
-  // email chưa có tài khoản. Đó là cố ý, để không lộ email nào đã đăng ký.
-  // ĐẶT LẠI MẬT KHẨU BƯỚC 2. Bấm Gửi mã.
+  // Bấm Gửi mã. Đi tiếp: src/features/auth/authApi.ts
   // Đường đi: apiClient → POST /user/send-otp → accountController.sendPasswordOTP
   //           → services/emailRelayClient.js → email relay
-  // Chờ lâu hơn mặc định vì còn phải chờ gửi email thật, xem hằng số ở đầu file.
+  // Hạn chờ 60 giây thay vì 45 giây mặc định, đặt trong authApi.sendPasswordOTP,
+  // vì lượt gọi này còn phải chờ gửi email thật.
+  // Nhớ: accountController.sendPasswordOTP luôn trả câu chung chung, nên bước này
+  //      thành công cả khi email chưa có tài khoản. Cố ý, để không lộ email đã đăng ký.
   const handleSendOTP = async () => {
     if (!emailIsValid) {
       setError(t.auth.invalidEmail);
@@ -85,7 +83,7 @@ export default function ForgotPasswordScreen() {
   };
 
   // Nút Gửi lại mã, chỉ bấm được khi đồng hồ đã về 0.
-  // Đi cùng đường với BƯỚC 2. Xóa ô mã cũ vì mã cũ đã hết hiệu lực.
+  // Nút Gửi lại, đi cùng đường với Gửi mã. Xóa ô mã cũ vì mã đó hết hiệu lực
   const handleResendOTP = async () => {
     if (resendSeconds > 0 || isLoading) return;
     setOtp("");
@@ -103,7 +101,7 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  // ĐẶT LẠI MẬT KHẨU BƯỚC 3. Bấm Xác minh mã.
+  // Bấm Xác minh mã
   // Đường đi: apiClient → POST /user/verify-otp → accountController.verifyPasswordOTP
   // Bước này CHỈ kiểm mã đúng hay sai, chưa đổi mật khẩu gì cả.
   // Tách riêng để người dùng biết mã sai ngay, chứ đừng gõ xong mật khẩu mới mới báo.
@@ -124,21 +122,15 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  // ĐẶT LẠI MẬT KHẨU BƯỚC 4. Bấm Đặt mật khẩu mới.
+  // Bấm Đặt mật khẩu mới
   // Đường đi: apiClient → POST /user/reset-password → accountController.resetPassword
-  // Nhớ: phải gửi KÈM LẠI mã 6 số, dù BƯỚC 3 đã kiểm rồi.
+  // Nhớ: phải gửi KÈM LẠI mã 6 số, dù chặng xác minh đã kiểm rồi.
   //      Vì mỗi request là độc lập, backend không nhớ mình vừa kiểm mã xong.
   const handleResetPassword = async () => {
-    if (newPassword.length < 6) {
-      setError(t.auth.passwordTooShort);
-      return;
-    }
-    if (!/[A-Z]/.test(newPassword)) {
-      setError(t.auth.passwordNeedUpper);
-      return;
-    }
-    if (!/[0-9]/.test(newPassword)) {
-      setError(t.auth.passwordNeedNumber);
+    // Ba luật mật khẩu nằm trong authValidation, ở đây chỉ lấy câu lỗi ra hiện.
+    const passwordError = passwordErrorMessage(newPassword, t);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -173,7 +165,7 @@ export default function ForgotPasswordScreen() {
         bounces={false}
       >
 
-        {/* Step indicator */}
+        {/* Thanh ba vạch báo đang ở chặng nào */}
         <View style={styles.stepsRow}>
           {STEPS.map((s, i) => (
             <View key={s} style={[styles.stepSeg, STEPS.indexOf(step) >= i && styles.stepSegActive]} />
@@ -186,7 +178,7 @@ export default function ForgotPasswordScreen() {
         </View>
 
         <View style={styles.form}>
-          {/* Step 1 - Email */}
+          {/* Chặng 1, nhập email */}
           {step === "email" && (
             <TextField
               label={t.auth.email}
@@ -202,20 +194,24 @@ export default function ForgotPasswordScreen() {
             />
           )}
 
-          {/* Step 2 - OTP */}
+          {/* Chặng 2, nhập mã 6 số */}
           {step === "otp" && (
             <TextField
               label={t.auth.otpLabel}
               placeholder={t.auth.otpPlaceholder}
               value={otp}
-              onChangeText={(v) => { setOtp(v); setError(""); setNotice(""); }}
+              // Lọc bỏ mọi ký tự không phải số, giống hệt ô mã ở màn Đăng ký.
+              onChangeText={(v) => { setOtp(v.replace(/\D/g, "")); setError(""); setNotice(""); }}
               keyboardType="number-pad"
+              // oneTimeCode để iOS tự điền mã từ tin nhắn, đỡ phải gõ tay.
+              textContentType="oneTimeCode"
+              returnKeyType="done"
               maxLength={INPUT_LIMITS.OTP_CODE}
-              inputProps={{ autoFocus: true }}
+              inputProps={{ autoFocus: true, onSubmitEditing: handleVerifyOTP }}
             />
           )}
 
-          {/* Step 3 - New Password */}
+          {/* Chặng 3, đặt mật khẩu mới */}
           {step === "password" && (
             <>
               <View style={styles.fieldNote}>
@@ -264,7 +260,7 @@ export default function ForgotPasswordScreen() {
             }
           />
 
-          {/* Resend OTP — sends a real new code (stays on this step) */}
+          {/* Gửi lại mã, backend phát mã MỚI thật, màn vẫn đứng ở chặng này */}
           {step === "otp" && (
             <Button
               title={resendSeconds > 0 ? t.auth.resendOtpIn(resendSeconds) : t.auth.resendOtp}

@@ -1,7 +1,8 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Khai những lựa chọn mà màn Bài tập tại nhà THỰC SỰ có.
 //
-// Ai gọi tới: planController, khi lọc gợi ý tập mà AI vừa dựng
+// Ai gọi tới: planController (lọc gợi ý tập mà AI vừa dựng),
+//             coachPrompt (dán đoạn lời dặn vào câu lệnh gửi Gemini)
 // Nhận vào:   nhóm bài tập và thời lượng mà AI đề xuất
 // Trả ra:     đúng hoặc sai, là app có làm được đề xuất đó không
 // Khi lỗi:    không khớp thì bỏ đề xuất đó đi
@@ -9,16 +10,9 @@
 // Vì sao cần: AI có thể gợi ý "bơi 45 phút", nhưng app không có mục bơi
 // và cũng không có mốc 45 phút. Gợi ý như vậy thì người dùng bấm vào không được.
 //
-// ══════════════════════════════════════════════════════════
-// LUẬT BÀI TẬP TẠI NHÀ
-//
-// Không phải luồng. Một bảng lựa chọn, một hàm kiểm, và một đoạn lời dặn cho AI.
-// Đến từ coachPrompt và coachResponse.
-//
 // Nhớ: đây là bản sao của những gì app THẬT SỰ có. Sửa danh sách bài tập bên
 //      frontend/src/features/exercise/guidedRoutines.ts thì phải sửa cả ở đây,
 //      lệch là Coach gợi ý một bài mà bấm vào không mở được.
-// ══════════════════════════════════════════════════════════
 
 // Bốn nhóm bài và ba mốc thời lượng, đúng bằng những gì màn Bài tập tại nhà có.
 const HOME_EXERCISE_CATEGORIES = ["everyday", "recovery", "strength", "cardio"];

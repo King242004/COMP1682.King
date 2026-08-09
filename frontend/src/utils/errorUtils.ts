@@ -22,10 +22,11 @@ export function getUserErrorMessage(error: unknown, t: Strings, fallback: string
   const known: Record<string, string> = {
     "Invalid email or password.": t.auth.invalidCredentials,
     "Please provide a valid email address.": t.auth.invalidEmail,
+    // Đăng ký và Quên mật khẩu từng nói cùng một lỗi bằng hai câu khác nhau,
+    // nên bảng này phải khai bốn dòng cho hai tình huống. Nay hai controller
+    // dùng chung một câu, mỗi tình huống chỉ còn một dòng.
     "Invalid verification code.": t.auth.invalidOtp,
-    "Invalid OTP.": t.auth.invalidOtp,
     "Verification code has expired. Please request a new one.": t.auth.otpExpired,
-    "OTP has expired. Please request a new one.": t.auth.otpExpired,
     "Too many wrong attempts. Please request a new code.": t.auth.otpAttemptsExceeded,
     "Unable to create an account with this email.": t.auth.accountUnavailable,
     "Email already in use.": t.auth.accountUnavailable,

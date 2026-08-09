@@ -35,16 +35,12 @@ type TabCache = {
   posts: FeedPost[];
   loadError: boolean;
 };
-
-// ══════════════════════════════════════════════════════════
 // XEM FEED
 //
-// Đến từ tab thứ hai. Bốn bước, đọc từ trên xuống là đúng thứ tự.
-// Chặng chờ mạng nằm ở BƯỚC 2, và có thể chạy hai lượt một lúc cho hai tab.
+// Đến từ tab thứ hai.
+// Chặng chờ mạng lúc tải bài, có thể chạy hai lượt một lúc cho hai tab.
 // Xong thì hiện lưới hai cột, cuộn tới cuối thì tải trang kế tiếp.
-// ══════════════════════════════════════════════════════════
-
-// XEM FEED BƯỚC 1. Dựng state, mỗi tab một bộ riêng.
+// Dựng state, mỗi tab một bộ riêng.
 // Mở tab Khám phá trước chứ không mở Đang theo dõi, vì người mới chưa theo dõi ai,
 // mở feed rỗng ra là tưởng app hỏng.
 export default function CommunityScreen() {
@@ -71,7 +67,7 @@ export default function CommunityScreen() {
   const pageRef = useRef<Record<Tab, number>>({ feed: 1, explore: 1 });
   // Khởi đầu để true, vì chưa gọi lần nào thì cứ coi như còn bài để tải.
   const hasMoreRef = useRef<Record<Tab, boolean>>({ feed: true, explore: true });
-  // Tab này đã từng tải xong lần nào chưa. Dùng để chọn kiểu tải ở BƯỚC 3.
+  // Tab này đã từng tải xong lần nào chưa, dùng để chọn kiểu tải.
   const loadedRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
   // Hai cờ chặn tải chồng: một cho trang đầu, một cho trang tiếp theo.
   const inFlightRef = useRef<Record<Tab, boolean>>({ feed: false, explore: false });
@@ -84,7 +80,7 @@ export default function CommunityScreen() {
   const loading = loadingByTab[tab] && posts.length === 0;
   const loadError = tabCache[tab].loadError;
 
-  // XEM FEED BƯỚC 2. Hàm tải dùng chung cho cả hai tab và cả bốn kiểu tải.
+  // Hàm tải dùng chung cho cả hai tab và cả bốn kiểu tải.
   // Đường đi: getFeed hoặc getExplore → apiClient → GET /community/posts/...
   //           → feedController.getFeed hoặc getExplore
   // Bên đó lọc bỏ bài của tài khoản riêng tư, chia trang, và tính sẵn
@@ -165,7 +161,7 @@ export default function CommunityScreen() {
     }
   }, [token]);
 
-  // XEM FEED BƯỚC 3. Tự chạy mỗi lần màn được nhìn thấy, không ai bấm.
+  // Tự chạy mỗi lần màn được nhìn thấy, không ai bấm.
   // Tab đang mở: đã tải rồi thì làm mới ngầm, chưa tải thì tải kiểu có vòng xoay.
   // Tab còn lại: tải ngầm nếu chưa từng tải, để chuyển tab là thấy nội dung ngay.
   useFocusEffect(useCallback(() => {
@@ -178,15 +174,11 @@ export default function CommunityScreen() {
   useFocusEffect(useCallback(() => {
     if (token) getUnreadCount(token).then(setUnread).catch(() => {});
   }, [token]));
-
-  // ══════════════════════════════════════════════════════════
   // BẤM TIM
   //
-  // Đến từ nút tim trên một ô bài. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Đến từ nút tim trên một ô bài.
   // Xong thì tim đổi màu và số tim đổi theo, ở CẢ HAI tab.
-  // ══════════════════════════════════════════════════════════
-
-  // BẤM TIM BƯỚC 1. Sửa một bài ở CẢ HAI bộ nhớ đệm cùng lúc.
+  // Sửa một bài ở CẢ HAI bộ nhớ đệm cùng lúc.
   // Phải sửa cả hai vì một bài có thể đang nằm trong cả Đang theo dõi lẫn Khám phá,
   // chỉ sửa một bên là chuyển tab thấy tim ngược lại.
   const updatePostAcrossTabs = (postId: string, update: (post: FeedPost) => FeedPost) => {
@@ -202,7 +194,7 @@ export default function CommunityScreen() {
     }));
   };
 
-  // BẤM TIM BƯỚC 2. Đổi tim với số tim trên màn NGAY, chưa chờ backend.
+  // Đổi tim với số tim trên màn NGAY, chưa chờ backend.
   const onLike = async (post: FeedPost) => {
     if (!token) return;
     updatePostAcrossTabs(post.id, (current) => ({
@@ -211,7 +203,7 @@ export default function CommunityScreen() {
       likeCount: current.likeCount + (current.isLiked ? -1 : 1),
     }));
     try {
-      // BẤM TIM BƯỚC 3. Giờ mới gửi lệnh thật rồi CHỜ.
+      // Giờ mới gửi lệnh thật rồi CHỜ.
       // Đường đi: toggleLike → apiClient → POST /community/posts/:id/like
       //           → postController.toggleLike
       // Backend trả về số tim THẬT, nên đặt lại theo số đó chứ không giữ số mình đoán.
@@ -232,7 +224,7 @@ export default function CommunityScreen() {
     }
   };
 
-  // XEM FEED BƯỚC 4. Chạm một ô thì sang màn Chi tiết bài, chỉ truyền mã bài.
+  // Chạm một ô thì sang màn Chi tiết bài, chỉ truyền mã bài.
   const openDetail = (item: FeedPost) =>
     router.push({ pathname: "/community/post-detail", params: { id: item.id } });
 

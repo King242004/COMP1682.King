@@ -8,16 +8,12 @@
 //
 // Bản nhớ sống 30 ngày. Mục đích là không hỏi AI hai lần cho cùng một món
 // của cùng một người.
-const mongoose = require("mongoose");
-
-// Bảng nhớ tạm kết quả ước tính dinh dưỡng của AI.
-// Nơi ghi vào: scanController, sau mỗi lần Gemini trả kết quả.
-// Nơi đọc ra: chính scanController, TRƯỚC khi gọi Gemini.
-// Mục đích là không hỏi AI hai lần cho cùng một món của cùng một người.
+//
 // Khóa key dựng từ tên món, khẩu phần, nguyên liệu và ngôn ngữ, nên chỉ cần
 // đổi một chữ trong tên món là thành một khóa khác và AI được hỏi lại.
 // expiresAt kèm expireAfterSeconds bằng 0 nghĩa là MongoDB tự xóa bản ghi khi
 // tới hạn, không cần dọn dẹp bằng tay và không cần chạy cron.
+const mongoose = require("mongoose");
 const nutritionEstimateCacheSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

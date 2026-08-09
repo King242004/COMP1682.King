@@ -15,9 +15,9 @@
 // POST   /change-password đổi mật khẩu khi đang đăng nhập
 // DELETE /account         xóa tài khoản và toàn bộ dữ liệu
 // Không cần thẻ, dùng cho màn Quên mật khẩu ba bước:
-// POST   /send-otp        bước 1 nhập email để nhận mã
-// POST   /verify-otp      bước 2 nhập mã để kiểm tra
-// POST   /reset-password  bước 3 đặt mật khẩu mới
+// POST   /send-otp        nhập email để nhận mã
+// POST   /verify-otp      nhập mã để kiểm tra
+// POST   /reset-password  đặt mật khẩu mới
 const express = require("express");
 const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
 const { passwordOtpLimiter } = require("../middleware/rateLimiters");

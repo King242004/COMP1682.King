@@ -33,15 +33,28 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
 type ProfileTab = "posts" | "saved";
 
-// ══════════════════════════════════════════════════════════
+function Stat({ label, value, onPress }: {
+  label: string;
+  value: number;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [styles.stat, pressed && onPress && styles.pressed]}
+    >
+      <AppText variant="h2" style={styles.statValue}>{value}</AppText>
+      <AppText variant="subtle" style={styles.statLabel}>{label}</AppText>
+    </Pressable>
+  );
+}
 // MỞ TRANG CÁ NHÂN
 //
 // Đến từ PostTile, CommunityUserList và màn Thông báo, mã người đi theo đường dẫn.
-// Bốn bước, đọc từ trên xuống là đúng thứ tự. Hai chặng chờ mạng, ở BƯỚC 2 và BƯỚC 3.
+// Hai chặng chờ mạng, một lúc tải hồ sơ và một lúc tải bài của người đó.
 // Xong thì hiện thông tin người đó cùng lưới bài của họ.
-// ══════════════════════════════════════════════════════════
-
-// MỞ TRANG CÁ NHÂN BƯỚC 1. Lấy mã người từ đường dẫn.
+// Lấy mã người từ đường dẫn.
 // viewingSelf quyết định khá nhiều thứ: có tab Đã lưu hay không, có nút Theo dõi hay không.
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -72,7 +85,7 @@ export default function UserProfileScreen() {
   // Cờ chặn tải chồng, kẻo cuộn nhanh là bắn liền mấy lượt cho cùng một trang.
   const loadingMoreRef = useRef(false);
 
-  // MỞ TRANG CÁ NHÂN BƯỚC 2. Tải trang đầu, ba lượt chạy SONG SONG rồi chờ cả ba.
+  // Tải trang đầu, ba lượt chạy SONG SONG rồi chờ cả ba.
   // Đường đi: getPublicProfile → apiClient → GET /community/users/:id
   //           → socialController.getPublicProfile
   // Đường đi: getUserPosts → apiClient → GET /community/posts/user/:id
@@ -108,7 +121,7 @@ export default function UserProfileScreen() {
   // Tải lại khi màn được mở để số lượng, theo dõi và bài đã lưu luôn mới.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  // MỞ TRANG CÁ NHÂN BƯỚC 3. Cuộn tới cuối lưới thì tải thêm một trang.
+  // Cuộn tới cuối lưới thì tải thêm một trang.
   // Đi đúng một trong hai đường tùy tab đang mở, xem cờ savedTab bên dưới.
   const loadMore = useCallback(async () => {
     if (!token || !id || loadingMoreRef.current) return;
@@ -147,15 +160,11 @@ export default function UserProfileScreen() {
       setLoadingMore(false);
     }
   }, [token, id, tab, viewingSelf]);
-
-  // ══════════════════════════════════════════════════════════
   // THEO DÕI
   //
-  // Đến từ nút Theo dõi ở đầu trang. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Đến từ nút Theo dõi ở đầu trang.
   // Xong thì chữ trên nút và số người theo dõi đã đổi.
-  // ══════════════════════════════════════════════════════════
-
-  // THEO DÕI BƯỚC 1. Đổi CẢ chữ trên nút LẪN số người theo dõi ngay trên màn,
+  // Đổi CẢ chữ trên nút LẪN số người theo dõi ngay trên màn,
   // chưa chờ backend, để bấm là thấy đổi liền.
   const onToggleFollow = async () => {
     if (!token || !id || !profile) return;
@@ -168,14 +177,14 @@ export default function UserProfileScreen() {
     });
     setBusy(true);
     try {
-      // THEO DÕI BƯỚC 2. Giờ mới gửi lệnh thật rồi CHỜ.
+      // Giờ mới gửi lệnh thật rồi CHỜ.
       // Đường đi: followUser hoặc unfollowUser → apiClient
       //           → POST hoặc DELETE /community/users/:id/follow
       //           → socialController.followUser hoặc unfollowUser
       if (wasFollowing) await unfollowUser(token, id);
       else await followUser(token, id);
     } catch {
-      // THEO DÕI BƯỚC 3. Gửi hụt thì TẢI LẠI cả trang, không tự lật ngược tay.
+      // Gửi hụt thì TẢI LẠI cả trang, không tự lật ngược tay.
       // Tải lại chắc ăn hơn, vì lỡ backend đã nhận rồi mà chỉ hỏng đường về
       // thì lật ngược tay lại làm màn hiện sai.
       load();
@@ -184,7 +193,7 @@ export default function UserProfileScreen() {
     }
   };
 
-  // MỞ TRANG CÁ NHÂN BƯỚC 4. Chưa có hồ sơ thì dừng ở đây, hiện màn chờ hoặc màn lỗi.
+  // Chưa có hồ sơ thì dừng ở đây, hiện màn chờ hoặc màn lỗi.
   // Vẫn giữ ScreenHeader trong cả hai nhánh, để người dùng luôn bấm quay lại được.
   // Nhớ: cửa chặn này phải nằm SAU mọi hook ở trên, đặt lên đầu hàm là hai lần vẽ
   //      chạy số hook khác nhau và React vỡ ngay.
@@ -215,19 +224,6 @@ export default function UserProfileScreen() {
   // Ẩn bài viết khi người xem không có quyền xem tài khoản riêng tư.
   const postsHidden = profile.postsHidden;
   const data = postsHidden ? [] : showSaved ? saved : posts;
-
-  // Một ô số liệu: con số to, nhãn nhỏ bên dưới. Gọi ba lần ở JSX.
-  // Không truyền onPress thì ô đó chỉ để xem, bấm không đi đâu cả.
-  const Stat = ({ label, value, onPress }: { label: string; value: number; onPress?: () => void }) => (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [styles.stat, pressed && onPress && styles.pressed]}
-    >
-      <AppText variant="h2" style={styles.statValue}>{value}</AppText>
-      <AppText variant="subtle" style={styles.statLabel}>{label}</AppText>
-    </Pressable>
-  );
 
   // Mở màn danh sách người theo dõi hoặc đang theo dõi. Dùng chung một màn,
   // chỉ khác tham số type, nên khỏi phải viết hai màn gần giống nhau.

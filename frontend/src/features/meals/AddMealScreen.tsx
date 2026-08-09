@@ -25,7 +25,7 @@
 //   → src/utils/apiClient.ts → backend/src/routes/mealRoutes.js
 //   → backend/src/controllers/mealController.js → backend/src/models/Meal.js
 //
-// Một lần lưu ghi được tối đa 8 món, nên mọi thứ đều theo danh sách items
+// Một lần lưu ghi được tối đa INPUT_LIMITS.MEAL_ITEMS món, nên mọi thứ theo danh sách items
 // chứ không phải một món đơn lẻ.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -45,9 +45,10 @@ import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 import { type MealTypeKey } from "@/features/meals/mealTypeDisplay";
 import { theme } from "@/ui/theme";
-import { dateKey } from "@/utils/dateUtils";
+import { mealFormStyles } from "@/features/meals/mealFormStyles";
+import { todayKey } from "@/utils/dateUtils";
 import { resolveLanguage, localeTag } from "@/utils/languageUtils";
-import { hasAnyNutrition, hasCompleteNutrition, isApproximateSource, nutritionNumberError, nutritionSourceLabel, recentUniqueMeals, similarRecentMealName } from "@/features/meals/mealHelpers";
+import { hasAnyNutrition, hasCompleteNutrition, isApproximateSource, mealPortionLabel, nutritionNumberError, nutritionSourceLabel, recentUniqueMeals, similarRecentMealName } from "@/features/meals/mealHelpers";
 import { NutritionManualFields, NutritionResultCard, NutritionSummary } from "@/features/meals/NutritionFields";
 import { parseDecimal } from "@/utils/numberUtils";
 import { getUserErrorMessage } from "@/utils/errorUtils";
@@ -120,7 +121,7 @@ export default function AddMealScreen() {
     source?: string;
   }>();
 
-  const todayStr = dateKey(new Date());
+  const todayStr = todayKey();
   const logDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) && dateParam <= todayStr
     ? dateParam
     : todayStr;
@@ -195,7 +196,7 @@ export default function AddMealScreen() {
   const recentDishes = useMemo(
     () => recentUniqueMeals(historyMeals, 4).map((meal) => ({
       name: meal.name,
-      portion: meal.portionText || [meal.portionAmount, meal.portionUnit].filter(Boolean).join(" ") || `1 ${t.meals.servingUnit}`,
+      portion: mealPortionLabel(meal) || `1 ${t.meals.servingUnit}`,
       details: meal.note ?? "",
       calories: meal.calories,
       protein: meal.protein ?? 0,
@@ -274,9 +275,10 @@ export default function AddMealScreen() {
     if (item) setErrors((current) => ({ ...current, ...collectItemErrors(item, nutritionField || hasCompleteNutrition(item)) }));
   };
 
-  // Thêm một món trống vào cuối, trần 8 món khớp mealInputValidator bên backend
+  // Thêm một món trống vào cuối. Trần số món lấy từ INPUT_LIMITS.MEAL_ITEMS,
+  // đúng con số mà mealController.addMeals kiểm lại ở backend.
   const addItem = () => {
-    if (items.length >= 8) return;
+    if (items.length >= INPUT_LIMITS.MEAL_ITEMS) return;
     setItems((current) => [...current, {
       id: nextItemId.current++,
       name: "", portion: "", details: "", calories: "", protein: "", carbs: "", fat: "",
@@ -295,10 +297,8 @@ export default function AddMealScreen() {
     setSaveError("");
   };
 
-  // ══════════════════════════════════════════════════════════
   // Bấm Ước tính, gửi tên món lên AI lấy số
   // Chỉ dùng khi gõ tay, vì màn khác gửi sang thì đã có sẵn số
-  // ══════════════════════════════════════════════════════════
 
   // Mỗi lúc chỉ cho ước tính một món, vì mỗi lượt gọi tốn một lượt AI
   const handleEstimate = async (id: number) => {
@@ -352,10 +352,8 @@ export default function AddMealScreen() {
     }
   };
 
-  // ══════════════════════════════════════════════════════════
   // Bấm Lưu, ghi món xuống database
   // Gõ tay hay màn khác gửi sang thì cũng đều xuống đây
-  // ══════════════════════════════════════════════════════════
 
   // Kiểm cả danh sách items tại máy trước, sai một món là dừng luôn
   const handleSave = async () => {
@@ -432,7 +430,7 @@ export default function AddMealScreen() {
   return (
     <Screen padded={false} keyboard dismissKeyboardOnTap={false}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={mealFormStyles.content}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -485,7 +483,7 @@ export default function AddMealScreen() {
             <AppText variant="h2" style={styles.suggestTitle}>{t.meals.recent}</AppText>
             <View style={styles.suggestWrap}>
               {recentDishes.map((suggestion) => (
-                <Pressable key={suggestion.name} onPress={() => fillSuggestion(suggestion)} style={({ pressed }) => [styles.suggestChip, pressed && styles.pressed]}>
+                <Pressable key={suggestion.name} onPress={() => fillSuggestion(suggestion)} style={({ pressed }) => [styles.suggestChip, pressed && mealFormStyles.pressed]}>
                   <AppText style={styles.suggestName} numberOfLines={1}>{suggestion.name}</AppText>
                   <AppText variant="subtle" style={styles.suggestPortion} numberOfLines={1}>{suggestion.portion}</AppText>
                   <AppText style={styles.suggestKcal}>{suggestion.calories} {t.common.kcal}</AppText>
@@ -510,16 +508,16 @@ export default function AddMealScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={t.meals.removeMealItem}
                     hitSlop={8}
-                    style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
+                    style={({ pressed }) => [styles.removeButton, pressed && mealFormStyles.pressed]}
                   >
                     <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
                   </Pressable>
                 </View>
               )}
 
-              <Card style={styles.formCard}>
-                <View style={styles.formFields}>
-                  <View style={styles.fieldWrap}>
+              <Card style={mealFormStyles.formCard}>
+                <View style={mealFormStyles.formFields}>
+                  <View style={mealFormStyles.fieldWrap}>
                     <TextField
                       label={t.meals.mealName}
                       placeholder={t.meals.mealNamePlaceholder}
@@ -530,13 +528,13 @@ export default function AddMealScreen() {
                       inputProps={{ onBlur: () => handleBlur(item.id, "name") }}
                     />
                     {touched[fieldKey(item.id, "name")] && errors[fieldKey(item.id, "name")] && (
-                      <AppText style={styles.error}>{errors[fieldKey(item.id, "name")]}</AppText>
+                      <AppText style={mealFormStyles.error}>{errors[fieldKey(item.id, "name")]}</AppText>
                     )}
                     {nameSuggestion && (
                       <Pressable
                         accessibilityRole="button"
                         onPress={() => updateInput(item.id, "name", nameSuggestion.name)}
-                        style={({ pressed }) => [styles.nameSuggestion, pressed && styles.pressed]}
+                        style={({ pressed }) => [styles.nameSuggestion, pressed && mealFormStyles.pressed]}
                       >
                         <Ionicons name="return-down-forward-outline" size={16} color={theme.colors.primary} />
                         <AppText style={styles.nameSuggestionText}>{t.meals.didYouMean(nameSuggestion.name)}</AppText>
@@ -544,7 +542,7 @@ export default function AddMealScreen() {
                     )}
                   </View>
 
-                  <View style={styles.fieldWrap}>
+                  <View style={mealFormStyles.fieldWrap}>
                     <TextField
                       label={t.meals.portionConsumed}
                       placeholder={t.meals.portionConsumedPlaceholder}
@@ -556,23 +554,23 @@ export default function AddMealScreen() {
                       inputProps={{ onBlur: () => handleBlur(item.id, "portion") }}
                     />
                     {touched[fieldKey(item.id, "portion")] && errors[fieldKey(item.id, "portion")] && (
-                      <AppText style={styles.error}>{errors[fieldKey(item.id, "portion")]}</AppText>
+                      <AppText style={mealFormStyles.error}>{errors[fieldKey(item.id, "portion")]}</AppText>
                     )}
                   </View>
 
-                  <View style={styles.fieldWrap}>
+                  <View style={mealFormStyles.fieldWrap}>
                     <TextField
                       label={t.meals.ingredientsCooking}
                       placeholder={t.meals.ingredientsCookingPlaceholder}
                       value={item.details}
                       onChangeText={(value) => updateInput(item.id, "details", value)}
                       textContentType="none"
-                      inputStyle={styles.detailsInput}
+                      inputStyle={mealFormStyles.detailsInput}
                       maxLength={INPUT_LIMITS.MEAL_DETAILS}
                       showCounter
                       inputProps={{ multiline: true, onBlur: () => handleBlur(item.id, "details") }}
                     />
-                    <AppText variant="subtle" style={styles.fieldHint}>{t.meals.ingredientsCookingHint}</AppText>
+                    <AppText variant="subtle" style={mealFormStyles.fieldHint}>{t.meals.ingredientsCookingHint}</AppText>
                   </View>
 
                   {/* Thẻ kết quả bốn số, chỉ hiện khi món đã đủ dinh dưỡng */}
@@ -599,7 +597,7 @@ export default function AddMealScreen() {
                   )}
 
                   {/* Nút Ước tính và nút mở ô gõ tay, nằm cuối mỗi thẻ món */}
-                  <View style={styles.itemActions}>
+                  <View style={mealFormStyles.itemActions}>
                     <Button
                       title={estimatingItemId === item.id
                         ? t.meals.estimatingNutrition
@@ -614,32 +612,32 @@ export default function AddMealScreen() {
                       onPress={() => setItems((current) => current.map((draft) => draft.id === item.id
                         ? { ...draft, showNutritionFields: !draft.showNutritionFields }
                         : draft))}
-                      style={({ pressed }) => [styles.manualButton, pressed && styles.pressed]}
+                      style={({ pressed }) => [mealFormStyles.manualButton, pressed && mealFormStyles.pressed]}
                     >
                       <Ionicons
                         name={item.showNutritionFields ? "chevron-up-outline" : completeNutrition ? "options-outline" : "keypad-outline"}
                         size={18}
                         color={theme.colors.primary}
                       />
-                      <AppText style={styles.actionText}>
+                      <AppText style={mealFormStyles.actionText}>
                         {item.showNutritionFields
                           ? t.meals.hideNutrition
                           : completeNutrition ? t.meals.adjustNutrition : t.meals.enterNutritionManually}
                       </AppText>
                     </Pressable>
                   </View>
-                  {estimateError?.id === item.id ? <AppText style={styles.error}>{estimateError.message}</AppText> : null}
+                  {estimateError?.id === item.id ? <AppText style={mealFormStyles.error}>{estimateError.message}</AppText> : null}
                 </View>
               </Card>
             </View>
           );
         })}
 
-        {/* Nút thêm dòng món, biến mất khi đã đủ 8 món */}
-        {items.length < 8 && (
-          <Pressable onPress={addItem} style={({ pressed }) => [styles.addItemButton, pressed && styles.pressed]}>
+        {/* Nút thêm dòng món, biến mất khi đã đủ số món tối đa */}
+        {items.length < INPUT_LIMITS.MEAL_ITEMS && (
+          <Pressable onPress={addItem} style={({ pressed }) => [styles.addItemButton, pressed && mealFormStyles.pressed]}>
             <Ionicons name="add-circle-outline" size={19} color={theme.colors.primary} />
-            <AppText style={styles.actionText}>{t.meals.addMealItem}</AppText>
+            <AppText style={mealFormStyles.actionText}>{t.meals.addMealItem}</AppText>
           </Pressable>
         )}
 
@@ -663,10 +661,10 @@ export default function AddMealScreen() {
           </Card>
         )}
 
-        {saveError ? <AppText style={styles.error}>{saveError}</AppText> : null}
+        {saveError ? <AppText style={mealFormStyles.error}>{saveError}</AppText> : null}
 
         {/* Nút Lưu và nút Hủy, Lưu bị khóa khi chưa chọn buổi ăn hoặc thiếu số */}
-        <View style={styles.actions}>
+        <View style={mealFormStyles.actions}>
           <Button
             title={isSaving ? t.common.saving : t.meals.saveMeal}
             size="lg"
@@ -690,10 +688,7 @@ export default function AddMealScreen() {
 
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
-  content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
   subtitle: { marginTop: -8 },
-  actions: { gap: 10 },
-  pressed: { opacity: 0.65 },
   backdateBanner: {
     flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(8,145,178,0.08)",
     borderColor: "rgba(8,145,178,0.2)", borderWidth: 1, borderRadius: 12, padding: theme.space.md,
@@ -710,11 +705,6 @@ const styles = StyleSheet.create({
   itemHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   itemTitle: { fontSize: 16 },
   removeButton: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  formCard: { padding: theme.space.xl },
-  formFields: { gap: theme.space.md },
-  fieldWrap: { gap: 4 },
-  detailsInput: { paddingTop: 6 },
-  fieldHint: { fontSize: 12, lineHeight: 18 },
   nameSuggestion: {
     minHeight: 40, borderRadius: 10, backgroundColor: theme.colors.tint, paddingHorizontal: 12,
     flexDirection: "row", alignItems: "center", gap: 8,
@@ -724,17 +714,10 @@ const styles = StyleSheet.create({
     minHeight: 50, borderRadius: theme.radius.button, borderWidth: 1, borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
   },
-  manualButton: {
-    minHeight: 46, borderRadius: theme.radius.button, backgroundColor: theme.colors.tint,
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-  },
-  itemActions: { gap: theme.space.sm },
-  actionText: { color: theme.colors.primary, fontSize: 13, fontWeight: "700" },
   sourceBadge: { backgroundColor: "rgba(5,150,105,0.10)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   sourceText: { color: theme.colors.accent, fontSize: 11, fontWeight: "700" },
   totalCard: { padding: theme.space.xl, gap: theme.space.md, borderColor: "rgba(8,145,178,0.22)", borderWidth: 1 },
   totalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  error: { fontSize: 12, color: theme.colors.danger },
   suggestBlock: { gap: theme.space.sm },
   suggestTitle: { fontSize: 15 },
   suggestWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

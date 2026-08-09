@@ -5,14 +5,12 @@
 // Nhận vào:   không nhận gì, đây là bảng chữ khai sẵn
 // Trả ra:     toàn bộ chữ tiếng Anh, gom theo nhóm màn hình
 // Khi lỗi:    vi.ts thiếu một khóa nào thì TypeScript báo lỗi ngay lúc build
-// Bộ chữ tiếng Anh của toàn app. Đây là bản gốc, file vi.ts phải có
-// đúng các khóa như file này, nếu thiếu khóa thì TypeScript sẽ báo lỗi.
-// Mọi chữ người dùng nhìn thấy đều phải lấy từ đây, không viết thẳng trong màn hình.
-// English catalog, the source-of-truth shape. vi.ts must mirror this exactly
-// (it's typed as `typeof en`, so missing/extra keys fail the type-check).
-// Strings with runtime values are functions, e.g. remaining: (n) => `${n} left`.
+//
+// vi.ts khai kiểu là `typeof en` nên thiếu hay thừa khóa đều không build được.
+// Chuỗi có giá trị thay đổi lúc chạy thì viết thành hàm, ví dụ (n) => `${n} left`.
+// Mọi chữ người dùng nhìn thấy đều lấy từ đây, không viết thẳng trong màn hình.
 export const en = {
-  // Screen-reader labels for icon-only buttons (accessibilityLabel)
+  // Nhãn cho trình đọc màn hình, dùng ở nút chỉ có biểu tượng
   a11y: {
     prevWeek: "Previous week",
     nextWeek: "Next week",
@@ -23,7 +21,6 @@ export const en = {
     attachPhoto: "Attach photo",
     clearChat: "Clear chat history",
     askCoach: "Ask the Coach",
-    deletePlanned: "Remove planned meal",
     search: "Search people",
     createPost: "New post",
     myProfile: "My community profile",
@@ -50,7 +47,7 @@ export const en = {
     checkConnection: "Check your connection and try again.",
     kcal: "kcal",
     errorTitle: "Error",
-    // Gemini free quota resets at a FIXED daily mark (midnight Pacific)
+    // Lượt Gemini miễn phí được cấp lại vào một MỐC CỐ ĐỊNH mỗi ngày, nửa đêm giờ Thái Bình Dương
     aiResetAt: (time: string, isToday: boolean) => `around ${time} ${isToday ? "today" : "tomorrow"}`,
   },
 
@@ -92,7 +89,7 @@ export const en = {
   },
 
   plan: {
-    // weekly.tsx (const L = t.plan)
+    // Màn Kế hoạch tuần dùng cụm này qua biến tắt L
     generate: "Generate my week with AI",
     generating: "AI is planning your week...",
     pastWeek: "The selected week has ended. Switch to the current or next week.",
@@ -122,7 +119,7 @@ export const en = {
     eaten: "Eaten",
     couldntLog: "Couldn't log meal",
     removePlanMsg: (name: string) => `Remove "${name}" from this day's plan.`,
-    // GenerateModal
+    // Hộp tạo kế hoạch
     genWeekTitle: "Generate with AI",
     genDayTitle: "Create a new plan for this day",
     genWeekMsg: "AI will plan meals and at-home exercise from today to the end of the week based on your goal and conditions. The existing plan in that range will be replaced.",
@@ -130,9 +127,9 @@ export const en = {
     genNotePlaceholder: "Preferences (optional): e.g. no seafood, love chicken...",
     genRemember: "Use these preferences for meal suggestions and Coach.",
     genStart: "Generate",
-    // GroceryModal
+    // Hộp danh sách đi chợ
     groceryTitle: "Grocery list",
-    // SuggestMealCard
+    // Thẻ gợi ý món ở Trang chủ
     whatToEat: "What should I eat now?",
     suggestPill: "Suggest",
     add: "Add meal",
@@ -221,12 +218,12 @@ export const en = {
   },
 
   scan: {
-    // Mode toggle + headers
+    // Nút đổi chế độ quét và các tiêu đề
     scanBarcode: "Scan barcode",
     scanMeal: "Scan meal",
     photo: "Photo",
     barcode: "Barcode",
-    // Camera-off / permission
+    // Khi tắt camera hoặc chưa cho quyền
     cameraNotEnabled: "Camera permission not granted",
     camOffBarcode: "Camera access is off. Enable it in Settings, or enter the barcode number manually below.",
     camOffPhoto: "Camera access is off. Enable it in Settings, or pick a photo from your library below.",
@@ -241,19 +238,19 @@ export const en = {
     loadingPhoto: "AI is analyzing your meal...",
     loadingBarcodeSub: "Just a moment",
     loadingPhotoSub: "This usually takes 5–10 seconds",
-    // Candidates sheet
+    // Bảng chọn món AI đoán được
     whatDidAiSee: "What did AI see?",
     pickClosest: "Pick the closest match",
     bestMatch: "Best match",
     noneEnterManually: "None of these → enter manually",
-    // Product sheet
+    // Bảng sản phẩm tra từ mã vạch
     productFound: "Product found",
     perServing: (s: string) => `Per serving: ${s}`,
     addToMeal: "Review and add",
     suitsMe: "Is this product suitable for me?",
     suitsMeQuestion: (name: string, kcal: number, p: number, c: number, f: number) =>
       `I just scanned "${name}", ${kcal} kcal, protein ${p}g, carbs ${c}g, fat ${f}g per serving. Is this product suitable for my health conditions?`,
-    // Manual barcode modal
+    // Hộp gõ tay mã vạch
     enterBarcode: "Enter barcode",
     barcodeHint: "Type the 8-14 digit number under the bars.",
     barcodeLabel: "Barcode number",
@@ -338,54 +335,30 @@ export const en = {
     finishedTitle: "Done! 🎉",
     finishedMsg: (minutes: number) => `${minutes} active minutes have been added to your progress.`,
     safety: "This is a general routine, not tailored to you. Listen to your body and stop right away if you feel dizzy or in pain. If you have a health condition or an injury, check with a professional first.",
-    // Localized picker labels; backend/src/config/exerciseMet.js is authoritative for MET.
-    groups: {
-      cardio: "Cardio",
-      strength: "Strength/Gym",
-      flexibility: "Flexibility/Light",
-      sports: "Sports",
-      other: "Other",
-    } as Record<string, string>,
+    // Nhãn hiển thị của bộ chọn hoạt động. Phải đủ và đúng bằng bộ khóa trong
+    // config/activityCatalog.ts, mà bộ đó lại phải khớp EXTERNAL_ACTIVITIES bên
+    // backend/src/config/exerciseCatalog.js. Hệ số MET thật nằm ở file backend đó.
     activities: {
       walking: "Walking",
-      brisk_walking: "Brisk walking",
       jogging: "Jogging",
-      running_fast: "Running (fast)",
       cycling: "Cycling",
       swimming: "Swimming",
       jump_rope: "Jump rope",
-      stair_climbing: "Stair climbing",
-      elliptical: "Elliptical",
-      weights_light: "Weights (light)",
-      weights_heavy: "Weights (heavy)",
-      bodyweight: "Bodyweight",
-      hiit: "HIIT",
-      crossfit: "CrossFit",
       yoga: "Yoga",
-      pilates: "Pilates",
-      stretching: "Stretching",
       football: "Football",
       basketball: "Basketball",
       badminton: "Badminton",
-      tennis: "Tennis",
       volleyball: "Volleyball",
       shuttlecock: "Shuttlecock kicking",
       martial_arts: "Martial arts",
       table_tennis: "Table tennis",
-      pickleball: "Pickleball",
-      dancing: "Dancing",
-      hiking: "Hiking",
-      boxing: "Boxing",
       gym: "Gym workout",
-      sports: "Playing sports",
-      yoga_stretch: "Yoga/stretching",
-      other: "Other",
     } as Record<string, string>,
   },
 
-  // Shared label lists, used by Profile display, Edit pickers, and Community
+  // Danh sách nhãn dùng chung cho màn Hồ sơ, bộ chọn khi sửa, và Cộng đồng
   labels: {
-    // All three labels describe the same thing: the DIRECTION of weight change.
+    // Cả ba nhãn cùng nói một chuyện: HƯỚNG thay đổi cân nặng.
     goal: { lose_weight: "Lose weight", gain_weight: "Gain weight", maintain_weight: "Maintain weight" } as Record<string, string>,
     activity: { sedentary: "Sedentary", moderate: "Moderate", active: "Active" } as Record<string, string>,
     condition: {
@@ -404,7 +377,7 @@ export const en = {
     daysShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   },
 
-  // App shell: header greeting + bottom tab bar + FAB sheet
+  // Khung app: lời chào ở thanh đầu, thanh tab dưới, và bảng của nút tròn
   nav: {
     goodMorning: "Good morning",
     goodAfternoon: "Good afternoon",
@@ -734,7 +707,6 @@ export const en = {
     currentWeight: "Current",
     targetWeight: "Target",
     remaining: (value: string) => `${value} kg remaining`,
-    direction: "Direction",
     directions: { lose: "Lose weight", gain: "Gain weight", maintain: "Maintain weight" },
     targetSection: "Your destination",
     targetLabel: "Target weight (kg)",
@@ -781,7 +753,7 @@ export const en = {
     onTrack: "✓ Goal met",
     onTrackShort: "Goal met",
     goalLine: (n: string) => `Goal (${n} kcal)`,
-    onTrackRange: "80–100% of goal",
+    onTrackRange: (min: number, max: number) => `${min}–${max}% of goal`,
     overGoalShort: "Over goal",
     avgKcalDay: "Avg/day",
     avgKcalMonth: "Avg/month",
@@ -904,7 +876,7 @@ export const en = {
     invalidCredentials: "Invalid email or password.",
     noAccount: "Don't have an account? Register",
     forgotPassword: "Forgot password?",
-    // Register
+    // Màn Đăng ký
     registerTitle: "Create your account",
     registerSubtitle: "Create an account to start tracking meals with MealMate.",
     registerVerifyTitle: "Verify your email",
@@ -927,7 +899,7 @@ export const en = {
     passwordNeedNumber: "Password must contain at least one number.",
     passwordChecklistLength: "Needs at least 6 characters",
     passwordChecklistUpperAndNumber: "Has 1 uppercase letter and 1 number",
-    // Forgot password, step titles/subtitles
+    // Quên mật khẩu, tiêu đề và phụ đề của từng chặng
     forgotTitle: "Forgot password",
     forgotSubtitle: "Enter your email to receive a verification code.",
     otpTitle: "Enter verification code",
@@ -947,7 +919,7 @@ export const en = {
     resendOtp: "Resend code",
     otpResent: "Verification code sent.",
     backToSignIn: "Back to sign in",
-    // Validation / errors
+    // Câu báo lỗi và câu kiểm dữ liệu
     otpMustBe6: "Please enter the 6-digit code.",
     passwordsNoMatch: "Passwords do not match.",
     failedSendOtp: "Couldn't send the code.",

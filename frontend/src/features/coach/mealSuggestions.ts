@@ -12,14 +12,12 @@
 //
 // Lưu tạm kết quả theo ngày, bữa và ngôn ngữ, vì mỗi lần gợi ý tốn một lượt AI.
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiRequest } from "@/utils/apiClient";
+import { apiRequest, AI_TIMEOUT_MS } from "@/utils/apiClient";
 import { stripMarkdown } from "@/features/coach/coachApi";
 import { mealSlotByHour } from "@/features/meals/mealHelpers";
 import type { Lang } from "@/utils/languageUtils";
 import { todayKey } from "@/utils/dateUtils";
 
-// Chờ tối đa 2 phút. Dài hơn request thường vì AI phải nghĩ.
-const AI_TIMEOUT_MS = 120_000;
 
 export type MealSuggestion = {
   name: string;
@@ -85,5 +83,6 @@ export async function cacheSuggestions(date: string, slot: string, language: Lan
   try {
     await AsyncStorage.setItem(suggestCacheKey(date, slot, language), JSON.stringify(s));
   } catch {
+    // Ghi bộ nhớ đệm hỏng thì bỏ qua, gợi ý vẫn hiện được.
   }
 }

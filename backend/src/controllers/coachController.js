@@ -1,6 +1,9 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Lo toàn bộ AI Coach: chấm điểm sức khỏe trong ngày, trò chuyện,
-// gợi ý món kế tiếp, lưu và xóa lịch sử chat, ghi món từ tin nhắn vào nhật ký.
+// gợi ý món kế tiếp, lưu và xóa lịch sử chat.
+//
+// Coach KHÔNG tự ghi món vào nhật ký. Tin nhắn có món thì chỉ hiện nút mở
+// màn Thêm món đã điền sẵn, người dùng xem lại rồi tự bấm Lưu.
 //
 // Ai gọi tới: coachRoutes, tức tab Coach và thẻ điểm sức khỏe ở Trang chủ
 // Nhận vào:   câu hỏi của người dùng, kèm ảnh nếu có, và ngôn ngữ đang chọn
@@ -21,23 +24,16 @@ const { parseCoachReply, finalizeCoachReply, avoidDuplicateCoachReply, photoNotF
 const { getExternalActivity, computeBurned } = require("../config/exerciseCatalog");
 const { resolveCoachScope, SUPPORTED, OUT_OF_SCOPE } = require("../services/coach/coachScope");
 const ChatMessage = require("../models/ChatMessage");
-const Meal = require("../models/Meal");
 const cloudinary = require("../config/cloudinary");
 const { validateCoachChat } = require("../validators/coachChatValidator");
 const { normalizeCoachText, resolveRequestedLanguage, requestedLanguage, languageSwitchReply } = require("../services/coach/coachLanguage");
 const { requestTodayKey } = require("../utils/dateUtils");
-const { MEAL_TYPES } = require("../config/mealEnums");
-
-// ══════════════════════════════════════════════════════════
 // CÁC CỬA CỦA AI COACH
+// Năm cửa độc lập: chấm điểm sức khỏe, trò chuyện, đọc lịch sử,
+// xóa lịch sử, và gợi ý món kế tiếp.
 //
-// Không phải luồng. Mấy cửa độc lập: chấm điểm sức khỏe, trò chuyện,
-// đọc và xóa lịch sử, ghi món từ tin nhắn, và gợi ý món.
-// 
 // Nhớ: mọi cửa gọi AI đều phải qua coachScope kiểm phạm vi TRƯỚC.
 //      Hỏi ngoài phạm vi thì chặn ngay, đừng tốn một lượt gọi Gemini.
-// ══════════════════════════════════════════════════════════
-
 // Đoán bữa đang tới dựa trên giờ hiện tại. Bản giống hệt bên frontend
 // nằm ở features/meals/mealHelpers.ts, hai bên phải cho ra cùng kết quả.
 function mealTypeByHour(h) {
@@ -137,13 +133,13 @@ exports.getInsight = async (req, res) => {
 // Cờ "đang ăn" chỉ bật khi người dùng nói họ ĐANG hoặc ĐÃ ăn, và AI cũng nhận ra món.
 // Chỉ khi đó app mới hiện nút Thêm để ghi món vào nhật ký.
 exports.chat = async (req, res) => {
-  // Bước 1. Kiểm dữ liệu gửi lên. Sai là dừng ngay, chưa tốn lượt gọi AI.
+  // Kiểm dữ liệu gửi lên. Sai là dừng ngay, chưa tốn lượt gọi AI.
   const validated = validateCoachChat(req.body);
   if (validated.error) return res.status(400).json({ message: validated.error });
   const { message: text, image, mimeType, source, language, localDate, localHour } = validated.value;
 
   try {
-    // Bước 2. Gom dữ liệu thật của người dùng trong hôm nay.
+    // Gom dữ liệu thật của người dùng trong hôm nay.
     // Nhờ nó mà Coach nói đúng số liệu của từng người thay vì nói chung chung.
     const [ctx, recentDocs] = await Promise.all([
       buildContext(req.user.id, localDate),
@@ -160,7 +156,7 @@ exports.chat = async (req, res) => {
     const history = recentDocs.reverse().map((item) => ({ role: item.role, text: item.text }));
     const hour = localHour;
 
-    // Bước 3. CỔNG CHUNG. Mọi tin nhắn phải qua đây trước khi được phép
+    // CỔNG CHUNG. Mọi tin nhắn phải qua đây trước khi được phép
     // tốn một lượt Gemini để trả lời nội dung.
     // Chỉ gửi ảnh mà không gõ chữ thì luôn là câu hỏi về món trong ảnh.
     // Lượt xin đổi ngôn ngữ chỉ cần coachLanguage.requestedLanguage;
@@ -180,7 +176,7 @@ exports.chat = async (req, res) => {
         );
     if (scope.scope === OUT_OF_SCOPE) console.warn("Coach gate blocked a message:", scope.reason);
 
-    // Bước 4. Gọi AI, ép kết quả về JSON, rồi dịch lại nếu trả sai ngôn ngữ.
+    // Gọi AI, ép kết quả về JSON, rồi dịch lại nếu trả sai ngôn ngữ.
     // Hai nhánh đầu KHÔNG gọi Gemini: ngoài phạm vi và đổi ngôn ngữ.
     // Ngoài phạm vi được xét trước, nên câu vừa xin đổi ngôn ngữ vừa hỏi
     // nội dung ngoài phạm vi sẽ nhận câu chuyển hướng bằng ngôn ngữ mới.
@@ -262,7 +258,7 @@ exports.chat = async (req, res) => {
     // nên chỉ đổi cách nói cho các câu trả lời nội dung.
     if (intent !== "out_of_scope") reply = avoidDuplicateCoachReply(reply, history, responseLanguage);
 
-    // Bước 5. Có ảnh thì đẩy lên kho ảnh, để lần sau mở lại vẫn thấy ảnh trong hội thoại.
+    // Có ảnh thì đẩy lên kho ảnh, để lần sau mở lại vẫn thấy ảnh trong hội thoại.
     // Lượt bị từ chối thì KHÔNG lưu ảnh, vì app không giữ lại thứ nó không nhận xử lý.
     let imageUrl = null;
     let imagePublicId = null;
@@ -280,7 +276,7 @@ exports.chat = async (req, res) => {
       }
     }
 
-    // Bước 6. Lưu cả tin của người dùng và tin của Coach, kèm ngôn ngữ lúc trò chuyện.
+    // Lưu cả tin của người dùng và tin của Coach, kèm ngôn ngữ lúc trò chuyện.
     // Nhờ trường ngôn ngữ này mà đổi sang tiếng Anh sẽ không kéo theo lịch sử tiếng Việt.
     const docs = await ChatMessage.create([
       { user: req.user.id, role: "user", language, responseLanguage, text: imageUrl ? `📷 ${userText}` : userText, image: imageUrl, imagePublicId },
@@ -390,7 +386,6 @@ exports.getHistory = async (req, res) => {
       image: m.image || undefined,
       meal: m.meal || null,
       eating: m.mealEating || false,
-      loggedId: m.loggedMealId || null,
       // Frontend dùng thời gian này để chia tin nhắn theo ngày.
       createdAt: m.createdAt,
     })),
@@ -407,43 +402,4 @@ exports.clearHistory = async (req, res) => {
   await Promise.allSettled(withImages.map((m) => cloudinary.uploader.destroy(m.imagePublicId)));
   await ChatMessage.deleteMany({ user: req.user.id });
   res.json({ message: "Chat history cleared." });
-};
-
-// Nút "Thêm" trên tin nhắn Coach có kèm món.
-// Ghi mã món vào tin nhắn để nút giữ đúng trạng thái sau khi thoát app mở lại,
-// và để nút hoàn tác biết cần xóa món nào.
-exports.logFromMessage = async (req, res) => {
-  const { messageId, mealType } = req.body;
-  const msg = await ChatMessage.findOne({ _id: messageId, user: req.user.id });
-  if (!msg || !msg.meal) return res.status(404).json({ message: "No suggested meal here." });
-  if (msg.loggedMealId) return res.status(400).json({ message: "Already added." });
-
-  const m = msg.meal;
-  const type = MEAL_TYPES.includes(mealType) ? mealType : m.mealType;
-  const meal = await Meal.create({
-    user: req.user.id,
-    name: m.name,
-    mealType: type,
-    calories: m.calories,
-    protein: m.protein,
-    carbs: m.carbs,
-    fat: m.fat,
-    date: requestTodayKey(req),
-  });
-  msg.loggedMealId = meal._id;
-  await msg.save();
-  res.json({ logged: { id: meal._id, name: meal.name, mealType: meal.mealType, calories: meal.calories } });
-};
-
-// Nút hoàn tác món vừa thêm từ tin nhắn Coach.
-exports.unlogFromMessage = async (req, res) => {
-  const { messageId } = req.body;
-  const msg = await ChatMessage.findOne({ _id: messageId, user: req.user.id });
-  if (!msg) return res.status(404).json({ message: "Message not found." });
-  if (msg.loggedMealId) {
-    await Meal.deleteOne({ _id: msg.loggedMealId, user: req.user.id });
-    msg.loggedMealId = null;
-    await msg.save();
-  }
-  res.json({ message: "Removed." });
 };

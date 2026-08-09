@@ -2,7 +2,9 @@
 // Kiểm tra biên HTTP từ chối object/array ở trường chỉ được nhận text.
 // Controller và validator dùng request giả để khóa lỗi type trước khi ghi.
 jest.mock("bcryptjs", () => ({ compare: jest.fn(), hash: jest.fn() }));
-jest.mock("../../src/config/cloudinary", () => ({ uploader: {} }));
+jest.mock("../../src/config/cloudinary", () => ({
+  uploader: { destroy: jest.fn().mockResolvedValue({}) },
+}));
 jest.mock("../../src/services/emailRelayClient", () => ({ sendOTP: jest.fn() }));
 jest.mock("../../src/services/otpService", () => ({ reserveOTP: jest.fn(), verifyOTPCode: jest.fn() }));
 jest.mock("../../src/models/User", () => ({
@@ -11,8 +13,14 @@ jest.mock("../../src/models/User", () => ({
   findByIdAndUpdate: jest.fn(),
   findOne: jest.fn(),
 }));
+jest.mock("../../src/models/Post", () => ({
+  create: jest.fn(),
+  find: jest.fn(),
+  findById: jest.fn(),
+}));
 jest.mock("../../src/controllers/community/communityHelpers", () => ({
   addNotification: jest.fn(),
+  privateUserIds: jest.fn(),
   postHiddenFrom: jest.fn(),
   shapePost: jest.fn(),
   uploadToCloudinary: jest.fn().mockResolvedValue({ url: "image-url", publicId: "image-id" }),
@@ -20,10 +28,13 @@ jest.mock("../../src/controllers/community/communityHelpers", () => ({
 
 const bcrypt = require("bcryptjs");
 const User = require("../../src/models/User");
+const Post = require("../../src/models/Post");
+const cloudinary = require("../../src/config/cloudinary");
 const { login, register } = require("../../src/controllers/authController");
 const { changeName, changePassword, deleteAccount } = require("../../src/controllers/accountController");
 const { updateProfile } = require("../../src/controllers/profileController");
-const { createPost } = require("../../src/controllers/community/postController");
+const { createPost, updatePost } = require("../../src/controllers/community/postController");
+const { getExplore } = require("../../src/controllers/community/feedController");
 const { searchUsers } = require("../../src/controllers/community/socialController");
 
 const response = () => {
@@ -75,5 +86,86 @@ describe("text input types at API boundaries", () => {
     expect(User.findById).not.toHaveBeenCalled();
     expect(User.findOne).not.toHaveBeenCalled();
     expect(bcrypt.compare).not.toHaveBeenCalled();
+  });
+});
+
+describe("controller data safety", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test("clears a stale calorie goal when automatic calculation lacks profile data", async () => {
+    User.findById.mockReturnValue({
+      select: jest.fn().mockResolvedValue({
+        customGoal: true,
+        weight: null,
+        height: null,
+        age: null,
+        gender: null,
+        activityLevel: "moderate",
+        goal: "maintain_weight",
+        targetWeight: null,
+        weeklyRateKg: 0,
+      }),
+    });
+    User.findByIdAndUpdate.mockReturnValue({
+      select: jest.fn().mockResolvedValue({ weight: null, height: null }),
+    });
+    const res = response();
+
+    await updateProfile({ body: { calorieGoal: null }, user: { id: "user-id" } }, res);
+
+    expect(User.findByIdAndUpdate.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ calorieGoal: null, customGoal: false }),
+    );
+  });
+
+  test("removes newly uploaded images when creating the database record fails", async () => {
+    Post.create.mockRejectedValue(new Error("database failed"));
+    const res = response();
+
+    await expect(createPost({
+      body: { caption: "hello" },
+      files: [{ buffer: Buffer.from("image") }],
+      user: { id: "user-id" },
+    }, res)).rejects.toThrow("database failed");
+
+    expect(cloudinary.uploader.destroy).toHaveBeenCalledWith("image-id");
+  });
+
+  test("does not delete old images before an edited post is saved", async () => {
+    const post = {
+      user: { toString: () => "user-id" },
+      caption: "hello",
+      images: [{ url: "old-url", publicId: "old-id" }],
+      image: "old-url",
+      imagePublicId: "old-id",
+      save: jest.fn().mockRejectedValue(new Error("database failed")),
+    };
+    Post.findById.mockResolvedValue(post);
+    const res = response();
+
+    await expect(updatePost({
+      params: { id: "post-id" },
+      body: { keepUrls: "[]", caption: "still valid" },
+      files: [{ buffer: Buffer.from("new-image") }],
+      user: { id: "user-id" },
+    }, res)).rejects.toThrow("database failed");
+
+    expect(cloudinary.uploader.destroy).not.toHaveBeenCalledWith("old-id");
+  });
+
+  test("clamps a negative feed limit to one item", async () => {
+    const limit = jest.fn().mockReturnValue({ populate: jest.fn().mockResolvedValue([]) });
+    Post.find.mockReturnValue({
+      sort: jest.fn().mockReturnValue({
+        skip: jest.fn().mockReturnValue({ limit }),
+      }),
+    });
+    const helpers = require("../../src/controllers/community/communityHelpers");
+    helpers.privateUserIds.mockResolvedValue([]);
+    const res = response();
+
+    await getExplore({ query: { limit: "-5" }, user: { id: "user-id" } }, res);
+
+    expect(limit).toHaveBeenCalledWith(2);
   });
 });

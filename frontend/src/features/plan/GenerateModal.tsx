@@ -4,12 +4,11 @@
 // Ai gọi tới: WeeklyPlanScreen, khi bấm nút Tạo
 // Nhận vào:   phạm vi ngày và ghi chú khẩu vị
 // Trả ra:     lựa chọn của người dùng, để màn cha gọi AI
-// Khi lỗi:    chọn quá 14 ngày thì bị chặn ngay tại đây
+// Khi lỗi:    hộp này không tự kiểm gì. Phạm vi ngày do WeeklyPlanScreen.genRange
+//             chốt TRƯỚC khi mở hộp, quá khứ thì nó chặn và không mở hộp ra
 
-// Chọn nhớ thì khẩu vị được lưu vào hồ sơ, nên Coach và phần gợi ý món
-// cũng dùng chung ghi chú đó.
-// Hộp xác nhận tạo thực đơn AI cho cả tuần hoặc một ngày, kèm ghi chú khẩu vị.
-// Chọn ghi nhớ sẽ lưu khẩu vị vào hồ sơ để Suggest, Coach và lần tạo sau cùng dùng.
+// Chọn ghi nhớ thì khẩu vị được lưu vào hồ sơ, nên gợi ý món, Coach và lần
+// tạo kế hoạch sau đều dùng chung ghi chú đó.
 import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
@@ -28,7 +27,7 @@ export function GenerateModal({ visible, scope, note, onChangeNote, remember, on
   onStart: () => void;
 }) {
   // Viết tắt cụm chữ của phần Kế hoạch, file này dùng nhiều lần.
-const L = useT().plan;
+  const L = useT().plan;
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
@@ -60,7 +59,8 @@ const L = useT().plan;
               onPress={onCancel}
               style={({ pressed }) => [styles.cancelBtn, pressed && styles.cancelBtnPressed]}
             >
-              <AppText style={styles.cancelText}>{L.cancel}</AppText>{/* shared plan.cancel */}
+              {/* Dùng plan.cancel chứ không phải common.cancel, vì hai chuỗi này tách riêng. */}
+              <AppText style={styles.cancelText}>{L.cancel}</AppText>
             </Pressable>
             <Pressable
               onPress={onStart}

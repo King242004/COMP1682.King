@@ -13,13 +13,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { scheduleDailyReminder, cancelNotification } from "./notificationService";
 
-// ══════════════════════════════════════════════════════════
-// KHUNG DỮ LIỆU
-//
-// Không phải luồng, chỉ là mấy khóa lưu trữ với mấy hàm đổi qua đổi lại.
-// Gọi cái nào trước cũng được. Ba luồng bên dưới đều mượn của khối này.
-// ══════════════════════════════════════════════════════════
-
 // Bốn bữa, mỗi bữa một lời nhắc riêng, để câu nhắc gọi đúng tên bữa.
 export const MEAL_KEYS = ["breakfast", "lunch", "dinner", "snack"] as const;
 export type MealKey = (typeof MEAL_KEYS)[number];
@@ -73,18 +66,10 @@ const toMinutes = (t: string) => {
   return p ? p[0] * 60 + p[1] : 0;
 };
 
-// ══════════════════════════════════════════════════════════
-// ĐỌC LỜI NHẮC
-//
-// Đến từ RemindersScreen lúc mở màn. Ba bước, đọc từ trên xuống là đúng thứ tự.
-// Chỉ đọc bộ nhớ máy, KHÔNG gọi mạng.
-// Xong thì màn Nhắc nhở có đủ bốn công tắc với bốn giờ để hiện.
-// ══════════════════════════════════════════════════════════
-
 // Chuyển người dùng của bản cũ sang kiểu bốn bữa. Chạy đúng một lần cho mỗi máy,
 // vì cuối hàm là xóa luôn hai khóa cũ đi.
 // Mã thông báo cũ được gán cho bữa có giờ mặc định gần với giờ cũ nhất.
-// Đây là hàm phụ, mốc BƯỚC nằm ở chỗ gọi trong loadReminders bên dưới.
+// Chỉ loadReminders ngay bên dưới gọi hàm này.
 async function migrateLegacy(state: ReminderMap): Promise<ReminderMap> {
   const [legacyId, legacyTime] = await Promise.all([
     AsyncStorage.getItem(LEGACY_ID_KEY),
@@ -107,16 +92,15 @@ async function migrateLegacy(state: ReminderMap): Promise<ReminderMap> {
   return state;
 }
 
-// ĐỌC LỜI NHẮC BƯỚC 1. Màn Nhắc nhở gọi thẳng vào đây lúc mở màn.
 export async function loadReminders(): Promise<ReminderMap> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
-  // ĐỌC LỜI NHẮC BƯỚC 2. Máy chưa lưu gì thì rẽ sang migrateLegacy ở trên.
-  // Có thể là máy mới tinh, mà cũng có thể là người dùng bản cũ chưa đổi qua.
+  // Máy chưa lưu gì thì rẽ sang migrateLegacy ở trên
+  // Có thể là máy mới tinh, mà cũng có thể là người dùng bản cũ chưa đổi qua
   if (!raw) return migrateLegacy(emptyReminders());
   try {
     const saved = JSON.parse(raw) as Partial<ReminderMap>;
-    // ĐỌC LỜI NHẮC BƯỚC 3. Đắp bản đã lưu lên bản mặc định, chứ không lấy thẳng bản đã lưu.
-    // Có vậy thì bản sau thêm bữa mới, máy cũ đọc lên vẫn đủ bốn khóa mà không vỡ.
+    // Đắp bản đã lưu lên bản mặc định, chứ không lấy thẳng bản đã lưu
+    // Có vậy thì bản sau thêm bữa mới, máy cũ đọc lên vẫn đủ khóa mà không vỡ
     const state = emptyReminders();
     for (const k of MEAL_KEYS) if (saved[k]) state[k] = { ...state[k], ...saved[k] };
     return state;
@@ -126,33 +110,25 @@ export async function loadReminders(): Promise<ReminderMap> {
   }
 }
 
-// Ghi cả bốn lời nhắc xuống máy. Gọi ở BẬT LỜI NHẮC BƯỚC 5 và trong migrateLegacy.
+// Ghi cả bốn lời nhắc xuống máy, gọi ở cuối applyReminder và trong migrateLegacy
 async function persist(state: ReminderMap) {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-// ══════════════════════════════════════════════════════════
-// BẬT LỜI NHẮC
-//
-// Đến từ RemindersScreen, mỗi lần gạt công tắc hoặc đổi giờ.
-// Năm bước, đọc từ trên xuống là đúng thứ tự. Không gọi mạng,
-// chỉ nói chuyện với hệ điều hành qua notificationService.
-// Xong thì màn Nhắc nhở nhận bản mới về mà vẽ lại công tắc.
-// ══════════════════════════════════════════════════════════
-
-// BẬT LỜI NHẮC BƯỚC 1. Màn Nhắc nhở gọi vào đây, kèm bữa nào và giờ mới.
+// Màn Nhắc nhở gọi mỗi lần gạt công tắc hoặc đổi giờ. Không gọi mạng, chỉ nói
+// chuyện với hệ điều hành qua notificationService, xong thì trả bản mới cho màn vẽ lại.
 export async function applyReminder(
   state: ReminderMap,
   key: MealKey,
   next: { enabled: boolean; time: string },
   content: { title: string; body: string }
 ): Promise<ReminderMap> {
-  // BẬT LỜI NHẮC BƯỚC 2. Chép ra bản mới rồi mới sửa, không đụng vào bản cũ.
-  // React so bằng địa chỉ ô nhớ, sửa thẳng bản cũ là màn không nhận ra có gì đổi.
+  // Chép ra bản mới rồi mới sửa, không đụng vào bản cũ
+  // React so bằng địa chỉ ô nhớ, sửa thẳng bản cũ là màn không nhận ra gì đổi
   const updated: ReminderMap = { ...state, [key]: { ...state[key] } };
 
-  // BẬT LỜI NHẮC BƯỚC 3. Hủy lịch cũ của bữa này TRƯỚC, rồi CHỜ hủy xong.
-  // Bỏ bước này là đổi giờ xong vẫn còn lịch cũ chạy, một ngày kêu hai lần.
+  // Hủy lịch cũ của bữa này TRƯỚC, rồi CHỜ hủy xong
+  // Bỏ đoạn này là đổi giờ xong vẫn còn lịch cũ chạy, một ngày kêu hai lần
   await cancelNotification(updated[key].id);
   updated[key].id = null;
   updated[key].time = next.time;
@@ -161,8 +137,8 @@ export async function applyReminder(
   if (next.enabled) {
     const parsed = parseTime(next.time);
     if (parsed) {
-      // BẬT LỜI NHẮC BƯỚC 4. notificationService.scheduleDailyReminder
-      // gọi expo-notifications và trả notification id do hệ điều hành cấp.
+      // Đi tiếp: src/utils/notifications/notificationService.ts
+      // Nó gọi expo-notifications và trả về mã lịch do hệ điều hành cấp
       const id = await scheduleDailyReminder(parsed[0], parsed[1], content);
       // Mã rỗng nghĩa là người dùng chưa cho quyền thông báo.
       // Phải gạt công tắc về tắt, kẻo màn hiện bật mà thực ra chẳng có lịch nào.
@@ -171,7 +147,7 @@ export async function applyReminder(
     }
   }
 
-  // BẬT LỜI NHẮC BƯỚC 5. Ghi xuống máy rồi trả bản mới cho màn vẽ lại.
+  // Ghi xuống máy rồi trả bản mới cho màn vẽ lại
   await persist(updated);
   return updated;
 }
@@ -181,22 +157,16 @@ export function enabledCount(state: ReminderMap) {
   return MEAL_KEYS.filter((k) => state[k].enabled).length;
 }
 
-// ══════════════════════════════════════════════════════════
-// DỌN KHI ĐĂNG XUẤT
-//
-// Đến từ authSession lúc đăng xuất. Ba bước, đọc từ trên xuống là đúng thứ tự.
-// Phải dọn, kẻo máy đổi tài khoản mà vẫn kêu lịch của người trước.
-// Xong thì authSession chạy tiếp phần xóa thẻ đăng nhập.
-// ══════════════════════════════════════════════════════════
-
-// DỌN BƯỚC 1. Đọc lại bản đã lưu để lấy mã của bốn lời nhắc.
+// authSession gọi lúc đăng xuất. Phải dọn, kẻo máy đổi tài khoản mà vẫn kêu
+// lịch của người trước.
+// Đọc lại bản đã lưu để lấy mã của bốn lời nhắc
 export async function cancelAllReminders() {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       const saved = JSON.parse(raw) as Partial<ReminderMap>;
-      // DỌN BƯỚC 2. Hủy cả bốn lịch một lượt rồi CHỜ.
-      // Cho chạy song song vì bốn cái không liên quan gì nhau.
+      // Hủy cả bốn lịch một lượt rồi CHỜ
+      // Cho chạy song song vì bốn cái không liên quan gì nhau
       await Promise.all(MEAL_KEYS.map((k) => cancelNotification(saved[k]?.id)));
     }
     // Hủy nốt lịch của bản cũ, phòng người dùng đăng xuất mà chưa từng mở màn Nhắc nhở
@@ -205,6 +175,6 @@ export async function cancelAllReminders() {
   } catch {
   // Hủy hụt cũng kệ, đăng xuất vẫn phải đi tiếp. Kẹt ở đây là người dùng thoát không được.
   }
-  // DỌN BƯỚC 3. Xóa sạch ba khóa trong máy. Nằm ngoài try nên lỗi ở trên vẫn chạy tới đây.
+  // Xóa sạch ba khóa trong máy, nằm ngoài try nên lỗi ở trên vẫn chạy tới đây
   await AsyncStorage.multiRemove([STORAGE_KEY, LEGACY_ID_KEY, LEGACY_TIME_KEY]);
 }

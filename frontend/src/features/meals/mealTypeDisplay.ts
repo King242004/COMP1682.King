@@ -7,7 +7,12 @@
 // Khi lỗi:    không có nhánh lỗi
 
 // Mọi màn lấy từ đây nên bốn buổi luôn cùng màu và cùng biểu tượng khắp app
-export type MealTypeKey = "breakfast" | "lunch" | "dinner" | "snack";
+import { theme } from "@/ui/theme";
+import type { MealType } from "./mealTypes";
+
+// Trước đây file này khai lại nguyên một union giống hệt MealType ở mealTypes.ts.
+// Nay chỉ đặt tên khác cho cùng một kiểu, nên thêm bớt buổi ăn chỉ sửa một chỗ.
+export type MealTypeKey = MealType;
 
 export type MealTypeMeta = {
   key: MealTypeKey;
@@ -19,11 +24,13 @@ export type MealTypeMeta = {
   bg: string;
 };
 
+// Màu lấy từ theme chứ không gõ mã màu, vì cả bốn màu này đều đã có tên ở đó.
+// Gõ tay thì đổi tông màu app một chỗ mà bốn biểu tượng bữa ăn vẫn màu cũ.
 export const MEAL_TYPE_META: MealTypeMeta[] = [
-  { key: "breakfast", icon: "sunny", color: "#FF8A3D", bg: "rgba(255,138,61,0.12)" },
-  { key: "lunch", icon: "partly-sunny", color: "#0891B2", bg: "rgba(8,145,178,0.10)" },
-  { key: "dinner", icon: "moon", color: "#6366F1", bg: "rgba(99,102,241,0.12)" },
-  { key: "snack", icon: "nutrition", color: "#059669", bg: "rgba(5,150,105,0.12)" },
+  { key: "breakfast", icon: "sunny", color: theme.colors.accent2, bg: "rgba(255,138,61,0.12)" },
+  { key: "lunch", icon: "partly-sunny", color: theme.colors.primary, bg: theme.colors.tint },
+  { key: "dinner", icon: "moon", color: theme.colors.indigo, bg: "rgba(99,102,241,0.12)" },
+  { key: "snack", icon: "nutrition", color: theme.colors.accent, bg: "rgba(5,150,105,0.12)" },
 ];
 
 export const MEAL_TYPE_BY_KEY: Record<string, MealTypeMeta> = Object.fromEntries(

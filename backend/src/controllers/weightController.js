@@ -56,8 +56,8 @@ exports.logWeight = async (req, res) => {
   if (day > requestTodayKey(req))
     return res.status(400).json({ message: "Cannot log weight for a future date." });
 
-    // Cân nặng chỉ cần chính xác đến một chữ số thập phân.
-    const rounded = Math.round(kg * 10) / 10;
+  // Cân nặng chỉ cần chính xác đến một chữ số thập phân.
+  const rounded = Math.round(kg * 10) / 10;
   const log = await WeightLog.findOneAndUpdate(
     { user: req.user.id, date: day },
     { $set: { weightKg: rounded } },
@@ -90,8 +90,8 @@ exports.getWeights = async (req, res) => {
   });
 };
 
-// Phải đồng bộ lại vì nếu xóa đúng lần cân mới nhất thì hồ sơ đang giữ
-// một con số không còn tồn tại trong nhật ký nữa.
+// Nếu còn log thì đồng bộ về lần cân mới nhất. Nếu đã xóa hết log thì giữ cân nặng hồ sơ,
+// vì số đó còn có thể đến độc lập từ Onboarding hoặc màn Sửa hồ sơ.
 exports.deleteWeight = async (req, res) => {
   const log = await WeightLog.findById(req.params.id);
   if (!log) return res.status(404).json({ message: "Entry not found." });

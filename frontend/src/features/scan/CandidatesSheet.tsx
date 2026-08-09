@@ -31,51 +31,51 @@ export function CandidatesSheet({ visible, candidates, previewUri, onPick, onMan
       subtitle={t.scan.pickClosest}
       onClose={onClose}
     >
-          {previewUri && (
-            <Image source={{ uri: previewUri }} style={styles.preview} resizeMode="cover" />
-          )}
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.list}>
-              {candidates?.map((c, i) => {
-                const pct = Math.round(c.confidence * 100);
-                const isTop = i === 0;
-                return (
-                  <Pressable key={i} onPress={() => onPick(c)}>
-                    <Card style={[styles.candidateCard, isTop && styles.candidateCardTop]}>
-                      <View style={styles.candidateRow}>
-                        <View style={styles.candidateInfo}>
-                          <View style={styles.nameRow}>
-                            <AppText variant="h2" style={styles.name}>{c.name}</AppText>
-                            {isTop && (
-                              <View style={styles.bestBadge}>
-                                <AppText style={styles.bestBadgeText}>{t.scan.bestMatch}</AppText>
-                              </View>
-                            )}
+      {previewUri && (
+        <Image source={{ uri: previewUri }} style={styles.preview} resizeMode="cover" />
+      )}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.list}>
+          {candidates?.map((c, i) => {
+            const pct = Math.round(c.confidence * 100);
+            const isTop = i === 0;
+            return (
+              <Pressable key={i} onPress={() => onPick(c)}>
+                <Card style={[styles.candidateCard, isTop && styles.candidateCardTop]}>
+                  <View style={styles.candidateRow}>
+                    <View style={styles.candidateInfo}>
+                      <View style={styles.nameRow}>
+                        <AppText variant="h2" style={styles.name}>{c.name}</AppText>
+                        {isTop && (
+                          <View style={styles.bestBadge}>
+                            <AppText style={styles.bestBadgeText}>{t.scan.bestMatch}</AppText>
                           </View>
-                          {c.portionDescription && (
-                            <AppText variant="muted" style={styles.portion}>{c.portionDescription}</AppText>
-                          )}
-                          <View style={styles.macroRow}>
-                            <AppText style={styles.kcal}>{c.calories} {t.common.kcal}</AppText>
-                            <AppText style={styles.macros}>P {c.protein}g · C {c.carbs}g · F {c.fat}g</AppText>
-                          </View>
-                        </View>
-                        <View style={styles.confidenceCol}>
-                          <AppText style={[styles.confidence, isTop && styles.confidenceTop]}>{pct}%</AppText>
-                          <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
-                        </View>
+                        )}
                       </View>
-                    </Card>
-                  </Pressable>
-                );
-              })}
-              <Pressable onPress={onManual} style={styles.manualWrap}>
-                <View style={styles.manualBox}>
-                  <AppText style={styles.manualText}>{t.scan.noneEnterManually}</AppText>
-                </View>
+                      {c.portionDescription && (
+                        <AppText variant="muted" style={styles.portion}>{c.portionDescription}</AppText>
+                      )}
+                      <View style={styles.macroRow}>
+                        <AppText style={styles.kcal}>{c.calories} {t.common.kcal}</AppText>
+                        <AppText style={styles.macros}>P {c.protein}g · C {c.carbs}g · F {c.fat}g</AppText>
+                      </View>
+                    </View>
+                    <View style={styles.confidenceCol}>
+                      <AppText style={[styles.confidence, isTop && styles.confidenceTop]}>{pct}%</AppText>
+                      <Ionicons name="chevron-forward" size={18} color={theme.colors.subtle} />
+                    </View>
+                  </View>
+                </Card>
               </Pressable>
+            );
+          })}
+          <Pressable onPress={onManual} style={styles.manualWrap}>
+            <View style={styles.manualBox}>
+              <AppText style={styles.manualText}>{t.scan.noneEnterManually}</AppText>
             </View>
-          </ScrollView>
+          </Pressable>
+        </View>
+      </ScrollView>
     </ScanBottomSheet>
   );
 }

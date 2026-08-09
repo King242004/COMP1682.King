@@ -27,10 +27,8 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
   const [dailyTotals, setDailyTotals] = useState<DailyTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [isLoading, setIsLoading] = useState(false);
 
-  // ══════════════════════════════════════════════════════════
   // ĐỌC MÓN. Hai hàm đọc thuần
   // Phải nằm trên cùng vì các hàm khối dưới có nhắc tới trong mảng phụ thuộc
-  // ══════════════════════════════════════════════════════════
 
   // Tải món của một ngày, tổng lấy thẳng từ backend chứ không tự cộng ở app
   const fetchMealsByDate = useCallback(async (date: string) => {
@@ -57,10 +55,8 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token]);
 
-  // ══════════════════════════════════════════════════════════
   // Đến từ AddMealScreen lúc bấm Lưu
   // Đi tiếp: src/features/meals/mealsApi.ts
-  // ══════════════════════════════════════════════════════════
 
   // Đường một món, dùng cho các chỗ chỉ thêm lẻ
   const addMeal = useCallback(async (meal: NewMeal) => {
@@ -82,10 +78,8 @@ export function MealsProvider({ children }: { children: React.ReactNode }) {
     markHealthDataChanged();
   }, [markHealthDataChanged, token]);
 
-  // ══════════════════════════════════════════════════════════
   // SỬA VÀ XÓA. Đến từ EditMealScreen và MealDetailScreen
   // Khác khối trên ở chỗ KHÔNG tải lại cả ngày, mà tự trừ cộng tại chỗ
-  // ══════════════════════════════════════════════════════════
 
   const updateMeal = useCallback(async (id: string, updates: UpdateMeal) => {
     if (!token) return;

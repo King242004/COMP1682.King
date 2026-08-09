@@ -8,13 +8,11 @@
 //
 // Điểm quan trọng khi bảo vệ: database chỉ giữ bản BĂM của mã,
 // KHÔNG bao giờ giữ 6 số thật. Ai đọc trộm database cũng không dùng được.
-const mongoose = require("mongoose");
-
-// Bảng mã xác minh 6 số, dùng cho cả đăng ký lẫn quên mật khẩu.
+// codeHash còn có select false nên mặc định cũng không đọc ra được.
+//
 // Nơi ghi vào: khi bấm gửi mã.
-// Nơi xóa đi: khi dùng đúng mã, khi hết hạn, khi sai quá 5 lần, và khi xóa tài khoản.
-// codeHash có select false nên mặc định không đọc ra được.
-// Database chỉ giữ bản băm, KHÔNG bao giờ giữ mã thật.
+// Nơi xóa đi:  khi dùng đúng mã, khi hết hạn, khi sai quá 5 lần, và khi xóa tài khoản.
+const mongoose = require("mongoose");
 const otpSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, trim: true, lowercase: true },

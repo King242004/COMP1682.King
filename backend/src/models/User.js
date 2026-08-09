@@ -10,12 +10,15 @@
 // Khi lỗi:    thiếu trường bắt buộc hoặc sai kiểu thì Mongoose chặn lại,
 //             hàm controller gọi User.save/Create bắt lỗi và trả response
 //
+// Nơi ghi vào: đăng ký, thiết lập hồ sơ lần đầu, màn Sửa hồ sơ, và màn Cài đặt.
+// Nơi đọc ra:  gần như mọi màn, vì mục tiêu calo và bệnh nền nằm ở đây.
+//
 // Hai trường cần chú ý:
 //   password có select false nên mặc định KHÔNG bị đọc ra.
 //     Muốn lấy phải xin thêm bằng .select("+password"), chỉ lúc đăng nhập mới cần.
 //   conditions là danh sách bệnh nền, chính là thứ mà lớp lọc an toàn dựa vào.
 const mongoose = require("mongoose");
-const { WEIGHT_GOALS, WEIGHT_GOAL_VALUES, HEALTH_CONDITIONS } = require("../config/nutritionConstants");
+const { WEIGHT_GOALS, WEIGHT_GOAL_VALUES, HEALTH_CONDITIONS, ACTIVITY_LEVELS, DEFAULT_ACTIVITY_LEVEL } = require("../config/nutritionConstants");
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -45,10 +48,12 @@ const userSchema = new mongoose.Schema(
       enum: WEIGHT_GOAL_VALUES,
       default: WEIGHT_GOALS.maintain,
     },
+    // Danh sách mức lấy từ nutritionConstants, đúng bằng các khóa của bảng hệ số
+    // nhân TDEE. Gõ tay ở đây thì thêm một mức mới là model với công thức lệch nhau.
     activityLevel: {
       type: String,
-      enum: ["sedentary", "moderate", "active"],
-      default: "moderate",
+      enum: ACTIVITY_LEVELS,
+      default: DEFAULT_ACTIVITY_LEVEL,
     },
     // Danh sách tình trạng sức khỏe, ví dụ tiểu đường hoặc cao huyết áp.
     // CÓ enum vì đây là trường nuôi thẳng lớp lọc an toàn. Trước đây nó là
@@ -63,7 +68,6 @@ const userSchema = new mongoose.Schema(
     language: { type: String, enum: ["vi", "en"] },
     tastePreferences: { type: String, default: "" },
     isPrivate: { type: Boolean, default: false },
-
   },
   { timestamps: true }
 );

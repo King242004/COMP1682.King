@@ -11,7 +11,7 @@
 import { useEffect, useRef } from "react";
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { compressImage } from "@/features/scan/scanApi";
+import { compressForUpload } from "@/utils/imageCompress";
 import { useT } from "@/i18n";
 
 export function PhotoPickerModal({
@@ -25,15 +25,12 @@ export function PhotoPickerModal({
   onClose: () => void;
   onDone: (uris: string[]) => void;
 }) {
-  // ══════════════════════════════════════════════════════════
   // MỞ BỘ CHỌN ẢNH
   //
-  // Đến từ màn Tạo bài và màn Sửa bài. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Đến từ màn Tạo bài và màn Sửa bài.
   // Không gọi mạng, chỉ nói chuyện với bộ chọn ảnh của hệ điều hành.
   // Xong thì trả danh sách đường dẫn ảnh về cho màn cha.
-  // ══════════════════════════════════════════════════════════
-
-  // MỞ BỘ CHỌN ẢNH BƯỚC 1. Nhận cờ hiện với trần số ảnh từ màn cha.
+  // Nhận cờ hiện với trần số ảnh từ màn cha.
   const t = useT();
   // Cờ chặn mở hai lần. Bộ chọn ảnh của hệ điều hành mà mở chồng là treo màn.
   const opening = useRef(false);
@@ -45,7 +42,7 @@ export function PhotoPickerModal({
   onCloseRef.current = onClose;
   onDoneRef.current = onDone;
 
-  // MỞ BỘ CHỌN ẢNH BƯỚC 2. Cờ hiện bật lên thì tự mở bộ chọn, không ai bấm thêm.
+  // Cờ hiện bật lên thì tự mở bộ chọn, không ai bấm thêm.
   // Component này KHÔNG vẽ gì cả, nó chỉ là cái cớ để chạy đoạn mở bộ chọn ảnh.
   useEffect(() => {
     if (!visible || opening.current) return;
@@ -61,7 +58,9 @@ export function PhotoPickerModal({
         });
         if (!result.canceled && result.assets.length > 0) {
           const uris = await Promise.all(
-            result.assets.slice(0, maxCount).map((asset) => compressImage(asset.uri))
+            result.assets.slice(0, maxCount).map(async (asset) =>
+              (await compressForUpload(asset.uri))?.uri ?? asset.uri
+            )
           );
           onDoneRef.current(uris);
         }

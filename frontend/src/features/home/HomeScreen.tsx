@@ -22,8 +22,7 @@ import { getPlanMeals, markPlanEaten, deletePlanMeal, type PlanMeal } from "@/fe
 import { getInsight, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight } from "@/features/coach/coachApi";
 import { SuggestMealCard } from "@/features/plan/SuggestMealCard";
 import { ProgressRing } from "@/ui/components/ProgressRing";
-import { getCurrentWeekDays } from "@/features/home/weekDates";
-import { dateKey } from "@/utils/dateUtils";
+import { dateKey, getCurrentWeekDays } from "@/utils/dateUtils";
 import { resolveLanguage, localeTag } from "@/utils/languageUtils";
 import { useT } from "@/i18n";
 import { theme, shadow } from "@/ui/theme";
@@ -63,13 +62,11 @@ export default function HomeScreen() {
   // Nhớ số revision đã xử lý, để biết dữ liệu sức khỏe có thật sự đổi hay không.
   const handledRevisionRef = useRef(0);
 
-  // ══════════════════════════════════════════════════════════
   // BA HÀM TẢI DỮ LIỆU
   //
-  // Không phải luồng. Ba hàm độc lập, mỗi hàm một nguồn, gọi cái nào trước cũng được.
+  // Ba hàm độc lập, mỗi hàm một nguồn, gọi cái nào trước cũng được.
   // Cả ba đều được gọi ở khối MỞ TRANG CHỦ bên dưới, và ở nút kéo xuống làm mới.
   // Hàm nào hỏng thì phần đó về rỗng, hai phần kia vẫn hiện bình thường.
-  // ══════════════════════════════════════════════════════════
 
   // Buổi tập của ĐÚNG ngày đang xem, cùng tổng calo đã đốt.
   // Đường đi: getExercisesByDate → apiClient → GET /exercise?date=...
@@ -100,26 +97,24 @@ export default function HomeScreen() {
     }
   }, [token, todayKey]);
 
-  // ══════════════════════════════════════════════════════════
   // ĐÁNH DẤU ĐÃ ĂN
   //
-  // Đến từ nút "Đã ăn" trên dòng món dự kiến. Bốn bước, đọc từ trên xuống là đúng thứ tự.
+  // Đến từ nút Đã ăn trên dòng món dự kiến.
   // Xong thì món dự kiến biến mất và món thật hiện lên trong nhật ký bữa đó.
-  // ══════════════════════════════════════════════════════════
 
-  // ĐÃ ĂN BƯỚC 1. Người dùng bấm nút là vào đây.
+  // Bấm nút là vào đây
   // Cửa chặn ở dòng dưới cho bấm nhanh hai lần, kẻo ghi trùng món vào nhật ký.
   const eatPlanned = async (p: PlanMeal) => {
     if (!token || eatingPlanRef.current) return;
     eatingPlanRef.current = true;
     try {
-      // ĐÃ ĂN BƯỚC 2. planApi.markPlanEaten → POST /plan/:id/eaten
+      // Đi tiếp: src/features/plan/planApi.ts, rồi POST /plan/:id/eaten
       // → planController.markEaten tạo Meal rồi đánh dấu PlanMeal.done.
       await markPlanEaten(token, p.id);
-      // ĐÃ ĂN BƯỚC 3. Tải lại cả hai danh sách, chạy song song vì không phụ thuộc nhau.
+      // Tải lại cả hai danh sách, chạy song song vì không phụ thuộc nhau
       // Phải tải lại vì planController.markEaten tạo Meal có _id mới mà state hiện tại chưa biết.
       await Promise.all([fetchMealsByDate(todayKey), loadPlanToday()]);
-      // ĐÃ ĂN BƯỚC 4. Báo cho cả app biết dữ liệu sức khỏe đã đổi.
+      // Báo cho cả app biết dữ liệu sức khỏe đã đổi
       // Nhờ đó lần sau quay lại màn này, Coach mới chịu gọi AI tính lại điểm.
       markHealthDataChanged();
     } catch {
@@ -129,14 +124,12 @@ export default function HomeScreen() {
     }
   };
 
-  // ══════════════════════════════════════════════════════════
   // XÓA MÓN DỰ KIẾN
   //
-  // Đến từ dấu x trên dòng món dự kiến. Ba bước, đọc từ trên xuống là đúng thứ tự.
+  // Đến từ dấu x trên dòng món dự kiến.
   // Ở đây chỉ xóa được, muốn sửa món thì phải vào màn Kế hoạch tuần.
-  // ══════════════════════════════════════════════════════════
 
-  // XÓA DỰ KIẾN BƯỚC 1. Hỏi lại cho chắc trước khi xóa.
+  // Ra màn: hộp thoại hỏi lại trước khi xóa
   const removePlanned = (p: PlanMeal) => {
     Alert.alert(t.home.removePlanTitle, t.home.removePlanMsg(p.name), [
       { text: t.common.cancel, style: "cancel" },
@@ -145,11 +138,11 @@ export default function HomeScreen() {
         style: "destructive",
         onPress: async () => {
           if (!token) return;
-          // XÓA DỰ KIẾN BƯỚC 2. Bỏ dòng khỏi state trước khi planController.deletePlanMeal hoàn tất.
+          // Bỏ dòng khỏi màn TRƯỚC, chưa chờ backend xóa xong, cho nhìn nhanh tay
           // Làm vậy để bấm là thấy mất luôn, không phải đợi một lượt mạng.
           setPlanToday((prev) => prev.filter((x) => x.id !== p.id));
           try {
-            // XÓA DỰ KIẾN BƯỚC 3. Giờ mới gửi lệnh xóa thật rồi CHỜ.
+            // Giờ mới gửi lệnh xóa thật rồi CHỜ
             // Đường đi: deletePlanMeal → apiClient → DELETE /plan/:id
             //           → planController.deletePlanMeal
             await deletePlanMeal(token, p.id);
@@ -162,24 +155,22 @@ export default function HomeScreen() {
     ]);
   };
 
-  // ══════════════════════════════════════════════════════════
   // LỜI KHUYÊN COACH
   //
-  // Đến từ khối MỞ TRANG CHỦ bên dưới. Năm bước, đọc từ trên xuống là đúng thứ tự.
-  // Đây là chỗ TỐN LƯỢT GỌI AI, nên có bộ nhớ đệm và có cửa chặn ở BƯỚC 1.
+  // Đến từ khối mở Trang chủ bên dưới.
+  // Đây là chỗ TỐN LƯỢT GỌI AI, nên có bộ nhớ đệm và có cửa chặn ngay đầu hàm.
   // Xong thì thẻ AI Coach ở cuối màn hiện điểm với câu tóm tắt.
-  // ══════════════════════════════════════════════════════════
 
-  // LỜI KHUYÊN BƯỚC 1. Chỉ chạy cho hôm nay. Đang xem ngày cũ thì xóa trắng rồi thôi,
+  // Chỉ chạy cho hôm nay. Đang xem ngày cũ thì xóa trắng rồi thôi,
   // vì Coach chỉ nhận xét ngày hiện tại.
   const loadInsight = useCallback(async (force = false) => {
     if (!token || selectedDate !== todayKey) { setCoachInsight(null); return; }
-    // LỜI KHUYÊN BƯỚC 2. Lấy số thứ tự cho lần gọi này.
+    // Lấy số thứ tự cho lần gọi này
     // Từ đây trở xuống, chỗ nào cũng so lại số. Số không còn khớp nghĩa là
     // đã có lần gọi mới hơn, kết quả của mình đã cũ nên phải bỏ, đừng đè lên bản mới.
     // Không có bước này là bấm đổi ngày liên tục sẽ thấy dữ liệu nhảy loạn.
     const requestId = ++insightRequestIdRef.current;
-    // LỜI KHUYÊN BƯỚC 3. Xem bộ nhớ đệm trong máy trước, hiện ngay cho đỡ chờ.
+    // Xem bộ nhớ đệm trong máy trước, hiện ngay cho đỡ chờ
     const cached = await getCachedInsight(todayKey, lang);
     if (requestId !== insightRequestIdRef.current) return;
     if (cached) {
@@ -189,11 +180,11 @@ export default function HomeScreen() {
       if (!force && Date.now() - cached.at < INSIGHT_TTL_MS) return;
     }
     try {
-      // LỜI KHUYÊN BƯỚC 4. coachApi.getInsight → GET /coach/insight
+      // Đi tiếp: src/features/coach/coachApi.ts, rồi GET /coach/insight
       // → coachController.getInsight → aiClient.generateWithFallback.
       const fresh = await getInsight(token, todayKey, lang);
       if (requestId !== insightRequestIdRef.current) return;
-      // LỜI KHUYÊN BƯỚC 5. Hiện bản mới rồi cất vào đệm cho lần mở màn sau.
+      // Hiện bản mới rồi cất vào đệm cho lần mở màn sau
       setCoachInsight(fresh);
       cacheInsight(todayKey, lang, fresh);
     } catch {
@@ -202,15 +193,13 @@ export default function HomeScreen() {
     }
   }, [token, selectedDate, todayKey, lang]);
 
-  // ══════════════════════════════════════════════════════════
   // MỞ TRANG CHỦ
   //
-  // KHÔNG ai bấm, tự chạy mỗi lần màn được nhìn thấy. Năm bước, đọc từ trên xuống
-  // là đúng thứ tự. BƯỚC 3 là chặng chờ, sáu lượt gọi mạng chạy song song.
+  // KHÔNG ai bấm, tự chạy mỗi lần màn được nhìn thấy.
+  // Có một chặng chờ, sáu lượt gọi mạng bắn đi song song.
   // Xong thì màn vẽ lại vòng calo, nhật ký bữa, thẻ Hoạt động và thẻ Coach.
-  // ══════════════════════════════════════════════════════════
 
-  // MỞ TRANG CHỦ BƯỚC 1. Lối phụ, người dùng kéo màn hình xuống để làm mới.
+  // Lối phụ, người dùng kéo màn hình xuống để làm mới
   // Khác lối chính ở hai chỗ: có vòng xoay ở đầu màn, và ÉP Coach gọi AI lại.
   // Dùng allSettled chứ không all, để một nguồn hỏng thì năm nguồn kia vẫn về.
   const onRefresh = useCallback(async () => {
@@ -232,7 +221,7 @@ export default function HomeScreen() {
     loadPlanToday,
   ]);
 
-  // MỞ TRANG CHỦ BƯỚC 2. Lối chính. Dùng useFocusEffect chứ không useEffect,
+  // Lối chính. Dùng useFocusEffect chứ không useEffect,
   // nên chạy mỗi lần màn được NHÌN THẤY, không phải chỉ một lần lúc dựng.
   // Nhờ vậy món thêm ở màn Thêm món hay buổi tập ghi ở màn khác đều hiện ra ngay.
   useFocusEffect(
@@ -244,13 +233,13 @@ export default function HomeScreen() {
         setSelectedDate(freshToday);
         return;
       }
-      // MỞ TRANG CHỦ BƯỚC 3. Bắn hết đi cùng lúc, KHÔNG chờ cái nào cả.
+      // Bắn hết đi cùng lúc, KHÔNG chờ cái nào cả
       // Cố ý không await: chờ tuần tự thì màn đứng im tới khi lượt cuối về.
       // Cứ để mỗi hàm tự đặt state của mình, phần nào về trước hiện trước.
       void fetchMealsByDate(selectedDate).catch(() => {});
       void fetchMealHistory().catch(() => {});
       loadExercises();
-      // MỞ TRANG CHỦ BƯỚC 4. So số revision với lần trước, để biết dữ liệu sức khỏe
+      // So số đếm với lần trước, để biết dữ liệu sức khỏe
       // có thật sự đổi hay chỉ là người dùng quay về màn này.
       // Chỉ khi đổi mới ép Coach gọi AI lại, kẻo mỗi lần bấm qua bấm lại là tốn một lượt.
       const healthChanged = revision !== handledRevisionRef.current;
@@ -263,23 +252,18 @@ export default function HomeScreen() {
       fetchMealsByDate,
       fetchMealHistory,
       loadExercises,
-        loadInsight,
+      loadInsight,
       loadPlanToday,
       revision,
     ])
   );
 
-  // Mục tiêu số buổi tập mỗi tuần do người dùng tự đặt trong hồ sơ.
-  // Đây là dữ liệu để vẽ giao diện, nên đặt sau luồng tải và trước các giá trị hiển thị khác.
-
-  // ══════════════════════════════════════════════════════════
   // XÓA BUỔI TẬP
   //
   // Đến từ nút thùng rác trên một dòng buổi tập ở thẻ Hoạt động.
-  // Ba bước, đọc từ trên xuống là đúng thứ tự. Xóa được ở bất kỳ ngày nào đang xem.
-  // ══════════════════════════════════════════════════════════
+  // Xóa được ở bất kỳ ngày nào đang xem.
 
-  // XÓA BUỔI TẬP BƯỚC 1. Hỏi lại cho chắc trước khi xóa.
+  // Ra màn: hộp thoại hỏi lại trước khi xóa
   const onDeleteExercise = (item: Exercise) => {
     Alert.alert(t.home.deleteWorkoutTitle, t.home.removeFromLog(item.name), [
       { text: t.common.cancel, style: "cancel" },
@@ -288,12 +272,12 @@ export default function HomeScreen() {
         style: "destructive",
         onPress: async () => {
           if (!token) return;
-          // XÓA BUỔI TẬP BƯỚC 2. Cập nhật state trước khi exerciseController.deleteExercise hoàn tất.
+          // Bỏ dòng khỏi màn TRƯỚC, chưa chờ backend xóa xong, cho nhìn nhanh tay
           // Trừ tay ở đây chứ không tính lại, để con số đổi cùng lúc với dòng biến mất.
           setExercises((prev) => prev.filter((e) => e.id !== item.id));
           setTotalBurned((prev) => prev - item.caloriesBurned);
           try {
-            // XÓA BUỔI TẬP BƯỚC 3. Giờ mới gửi lệnh xóa thật rồi CHỜ.
+            // Giờ mới gửi lệnh xóa thật rồi CHỜ
             // Đường đi: deleteExercise → apiClient → DELETE /exercise/:id
             //           → exerciseController.deleteExercise
             await deleteExercise(token, item.id);
@@ -307,12 +291,10 @@ export default function HomeScreen() {
     ]);
   };
 
-  // ══════════════════════════════════════════════════════════
   // TÍNH SỐ ĐỂ VẼ
   //
-  // Không phải luồng, không gọi mạng. Chỉ là mấy phép tính từ state đã có,
+  // không gọi mạng. Chỉ là mấy phép tính từ state đã có,
   // chạy lại mỗi lần màn vẽ. Xong thì phần JSX ở dưới lấy ra hiện.
-  // ══════════════════════════════════════════════════════════
 
   // Mục tiêu có thể chưa có nếu hồ sơ chưa đủ. Không thay bằng con số mặc định,
   // vì như vậy người dùng sẽ tưởng app đã tính riêng cho mình.
@@ -644,7 +626,7 @@ export default function HomeScreen() {
             disabled={!isToday}
             style={({ pressed }) => isToday && pressed ? styles.pressedFaint : undefined}
           >
-          <Card style={styles.mealCard}>
+            <Card style={styles.mealCard}>
             <View style={styles.activityHeader}>
               <View style={[styles.iconBox, styles.flameBox]}>
                 <Ionicons name="flame" size={18} color={theme.colors.accent2} />
@@ -804,7 +786,7 @@ const styles = StyleSheet.create({
     alignItems: "center", gap: 5,
     backgroundColor: theme.colors.surface,
   },
-  dayChipLogged: { backgroundColor: "rgba(8,145,178,0.10)" },
+  dayChipLogged: { backgroundColor: theme.colors.tint },
   dayChipSelected: {
     backgroundColor: theme.colors.primary,
     shadowColor: theme.colors.primary,
@@ -869,7 +851,7 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 26, height: 26, borderRadius: 13,
     alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(8,145,178,0.10)",
+    backgroundColor: theme.colors.tint,
   },
   addBtnPressed: { backgroundColor: theme.colors.tint },
   mealRow: {
@@ -928,7 +910,7 @@ const styles = StyleSheet.create({
   coachTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   scoreChip: {
     flexDirection: "row", alignItems: "center", gap: 3,
-    backgroundColor: "rgba(8,145,178,0.10)",
+    backgroundColor: theme.colors.tint,
     paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99,
   },
   scoreVal: { fontSize: 11, fontWeight: "800", color: theme.colors.primary },

@@ -50,14 +50,12 @@ function SettingRow({ icon, label, value, last, onPress }: {
   );
 }
 
-// ══════════════════════════════════════════════════════════
 // MỞ HỒ SƠ
 //
-// Đến từ tab thứ tư. Hai bước, đọc từ trên xuống là đúng thứ tự.
+// Đến từ tab thứ tư.
 // Xong thì màn hiện tên, ảnh đại diện, và ba chỉ số tóm tắt.
-// ══════════════════════════════════════════════════════════
 
-// MỞ HỒ SƠ BƯỚC 1. Lấy hồ sơ với số liệu tóm tắt từ AuthContext.
+// Lấy hồ sơ với số liệu tóm tắt từ AuthContext.
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, stats, logout, fetchProfile, uploadAvatar } = useAuth();
@@ -65,7 +63,7 @@ export default function ProfileScreen() {
 
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
-  // MỞ HỒ SƠ BƯỚC 2. Tự tải lại mỗi lần quay về tab này, không ai bấm.
+  // Tự tải lại mỗi lần quay về tab này, không ai bấm.
   // Đường đi: AuthContext.fetchProfile → authApi → apiClient → GET /profile
   //           → profileController.getProfile → buildStats
   // Bên đó tính BMI với TDEE rồi trả về, nên hai số đó luôn khớp số đo mới nhất
@@ -74,15 +72,13 @@ export default function ProfileScreen() {
   // đâu cần hồ sơ mới mà vẫn bấm được.
   useFocusEffect(useCallback(() => { void fetchProfile().catch(() => {}); }, [fetchProfile]));
 
-  // ══════════════════════════════════════════════════════════
   // ĐỔI ẢNH ĐẠI DIỆN
   //
-  // Đến từ việc chạm vào ảnh đại diện. Bốn bước, đọc từ trên xuống
-  // là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 4.
+  // Đến từ việc chạm vào ảnh đại diện.
+  // Một chặng chờ mạng, lúc tải hồ sơ.
   // Xong thì ảnh đổi ngay trên màn, vì AuthContext đã cập nhật hồ sơ.
-  // ══════════════════════════════════════════════════════════
 
-  // ĐỔI ẢNH BƯỚC 1. Xin quyền đọc thư viện ảnh trước.
+  // Xin quyền đọc thư viện ảnh trước.
   // Chưa cho quyền thì dừng hẳn, không mở được thư viện.
   const handlePickAvatar = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -90,7 +86,7 @@ export default function ProfileScreen() {
       Alert.alert(t.profile.permissionNeeded, t.profile.avatarPermMsg);
       return;
     }
-    // ĐỔI ẢNH BƯỚC 2. Mở thư viện, cho cắt ảnh vuông ngay tại đó.
+    // Mở thư viện, cho cắt ảnh vuông ngay tại đó.
     // aspect [1,1] ép khung vuông vì avatar là hình tròn, ảnh chữ nhật sẽ bị cắt xấu.
     // quality 0.8 nén bớt cho nhẹ, đỡ bị imageUpload ở backend từ chối vì quá nặng.
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -99,11 +95,11 @@ export default function ProfileScreen() {
       aspect: [1, 1],
       quality: 0.8,
     });
-    // ĐỔI ẢNH BƯỚC 3. Người dùng bấm hủy giữa chừng thì thoát êm, không báo lỗi gì.
+    // Người dùng bấm hủy giữa chừng thì thoát êm, không báo lỗi gì.
     if (result.canceled || !result.assets?.[0]?.uri) return;
     setIsUploadingAvatar(true);
     try {
-      // ĐỔI ẢNH BƯỚC 4. Gửi ảnh lên rồi ĐỨNG ĐÂY CHỜ. Chặng này lâu vì phải tải file.
+      // Gửi ảnh lên rồi ĐỨNG ĐÂY CHỜ. Chặng này lâu vì phải tải file.
       // Đường đi: AuthContext.uploadAvatar → authApi → apiClient → POST /user/avatar
       //           → imageUpload → accountController.uploadAvatar → Cloudinary
       // Bên đó đẩy ảnh lên Cloudinary, cắt vuông, xóa ảnh cũ, rồi trả về đường dẫn.
@@ -116,14 +112,12 @@ export default function ProfileScreen() {
     }
   };
 
-  // ══════════════════════════════════════════════════════════
   // ĐĂNG XUẤT
   //
   // Đến từ nút Đăng xuất ở cuối màn. Ba bước, và THỨ TỰ ở đây là quan trọng.
   // Xong thì app về màn Đăng nhập, phiên với lời nhắc đã bị dọn sạch.
-  // ══════════════════════════════════════════════════════════
 
-  // ĐĂNG XUẤT BƯỚC 1. Hỏi lại cho chắc.
+  // Hỏi lại cho chắc.
   const handleLogout = () => {
     Alert.alert(t.profile.logout, t.profile.logoutMsg, [
       { text: t.common.cancel, style: "cancel" },
@@ -131,9 +125,9 @@ export default function ProfileScreen() {
         text: t.profile.logout,
         style: "destructive",
         onPress: () => {
-          // ĐĂNG XUẤT BƯỚC 2. Chuyển màn TRƯỚC, dọn phiên sau.
+          // Chuyển màn TRƯỚC, dọn phiên sau.
           router.replace("/auth/login");
-          // ĐĂNG XUẤT BƯỚC 3. Chờ hiệu ứng chuyển màn xong rồi mới dọn phiên.
+          // Chờ hiệu ứng chuyển màn xong rồi mới dọn phiên.
           // Dọn sớm là mấy màn đang mở render lại lúc chưa kịp thoát, nhìn giật một cái.
           // logout xóa phiên, hủy mọi lời nhắc, và dọn dữ liệu tạm của tài khoản.
           InteractionManager.runAfterInteractions(() => {
@@ -234,7 +228,7 @@ export default function ProfileScreen() {
           </Card>
         )}
 
-        {/* Health details */}
+        {/* Thông tin sức khỏe */}
         <SectionLabel>{t.profile.healthDetails}</SectionLabel>
         <Card style={styles.detailCard}>
           {/* Dùng danh mục ngôn ngữ như mọi hàng khác, nếu không sẽ hiện male hoặc female. */}
@@ -295,7 +289,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
   titleBlock: { gap: 4 },
 
-  // Setting/detail row
+  // Một dòng cài đặt hoặc dòng thông tin
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: theme.colors.border },
   rowLast: { borderBottomWidth: 0 },
   rowIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: theme.colors.tintSoft, alignItems: "center", justifyContent: "center" },

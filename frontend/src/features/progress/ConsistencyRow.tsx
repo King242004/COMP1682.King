@@ -6,12 +6,103 @@
 // Trả ra:     một hàng chấm, ngày có món thì tô đậm
 // Khi lỗi:    không có nhánh lỗi
 
-import { StyleSheet, View } from "react-native";
+import type { ReactNode } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import type { DaySummary } from "./progressSummary";
+
+export type LegendItem = {
+  color: string;
+  label: string;
+  line?: boolean;
+};
+
+export function ChartLegend({ items }: { items: LegendItem[] }) {
+  return (
+    <View style={legendStyles.row}>
+      {items.map((item) => (
+        <View key={item.label} style={legendStyles.item}>
+          <View style={[item.line ? legendStyles.line : legendStyles.dot, { backgroundColor: item.color }]} />
+          <AppText variant="subtle" style={legendStyles.text}>{item.label}</AppText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export type DayDot = {
+  key: string;
+  color: string;
+  isToday: boolean;
+  showRing?: boolean;
+  ringColor?: string;
+  content?: ReactNode;
+  todayLabelColor?: string;
+};
+
+export function DayDotRow({ days }: { days: DayDot[] }) {
+  const t = useT();
+  return (
+    <View style={dayDotStyles.row}>
+      {days.map((day, index) => (
+        <View key={day.key} style={dayDotStyles.col}>
+          <View
+            style={[
+              dayDotStyles.dot,
+              { backgroundColor: day.color },
+              day.showRing && {
+                borderWidth: 1.5,
+                borderColor: day.ringColor ?? theme.colors.primary,
+              },
+            ]}
+          >
+            {day.content}
+          </View>
+          <AppText
+            style={[
+              dayDotStyles.label,
+              day.isToday && dayDotStyles.labelToday,
+              day.isToday && day.todayLabelColor ? { color: day.todayLabelColor } : null,
+            ]}
+          >
+            {t.labels.daysShort[index]}
+          </AppText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function PeriodNav({ label, nextDisabled, onShift }: {
+  label: string;
+  nextDisabled: boolean;
+  onShift: (delta: 1 | -1) => void;
+}) {
+  return (
+    <View style={periodStyles.row}>
+      <Pressable onPress={() => onShift(-1)} hitSlop={8} style={({ pressed }) => pressed && periodStyles.pressed}>
+        <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />
+      </Pressable>
+      <AppText variant="body2" style={periodStyles.label}>{label}</AppText>
+      <Pressable
+        onPress={() => onShift(1)}
+        disabled={nextDisabled}
+        hitSlop={8}
+        style={({ pressed }) => pressed && periodStyles.pressed}
+      >
+        <Ionicons
+          name="chevron-forward"
+          size={22}
+          color={nextDisabled ? theme.colors.border : theme.colors.primary}
+        />
+      </Pressable>
+    </View>
+  );
+}
 
 // Bảy chấm thể hiện đúng mục tiêu, vượt mục tiêu, đã ghi hoặc chưa có dữ liệu.
 export function ConsistencyRow({ summaries, goal, daysLogged }: {
@@ -24,48 +115,32 @@ export function ConsistencyRow({ summaries, goal, daysLogged }: {
         <AppText variant="h2">{t.progress.consistency}</AppText>
         <AppText variant="subtle" style={styles.headerMeta}>{t.progress.daysLoggedOf7(daysLogged)}</AppText>
       </View>
-      <View style={styles.row}>
-        {summaries.map((day, i) => {
+      <DayDotRow
+        days={summaries.map((day) => ({
+          key: day.key,
           // Vượt mục tiêu dùng màu cam cảnh báo, màu đỏ chỉ dành cho lỗi hoặc xóa.
-          const bg = day.onTrack
+          color: day.onTrack
             ? theme.colors.accent
             : day.calories > goal
             ? theme.colors.accent2
             : day.calories > 0
             ? theme.colors.primary
-            : theme.colors.tint;
-          const showRing = day.isToday && day.calories === 0;
-          return (
-            <View key={day.key} style={styles.col}>
-              <View style={[styles.circle, { backgroundColor: bg }, showRing && styles.circleRing]}>
-                {(day.onTrack || day.calories > goal) && (
-                  <AppText style={styles.mark}>
-                    {day.onTrack ? "✓" : "!"}
-                  </AppText>
-                )}
-              </View>
-              <AppText style={[styles.dayLabel, day.isToday ? styles.dayLabelToday : null]}>
-                {t.labels.daysShort[i]}
-              </AppText>
-            </View>
-          );
-        })}
-      </View>
+            : theme.colors.tint,
+          isToday: day.isToday,
+          showRing: day.isToday && day.calories === 0,
+          content: (day.onTrack || day.calories > goal)
+            ? <AppText style={styles.mark}>{day.onTrack ? "✓" : "!"}</AppText>
+            : null,
+        }))}
+      />
       {/* Chú thích màu của các chấm. */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, styles.legendOnTrack]} />
-          <AppText variant="subtle" style={styles.legendText}>{t.progress.onTrackShort}</AppText>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, styles.legendLogged]} />
-          <AppText variant="subtle" style={styles.legendText}>{t.progress.logged}</AppText>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, styles.legendOver]} />
-          <AppText variant="subtle" style={styles.legendText}>{t.progress.overGoalShort}</AppText>
-        </View>
-      </View>
+      <ChartLegend
+        items={[
+          { color: theme.colors.accent, label: t.progress.onTrackShort },
+          { color: theme.colors.primary, label: t.progress.logged },
+          { color: theme.colors.accent2, label: t.progress.overGoalShort },
+        ]}
+      />
     </Card>
   );
 }
@@ -74,18 +149,27 @@ const styles = StyleSheet.create({
   card: { padding: theme.space.lg, gap: theme.space.md },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   headerMeta: { fontSize: 12 },
+  mark: { fontSize: 16, fontWeight: "800", color: "#fff" },
+});
+
+const legendStyles = StyleSheet.create({
+  row: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
+  item: { flexDirection: "row", alignItems: "center", gap: 4 },
+  dot: { width: 10, height: 10, borderRadius: 3 },
+  line: { width: 16, height: 2 },
+  text: { fontSize: 11 },
+});
+
+const dayDotStyles = StyleSheet.create({
   row: { flexDirection: "row", gap: 6 },
   col: { flex: 1, alignItems: "center", gap: 4 },
-  circle: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
-  circleRing: { borderWidth: 1.5, borderColor: theme.colors.primary },
-  mark: { fontSize: 16, fontWeight: "800", color: "#fff" },
-  dayLabel: { fontSize: 10, fontWeight: "500", color: theme.colors.subtle },
-  dayLabelToday: { fontWeight: "700", color: theme.colors.primary },
-  legend: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendOnTrack: { backgroundColor: theme.colors.accent },
-  legendLogged: { backgroundColor: theme.colors.primary },
-  legendOver: { backgroundColor: theme.colors.accent2 },
-  legendText: { fontSize: 11 },
+  dot: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  label: { fontSize: 10, fontWeight: "500", color: theme.colors.subtle },
+  labelToday: { fontWeight: "700", color: theme.colors.primary },
+});
+
+const periodStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  label: { fontWeight: "700" },
+  pressed: { opacity: 0.7 },
 });

@@ -9,6 +9,8 @@
 // Khi lỗi:    AI trả chữ thường không phải JSON thì vẫn giữ lại phần lời nói,
 //             chỉ mất phần hành động kèm theo. Thà thiếu nút còn hơn màn trắng.
 
+const { normalizeText } = require("../../utils/textNormalize");
+
 // Đọc câu trả lời AI. Không phải JSON thì coi cả chuỗi là lời nói.
 function parseCoachReply(rawText) {
   const text = String(rawText || "").trim();
@@ -18,7 +20,7 @@ function parseCoachReply(rawText) {
       ? parsed
       : { reply: text, meal: null, eating: false };
   } catch {
-    // A plain-text model response is still useful; only the structured action is lost.
+    // Câu trả lời dạng chữ thuần vẫn dùng được, chỉ mất phần hành động có cấu trúc.
     return { reply: text, meal: null, eating: false };
   }
 }
@@ -52,16 +54,8 @@ function photoNotFood(language) {
 }
 
 // Bỏ dấu câu và hạ chữ thường, để so hai câu trả lời có giống nhau không.
-function normalizeForComparison(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    // NFD bỏ được dấu thanh nhưng không chuyển đ thành d, nên xử lý đ riêng.
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+// Dùng hàm chung ở utils/textNormalize.
+const normalizeForComparison = normalizeText;
 
 // Chặn Coach lặp lại y nguyên câu vừa nói lượt trước.
 // AI hay bí mà nhắc lại, người dùng đọc thấy như máy hỏng.

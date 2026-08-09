@@ -18,8 +18,8 @@ import { theme } from "@/ui/theme";
 import { macroTargets } from "@/config/nutritionCalculations";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { MEAL_TYPE_BY_KEY } from "@/features/meals/mealTypeDisplay";
-import { dateKey } from "@/utils/dateUtils";
-import { mealSlotByHour } from "@/features/meals/mealHelpers";
+import { isLoggedOnSameDay, timeHHMM, todayKey } from "@/utils/dateUtils";
+import { mealPortionLabel, mealSlotByHour } from "@/features/meals/mealHelpers";
 import { resolveLanguage, localeTag } from "@/utils/languageUtils";
 import { AppText } from "@/ui/components/AppText";
 import { Button } from "@/ui/components/Button";
@@ -28,9 +28,7 @@ import { ProgressRing } from "@/ui/components/ProgressRing";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
-// ══════════════════════════════════════════════════════════
 // HAI MẢNH VẼ NHỎ. Tách ra cho phần JSX dưới đỡ rối
-// ══════════════════════════════════════════════════════════
 
 // Ra màn: một dòng chất gồm chấm màu, tên, số so mục tiêu và thanh chạy
 // Mục tiêu bằng 0 thì thanh để trống, vượt mục tiêu thì thanh dừng ở đầy
@@ -42,7 +40,7 @@ function MacroRow({ label, value, total, color }: {
     <View style={styles.macroRow}>
       <View style={styles.macroHead}>
         <View style={styles.macroLabelWrap}>
-      {/* Màu chấm phụ thuộc từng chất dinh dưỡng và chỉ biết khi chạy */}
+          {/* Màu chấm phụ thuộc từng chất dinh dưỡng và chỉ biết khi chạy */}
           <View style={[styles.macroDot, { backgroundColor: color }]} />
           <AppText variant="body2">{label}</AppText>
         </View>
@@ -55,18 +53,8 @@ function MacroRow({ label, value, total, color }: {
   );
 }
 
-// Rút giờ phút khỏi createdAt, chỉ dùng khi món ghi ĐÚNG ngày ăn
-function hhmm(iso: string) {
-  const d = new Date(iso);
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-// ══════════════════════════════════════════════════════════
 // Đến từ Trang chủ và màn Lịch sử món
 // Ra màn: chi tiết món cùng ba nút Sửa, Ghi lại, Xóa. KHÔNG gọi mạng
-// ══════════════════════════════════════════════════════════
 
 // Lấy mã món từ đường dẫn, lấy dữ liệu từ hai context
 export default function MealDetailScreen() {
@@ -99,15 +87,13 @@ export default function MealDetailScreen() {
   const eatenDateLabel = new Date(meal.date + "T00:00:00").toLocaleDateString(locale, {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
-  const loggedSameDay = dateKey(new Date(meal.createdAt)) === meal.date;
+  const loggedSameDay = isLoggedOnSameDay(meal.createdAt, meal.date);
   // Chỉ cho ghi lại món của ngày cũ. Món hôm nay mà ghi lại sẽ tạo bản trùng.
-  const eatenToday = meal.date === dateKey(new Date());
-  const portionLabel = meal.portionText || [meal.portionAmount, meal.portionUnit].filter(Boolean).join(" ");
+  const eatenToday = meal.date === todayKey();
+  const portionLabel = mealPortionLabel(meal);
 
-  // ══════════════════════════════════════════════════════════
   // Nút Xóa của màn này
   // Đi tiếp: MealsContext.tsx, rồi DELETE /meals/:id
-  // ══════════════════════════════════════════════════════════
 
   // Ra màn: hộp thoại hỏi lại, vì xóa là mất hẳn không hoàn lại được
   const handleDelete = () => {
@@ -150,7 +136,7 @@ export default function MealDetailScreen() {
             {loggedSameDay && (
               <>
                 <AppText variant="subtle">·</AppText>
-                <AppText variant="muted">{hhmm(meal.createdAt)}</AppText>
+                <AppText variant="muted">{timeHHMM(meal.createdAt)}</AppText>
               </>
             )}
           </View>
@@ -220,7 +206,7 @@ export default function MealDetailScreen() {
                     prefillProtein: String(meal.protein ?? 0),
                     prefillCarbs: String(meal.carbs ?? 0),
                     prefillFat: String(meal.fat ?? 0),
-                    prefillPortion: meal.portionText || [meal.portionAmount, meal.portionUnit].filter(Boolean).join(" "),
+                    prefillPortion: mealPortionLabel(meal),
                     prefillNote: meal.note ?? "",
                     mealType: mealSlotByHour(new Date().getHours()),
                     source: "repeat",

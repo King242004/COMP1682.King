@@ -5,9 +5,8 @@
 // Nhận vào:   ngôn ngữ đã lưu trong hồ sơ, nếu có
 // Trả ra:     vi hoặc en
 // Khi lỗi:    chưa chọn thì lấy theo ngôn ngữ điện thoại, không mặc định cứng
-// Thứ tự ưu tiên: ngôn ngữ người dùng chọn trong Cài đặt,
-// chưa chọn thì lấy theo ngôn ngữ điện thoại.
-// Ngôn ngữ này đi theo mọi lệnh gọi AI, để Coach và Quét ảnh trả đúng tiếng.
+//
+// Nhớ: ngôn ngữ này đi theo mọi lệnh gọi AI, để Coach và Quét ảnh trả đúng tiếng.
 export type Lang = "vi" | "en";
 
 // Phát hiện ngôn ngữ thiết bị bằng Intl của Hermes và trả về vi hoặc en.

@@ -14,6 +14,38 @@ import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import type { ScanMode } from "@/features/scan/scanApi";
 
+// Hai nút dưới đây khai NGOÀI ScanOverlay. Khai bên trong thì mỗi lần lớp phủ vẽ
+// lại là React thấy một kiểu component mới và dựng lại nút từ đầu, mất cả trạng
+// thái đang nhấn. Vì ở ngoài nên isScanning phải truyền vào bằng prop.
+
+// Nút biểu tượng tròn nhỏ dùng ở hàng dưới.
+function IconBtn({ icon, onPress, active, disabled }: {
+  icon: any; onPress: () => void; active?: boolean; disabled: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.iconBtn,
+        active && styles.iconBtnActive,
+        (pressed || disabled) && styles.dim,
+      ]}
+    >
+      <Ionicons name={icon} size={24} color={active ? theme.colors.primary : "#fff"} />
+    </Pressable>
+  );
+}
+
+// Nút biểu tượng không nền ở thanh đầu, dùng để quay lại hoặc đổi camera.
+function TopBtn({ icon, onPress }: { icon: any; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} hitSlop={10} style={({ pressed }) => [styles.topBtn, pressed && styles.dim]}>
+      <Ionicons name={icon} size={28} color="#fff" />
+    </Pressable>
+  );
+}
+
 export function ScanOverlay({
   mode, onSwitchMode, onClose, onFlipCamera, onCapture, onLibrary, onManualBarcode, onToggleFlash, torchOn, isScanning, cameraGranted,
 }: {
@@ -42,28 +74,6 @@ export function ScanOverlay({
   const R = 28;
   // Viền phải đủ dày để phủ kín phần còn lại của màn hình.
   const BIG = Math.max(width, height);
-
-  // Nút biểu tượng tròn nhỏ dùng ở hàng dưới.
-  const IconBtn = ({ icon, onPress, active }: { icon: any; onPress: () => void; active?: boolean }) => (
-    <Pressable
-      onPress={onPress}
-      disabled={isScanning}
-      style={({ pressed }) => [
-        styles.iconBtn,
-        active && styles.iconBtnActive,
-        (pressed || isScanning) && styles.dim,
-      ]}
-    >
-      <Ionicons name={icon} size={24} color={active ? theme.colors.primary : "#fff"} />
-    </Pressable>
-  );
-
-  // Nút biểu tượng không nền ở thanh đầu, dùng để quay lại hoặc đổi camera.
-  const TopBtn = ({ icon, onPress }: { icon: any; onPress: () => void }) => (
-    <Pressable onPress={onPress} hitSlop={10} style={({ pressed }) => [styles.topBtn, pressed && styles.dim]}>
-      <Ionicons name={icon} size={28} color="#fff" />
-    </Pressable>
-  );
 
   return (
     <View style={styles.flex1}>
@@ -156,7 +166,7 @@ export function ScanOverlay({
             <>
               <AppText style={styles.bottomHint}>{t.scan.holdSteady}</AppText>
               <View style={styles.controlRow}>
-                <IconBtn icon="images-outline" onPress={onLibrary} />
+                <IconBtn icon="images-outline" onPress={onLibrary} disabled={isScanning} />
                 <Pressable
                   onPress={onManualBarcode}
                   disabled={isScanning}
@@ -164,7 +174,7 @@ export function ScanOverlay({
                 >
                   <Ionicons name="keypad" size={28} color={theme.colors.primary} />
                 </Pressable>
-                <IconBtn icon={torchOn ? "flash" : "flash-off"} onPress={onToggleFlash} active={torchOn} />
+                <IconBtn icon={torchOn ? "flash" : "flash-off"} onPress={onToggleFlash} active={torchOn} disabled={isScanning} />
               </View>
             </>
           ) : (
@@ -172,7 +182,7 @@ export function ScanOverlay({
             <>
               <AppText style={styles.bottomHint}>{t.scan.photoHint}</AppText>
               <View style={styles.controlRow}>
-                <IconBtn icon="images-outline" onPress={onLibrary} />
+                <IconBtn icon="images-outline" onPress={onLibrary} disabled={isScanning} />
                 <Pressable
                   onPress={onCapture}
                   disabled={isScanning}
@@ -184,7 +194,7 @@ export function ScanOverlay({
                     <View style={styles.shutterCore} />
                   )}
                 </Pressable>
-                <IconBtn icon={torchOn ? "flash" : "flash-off"} onPress={onToggleFlash} active={torchOn} />
+                <IconBtn icon={torchOn ? "flash" : "flash-off"} onPress={onToggleFlash} active={torchOn} disabled={isScanning} />
               </View>
             </>
           )}

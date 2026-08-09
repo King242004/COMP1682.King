@@ -7,8 +7,18 @@
 // Khi lỗi:    không có món nào thì trả 0, không trả rỗng làm vỡ biểu đồ
 
 // Chỉ tính toán, KHÔNG gọi mạng và không giữ state.
-import { dateKey } from "@/utils/dateUtils";
+import { dateKey, mondayOf, todayKey } from "@/utils/dateUtils";
 import type { Meal } from "@/features/meals/MealsContext";
+
+// Khoảng được tính là ĐẠT mục tiêu, theo tỷ lệ giữa lượng đã ăn và mục tiêu.
+// Khai ở đây vì cả phép tính lẫn chú thích màu trên biểu đồ đều cần đúng hai số
+// này. Trước ngày 9/8/2026 phép tính gõ 0.8 với 1.0 còn chuỗi i18n viết cứng
+// "80–100%", nên đổi ngưỡng mà quên sửa chữ là app nói một đằng tính một nẻo.
+// Đây là QUYẾT ĐỊNH THIẾT KẾ của dự án, không phải ngưỡng y khoa.
+export const ON_TRACK_MIN_RATIO = 0.8;
+export const ON_TRACK_MAX_RATIO = 1.0;
+export const ON_TRACK_MIN_PERCENT = Math.round(ON_TRACK_MIN_RATIO * 100);
+export const ON_TRACK_MAX_PERCENT = Math.round(ON_TRACK_MAX_RATIO * 100);
 
 export type DaySummary = {
   key: string;
@@ -24,7 +34,7 @@ export type DaySummary = {
   carbs: number;
   fat: number;
   mealCount: number;
-  // Đúng mục tiêu khi lượng calo nằm trong khoảng 80 đến 100 phần trăm.
+  // Đúng mục tiêu khi tỷ lệ nằm trong khoảng ON_TRACK_MIN_RATIO tới ON_TRACK_MAX_RATIO.
   onTrack: boolean;
   // Khoảng cách tuyệt đối tới mục tiêu, bằng Infinity khi chưa có món.
   distToGoal: number;
@@ -77,26 +87,22 @@ export function getYearMonthTotals(historyMeals: Meal[], year: number, locale?: 
   return out;
 }
 
+// Bảy ngày của tuần chứa date. Phép tìm Thứ hai nằm ở utils/dateUtils,
+// dùng chung với Trang chủ và màn Kế hoạch tuần.
 export function getWeekDays(date: Date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  // Chuyển cách đánh số để Thứ hai là 0.
-  const dow = (d.getDay() + 6) % 7;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - dow);
-  const days: Date[] = [];
-  for (let i = 0; i < 7; i++) {
+  const monday = mondayOf(date);
+  return Array.from({ length: 7 }, (_, i) => {
     const x = new Date(monday);
     x.setDate(monday.getDate() + i);
-    days.push(x);
-  }
-  return days;
+    return x;
+  });
 }
 
 // goal bằng null nghĩa là hồ sơ chưa đủ để tính mục tiêu. Khi đó vẫn dựng được
 // tổng calo từng ngày, chỉ riêng cờ onTrack là không có căn cứ để bật.
 export function buildDaySummaries(historyMeals: Meal[], goal: number | null, windowDays: Date[], locale?: string): DaySummary[] {
-  const todayKey = dateKey(new Date());
+  // Đặt tên là today chứ không phải todayKey, vì todayKey là tên một hàm dùng khắp app.
+  const today = todayKey();
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   return windowDays.map((d) => {
@@ -110,14 +116,14 @@ export function buildDaySummaries(historyMeals: Meal[], goal: number | null, win
       key,
       label: d.toLocaleDateString(locale, { weekday: "short" }),
       fullLabel: d.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "short" }),
-      isToday: key === todayKey,
+      isToday: key === today,
       isFuture: d.getTime() > todayStart.getTime(),
       calories,
       protein: dayMeals.reduce((s, m) => s + (m.protein ?? 0), 0),
       carbs: dayMeals.reduce((s, m) => s + (m.carbs ?? 0), 0),
       fat: dayMeals.reduce((s, m) => s + (m.fat ?? 0), 0),
       mealCount: dayMeals.length,
-      onTrack: calories > 0 && ratio >= 0.8 && ratio <= 1.0,
+      onTrack: calories > 0 && ratio >= ON_TRACK_MIN_RATIO && ratio <= ON_TRACK_MAX_RATIO,
       distToGoal: goal != null && calories > 0 ? Math.abs(calories - goal) : Infinity,
       ratio,
     };

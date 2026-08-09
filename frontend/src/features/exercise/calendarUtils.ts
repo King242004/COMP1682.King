@@ -8,33 +8,32 @@
 //
 // Nhớ: hai hàm này KHÔNG đọc state, KHÔNG gọi mạng, và KHÔNG tự lấy ngày hôm nay.
 //      Cố ý giữ vậy để test được độc lập, cứ đưa tháng nào vào là ra kết quả đó.
+import { mondayFirstIndex } from "@/utils/dateUtils";
 
-// ══════════════════════════════════════════════════════════
 // DỰNG LƯỚI THÁNG
 //
 // Đến từ màn Ghi buổi tập, chạy lại mỗi lần người dùng lật tháng.
-// Ba bước, đọc từ trên xuống là đúng thứ tự.
+//
 // Xong thì màn map mảng trả về thành các ô ngày, ô null vẽ trống.
-// ══════════════════════════════════════════════════════════
 
-// DỰNG LƯỚI BƯỚC 1. Nơi gọi đưa vào một Date bất kỳ trong tháng cần vẽ.
+// Nơi gọi đưa vào một Date bất kỳ trong tháng cần vẽ.
 // Chỉ lấy năm với tháng, ngày trong Date đó không dùng tới.
 export function calendarMonthDays(month: Date): (number | null)[] {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
-  // DỰNG LƯỚI BƯỚC 2. Đếm ba con số cần để xếp lưới.
+  // Đếm ba con số cần để xếp lưới.
   //
   // leadingBlanks là số ô trống phải chừa trước ngày 1, để ngày 1 rơi đúng cột thứ của nó.
-  // JavaScript đánh Chủ nhật là 0, Thứ hai là 1, mà lưới của app bắt đầu từ Thứ hai,
-  // nên phải xoay bằng (thứ + 6) % 7 thì Thứ hai mới ra 0 còn Chủ nhật ra 6.
-  const leadingBlanks = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
+  // Phép xoay Chủ nhật về cuối tuần nằm ở utils/dateUtils, dùng chung với bản đồ
+  // nhiệt của màn Tiến trình vốn cần đúng con số này.
+  const leadingBlanks = mondayFirstIndex(new Date(year, monthIndex, 1));
   // Số ngày trong tháng. Mẹo: ngày 0 của tháng SAU chính là ngày cuối của tháng này,
   // nhờ vậy khỏi phải nhớ tháng nào 30 tháng nào 31, và năm nhuận cũng tự đúng.
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   // Làm tròn LÊN cho chẵn tuần, nên lưới luôn đủ hàng 7 ô, không có hàng cụt.
   const cellCount = Math.ceil((leadingBlanks + daysInMonth) / 7) * 7;
 
-  // DỰNG LƯỚI BƯỚC 3. Đổ mảng ô. Ô nào rơi ngoài tháng thì để null,
+  // Đổ mảng ô. Ô nào rơi ngoài tháng thì để null,
   // nơi gọi thấy null là vẽ một ô trống chứ không vẽ số.
   return Array.from({ length: cellCount }, (_, index) => {
     const day = index - leadingBlanks + 1;

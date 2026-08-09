@@ -10,16 +10,7 @@ import Svg, { Circle } from "react-native-svg";
 import { theme } from "../theme";
 import { AppText } from "./AppText";
 
-// ══════════════════════════════════════════════════════════
-// VẼ VÒNG
-//
-// Đến từ vòng calo ở Trang chủ và vòng điểm sức khỏe ở Coach.
-// Ba bước, đọc từ trên xuống là đúng thứ tự. Không gọi mạng.
-// Xong thì trả về một vòng SVG đã tô đúng tỷ lệ, kèm số phần trăm ở giữa.
-// ══════════════════════════════════════════════════════════
-
-// VẼ VÒNG BƯỚC 1. Nơi gọi đưa vào số đã ăn với số mục tiêu.
-// size và stroke có sẵn giá trị mặc định nên chỗ nào cần vòng nhỏ mới phải truyền.
+// size và stroke có sẵn mặc định, chỗ nào cần vòng nhỏ mới phải truyền
 export function ProgressRing({
   eaten,
   goal,
@@ -33,9 +24,8 @@ export function ProgressRing({
   stroke?: number;
   caption?: string;
 }) {
-  // VẼ VÒNG BƯỚC 2. Tính mấy số để vẽ.
-  // Trừ stroke đi rồi mới chia đôi, vì nét vẽ ăn ra hai bên tâm đường tròn,
-  // không trừ là vòng bị cắt cụt ở mép.
+  // Trừ stroke rồi mới chia đôi, vì nét vẽ ăn ra hai bên tâm đường tròn
+  // Không trừ là vòng bị cắt cụt ở mép
   const r = (size - stroke) / 2;
   // Chu vi. Cần vì SVG tô vòng bằng cách chia nét thành đoạn liền rồi đoạn hở,
   // muốn tô 40% thì đoạn liền phải dài đúng 40% chu vi.
@@ -49,8 +39,8 @@ export function ProgressRing({
   // Cỡ chữ phần trăm thay đổi theo kích thước vòng tròn.
   const pctSize = Math.max(11, Math.round(size * 0.19));
 
-  // VẼ VÒNG BƯỚC 3. Vẽ hai vòng chồng nhau: vòng nền mờ, rồi vòng tô đè lên.
-  // rotation -90 để vạch bắt đầu nằm ở đỉnh chứ không nằm bên phải.
+  // Hai vòng chồng nhau, vòng nền mờ rồi vòng tô đè lên
+  // rotation -90 để vạch bắt đầu nằm ở đỉnh chứ không nằm bên phải
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>

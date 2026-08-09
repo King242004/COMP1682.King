@@ -10,6 +10,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
+import { mondayFirstIndex } from "@/utils/dateUtils";
 
 export type HeatCell = { key: string; value: number; isFuture: boolean; isToday: boolean };
 
@@ -22,15 +23,13 @@ function rgba(hex: string, a: number) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 }
 
-// ══════════════════════════════════════════════════════════
 // VẼ LƯỚI THÁNG
 //
-// Đến từ màn Tiến trình ở chế độ xem Tháng. Ba bước, đọc từ trên xuống
-// là đúng thứ tự. Không gọi mạng, dữ liệu do nơi gọi đưa xuống.
+// Đến từ màn Tiến trình ở chế độ xem Tháng.
+// Không gọi mạng, dữ liệu do nơi gọi đưa xuống.
 // Xong thì chạm một ô là nơi gọi hiện chi tiết ngày đó.
-// ══════════════════════════════════════════════════════════
 
-// VẼ LƯỚI BƯỚC 1. Nơi gọi đưa xuống các ô ngày, đã xếp từ ngày 1 tới cuối tháng.
+// Nơi gọi đưa xuống các ô ngày, đã xếp từ ngày 1 tới cuối tháng.
 // shade là màu nền của lưới, để tab Calo với tab Hoạt động dùng hai màu khác nhau.
 export function MonthHeatmap({ cells: data, maxValue, selectedKey, onSelect, shade = theme.colors.primary }: {
   cells: HeatCell[];
@@ -40,11 +39,11 @@ export function MonthHeatmap({ cells: data, maxValue, selectedKey, onSelect, sha
   shade?: string;
 }) {
   const t = useT();
-  // VẼ LƯỚI BƯỚC 2. Tìm xem ngày 1 rơi vào cột thứ mấy.
-  // JavaScript đánh Chủ nhật là 0, Thứ hai là 1, mà lưới bắt đầu từ Thứ hai,
-  // nên phải xoay bằng (thứ + 6) % 7 thì Thứ hai mới ra 0 còn Chủ nhật ra 6.
-  const firstDow = data.length ? (new Date(data[0].key + "T00:00:00").getDay() + 6) % 7 : 0;
-  // VẼ LƯỚI BƯỚC 3. Chèn bấy nhiêu ô null vào đầu để đẩy ngày 1 sang đúng cột.
+  // Tìm xem ngày đầu tiên rơi vào cột thứ mấy.
+  // Phép xoay Chủ nhật về cuối tuần nằm ở utils/dateUtils, dùng chung với lưới
+  // lịch của màn Ghi buổi tập.
+  const firstDow = data.length ? mondayFirstIndex(new Date(data[0].key + "T00:00:00")) : 0;
+  // Chèn bấy nhiêu ô null vào đầu để đẩy ngày 1 sang đúng cột.
   // Nơi vẽ thấy null thì chừa chỗ trống chứ không vẽ ô nào.
   const cells: (HeatCell | null)[] = [...Array(firstDow).fill(null), ...data];
   return (

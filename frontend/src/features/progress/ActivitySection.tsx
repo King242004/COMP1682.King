@@ -9,7 +9,7 @@
 // Nhớ: phần này TỰ gọi mạng lấy buổi tập, không dùng chung lượt gọi với phần món ăn,
 //      vì hai nhóm dữ liệu nằm ở hai bảng khác nhau trong database.
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
@@ -17,20 +17,19 @@ import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
 import { getExerciseHistory, type Exercise } from "@/features/exercise/exerciseApi";
-import { dateKey } from "@/utils/dateUtils";
+import { dateKey, todayKey } from "@/utils/dateUtils";
 import { WeeklyBarChart, type Bar } from "./WeeklyBarChart";
 import { MonthHeatmap } from "./MonthHeatmap";
+import { DayDotRow, PeriodNav } from "./ConsistencyRow";
 
 type Mode = "week" | "month" | "year";
 type BurnDay = { key: string; label: string; fullLabel: string; isToday: boolean; isFuture: boolean; burned: number; count: number };
 type BurnMonth = { key: string; label: string; burned: number; count: number; isFuture: boolean };
 
-// ══════════════════════════════════════════════════════════
 // HAI HÀM GOM SỐ
 //
-// Không phải luồng. Hai hàm gom danh sách buổi tập thô thành từng ngày
+// Hai hàm gom danh sách buổi tập thô thành từng ngày
 // hoặc từng tháng. Cả hai đều được gọi ở khối XEM HOẠT ĐỘNG bên dưới.
-// ══════════════════════════════════════════════════════════
 
 // Đệm số 0 cho đủ hai chữ số, để tháng 3 ra "03" chứ không ra "3".
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -39,7 +38,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 // Mỗi ngày trong khoảng có một dòng, kể cả ngày không tập, để biểu đồ đủ cột.
 // locale để nhãn theo ngôn ngữ trong app, không theo ngôn ngữ điện thoại.
 function buildBurnDays(exercises: Exercise[], windowDays: Date[], locale?: string): BurnDay[] {
-  const todayK = dateKey(new Date());
+  const todayK = todayKey();
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   return windowDays.map((d) => {
@@ -78,15 +77,13 @@ function buildBurnMonths(exercises: Exercise[], year: number, locale?: string): 
   return out;
 }
 
-// ══════════════════════════════════════════════════════════
 // XEM HOẠT ĐỘNG
 //
-// Đến từ màn Tiến trình, tab Hoạt động. Bốn bước, đọc từ trên xuống
-// là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 2.
+// Đến từ màn Tiến trình, tab Hoạt động.
+// Một chặng chờ mạng, lúc tải lịch sử tập.
 // Bố cục giống hệt tab Calo: thanh chuyển khoảng, biểu đồ, rồi các con số.
-// ══════════════════════════════════════════════════════════
 
-// XEM HOẠT ĐỘNG BƯỚC 1. Màn Tiến trình đưa xuống khoảng ngày đang xem.
+// Màn Tiến trình đưa xuống khoảng ngày đang xem.
 // Phần này KHÔNG tự quản khoảng ngày, chỉ nhận rồi dùng, để tab Calo với tab
 // Hoạt động luôn xem cùng một khoảng.
 export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey, onSelectKey, periodLabel, onShiftPeriod, nextDisabled }: {
@@ -110,7 +107,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
   const start = mode === "year" ? `${year}-01-01` : dateKey(windowDays[0]);
   const end = mode === "year" ? `${year}-12-31` : dateKey(windowDays[windowDays.length - 1]);
 
-  // XEM HOẠT ĐỘNG BƯỚC 2. Tải buổi tập của khoảng đang xem.
+  // Tải buổi tập của khoảng đang xem.
   // Đường đi: getExerciseHistory → apiClient → GET /exercise/history
   //           → exerciseController.getExerciseHistory
   // Mảng phụ thuộc dùng hai CHUỖI start với end, không dùng mảng windowDays,
@@ -133,7 +130,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
   // và lệch hẳn với Trang chủ vốn đã đọc đúng trường trong hồ sơ.
   const weekTarget = user?.weeklyWorkoutTarget ?? null;
 
-  // XEM HOẠT ĐỘNG BƯỚC 3. Gom danh sách thô thành từng ngày, và thêm từng tháng
+  // Gom danh sách thô thành từng ngày, và thêm từng tháng
   // nếu đang ở chế độ Năm. Hai hàm gom nằm ở đầu file.
   const burnDays = buildBurnDays(exercises, windowDays, locale);
   const burnMonths = mode === "year" ? buildBurnMonths(exercises, year, locale) : [];
@@ -142,7 +139,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
   const bars: Bar[] = mode === "year"
     ? burnMonths.map((mt, i) => ({ key: mt.key, label: String(i + 1), fullLabel: mt.label, value: mt.burned, color: theme.colors.accent2, dim: mt.isFuture }))
     : burnDays.map((d, i) => ({ key: d.key, label: t.labels.daysShort[i], value: d.burned, color: theme.colors.accent2, dim: d.isFuture }));
-  // XEM HOẠT ĐỘNG BƯỚC 4. Cột cao nhất, dùng làm mốc để tính chiều cao các cột kia.
+  // Cột cao nhất, dùng làm mốc để tính chiều cao các cột kia.
   // Đuôi "|| 1" chặn trường hợp cả khoảng không tập buổi nào, tránh chia cho 0.
   const maxValue = (mode === "year"
     ? Math.max(0, ...burnMonths.map((mt) => mt.burned))
@@ -172,15 +169,7 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
     <>
       {/* Một thẻ gồm chuyển khoảng thời gian, biểu đồ và tổng số liệu. */}
       <Card style={styles.heroCard}>
-        <View style={styles.periodNav}>
-          <Pressable onPress={() => onShiftPeriod(-1)} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
-            <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />
-          </Pressable>
-          <AppText variant="body2" style={styles.periodLabel}>{periodLabel}</AppText>
-          <Pressable onPress={() => onShiftPeriod(1)} disabled={nextDisabled} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
-            <Ionicons name="chevron-forward" size={22} color={nextDisabled ? theme.colors.border : theme.colors.primary} />
-          </Pressable>
-        </View>
+        <PeriodNav label={periodLabel} nextDisabled={nextDisabled} onShift={onShiftPeriod} />
 
         <View style={styles.chartBox}>
           {totalWorkouts === 0 ? (
@@ -226,20 +215,17 @@ export function ActivitySection({ mode, anchor, windowDays, locale, selectedKey,
               {t.progress.actDaysTrainedOf7(daysTrained)}
             </AppText>
           </View>
-          <View style={styles.dotRow}>
-            {burnDays.map((d, i) => {
-              const trained = d.count > 0;
-              const showRing = d.isToday && !trained;
-              return (
-                <View key={d.key} style={styles.dotCol}>
-                  <View style={[styles.dot, trained ? styles.dotTrained : styles.dotRest, showRing && styles.dotRing]}>
-                    {trained && <Ionicons name="barbell" size={14} color="#fff" />}
-                  </View>
-                  <AppText style={[styles.dotLabel, d.isToday && styles.dotLabelToday]}>{t.labels.daysShort[i]}</AppText>
-                </View>
-              );
-            })}
-          </View>
+          <DayDotRow
+            days={burnDays.map((d) => ({
+              key: d.key,
+              color: d.count > 0 ? theme.colors.accent2 : theme.colors.tint,
+              isToday: d.isToday,
+              showRing: d.isToday && d.count === 0,
+              ringColor: theme.colors.accent2,
+              todayLabelColor: theme.colors.accent2,
+              content: d.count > 0 ? <Ionicons name="barbell" size={14} color="#fff" /> : null,
+            }))}
+          />
           {/* Chưa đặt mục tiêu thì không vẽ dòng này, thay vì bịa ra một con số. */}
           {weekTarget != null && (
             <AppText variant="subtle" style={styles.targetText}>{t.progress.actWeekTarget(weekTarget)}</AppText>
@@ -273,8 +259,6 @@ const styles = StyleSheet.create({
 
   // Thẻ chính có kiểu giống thẻ hôm nay trong ProgressScreen.
   heroCard: { padding: theme.space.xl, gap: theme.space.md },
-  periodNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  periodLabel: { fontWeight: "700" },
   pressed: { opacity: 0.7 },
   chartBox: { marginTop: theme.space.sm },
   emptyChart: { paddingVertical: theme.space.lg, textAlign: "center" },
@@ -289,14 +273,6 @@ const styles = StyleSheet.create({
   consistencyHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   consistencyMeta: { fontSize: 12 },
   metaMet: { color: theme.colors.accent, fontWeight: "700" },
-  dotRow: { flexDirection: "row", gap: 6 },
-  dotCol: { flex: 1, alignItems: "center", gap: 4 },
-  dot: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
-  dotTrained: { backgroundColor: theme.colors.accent2 },
-  dotRest: { backgroundColor: theme.colors.tint },
-  dotRing: { borderWidth: 1.5, borderColor: theme.colors.accent2 },
-  dotLabel: { fontSize: 10, fontWeight: "500", color: theme.colors.subtle },
-  dotLabelToday: { fontWeight: "700", color: theme.colors.accent2 },
   targetText: { fontSize: 11 },
 
   // Hàng số liệu có kiểu giống ProgressScreen.

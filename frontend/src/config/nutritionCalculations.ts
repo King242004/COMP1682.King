@@ -6,25 +6,17 @@
 // Trả ra:     các hằng số và hàm tính phụ
 // Khi lỗi:    không có nhánh lỗi; calorieGoal.autoGoal là phép tính lưu chính thức
 // Quy tắc giống backend/src/config/nutritionConstants.js: một hằng số phải có nguồn.
-// Bản gốc của các hằng số này nằm ở backend/src/config/nutritionConstants.js.
-// backend/src/services/nutrition/calorieGoal.js tính giá trị lưu chính thức;
-// file này chỉ để màn hình vẽ được mục tiêu
-// ngay khi vừa mở app, trước lúc hồ sơ kịp tải về. Sửa một bên thì phải sửa bên kia.
-// Khi profileController trả sẵn mọi mục tiêu xem trước, có thể bỏ bản tính song song ở file này.
-
-// Số kcal mà một gam mỗi chất sinh năng lượng tạo ra.
-// Nguồn: hệ số Atwater tổng quát, FAO (2003), Food and Nutrition Paper 77.
-// ══════════════════════════════════════════════════════════
-// HẰNG SỐ VÀ CÔNG THỨC DINH DƯỠNG
-//
-// Không phải luồng. Một chỗ duy nhất giữ mọi hằng số và công thức của app,
-// để không nơi nào gõ lại một con số rồi lệch với nơi khác.
+// Bản gốc của các hằng số này nằm ở backend/src/config/nutritionConstants.js,
+// file này chỉ để màn hình vẽ được mục tiêu ngay khi vừa mở app, trước lúc hồ sơ
+// kịp tải về. Sửa một bên thì phải sửa bên kia, và tests/nutritionCalculations.test.ts
+// khoá từng con số của hai bên với nhau.
 //
 // Nhớ: mấy hàm ở đây chỉ để XEM TRƯỚC trên màn. Con số chính thức luôn do
 //      backend tính lại trong services/nutrition/calorieGoal.js, và có thể lệch
 //      khi backend áp mức sàn calo.
-// ══════════════════════════════════════════════════════════
 
+// Số kcal mà một gam mỗi chất sinh năng lượng tạo ra.
+// Nguồn: hệ số Atwater tổng quát, FAO (2003), Food and Nutrition Paper 77.
 export const ATWATER_KCAL_PER_GRAM = { protein: 4, carbs: 4, fat: 9 };
 
 // Lượng đạm cần mỗi ngày, tính theo gam trên mỗi kg cân nặng.
@@ -76,6 +68,28 @@ export const ACTIVITY_MULTIPLIERS: Record<string, number> = {
 };
 export const DEFAULT_ACTIVITY_LEVEL = "moderate";
 
+// Ba khóa mức vận động, lấy thẳng từ bảng hệ số ở trên chứ không gõ lại.
+// Màn Thiết lập lần đầu và màn Sửa hồ sơ đều dùng danh sách này.
+// Backend có bản đối xứng là ACTIVITY_LEVELS trong config/nutritionConstants.js.
+export const ACTIVITY_LEVELS = Object.keys(ACTIVITY_MULTIPLIERS);
+
+// Năm bệnh nền app hỗ trợ. Phải khớp CHÍNH XÁC bảng RULES trong
+// backend/src/services/nutrition/foodSafetyFilter.js và HEALTH_CONDITIONS trong
+// backend/src/config/nutritionConstants.js. Trước ngày 9/8/2026 danh sách này
+// bị gõ tay ở từng màn, mỗi màn một bản.
+// Không có mục "none": giao diện chọn Không có thì gửi mảng RỖNG.
+export const HEALTH_CONDITIONS = [
+  "diabetes",
+  "hypertension",
+  "gout",
+  "high_cholesterol",
+  "gastritis",
+] as const;
+
+// Số buổi tập tối đa cho người dùng chọn mỗi tuần.
+// Bảy vì một tuần có bảy ngày, và profileController.updateProfile kiểm đúng trần này.
+export const MAX_WEEKLY_WORKOUT_TARGET = 7;
+
 export type WeightDirection = "lose" | "gain" | "maintain";
 export const WEIGHT_GOAL_BY_DIRECTION = {
   lose: "lose_weight",
@@ -84,11 +98,9 @@ export const WEIGHT_GOAL_BY_DIRECTION = {
 } as const;
 export type WeightGoal = (typeof WEIGHT_GOAL_BY_DIRECTION)[WeightDirection];
 
-// Bản chính thức nằm ở backend/src/config/nutritionConstants.js. Frontend dùng các
-// giới hạn này để báo lỗi sớm; profileController.updateProfile vẫn kiểm request.
-// Phải khai đủ bốn trường như file nguồn. Màn nào cần kiểm khoảng giá trị thì đọc
-// ở đây, đừng gõ tay lại con số để tránh hai bản lệch nhau.
-// Có tests/profileLimits.test.ts khoá hai bên khớp nhau.
+// Frontend dùng các giới hạn này để báo lỗi sớm; profileController.updateProfile
+// vẫn kiểm request. Phải khai đủ bốn trường như file nguồn. Màn nào cần kiểm
+// khoảng giá trị thì đọc ở đây, đừng gõ tay lại con số.
 export const PROFILE_LIMITS = {
   age: { min: 10, max: 120 },
   weightKg: { min: 20, max: 300 },

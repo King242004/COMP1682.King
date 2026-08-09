@@ -14,7 +14,7 @@
 // Nhớ: CHẶN NHẦM CÂU THẬT tệ hơn thả lọt một câu vô hại. Người dùng bị từ
 //      chối một câu hỏi chính đáng sẽ nghĩ app hỏng, còn câu vô hại lọt qua
 //      thì còn lớp hai và cả prompt chính đỡ tiếp.
-const { hasBlockedCoachIntent, outOfScopeSignals } = require("../../src/services/coach/coachScope");
+const { outOfScopeSignals } = require("../../src/services/coach/coachScope");
 
 // Câu hỏi thật của người dùng app dinh dưỡng. TẤT CẢ phải lọt qua cổng.
 const MUST_PASS = [
@@ -68,20 +68,20 @@ describe("người dùng hỏi câu THẬT, cổng gác phải cho qua", () => {
   test.each(MUST_PASS)("cho qua: %s", (message) => {
     const signals = outOfScopeSignals(message);
     expect(signals).toEqual([]);
-    expect(hasBlockedCoachIntent(message)).toBe(false);
+    expect(outOfScopeSignals(message)).toEqual([]);
   });
 });
 
 describe("câu ngoài việc của app, cổng gác phải chặn", () => {
   test.each(MUST_BLOCK)("chặn vì %s: %s", (reason, message) => {
-    expect(hasBlockedCoachIntent(message)).toBe(true);
+    expect(outOfScopeSignals(message).length).toBeGreaterThan(0);
     expect(outOfScopeSignals(message)).toContain(reason);
   });
 });
 
 describe("mẹo lách luật phải bị chặn", () => {
   test.each(MUST_BLOCK_TRICKS)("chặn: %s", (message) => {
-    expect(hasBlockedCoachIntent(message)).toBe(true);
+    expect(outOfScopeSignals(message).length).toBeGreaterThan(0);
   });
 });
 

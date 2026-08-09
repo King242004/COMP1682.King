@@ -25,15 +25,11 @@ import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
-
-// ══════════════════════════════════════════════════════════
 // XEM THÔNG BÁO
 //
 // Đến từ nút chuông ở thanh đầu Trang chủ và ở màn Cộng đồng.
-// Ba bước, đọc từ trên xuống là đúng thứ tự. Chặng chờ mạng ở BƯỚC 1.
+// Có một chặng chờ mạng, lúc tải danh sách thông báo.
 // Xong thì chấm đỏ trên chuông tắt mà người dùng không phải bấm nút nào.
-// ══════════════════════════════════════════════════════════
-
 export default function NotificationsScreen() {
   const router = useRouter();
   const { token, user } = useAuth();
@@ -45,7 +41,7 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  // XEM THÔNG BÁO BƯỚC 1. Tải danh sách rồi ĐÁNH DẤU ĐÃ ĐỌC luôn trong cùng một lượt.
+  // Tải danh sách rồi ĐÁNH DẤU ĐÃ ĐỌC luôn trong cùng một lượt.
   // Đường đi: getNotifications → apiClient → GET /community/notifications
   //           → notificationController.getNotifications
   // Đường đi: markNotificationsRead → apiClient → POST /community/notifications/read
@@ -75,7 +71,7 @@ export default function NotificationsScreen() {
   // Tự chạy mỗi lần màn được nhìn thấy, không ai bấm.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  // XEM THÔNG BÁO BƯỚC 2. Chạm một dòng thì đi đâu tùy loại thông báo.
+  // Chạm một dòng thì đi đâu tùy loại thông báo.
   // Thông báo tim thì mở bài đó, còn lại, tức thông báo theo dõi, thì mở trang người đó.
   const openTarget = (n: Notification) => {
     if (n.type === "like" && n.postId) {
@@ -85,7 +81,7 @@ export default function NotificationsScreen() {
     }
   };
 
-  // XEM THÔNG BÁO BƯỚC 3. Vẽ một dòng thông báo. Có HAI vùng chạm lồng nhau:
+  // Vẽ một dòng thông báo. Có HAI vùng chạm lồng nhau:
   // chạm ảnh đại diện thì luôn mở trang người đó, chạm phần còn lại thì đi theo openTarget.
   const renderItem = ({ item }: { item: Notification }) => {
     return (

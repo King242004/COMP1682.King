@@ -7,6 +7,8 @@
 // Khi lỗi:    dịch lại thất bại thì giữ nguyên câu gốc,
 //             thà sai ngôn ngữ còn hơn màn hình trống
 //
+const { normalizeText } = require("../../utils/textNormalize");
+
 // Ba bộ dấu hiệu để đoán ngôn ngữ. Dấu tiếng Việt, từ tiếng Việt không dấu,
 // và các từ tiếng Anh hay gặp.
 const VIETNAMESE_MARKS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
@@ -25,16 +27,8 @@ const LANGUAGE_TARGET = /\b(tieng anh|english|tieng viet|vietnamese)\b(?! (?:foo
 const LANGUAGE_MARKERS = /\b(tra loi|noi chuyen|noi|doc|nhan tin|chat|talk|speak|reply|answer|respond|write|viet|use|dung|switch|change|chuyen|doi|prefer|want|please|lam on|giup|nhe|nha|thoi|di|luon|tu gio|from now|instead|can we|could we|shall we|lets|let us)\b/;
 
 // Bỏ dấu và bỏ ký tự lạ để so khớp không phụ thuộc cách gõ có dấu hay không.
-function normalizeLanguageText(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    // NFD bỏ được dấu thanh nhưng không chuyển đ thành d, nên xử lý đ riêng.
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+// Dùng hàm chung ở utils/textNormalize.
+const normalizeLanguageText = normalizeText;
 
 // Lấy tên ngôn ngữ CUỐI CÙNG trong câu, vì đích đến thường đứng sau,
 // ví dụ "từ tiếng Việt sang tiếng Anh".

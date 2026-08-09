@@ -34,47 +34,48 @@ async function readDay(userId, date) {
   return { date, meals, totals };
 }
 
-// LUỒNG LƯU MÓN. AddMealScreen → MealsContext.addMeals → POST /meals/batch
+// Nút Lưu ở màn Thêm món đi tới đây. Đường đầy đủ ở đầu AddMealScreen.tsx.
 // → route POST /meals/batch trong mealRoutes.js → hàm addMeals bên dưới.
 // Đến từ mealRoutes, đã qua authenticateUser nên req.user chắc chắn có.
-// Bốn bước bên dưới, đọc từ trên xuống là đúng thứ tự.
+// Đến từ mealRoutes, đã qua authenticateUser nên req.user chắc chắn có.
 exports.addMeal = async (req, res) => {
-  // LƯU MÓN BƯỚC 1. Kiểm dữ liệu, xem mealInputValidator.
+  // Kiểm dữ liệu, xem mealInputValidator.
   // Sai là dừng ngay ở đây, chưa đụng tới database.
   const normalized = validateMealInput(req.body, req.user.id, requestTodayKey(req));
   if (normalized.error) return res.status(400).json({ message: normalized.error });
 
-  // LƯU MÓN BƯỚC 2. Ghi xuống MongoDB. Model Meal kiểm lần nữa trước khi ghi.
+  // Ghi xuống MongoDB. Model Meal kiểm lần nữa trước khi ghi.
   const meal = await Meal.create(normalized.value);
 
-  // LƯU MÓN BƯỚC 3. Đọc lại cả ngày rồi cộng tổng.
+  // Đọc lại cả ngày rồi cộng tổng.
   const day = await readDay(req.user.id, meal.date);
 
-  // LƯU MÓN BƯỚC 4. Trả về. Trường day là thứ giúp app khỏi gọi lượt thứ hai.
+  // Trả về. Trường day là thứ giúp app khỏi gọi lượt thứ hai.
   res.status(201).json({ message: "Meal added successfully.", meal, day });
 };
 
-// LUỒNG LƯU MÓN, bản nhiều món. Đây là đường mà nút Lưu ở AddMealScreen
-// thật sự đi vào, vì một lần lưu ghi được tối đa 8 món.
-// Cả 8 món luôn cùng một ngày nên chỉ cần đọc lại ngày đó.
+// Bản nhiều món. Đây là đường mà nút Lưu ở AddMealScreen thật sự đi vào.
+// Trần số món lấy từ INPUT_LIMITS.MEAL_ITEMS, cùng một con số với
+// scanController.estimateNutrition và với hai chỗ kiểm bên AddMealScreen.
+// Mọi món trong một lô luôn cùng một ngày nên chỉ cần đọc lại ngày đó.
 exports.addMeals = async (req, res) => {
-  if (!Array.isArray(req.body.meals) || req.body.meals.length < 1 || req.body.meals.length > 8)
-    return res.status(400).json({ message: "Enter between 1 and 8 meals." });
+  if (!Array.isArray(req.body.meals) || req.body.meals.length < 1 || req.body.meals.length > INPUT_LIMITS.MEAL_ITEMS)
+    return res.status(400).json({ message: `Enter between 1 and ${INPUT_LIMITS.MEAL_ITEMS} meals.` });
 
-  // LƯU MÓN BƯỚC 1. Kiểm TỪNG món. Chỉ cần một món sai là bỏ cả lô,
+  // Kiểm TỪNG món. Chỉ cần một món sai là bỏ cả lô,
   // để không rơi vào cảnh ghi được 5 món rồi hỏng ở món thứ 6.
   const currentDate = requestTodayKey(req);
   const normalized = req.body.meals.map((meal) => validateMealInput(meal, req.user.id, currentDate));
   const invalid = normalized.find((meal) => meal.error);
   if (invalid) return res.status(400).json({ message: invalid.error });
 
-  // LƯU MÓN BƯỚC 2. Ghi cả lô trong một lệnh.
+  // Ghi cả lô trong một lệnh.
   const meals = await Meal.insertMany(normalized.map((meal) => meal.value));
 
-  // LƯU MÓN BƯỚC 3. Đọc lại cả ngày rồi cộng tổng.
+  // Đọc lại cả ngày rồi cộng tổng.
   const day = await readDay(req.user.id, meals[0].date);
 
-  // LƯU MÓN BƯỚC 4. Trả về, kèm trường day.
+  // Trả về, kèm trường day.
   res.status(201).json({ message: "Meals added successfully.", meals, day });
 };
 

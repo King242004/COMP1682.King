@@ -103,4 +103,34 @@ describe("đăng nhập và đăng ký lưu luôn ngôn ngữ, khỏi gọi thê
 
     expect(User.create).toHaveBeenCalledWith(expect.objectContaining({ language: undefined }));
   });
+
+  test("register ignores profile fields that belong to onboarding", async () => {
+    verifyOTPCode.mockResolvedValue("valid");
+    User.exists.mockResolvedValue(false);
+    bcrypt.hash.mockResolvedValue("hashed");
+    User.create.mockResolvedValue({ _id: "new-id", tokenVersion: 0 });
+    const res = response();
+
+    await register({ body: {
+      name: "Nam",
+      email: "a@b.com",
+      password: "Good1x",
+      otp: "123456",
+      goal: "lose_weight",
+      conditions: ["diabetes"],
+      calorieGoal: 900,
+      weight: 1,
+      height: 999,
+      age: 2,
+    } }, res);
+
+    expect(User.create).toHaveBeenCalledWith(expect.not.objectContaining({
+      goal: expect.anything(),
+      conditions: expect.anything(),
+      calorieGoal: expect.anything(),
+      weight: expect.anything(),
+      height: expect.anything(),
+      age: expect.anything(),
+    }));
+  });
 });

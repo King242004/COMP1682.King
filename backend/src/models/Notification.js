@@ -6,14 +6,15 @@
 // Nhận vào:   người nhận, người gây ra, và loại thông báo
 // Trả ra:     một dòng Notification đã kiểm hợp lệ
 // Khi lỗi:    thiếu người nhận hoặc thiếu loại thì Mongoose chặn lại
-const mongoose = require("mongoose");
-
-// Bảng thông báo. Chỉ có hai loại: có người tim bài, và có người theo dõi mình.
+//
+// Chỉ có hai loại: có người tim bài, và có người theo dõi mình.
 // Nơi ghi vào: bấm tim và bấm theo dõi.
-// Nơi xóa đi: bỏ tim, bỏ theo dõi, xóa bài, và xóa tài khoản.
-// Nơi đọc ra: màn Thông báo và chấm đỏ trên biểu tượng chuông.
-// user là người NHẬN thông báo, actor là người GÂY RA thông báo.
-// post rỗng với thông báo theo dõi, vì theo dõi không gắn với bài nào.
+// Nơi xóa đi:  bỏ tim, bỏ theo dõi, xóa bài, và xóa tài khoản.
+// Nơi đọc ra:  màn Thông báo và chấm đỏ trên biểu tượng chuông.
+//
+// Nhớ: user là người NHẬN thông báo, actor là người GÂY RA thông báo.
+//      post rỗng với thông báo theo dõi, vì theo dõi không gắn với bài nào.
+const mongoose = require("mongoose");
 const notificationSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

@@ -8,7 +8,7 @@
 //
 // Nhớ: app KHÔNG tự tính calo đốt và KHÔNG gửi con số đó lên.
 //      App chỉ gửi mã hoạt động hoặc mã bài hướng dẫn, rồi backend tra hệ số MET
-//      trong config/exerciseMet.js và tự tính với cân nặng trong hồ sơ.
+//      trong config/exerciseCatalog.js và tự tính với cân nặng trong hồ sơ.
 //      Làm vậy để calo đốt luôn khớp cân nặng mới nhất, không phải số đóng băng lúc ghi.
 import { apiRequest } from "@/utils/apiClient";
 import { withId } from "@/utils/apiTypes";
@@ -24,12 +24,10 @@ export type Exercise = {
 // Bản backend trả về. Khác bản app dùng đúng một chỗ: mã món tên là _id.
 type RawExercise = Omit<Exercise, "id"> & { _id: string };
 
-// ══════════════════════════════════════════════════════════
 // BỐN CỬA GỌI MẠNG
 // Mỗi hàm là một cửa riêng, màn nào cần gì thì gọi cái đó
 // Cả bốn đều đi qua apiClient rồi sang exerciseRoutes bên backend
 // Lỗi thì để nguyên cho ném lên, màn hình gọi tự lo phần hiện thông báo
-// ══════════════════════════════════════════════════════════
 
 // Lấy buổi tập của một ngày. Gọi GET /exercise kèm ngày.
 // exerciseController.getExercisesByDate trả kèm totalBurned đã cộng sẵn.

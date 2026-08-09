@@ -12,8 +12,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 export default function Index() {
   const { user, isLoading } = useAuth();
 
-  // Chưa đọc xong phiên thì không hiện gì, tránh lóe màn đăng nhập
-  // rồi lại nhảy ngay sang trang chủ.
+  // Chưa đọc xong phiên thì không vẽ gì, tránh lóe màn đăng nhập rồi nhảy đi
   if (isLoading) return null;
 
   if (user) {

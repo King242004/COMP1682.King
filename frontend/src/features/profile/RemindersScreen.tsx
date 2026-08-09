@@ -24,24 +24,15 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 import { INPUT_LIMITS } from "@/config/inputLimits";
+import { MEAL_TYPE_BY_KEY } from "@/features/meals/mealTypeDisplay";
 
-// Icon cho từng bữa, chọn theo thời điểm trong ngày: mặt trời, trời râm, trăng, hạt.
-const ICONS: Record<MealKey, keyof typeof Ionicons.glyphMap> = {
-  breakfast: "sunny-outline",
-  lunch: "partly-sunny-outline",
-  dinner: "moon-outline",
-  snack: "nutrition-outline",
-};
-
-// ══════════════════════════════════════════════════════════
 // ĐẶT LỜI NHẮC
 //
-// Đến từ màn Hồ sơ. Bốn bước, đọc từ trên xuống là đúng thứ tự.
+// Đến từ màn Hồ sơ.
 // KHÔNG gọi mạng, chỉ nói chuyện với hệ điều hành qua reminderSettings.
 // Xong thì máy tự kêu vào giờ đã đặt, mỗi ngày một lần cho mỗi bữa đang bật.
-// ══════════════════════════════════════════════════════════
 
-// ĐẶT LỜI NHẮC BƯỚC 1. Đọc trạng thái bốn lời nhắc từ bộ nhớ máy khi mở màn.
+// Đọc trạng thái bốn lời nhắc từ bộ nhớ máy khi mở màn.
 // Cờ busy chặn bấm chồng: đang đặt lịch một bữa thì khóa mọi công tắc khác,
 // kẻo hai lượt cùng ghi xuống máy và đè lên nhau.
 export default function RemindersScreen() {
@@ -54,7 +45,7 @@ export default function RemindersScreen() {
   // Tự đọc trạng thái bốn lời nhắc từ bộ nhớ máy khi mở màn.
   useFocusEffect(useCallback(() => { void loadReminders().then(setState).catch(() => {}); }, []));
 
-  // ĐẶT LỜI NHẮC BƯỚC 2. Dựng nội dung câu nhắc cho một bữa.
+  // Dựng nội dung câu nhắc cho một bữa.
   // Tên bữa lấy từ bảng dịch, thiếu thì lấy tạm mã bữa cho khỏi hiện chuỗi trống.
   const mealLabel = (key: MealKey) => t.labels.mealType[key] ?? key;
 
@@ -66,7 +57,7 @@ export default function RemindersScreen() {
     body: t.settings.reminderNotifBody,
   });
 
-  // ĐẶT LỜI NHẮC BƯỚC 3. Người dùng gạt công tắc một bữa.
+  // Người dùng gạt công tắc một bữa.
   const toggle = async (key: MealKey, value: boolean) => {
     if (busy) return;
     setBusy(true);
@@ -91,7 +82,7 @@ export default function RemindersScreen() {
     }
   };
 
-  // ĐẶT LỜI NHẮC BƯỚC 4. Người dùng đổi giờ nhắc rồi bấm Lưu.
+  // Người dùng đổi giờ nhắc rồi bấm Lưu.
   const saveTime = async () => {
     if (!editing) return;
     // Kiểm giờ TRƯỚC khi đóng hộp, sai thì báo rồi giữ nguyên hộp cho họ sửa.
@@ -107,7 +98,7 @@ export default function RemindersScreen() {
     setBusy(true);
     try {
       // Giữ nguyên trạng thái bật tắt, chỉ đổi giờ. Đang tắt thì đổi giờ xong vẫn tắt.
-      // Đường đi giống hệt BƯỚC 3, cũng qua applyReminder.
+      // Đường đi giống hệt lúc gạt công tắc, cũng qua applyReminder.
       setState(await applyReminder(state, key, { enabled: state[key].enabled, time }, notifContent(key)));
     } finally {
       setBusy(false);
@@ -130,7 +121,11 @@ export default function RemindersScreen() {
           {MEAL_KEYS.map((key, i) => (
             <View key={key} style={[styles.row, i > 0 && styles.rowDivider]}>
               <View style={styles.iconBox}>
-                <Ionicons name={ICONS[key]} size={17} color={theme.colors.primary} />
+                <Ionicons
+                  name={`${MEAL_TYPE_BY_KEY[key].icon}-outline` as keyof typeof Ionicons.glyphMap}
+                  size={17}
+                  color={theme.colors.primary}
+                />
               </View>
 
               <View style={styles.rowText}>
@@ -169,7 +164,7 @@ export default function RemindersScreen() {
         <AppText variant="subtle" style={styles.note}>{t.settings.reminderBlindNote}</AppText>
       </ScrollView>
 
-      {/* Time editor */}
+      {/* Ô chỉnh giờ nhắc */}
       <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => setEditing(null)}>
         <View style={styles.backdrop}>
           <Card style={styles.modalCard}>

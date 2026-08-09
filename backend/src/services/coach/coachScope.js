@@ -11,8 +11,10 @@
 // ngoài phạm vi. Tên món ăn hay tên bệnh nằm trong câu KHÔNG tự động
 // làm cho một yêu cầu khác trở thành hợp lệ.
 //
-const SUPPORTED = "supported";
+const { normalizeText } = require("../../utils/textNormalize");
+
 // Hai kết quả duy nhất mà cổng gác này trả về.
+const SUPPORTED = "supported";
 const OUT_OF_SCOPE = "out_of_scope";
 
 // Danh sách ĐÓNG các việc Coach được phép làm. Gemini phải chọn đúng một mục
@@ -33,16 +35,8 @@ const CAPABILITY_SET = new Set(COACH_CAPABILITIES);
 
 // Hạ chữ thường và bỏ dấu tiếng Việt, để dò từ khóa không bị lệch
 // giữa "chính trị" và "chinh tri". Người muốn lách hay gõ không dấu.
-function normalizeScopeText(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    // NFD bỏ được dấu thanh nhưng không chuyển đ thành d, nên xử lý đ riêng.
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+// Dùng hàm chung ở utils/textNormalize.
+const normalizeScopeText = normalizeText;
 
 // Lớp một: từ khóa CHẮC CHẮN ngoài phạm vi, chỉ cần xuất hiện là chặn.
 // Các từ này không nằm trong câu hỏi dinh dưỡng hay vận động thật,
@@ -71,7 +65,10 @@ const RULE_BYPASS = /\b(bo qua|quen|ignore|disregard|forget|bypass|override|tiet
 // "dong vai" bị loại trừ khi theo sau là "tro", vì "đóng vai trò" là câu hỏi thật.
 const INJECTION_MARKERS = /\b(system prompt|prompt injection|jailbreak|developer mode|dan mode|act as an ai|ban la mot ai|role play as|dong vai (?!tro))/;
 
-// Đếm xem câu này chạm bao nhiêu nhóm dấu hiệu ngoài phạm vi.
+// LỚP MỘT, chặn cứng. Đếm xem câu này chạm bao nhiêu nhóm dấu hiệu ngoài phạm vi.
+// Chạm một nhóm là resolveCoachScope chặn ngay, không tốn lượt gọi Gemini nào.
+// Trước đây còn một hàm hasBlockedCoachIntent chỉ bọc lại phép đếm này thành
+// đúng hay sai, nhưng không nơi nào trong src gọi nó, chỉ có test, nên đã bỏ.
 function outOfScopeSignals(message) {
   const text = normalizeScopeText(message);
   if (!text) return [];
@@ -79,12 +76,6 @@ function outOfScopeSignals(message) {
   if (REQUEST_VERBS.test(text) && AMBIGUOUS_CONTENT.test(text)) signals.push("content_writing");
   if (RULE_BYPASS.test(text) || INJECTION_MARKERS.test(text)) signals.push("prompt_injection");
   return signals;
-}
-
-// LỚP MỘT, chặn cứng. Rõ ràng ngoài phạm vi thì chặn ngay,
-// không tốn một lượt gọi Gemini nào cả.
-function hasBlockedCoachIntent(message) {
-  return outOfScopeSignals(message).length > 0;
 }
 
 // LỚP HAI, nhờ AI phân loại phần còn lại mà lớp một chưa chắc.
@@ -173,7 +164,6 @@ module.exports = {
   OUT_OF_SCOPE,
   COACH_CAPABILITIES,
   outOfScopeSignals,
-  hasBlockedCoachIntent,
   buildScopePrompt,
   parseScope,
   classifyCoachScope,

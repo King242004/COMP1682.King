@@ -10,11 +10,9 @@
 // tim mà bài đã bị xóa. Không lọc thì màn hình hiện dòng trống bấm vào không ra gì.
 const Notification = require("../../models/Notification");
 
-// ══════════════════════════════════════════════════════════
 // BA CỬA VỀ THÔNG BÁO
 //
-// Không phải luồng. Lấy danh sách, đếm số chưa đọc, và đánh dấu đã đọc.
-// ══════════════════════════════════════════════════════════
+// Lấy danh sách, đếm số chưa đọc, và đánh dấu đã đọc.
 
 // Bỏ qua thông báo mà người gây ra đã xóa tài khoản, hoặc thông báo tim
 // mà bài đã bị xóa, để màn hình không hiện dòng trống bấm vào không ra gì.

@@ -28,15 +28,13 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 
-// ══════════════════════════════════════════════════════════
 // TẬP THEO HƯỚNG DẪN
 //
 // Đến từ màn Ghi buổi tập và từ màn Kế hoạch tuần, mã bài đi theo đường dẫn.
-// Năm bước, đọc từ trên xuống là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 5.
+// Một chặng chờ mạng, lúc ghi buổi tập xong.
 // Xong thì hiện thông báo rồi quay về màn trước.
-// ══════════════════════════════════════════════════════════
 
-// TẬP THEO HƯỚNG DẪN BƯỚC 1. Lấy mã bài từ đường dẫn rồi tra trong GUIDED_ROUTINES.
+// Lấy mã bài từ đường dẫn rồi tra trong GUIDED_ROUTINES.
 // Bài nằm sẵn trong app, KHÔNG gọi mạng để tải.
 // previewOnly bằng "1" là chỉ xem trước, không cho bấm Bắt đầu.
 export default function GuidedRoutineScreen() {
@@ -63,7 +61,7 @@ export default function GuidedRoutineScreen() {
   // và thấy ngay lập tức, chứ state thì phải chờ tới nhịp vẽ sau.
   const finishedRef = useRef(false);
 
-  // TẬP THEO HƯỚNG DẪN BƯỚC 2. Người dùng bấm Bắt đầu.
+  // Người dùng bấm Bắt đầu.
   // started bật màn tập lên, running cho đồng hồ chạy. Tách hai cờ vì lúc tạm dừng
   // thì running tắt nhưng started vẫn bật, màn tập không biến mất.
   const startSession = () => {
@@ -71,7 +69,7 @@ export default function GuidedRoutineScreen() {
     setRunning(true);
   };
 
-  // TẬP THEO HƯỚNG DẪN BƯỚC 3. Đồng hồ đếm ngược cho bước đang tập, mỗi giây trừ một.
+  // Đồng hồ đếm ngược cho bước đang tập, mỗi giây trừ một.
   // Dòng return dọn đồng hồ khi thoát màn hoặc khi tạm dừng, kẻo nó chạy nền mãi.
   useEffect(() => {
     if (!started || !running || !routine) return;
@@ -79,7 +77,7 @@ export default function GuidedRoutineScreen() {
     return () => clearInterval(id);
   }, [started, running, routine]);
 
-  // TẬP THEO HƯỚNG DẪN BƯỚC 4. Đồng hồ về 0 thì rẽ hai nhánh.
+  // Đồng hồ về 0 thì rẽ hai nhánh.
   // Còn bước phía sau thì nhảy sang bước đó và nạp lại giờ.
   // Hết bước cuối thì gọi finish, nhưng phải qua cửa finishedRef trước,
   // vì effect này có thể chạy lại khi secondsLeft vẫn đang là 0.
@@ -95,7 +93,7 @@ export default function GuidedRoutineScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft]);
 
-  // TẬP THEO HƯỚNG DẪN BƯỚC 5. Tập hết bước cuối thì ghi buổi tập.
+  // Tập hết bước cuối thì ghi buổi tập.
   // Rẽ hai đường tùy chỗ mở màn này:
   //   Vào từ Kế hoạch tuần, có planWorkoutId, thì đánh dấu buổi đó đã xong.
   //   Đường đi: markPlanWorkoutDone → apiClient → POST /plan/workout/:id/done
@@ -122,7 +120,7 @@ export default function GuidedRoutineScreen() {
         markHealthDataChanged();
       }
       Alert.alert(t.exercise.finishedTitle, t.exercise.finishedMsg(routine.durationMin), [
-        { text: "OK", onPress: () => router.back() },
+        { text: t.common.ok, onPress: () => router.back() },
       ]);
     } catch (error) {
       Alert.alert(
@@ -130,13 +128,13 @@ export default function GuidedRoutineScreen() {
         error instanceof Error && error.message === "PROFILE_WEIGHT_REQUIRED"
           ? t.exercise.weightRequired
           : t.exercise.failed,
-        [{ text: "OK", onPress: () => router.back() }],
+        [{ text: t.common.ok, onPress: () => router.back() }],
       );
     }
   };
 
   // Nút Bỏ qua bước. Không tự nhảy bước, chỉ vặn đồng hồ về 0
-  // rồi để BƯỚC 4 ở trên lo, nhờ vậy chỉ có MỘT chỗ quyết định chuyện chuyển bước.
+  // rồi để đồng hồ ở trên lo, nhờ vậy chỉ MỘT chỗ quyết định chuyện chuyển bước.
   const skipStep = () => {
     if (!routine) return;
     setSecondsLeft(0);
@@ -162,7 +160,7 @@ export default function GuidedRoutineScreen() {
 
   // Mấy giá trị để vẽ đồng hồ, tính lại mỗi nhịp vẽ.
   const step = routine.steps[stepIndex];
-  // Kẹp ở 0 vì đồng hồ có thể trừ xuống âm một nhịp trước khi BƯỚC 4 kịp chặn.
+  // Kẹp ở 0 vì đồng hồ có thể trừ xuống âm một nhịp trước khi kịp chặn.
   // Không kẹp là màn chớp một cái "-1" rồi mới nhảy bước.
   const mm = String(Math.floor(Math.max(0, secondsLeft) / 60)).padStart(2, "0");
   const ss = String(Math.max(0, secondsLeft) % 60).padStart(2, "0");
@@ -241,7 +239,7 @@ export default function GuidedRoutineScreen() {
       <View style={styles.content}>
         <ScreenHeader title={routine.title[lang]} />
 
-        {/* Progress: step counter + slim bar */}
+        {/* Tiến độ: số bước đã qua và thanh chạy mảnh */}
         <View style={styles.progressBlock}>
           <AppText variant="subtle" style={styles.stepCount}>
             {t.exercise.guidedStep(stepIndex + 1, routine.steps.length)}
@@ -257,7 +255,7 @@ export default function GuidedRoutineScreen() {
           <AppText variant="h0" style={styles.timer}>{mm}:{ss}</AppText>
         </Card>
 
-        {/* Controls */}
+        {/* Nút điều khiển buổi tập */}
         <View style={styles.controls}>
           <Pressable
             onPress={() => setRunning((r) => !r)}
@@ -277,7 +275,7 @@ export default function GuidedRoutineScreen() {
           </Pressable>
         </View>
 
-        {/* Safety note (health-conditions app: always visible) */}
+        {/* Lưu ý an toàn, app liên quan bệnh nền nên LUÔN hiện, không cho ẩn */}
         <AppText variant="subtle" style={styles.safety}>{t.exercise.safety}</AppText>
 
         <Pressable onPress={quit} style={({ pressed }) => [styles.quitBtn, pressed && styles.pressed]}>
@@ -292,7 +290,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   content: { flex: 1, paddingHorizontal: theme.space.lg, paddingTop: 60, gap: theme.space.lg },
 
-  // Preview (before Start)
+  // Phần xem trước, hiện khi chưa bấm Bắt đầu
   previewContent: { paddingHorizontal: theme.space.lg, paddingTop: 60, paddingBottom: 40, gap: theme.space.lg },
   previewDescription: { marginTop: -8, lineHeight: 21 },
   previewStats: {

@@ -30,32 +30,27 @@ if (KEYS.length === 0) {
   console.log(`Gemini: ${KEYS.length} API key(s) loaded`);
 }
 
-// ══════════════════════════════════════════════════════════
-// DỰNG BẢNG ĐƯỜNG GỌI AI
-//
-// Không ai gọi, cả khối chạy MỘT LẦN lúc server nạp file này.
-// Ba bước, đọc từ trên xuống là đúng thứ tự.
-// Xong thì các controller lấy bảng ra, thử lần lượt từ trên xuống,
-// hỏng cách này thì tụt sang cách sau.
-// ══════════════════════════════════════════════════════════
+// Cả khối dưới đây chạy MỘT LẦN lúc server nạp file này. Xong thì các controller
+// lấy bảng ra, thử lần lượt từ trên xuống, hỏng cách này thì tụt sang cách sau.
 
-// DỰNG BẢNG BƯỚC 1. Mỗi khóa tạo một đường gọi riêng.
+// Mỗi khóa tạo một đường gọi riêng.
 const clients = KEYS.map((k) => new GoogleGenerativeAI(k));
 
-// DỰNG BẢNG BƯỚC 2. Model là các bản Gemini khác nhau, con khỏe con nhẹ.
+// Model là các bản Gemini khác nhau, con khỏe con nhẹ.
 // Đây là thứ tự gọi chứ không phải danh sách chọn: con đầu hỏng thì tụt xuống con sau.
-const TEXT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
-// Model cho việc nhìn ảnh đoán món. Hiện dùng đúng danh sách như phần chữ.
-const VISION_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
-// Chat giữ flash ở đầu vì câu trả lời cần model mạnh nhất. flash-lite nằm giữa
-// làm chỗ lui khi flash hết lượt, vì flash-latest hay chạm trần thời gian chờ.
-const CHAT_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
+// flash đứng đầu vì mạnh nhất, flash-lite làm chỗ lui khi flash hết lượt, còn
+// flash-latest xếp cuối vì hay chạm trần thời gian chờ.
+// CẢ BỐN việc dùng chung đúng thứ tự này. Trước đây khai ba mảng riêng có nội
+// dung y hệt nhau, đọc vào tưởng chat gọi khác chỗ khác. Khác nhau CHỈ ở
+// temperature bên dưới.
+const MODEL_CHAIN = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
 
-// DỰNG BẢNG BƯỚC 3. Ghép mỗi khóa với mỗi model. Hiện có 3 khóa và 3 model nên ra 9 cách gọi.
-// Cách này hỏng thì thử cách khác, nên hết lượt một khóa chưa làm app chết.
-function buildModels(names, generationConfig) {
+// Ghép mỗi khóa với mỗi model, nên số cách gọi bằng số khóa nhân số model.
+// Khai đủ 3 khóa thì ra 9 cách. Cách này hỏng thì thử cách khác, nên hết lượt
+// một khóa chưa làm app chết.
+function buildModels(generationConfig) {
   return clients.flatMap((client) =>
-    names.map((model) => client.getGenerativeModel({ model, generationConfig }))
+    MODEL_CHAIN.map((model) => client.getGenerativeModel({ model, generationConfig }))
   );
 }
 
@@ -65,15 +60,15 @@ const NO_THINKING = { thinkingConfig: { thinkingBudget: 0 } };
 // temperature = mức được phép bịa. Để 0 là hỏi lại ra y hệt câu cũ.
 
 // 0.2 nhìn ảnh, phải bám thứ nhìn thấy nên gần như không được đoán
-const visionModels = buildModels(VISION_MODELS, { temperature: 0.2, responseMimeType: "application/json", ...NO_THINKING });
+const visionModels = buildModels({ temperature: 0.2, responseMimeType: "application/json", ...NO_THINKING });
 
 // 0.3 lời khuyên, linh hoạt vừa đủ để không lặp lại y hệt
-const insightModels = buildModels(TEXT_MODELS, { temperature: 0.3, responseMimeType: "application/json", ...NO_THINKING });
+const insightModels = buildModels({ temperature: 0.3, responseMimeType: "application/json", ...NO_THINKING });
 
 // 0 tính calo, cùng một món phải luôn ra cùng một số
-const nutritionModels = buildModels(TEXT_MODELS, { temperature: 0, responseMimeType: "application/json", ...NO_THINKING });
+const nutritionModels = buildModels({ temperature: 0, responseMimeType: "application/json", ...NO_THINKING });
 
 // 0.75 trò chuyện, cần tự nhiên nhất nên thả lỏng nhất
-const chatModels = buildModels(CHAT_MODELS, { temperature: 0.75, responseMimeType: "application/json", ...NO_THINKING });
+const chatModels = buildModels({ temperature: 0.75, responseMimeType: "application/json", ...NO_THINKING });
 
 module.exports = { visionModels, insightModels, nutritionModels, chatModels };

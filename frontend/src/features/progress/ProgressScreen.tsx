@@ -31,21 +31,19 @@ import { resolveLanguage, localeTag } from "@/utils/languageUtils";
 import { useAnimatedNumber } from "@/ui/useAnimatedNumber";
 import { WeeklyBarChart, type Bar } from "@/features/progress/WeeklyBarChart";
 import { MonthHeatmap } from "@/features/progress/MonthHeatmap";
-import { ConsistencyRow } from "@/features/progress/ConsistencyRow";
+import { ConsistencyRow, PeriodNav } from "@/features/progress/ConsistencyRow";
 
 type Tab = "calories" | "activity" | "weight";
 type Mode = "week" | "month" | "year";
 
-// ══════════════════════════════════════════════════════════
 // XEM TIẾN TRÌNH
 //
-// Đến từ màn Hồ sơ. Năm bước, đọc từ trên xuống là đúng thứ tự.
-// Chỉ có MỘT chặng chờ mạng, ở BƯỚC 2. Từ BƯỚC 3 trở đi là tính tại máy.
+// Đến từ màn Hồ sơ.
+// Chỉ MỘT chặng chờ mạng lúc tải dữ liệu, còn lại tính hết tại máy.
 // Xong thì vẽ biểu đồ cột hoặc lưới nhiệt, kèm các con số tổng và trung bình.
-// ══════════════════════════════════════════════════════════
 
-// XEM TIẾN TRÌNH BƯỚC 1. Chốt khoảng ngày đang xem.
-// anchor là một ngày bất kỳ trong kỳ, hai mũi tên ở BƯỚC 5 sẽ dời nó đi.
+// Chốt khoảng ngày đang xem.
+// anchor là một ngày bất kỳ trong kỳ, hai mũi tên chuyển kỳ sẽ dời nó đi.
 export default function ProgressScreen() {
   const { user } = useAuth();
   // historyMeals chứa mọi ngày đã ghi, còn meals chỉ chứa ngày đang chọn.
@@ -76,7 +74,7 @@ export default function ProgressScreen() {
     { key: "weight", label: t.weight.tab, icon: "scale-outline" },
   ];
 
-  // XEM TIẾN TRÌNH BƯỚC 2. Chặng chờ mạng DUY NHẤT của file này.
+  // Chặng chờ mạng DUY NHẤT của file này.
   // Đường đi: MealsContext.fetchMealHistory → mealsApi → apiClient
   //           → GET /meals/history → mealController.getMealHistory
   // Tải trọn lịch sử một lần, rồi mọi biểu đồ đều tính từ đống dữ liệu đó.
@@ -89,8 +87,8 @@ export default function ProgressScreen() {
   // so với mục tiêu đều bị ẩn, nên giá trị 0 ở đây không bao giờ hiện ra.
   const goalScale = goal ?? 0;
 
-  // XEM TIẾN TRÌNH BƯỚC 3. Gom món theo ngày, rồi đếm chuỗi ngày dài nhất.
-  // Tất cả tính từ historyMeals đã tải ở BƯỚC 2, không gọi mạng thêm.
+  // Gom món theo ngày, rồi đếm chuỗi ngày dài nhất.
+  // Tất cả tính từ historyMeals đã tải ở trên, không gọi mạng thêm.
   const summaries = buildDaySummaries(historyMeals, goal, windowDays, locale);
   const daysWithMeals = summaries.filter((s) => s.calories > 0);
   const eligibleMealDates = streakEligibleDates(historyMeals);
@@ -101,7 +99,7 @@ export default function ProgressScreen() {
       : eligibleMealDates.filter((date) => periodKeys.has(date));
   const longestStreak = longestMealStreak(periodMealDates);
 
-  // XEM TIẾN TRÌNH BƯỚC 4. Dựng các cột cho biểu đồ.
+  // Dựng các cột cho biểu đồ.
   // Chế độ Năm thì 12 cột theo tháng, hai chế độ kia thì mỗi ngày một cột.
   // Màu cột nói lên tình trạng: cam là vượt mục tiêu, xanh lá là đạt, còn lại màu chính.
   const yearMonths = mode === "year" ? getYearMonthTotals(historyMeals, anchor.getFullYear(), locale) : [];
@@ -152,7 +150,7 @@ export default function ProgressScreen() {
   const selectedBar = selectedKey ? bars.find((b) => b.key === selectedKey) ?? null : null;
   const selectedSummary = selectedKey ? summaries.find((s) => s.key === selectedKey) ?? null : null;
 
-  // XEM TIẾN TRÌNH BƯỚC 5. Nhãn kỳ và hai nút lật kỳ.
+  // Nhãn kỳ và hai nút lật kỳ.
   // Nhãn đổi theo chế độ: tuần ghi khoảng ngày, tháng ghi tháng và năm, năm ghi số năm.
   const periodLabel = mode === "week"
     ? `${windowDays[0].toLocaleDateString(locale, { day: "numeric", month: "short" })} – ${windowDays[6].toLocaleDateString(locale, { day: "numeric", month: "short" })}`
@@ -221,20 +219,12 @@ export default function ProgressScreen() {
           })}
         </View>
 
-          {/* Tab calo. */}
+        {/* Tab calo. */}
         {activeTab === "calories" && (
           <>
             {/* Một thẻ gồm chuyển kỳ, biểu đồ và tổng của kỳ. */}
             <Card style={styles.todayCard}>
-              <View style={styles.periodNav}>
-                <Pressable onPress={() => shiftPeriod(-1)} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
-                  <Ionicons name="chevron-back" size={22} color={theme.colors.primary} />
-                </Pressable>
-                <AppText variant="body2" style={styles.periodLabel}>{periodLabel}</AppText>
-                <Pressable onPress={() => shiftPeriod(1)} disabled={nextDisabled} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
-                  <Ionicons name="chevron-forward" size={22} color={nextDisabled ? theme.colors.border : theme.colors.primary} />
-                </Pressable>
-              </View>
+              <PeriodNav label={periodLabel} nextDisabled={nextDisabled} onShift={shiftPeriod} />
 
               <View style={styles.chartBox}>
                 {mode === "month" ? (
@@ -266,14 +256,14 @@ export default function ProgressScreen() {
                 </AppText>
               )}
 
-                {/* Giá trị của cột người dùng vừa chọn. */}
+              {/* Giá trị của cột người dùng vừa chọn. */}
               {selectedBar && (
                 <AppText variant="subtle" style={styles.selectedLine}>
                   {(selectedSummary?.fullLabel ?? selectedBar.fullLabel ?? selectedBar.label)}: {selectedBar.value.toLocaleString()} {t.common.kcal}
                 </AppText>
               )}
 
-                {/* Tổng của kỳ với nhãn nằm sát phía trên. */}
+              {/* Tổng của kỳ với nhãn nằm sát phía trên. */}
               <View style={styles.eatenGroup}>
                 <AppText variant="subtle" style={styles.todayLabel}>{t.progress.eatenLabel}</AppText>
                 <View style={styles.todayValueRow}>
@@ -298,7 +288,7 @@ export default function ProgressScreen() {
               </View>
             </Card>
 
-                {/* Thống kê theo ngày hoặc theo tháng tùy chế độ. */}
+            {/* Thống kê theo ngày hoặc theo tháng tùy chế độ. */}
             <View style={styles.statsRow}>
               <Card style={styles.statCard}>
                 <AppText variant="h2" style={styles.statPrimary}>
@@ -319,7 +309,7 @@ export default function ProgressScreen() {
               </Card>
             </View>
 
-              {/* Tuần hiển thị danh sách chi tiết từng ngày. */}
+            {/* Tuần hiển thị danh sách chi tiết từng ngày. */}
             {mode === "week" && (
               <Card style={styles.sectionCard}>
                 <AppText variant="h2">{t.progress.summaryTitle}</AppText>
@@ -358,14 +348,14 @@ export default function ProgressScreen() {
               </Card>
             )}
 
-              {/* Tháng đã có heatmap nên chỉ cần hiện số ngày đã ghi. */}
+            {/* Tháng đã có heatmap nên chỉ cần hiện số ngày đã ghi. */}
             {mode === "month" && (
               <Card style={styles.sectionCard}>
                 <AppText variant="subtle">{t.progress.daysLoggedMonth(daysWithMeals.length, days)}</AppText>
               </Card>
             )}
 
-              {/* Ngày tốt nhất là ngày gần mục tiêu nhất trong tuần hoặc tháng. */}
+            {/* Ngày tốt nhất là ngày gần mục tiêu nhất trong tuần hoặc tháng. */}
             {mode !== "year" && bestDay && (
               <Card style={styles.bestCard}>
                 <View style={styles.bestHead}>
@@ -380,7 +370,7 @@ export default function ProgressScreen() {
               </Card>
             )}
 
-              {/* Tuần hiển thị bảy chấm về mức độ đều đặn. */}
+            {/* Tuần hiển thị bảy chấm về mức độ đều đặn. */}
             {mode === "week" && (
               <ConsistencyRow
                 summaries={summaries.slice(-7)}
@@ -389,7 +379,7 @@ export default function ProgressScreen() {
               />
             )}
 
-              {/* Năm hiển thị chi tiết từng tháng. */}
+            {/* Năm hiển thị chi tiết từng tháng. */}
             {mode === "year" && (
               <Card style={styles.sectionCard}>
                 <AppText variant="h2">{t.progress.monthlyTitle}</AppText>
@@ -408,7 +398,7 @@ export default function ProgressScreen() {
           </>
         )}
 
-          {/* Tab hoạt động dùng kỳ, biểu đồ và độ đều đặn tương tự tab calo. */}
+        {/* Tab hoạt động dùng kỳ, biểu đồ và độ đều đặn tương tự tab calo. */}
         {activeTab === "activity" && (
           <ActivitySection
             mode={mode}
@@ -446,8 +436,6 @@ const styles = StyleSheet.create({
 
   // Thẻ của ngày đang được chọn.
   todayCard: { padding: theme.space.xl, gap: theme.space.md },
-  periodNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  periodLabel: { fontWeight: "700" },
   selectedLine: { fontSize: 12, fontWeight: "700", color: theme.colors.primary },
   goalBasis: { fontSize: 11, lineHeight: 15 },
   // Tạo khoảng cách giữa phần chuyển kỳ và biểu đồ.

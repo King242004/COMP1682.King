@@ -2,7 +2,8 @@
 // Giữ bảng chỉ số MET, là con số dùng để tính calo đã đốt của từng hoạt động.
 //
 // Ai gọi tới: exerciseController (ghi buổi tập), planController (nút "Xong"),
-//             coachController (tính calo đốt khi trả lời)
+//             coachController (tính calo đốt khi trả lời),
+//             coachPrompt (liệt kê các hoạt động app hỗ trợ cho AI biết)
 // Nhận vào:   mã hoạt động và thời lượng
 // Trả ra:     chỉ số MET và số calo đã đốt
 // Khi lỗi:    mã hoạt động không có trong bảng thì trả rỗng, không đoán bừa
@@ -11,8 +12,6 @@
 // nằm ở đây. Nhờ vậy một app đã bị sửa cũng không tự đặt được MET để khai khống
 // lượng calo đã đốt.
 //
-// Danh mục chỉ số MET, đặt Ở SERVER. App chỉ gửi lên mã hoạt động, còn con số
-// dùng để tính calo nằm ở đây, nên một app đã bị sửa cũng không tự đặt được MET.
 // Nguồn: Herrmann và cộng sự (2024), 2024 Adult Compendium of Physical Activities.
 // Tra cứu tại https://pacompendium.com/adult-compendium/
 // Trường code là mã tra cứu trong Compendium, để bất kỳ ai cũng kiểm lại được
@@ -22,15 +21,8 @@
 // vì nó trộn nhiều động tác, nên lấy theo hoạt động gần nhất và thiên về phía
 // thấp hơn. Năm mốc đang dùng: 02101 giãn cơ nhẹ, 02150 yoga,
 // 02022 calisthenics mức vừa, 17190 đi bộ mức vừa, và 15110 đấm bao cát.
-
-// ══════════════════════════════════════════════════════════
-// BẢNG HOẠT ĐỘNG VÀ CÔNG THỨC ĐỐT CALO
 //
-// Không phải luồng. Mấy bảng tra, cộng công thức tính calo đốt.
-// Đến từ exerciseController và planController.
-// 
-// Nhớ: mọi chỉ số MET đều có nguồn, ghi ngay dưới đây. Không số nào tự nghĩ ra.
-// ══════════════════════════════════════════════════════════
+// Nhớ: mọi chỉ số MET đều có nguồn, ghi ngay tại dòng khai nó. Không số nào tự nghĩ ra.
 
 // Các hoạt động ngoài app được ghi nhận trong khảo sát 392 sinh viên nội trú
 // Đại học Cần Thơ: Dang và cộng sự (2025), DOI 10.46827/ejpe.v12i6.6045.

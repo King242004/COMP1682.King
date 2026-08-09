@@ -9,17 +9,14 @@
 // Cách dựng khóa nhớ tạm: chuẩn hóa chữ rồi băm SHA-256. Chuẩn hóa gồm bỏ
 // dấu cách thừa và hạ chữ thường, nên "Phở Bò" và "phở  bò" ra cùng một khóa
 // và chỉ tốn một lượt AI.
-// CACHE_VERSION nằm trong khóa: đổi cách dựng câu lệnh thì tăng số này để mọi
-// kết quả cũ bị bỏ, thay vì trả về số tính theo luật cũ.
-// Khóa nhớ tạm dựng bằng cách chuẩn hóa chữ rồi băm SHA-256. Chuẩn hóa gồm bỏ
-// chỉ tốn một lượt AI. CACHE_VERSION nằm trong khóa: đổi cách dựng câu lệnh thì
-// tăng số này để mọi kết quả cũ bị bỏ thay vì trả về số tính theo luật cũ.
 const crypto = require("crypto");
 
-// Nằm trong khóa nhớ tạm. Đổi cách dựng câu lệnh thì TĂNG số này,
+// Nằm trong khóa nhớ tạm. Đổi cách dựng câu lệnh thì TĂNG số này, để mọi kết quả
+// cũ bị bỏ thay vì trả về số tính theo luật cũ.
 const CACHE_VERSION = "nutrition-v1";
 
-// và chỉ tốn một lượt AI.
+// Bỏ dấu cách thừa và hạ chữ thường. GIỮ NGUYÊN dấu tiếng Việt, khác hẳn
+// utils/textNormalize, vì đây chỉ để gộp khóa nhớ tạm chứ không để dò từ khóa.
 function normalizeNutritionText(value) {
   return String(value || "").normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
 }

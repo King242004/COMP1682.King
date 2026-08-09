@@ -12,8 +12,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useMeals } from "@/features/meals/MealsContext";
 import { getUnreadCount } from "@/features/community/communityApi";
-import { dateKey } from "@/utils/dateUtils";
+import { todayKey } from "@/utils/dateUtils";
 import { mealStreak, streakEligibleDates } from "@/utils/mealStreak";
+import { initials } from "@/utils/nameUtils";
 import { useT, type Strings } from "@/i18n";
 import { shadow, theme } from "@/ui/theme";
 import { AppText } from "./AppText";
@@ -26,33 +27,24 @@ function greetingForHour(h: number, t: Strings) {
   return t.nav.goodEvening;
 }
 
-// ══════════════════════════════════════════════════════════
-// THANH ĐẦU
-//
-// Đến từ app/tabs/_layout, chỉ gắn cho riêng tab Trang chủ.
-// Ba bước, đọc từ trên xuống là đúng thứ tự. Có một chặng chờ mạng ở BƯỚC 2.
-// Xong thì bấm chuông đi màn Thông báo, bấm ngọn lửa mở bảng chuỗi ngày.
-// ══════════════════════════════════════════════════════════
-
-// THANH ĐẦU BƯỚC 1. Lấy sẵn mọi thứ cần hiện, KHÔNG gọi mạng ở đây.
-// Tên và ảnh lấy từ AuthContext, danh sách món lấy từ MealsContext,
-// rồi tự đếm chuỗi ngày với calo hôm nay ngay tại máy.
+// Thanh xanh trên cùng, có chuông đi màn Thông báo và ngọn lửa bấm vào thì mở
+// bảng chuỗi ngày. Chỉ đếm thông báo là phải chờ mạng.
+// Tên và ảnh lấy từ AuthContext, món lấy từ MealsContext, đều có sẵn
+// Chuỗi ngày và calo hôm nay tự đếm tại máy, không gọi mạng
 export function AppHeader() {
   const { user, token, fetchProfile } = useAuth();
   const router = useRouter();
   const t = useT();
   const { historyMeals } = useMeals();
   const streak = mealStreak(streakEligibleDates(historyMeals));
-  const todayMeals = historyMeals.filter((meal) => meal.date === dateKey(new Date()));
+  const todayMeals = historyMeals.filter((meal) => meal.date === todayKey());
   const todayCalories = Math.round(todayMeals.reduce((sum, meal) => sum + meal.calories, 0));
   const goal = user?.calorieGoal ?? null;
 
   const [unread, setUnread] = useState(0);
   const [streakVisible, setStreakVisible] = useState(false);
-  // THANH ĐẦU BƯỚC 2. communityApi.getUnreadNotificationCount và getPendingFollowRequests
-  // gọi song song các route Community; Promise.all tiếp tục khi cả hai trả kết quả.
-  // Đường đi: getUnreadCount → apiClient → GET /community/notifications/unread-count
-  //           → notificationController.getUnreadCount
+  // Đếm thông báo chưa đọc và lời mời theo dõi, gọi song song bằng Promise.all
+  // Đi tiếp: src/features/community/communityApi.ts
   // Lượt kia là fetchProfile của AuthContext, lấy mục tiêu calo mới nhất
   // cho bảng chuỗi ngày ở dưới hiện còn bao nhiêu kcal.
   // Dùng useFocusEffect chứ không useEffect, nên mỗi lần quay về tab Trang chủ
@@ -64,8 +56,8 @@ export function AppHeader() {
     fetchProfile().catch(() => {});
   }, [fetchProfile, token]));
 
-  // THANH ĐẦU BƯỚC 3. Vẽ thanh, rồi vẽ luôn bảng chuỗi ngày nhưng để ẩn.
-  // Bảng chỉ hiện khi bấm ngọn lửa. Chuỗi ngày bằng 0 thì giấu luôn ngọn lửa.
+  // Bảng chuỗi ngày dựng sẵn nhưng ẩn, chỉ hiện khi bấm ngọn lửa
+  // Chuỗi ngày bằng 0 thì giấu luôn ngọn lửa
   return (
     <>
       <View style={styles.header}>
@@ -74,7 +66,7 @@ export function AppHeader() {
             {user?.avatar ? (
               <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
             ) : (
-              <AppText style={styles.avatarText}>{(user?.name ?? "U")[0].toUpperCase()}</AppText>
+              <AppText style={styles.avatarText}>{initials(user?.name ?? "")}</AppText>
             )}
           </View>
           <View>

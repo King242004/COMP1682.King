@@ -10,16 +10,7 @@
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, type DimensionValue } from "react-native";
 
-// ══════════════════════════════════════════════════════════
-// NHẤP NHÁY
-//
-// Đến từ mấy màn có chờ dữ liệu. Ba bước, đọc từ trên xuống là đúng thứ tự.
-// Không gọi mạng, chỉ nhấp nháy tại chỗ cho tới khi nơi gọi bỏ nó đi.
 // Dùng thay vòng xoay để bố cục không nhảy một cái khi dữ liệu về.
-// ══════════════════════════════════════════════════════════
-
-// NHẤP NHÁY BƯỚC 1. Nơi gọi đưa vào kích thước khối cần giữ chỗ.
-// Nên truyền đúng cỡ của nội dung thật, kẻo dữ liệu về là bố cục giật một nhịp.
 export function Skeleton({
   width = "100%",
   height = 12,
@@ -29,12 +20,12 @@ export function Skeleton({
   height?: number;
   radius?: number;
 }) {
-  // NHẤP NHÁY BƯỚC 2. Độ mờ chạy được, bắt đầu ở 0.35 tức mờ nhất.
-  // Để trong useRef nên vẽ lại bao nhiêu lần cũng vẫn là một giá trị đó,
-  // chứ dựng mới mỗi lần là hiệu ứng nhảy về đầu liên tục.
+  // Độ mờ bắt đầu ở 0.35 tức mờ nhất
+  // Để trong useRef nên vẽ lại bao nhiêu lần vẫn là một giá trị đó,
+  // dựng mới mỗi lần là hiệu ứng nhảy về đầu liên tục
   const opacity = useRef(new Animated.Value(0.35)).current;
-  // NHẤP NHÁY BƯỚC 3. Chạy vòng lặp mờ rồi tỏ, mỗi chiều 650 ms, lặp mãi.
-  // Dòng return ở cuối dừng vòng lặp khi component biến mất, kẻo nó chạy nền hoài.
+  // Vòng lặp mờ rồi tỏ, mỗi chiều 650 ms, lặp mãi
+  // Dòng return ở cuối dừng vòng lặp khi component biến mất, kẻo chạy nền hoài
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([

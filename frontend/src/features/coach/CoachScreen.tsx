@@ -7,23 +7,21 @@
 // Khi lỗi:    AI hết lượt thì hiện lời nhắc thử lại sau. Câu ngoài phạm vi thì Coach từ chối lịch sự
 
 // Màn này có hai phần: thẻ điểm sức khỏe ở trên, và khung chat ở dưới.
-// LUỒNG GỬI TIN NHẮN
-// 1. Bấm nút gửi, chạy send ở file này
-// 2. hiện ngay tin của mình cộng ba chấm đang gõ, chưa chờ mạng
-// 3. chatWithCoach gửi tin hiện tại (POST /coach/chat)
-// 4. coachController.chat đọc 10 ChatMessage và gọi coachContext.buildContext
-// 5. gửi cho Gemini kèm dữ liệu đó, nhận câu trả lời
-// 6. coachController.chat tạo hai ChatMessage rồi trả response
-// 7. thay ba chấm bằng câu trả lời thật
-// LUỒNG GHI MÓN TỪ TIN NHẮN
-// 1. Coach nhận ra người dùng đang ăn một món, tin nhắn có nút Thêm
-// 2. Bấm Thêm để mở màn Add Meal với dữ liệu AI điền sẵn
-// 3. Người dùng kiểm tra hoặc chỉnh lại rồi tự bấm Lưu
-// 4. món được ghi qua API Meal thông thường
-// LUỒNG XEM ĐIỂM SỨC KHỎE, tự chạy khi mở màn
-// 1. loadInsight hiện bản lưu trong máy ngay
-// 2. nếu bản lưu quá 10 phút thì gọi GET /coach/insight lấy bản mới
-// 3. điểm do CODE tính chứ không phải AI chấm, AI chỉ viết lời nhận xét
+// Bấm nút gửi thì đi:
+//   Hiện ngay tin của mình cộng ba chấm đang gõ, chưa chờ mạng
+//   src/features/coach/coachApi.ts → src/utils/apiClient.ts
+//   → backend/src/routes/coachRoutes.js, POST /coach/chat
+//   → backend/src/controllers/coachController.js đọc 10 tin gần nhất
+//   → backend/src/services/coach/coachContext.js gom dữ liệu sức khỏe
+//   → Gemini trả lời, backend lưu hai tin rồi trả về
+//   Cuối cùng thay ba chấm bằng câu trả lời thật.
+//
+// Coach nhận ra người dùng đang ăn một món thì tin nhắn có thêm nút Thêm.
+// Bấm nút đó chỉ mở màn Thêm món với dữ liệu điền sẵn, KHÔNG tự ghi.
+//
+// Thẻ điểm sức khỏe tự chạy khi mở màn, không ai bấm:
+//   Hiện bản lưu trong máy ngay, quá 10 phút thì gọi GET /coach/insight
+//   Điểm do CODE tính chứ không phải AI chấm, AI chỉ viết lời nhận xét.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, FlatList, Image, Keyboard, Platform, Pressable, StyleSheet, TextInput, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -33,11 +31,11 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useHealthDataRefresh } from "@/context/HealthDataRefreshContext";
 import { getInsight, chatWithCoach, getChatHistory, clearChatHistory, getCachedInsight, cacheInsight, INSIGHT_TTL_MS, type CoachInsight, type ChatMessage } from "@/features/coach/coachApi";
-import { prepareCoachImage } from "@/features/coach/coachImage";
+import { compressForUpload } from "@/utils/imageCompress";
 import { TypingDots } from "@/features/coach/TypingDots";
 import { InsightCard } from "@/features/coach/InsightCard";
 import { ChatBubble } from "@/features/coach/ChatBubble";
-import { todayKey, dateKey } from "@/utils/dateUtils";
+import { todayKey, dateKey, relativeDayLabel } from "@/utils/dateUtils";
 import { aiResetWhen } from "@/utils/aiQuota";
 import { resolveLanguage, localeTag } from "@/utils/languageUtils";
 import { getErrorMessage } from "@/utils/errorUtils";
@@ -107,8 +105,8 @@ export default function CoachScreen() {
       ? await ImagePicker.launchCameraAsync({ mediaTypes: "images", quality: 0.7 })
       : await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.7 });
     if (result.canceled || !result.assets?.[0]?.uri) return;
-      const compressed = await prepareCoachImage(result.assets[0].uri);
-    if (compressed) setPendingImage(compressed);
+    const compressed = await compressForUpload(result.assets[0].uri, { base64: true });
+    if (compressed?.base64) setPendingImage({ uri: compressed.uri, base64: compressed.base64 });
     else Alert.alert(L.imgErrTitle, L.imgErrMsg);
   };
 
@@ -162,7 +160,7 @@ export default function CoachScreen() {
       // Cuộn tới tin mới nhất sau khi lịch sử hiển thị.
       setTimeout(() => scrollToLatest(false), 150);
     } catch {
-    // Giữ nguyên dữ liệu đang có nếu tải lịch sử thất bại.
+      // Giữ nguyên dữ liệu đang có nếu tải lịch sử thất bại.
     } finally {
       setHistoryLoaded(true);
     }
@@ -266,15 +264,8 @@ export default function CoachScreen() {
   // Nhãn cho dòng phân cách ngày giữa các tin nhắn.
   // Hai ngày gần nhất gọi thẳng là Hôm nay với Hôm qua, xa hơn mới ghi ngày tháng.
   // Không truyền iso thì coi như hôm nay.
-  const dayLabelFor = (iso?: string) => {
-    const d = iso ? dateKey(new Date(iso)) : todayKey();
-    const now = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(now.getDate() - 1);
-    if (d === dateKey(now)) return t.meals.today;
-    if (d === dateKey(yesterday)) return t.meals.yesterday;
-    return new Date(d + "T00:00:00").toLocaleDateString(localeTag(lang), { month: "short", day: "numeric" });
-  };
+  const dayLabelFor = (iso?: string) =>
+    relativeDayLabel(iso ? dateKey(new Date(iso)) : todayKey(), t.meals, localeTag(lang));
   // Lấy ngày của một tin nhắn, dùng để chèn dòng phân cách ngày giữa các tin.
   const msgDay = (m: ChatMessage) => (m.createdAt ? dateKey(new Date(m.createdAt)) : todayKey());
 
@@ -298,7 +289,8 @@ export default function CoachScreen() {
           try {
             await clearChatHistory(token);
           } catch {
-          loadHistory();
+            // Xóa hụt trên máy chủ thì tải lại, cho lịch sử hiện về đúng như cũ.
+            loadHistory();
           }
         },
       },
@@ -329,7 +321,7 @@ export default function CoachScreen() {
             >
               <Ionicons name="trash-outline" size={20} color="rgba(255,255,255,0.85)" />
             </Pressable>
-          )}
+            )}
         </View>
 
         <View style={styles.chatArea}>
@@ -362,7 +354,7 @@ export default function CoachScreen() {
               </View>
             )}
 
-          renderItem={({ item: m, index: i }) => {
+            renderItem={({ item: m, index: i }) => {
             const showSeparator = i === 0 || msgDay(m) !== msgDay(messages[i - 1]);
             return (
               <View style={styles.msgBlock}>
@@ -380,15 +372,15 @@ export default function CoachScreen() {
                 />
               </View>
             );
-          }}
+            }}
 
-          ListFooterComponent={sending ? (
+            ListFooterComponent={sending ? (
             <View style={styles.typingBubble}>
               <TypingDots />
             </View>
           ) : null}
 
-          ListEmptyComponent={(
+            ListEmptyComponent={(
             <View style={styles.emptyBlock}>
               <AppText variant="muted" style={styles.introText}>{L.intro}</AppText>
               <View style={styles.chipWrap}>
@@ -410,8 +402,8 @@ export default function CoachScreen() {
                 </Pressable>
               </View>
             </View>
-          )}
-          />
+            )}
+            />
 
           {/* Hiện nút tới tin mới nhất khi người dùng đang đọc tin cũ. */}
           {showJump && (
@@ -421,7 +413,7 @@ export default function CoachScreen() {
             >
               <Ionicons name="chevron-down" size={20} color="#fff" />
             </Pressable>
-          )}
+            )}
         </View>
 
         {communityRecipeNotice && (
@@ -487,7 +479,7 @@ export default function CoachScreen() {
             onFocus={() => scrollToLatest(true)}
             onSubmitEditing={() => send(input)}
             returnKeyType="send"
-          />
+            />
           <Pressable
             onPress={() => send(input)}
             disabled={(!input.trim() && !pendingImage) || sending}
@@ -600,7 +592,7 @@ const styles = StyleSheet.create({
   inputBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, paddingBottom: 14 },
   cameraBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: "rgba(8,145,178,0.06)",
+    backgroundColor: theme.colors.tintSoft,
     alignItems: "center", justifyContent: "center",
   },
   cameraBtnPressed: { backgroundColor: theme.colors.tint },

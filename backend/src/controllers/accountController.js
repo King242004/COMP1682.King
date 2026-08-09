@@ -15,16 +15,13 @@ const { INPUT_LIMITS } = require("../config/inputLimits");
 const cloudinary = require("../config/cloudinary");
 const { sendOTP } = require("../services/emailRelayClient");
 const User = require("../models/User");
-// ══════════════════════════════════════════════════════════
 // CÁC CỬA VỀ TÀI KHOẢN
 //
-// Không phải luồng. Mấy cửa độc lập: đổi tên, đổi ảnh đại diện, đổi mật khẩu,
+// Mấy cửa độc lập: đổi tên, đổi ảnh đại diện, đổi mật khẩu,
 // quên mật khẩu, và xóa tài khoản.
-// 
+//
 // Nhớ: xóa tài khoản là việc KHÔNG lùi được. Nó phải dọn dữ liệu ở MỌI bảng
 //      và xóa cả ảnh trên Cloudinary, sót chỗ nào là rác nằm lại vĩnh viễn.
-// ══════════════════════════════════════════════════════════
-
 // Từ đây xuống là các bảng cần dọn khi xóa tài khoản.
 // Thiếu một bảng là dữ liệu của người đã xóa còn nằm lại trong database.
 const OTP = require("../models/OTP");
@@ -41,9 +38,7 @@ const NutritionEstimateCache = require("../models/NutritionEstimateCache");
 const { reserveOTP, verifyOTPCode } = require("../services/otpService");
 const { OTP_PURPOSE, OTP_TTL_MS, generateOTP, hashOTP, normalizeEmail, waitForResponseFloor } = require("../utils/otpSecurity");
 const { createAuthToken } = require("../utils/authToken");
-// Chốt ngôn ngữ email. Chỉ có tiếng Việt hoặc tiếng Anh,
-// giá trị lạ thì rơi về tiếng Anh.
-const resolveEmailLanguage = (value) => value === "vi" ? "vi" : "en";
+const { isValidEmail, isValidName, isValidPassword, resolveEmailLanguage } = require("../validators/accountInputValidator");
 
 // Đẩy ảnh lên kho ảnh và cắt vuông 300x300 ngay lúc tải lên.
 function uploadAvatarToCloudinary(buffer) {
@@ -89,15 +84,8 @@ exports.uploadAvatar = async (req, res) => {
 exports.changeName = async (req, res) => {
   const { name } = req.body;
 
-  if (typeof name !== "string" || name.trim().length < 2)
-    return res.status(400).json({ message: "Name must be at least 2 characters." });
-
-  if (name.trim().length > INPUT_LIMITS.DISPLAY_NAME)
-    return res.status(400).json({ message: `Name must be ${INPUT_LIMITS.DISPLAY_NAME} characters or fewer.` });
-
-  // \p{L} = any Unicode letter (English + Vietnamese diacritics + other languages)
-  if (!/^[\p{L}\s]+$/u.test(name.trim()))
-    return res.status(400).json({ message: "Name must contain only letters." });
+  if (!isValidName(name))
+    return res.status(400).json({ message: `Name must be 2 to ${INPUT_LIMITS.DISPLAY_NAME} characters and contain only letters.` });
 
   const user = await User.findByIdAndUpdate(
     req.user.id,
@@ -108,15 +96,15 @@ exports.changeName = async (req, res) => {
   res.json({ message: "Name updated successfully.", user });
 };
 
-// ─── Send OTP ─────────────────────────────────────────────────────────────────
-// Bước 1 của luồng Quên mật khẩu.
+// ─── QUÊN MẬT KHẨU, : GỬI MÃ ───
+// của luồng Quên mật khẩu.
 // Giống luồng đăng ký, câu trả lời luôn như nhau để không lộ email nào đã đăng ký.
 exports.sendPasswordOTP = async (req, res) => {
   const startedAt = Date.now();
   const email = normalizeEmail(req.body.email);
 
   if (!email) return res.status(400).json({ message: "Email is required." });
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+  if (!isValidEmail(email))
     return res.status(400).json({ message: "Please provide a valid email address." });
 
   const user = await User.exists({ email });
@@ -125,7 +113,7 @@ exports.sendPasswordOTP = async (req, res) => {
     return res.json({ message: "If an account matches this email, a code will be sent." });
   }
 
-  // Cooldown: one code per minute per email — stops OTP email spam
+  // Mỗi email chỉ xin được một mã mỗi phút, chặn spam gửi mail
   const purpose = OTP_PURPOSE.PASSWORD_RESET;
   const code = generateOTP();
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
@@ -148,7 +136,7 @@ exports.sendPasswordOTP = async (req, res) => {
   res.json({ message: "If an account matches this email, a code will be sent." });
 };
 
-// Bước 2 của luồng Quên mật khẩu.
+// của luồng Quên mật khẩu.
 exports.verifyOTP = async (req, res) => {
   const { otp } = req.body;
   const email = normalizeEmail(req.body.email);
@@ -158,19 +146,19 @@ exports.verifyOTP = async (req, res) => {
   const purpose = OTP_PURPOSE.PASSWORD_RESET;
   const otpStatus = await verifyOTPCode({ email, purpose, candidate: otp });
   if (otpStatus === "expired") {
-    return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+    return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
   }
   if (otpStatus === "burned") {
     return res.status(400).json({ message: "Too many wrong attempts. Please request a new code." });
   }
-  if (otpStatus !== "valid") return res.status(400).json({ message: "Invalid OTP." });
+  if (otpStatus !== "valid") return res.status(400).json({ message: "Invalid verification code." });
 
   res.json({ message: "OTP verified." });
 };
 
-// ─── Verify OTP & Change Password ─────────────────────────────────────────────
-// Bước 3 của luồng Quên mật khẩu.
-// Bước 2 chỉ xem mã, bước 3 mới xóa mã, nên mã dùng đúng một lần cho cả luồng.
+// ─── QUÊN MẬT KHẨU, : ĐẶT MẬT KHẨU MỚI ───
+// của luồng Quên mật khẩu.
+// chỉ xem mã, mới xóa mã, nên mã dùng đúng một lần cho cả luồng.
 exports.resetPassword = async (req, res) => {
   const { otp, newPassword } = req.body;
   const email = normalizeEmail(req.body.email);
@@ -178,19 +166,18 @@ exports.resetPassword = async (req, res) => {
   if (!email || !otp || typeof newPassword !== "string" || !newPassword)
     return res.status(400).json({ message: "Email, OTP and new password are required." });
 
-  if (newPassword.length < 6 || newPassword.length > INPUT_LIMITS.PASSWORD ||
-      !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword))
+  if (!isValidPassword(newPassword))
     return res.status(400).json({ message: "Password must be at least 6 characters, include one uppercase letter and one number." });
 
   const purpose = OTP_PURPOSE.PASSWORD_RESET;
   const otpStatus = await verifyOTPCode({ email, purpose, candidate: otp, consume: true });
   if (otpStatus === "expired") {
-    return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+    return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
   }
   if (otpStatus === "burned") {
     return res.status(400).json({ message: "Too many wrong attempts. Please request a new code." });
   }
-  if (otpStatus !== "valid") return res.status(400).json({ message: "Invalid OTP." });
+  if (otpStatus !== "valid") return res.status(400).json({ message: "Invalid verification code." });
 
   const hashed = await bcrypt.hash(newPassword, 10);
   const updated = await User.findOneAndUpdate(
@@ -209,8 +196,7 @@ exports.changePassword = async (req, res) => {
   if (typeof currentPassword !== "string" || typeof newPassword !== "string" || !currentPassword || !newPassword)
     return res.status(400).json({ message: "Current and new password are required." });
 
-  if (newPassword.length < 6 || newPassword.length > INPUT_LIMITS.PASSWORD ||
-      !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword))
+  if (!isValidPassword(newPassword))
     return res.status(400).json({ message: "Password must be at least 6 characters, include one uppercase letter and one number." });
 
   const user = await User.findById(req.user.id).select("+password +tokenVersion");

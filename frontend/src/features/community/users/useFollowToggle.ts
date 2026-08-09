@@ -12,28 +12,24 @@
 import { useCallback, useState } from "react";
 import { followUser, unfollowUser, type DiscoverUser } from "../communityApi";
 import { resolvedFollowState } from "../communityDisplay";
-
-// ══════════════════════════════════════════════════════════
 // BẤM THEO DÕI
 //
 // Đến từ nút Theo dõi ở màn Khám phá và màn danh sách người.
-// Bốn bước, đọc từ trên xuống là đúng thứ tự.
+//
 // Xong thì chữ trên nút đổi ngay, còn backend chạy theo sau.
-// ══════════════════════════════════════════════════════════
-
-// BẤM THEO DÕI BƯỚC 1. Bảng đè, khóa là mã người, giá trị là trạng thái mới.
+// Bảng đè, khóa là mã người, giá trị là trạng thái mới.
 // Chỉ chứa những người vừa bị bấm, chứ không chứa cả danh sách.
 export function useFollowToggle(token: string | null) {
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
 
-  // BẤM THEO DÕI BƯỚC 2. Trả trạng thái để vẽ nút.
+  // Trả trạng thái để vẽ nút.
   // Có trong bảng đè thì lấy giá trị đè, không có thì lấy giá trị backend đưa về.
   const isFollowing = useCallback(
     (user: DiscoverUser) => resolvedFollowState(overrides, user),
     [overrides],
   );
 
-  // BẤM THEO DÕI BƯỚC 3. Người dùng bấm nút.
+  // Người dùng bấm nút.
   // Ghi vào bảng đè TRƯỚC, nên nút đổi chữ ngay, chưa chờ mạng.
   const toggleFollow = useCallback(async (user: DiscoverUser) => {
     if (!token) return;
@@ -52,7 +48,7 @@ export function useFollowToggle(token: string | null) {
     }
   }, [overrides, token]);
 
-  // BẤM THEO DÕI BƯỚC 4. Xóa sạch bảng đè.
+  // Xóa sạch bảng đè.
   // Màn gọi hàm này sau khi vừa tải lại danh sách, vì lúc đó dữ liệu backend
   // đã là mới nhất, giữ bảng đè cũ lại chỉ tổ đè nhầm.
   const clearFollowOverrides = useCallback(() => setOverrides({}), []);

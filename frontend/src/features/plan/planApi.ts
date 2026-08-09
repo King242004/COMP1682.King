@@ -9,14 +9,13 @@
 // Ngoài gọi mạng, nó còn lo lưu tạm kế hoạch tuần và danh sách đi chợ
 // trong bộ nhớ máy, để mở lại không phải chờ và không tốn lượt gọi AI.
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiRequest } from "@/utils/apiClient";
+import { apiRequest, AI_TIMEOUT_MS } from "@/utils/apiClient";
 import { withId } from "@/utils/apiTypes";
 import { ROUTINE_CATEGORIES, type RoutineCategory } from "@/features/exercise/guidedRoutines";
+import type { MealType } from "@/features/meals/mealTypes";
 
-// Chờ tối đa 2 phút. Tạo kế hoạch cả tuần là lượt gọi AI nặng nhất app.
-const AI_TIMEOUT_MS = 120_000;
-
-export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+// Dùng lại kiểu của features/meals thay vì khai lại, vì cùng một bộ bốn buổi ăn.
+export type { MealType };
 
 export type PlanMeal = {
   id: string;

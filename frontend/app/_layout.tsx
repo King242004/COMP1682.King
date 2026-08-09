@@ -3,16 +3,14 @@
 //
 // Ai gọi tới: expo-router chạy file này đầu tiên, trước mọi màn hình
 // Nhận vào:   không nhận gì
-// Trả ra:     bộ khung có ba Provider bọc ngoài và danh sách màn hình
+// Trả ra:     bộ khung có ba Provider bọc ngoài, cộng phần khai hiệu ứng chuyển màn
 // Khi lỗi:    font tải hỏng thì màn hình chờ giữ nguyên, không lóe màn trắng
 //
-// LUỒNG MỞ APP
-// 1. Chạy file này đầu tiên
-// 2. Giữ màn hình chờ, tải font Be Vietnam Pro
-// 3. Font xong thì tắt màn hình chờ
-// 4. Dựng ba Provider bọc ngoài, xem chú thích bên dưới
-// 5. AuthProvider tự đọc phiên đăng nhập cũ trong máy
-// 6. app/index.tsx xem có phiên không rồi đá sang /tabs hoặc /auth/login
+// Mở app thì chạy theo thứ tự này:
+//   File này chạy đầu tiên, giữ màn hình chờ và tải font Be Vietnam Pro
+//   Font xong thì tắt màn hình chờ, rồi dựng ba Provider bọc ngoài
+//   AuthProvider tự đọc phiên đăng nhập cũ trong máy
+//   app/index.tsx xem có phiên không rồi đá sang /tabs hoặc /auth/login
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
@@ -27,7 +25,9 @@ import { HealthDataRefreshProvider } from "@/context/HealthDataRefreshContext";
 import { MealsProvider } from "@/features/meals/MealsContext";
 
 // Chặn hệ điều hành tự tắt màn hình chờ, để tự tắt sau khi font tải xong.
-SplashScreen.preventAutoHideAsync();
+// Bắt lỗi vì đây là promise không ai chờ: chặn hụt thì màn hình chờ tắt sớm,
+// khó chịu một nhịp chứ không hỏng app, nên không được để nó thành lỗi văng ra.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -54,9 +54,13 @@ export default function RootLayout() {
     <AuthProvider>
       <HealthDataRefreshProvider>
         <MealsProvider>
-          <Stack screenOptions={{ headerShown: false, headerBackButtonDisplayMode: "minimal", headerBackTitle: "" }}>
-            {/* Khai báo hiệu ứng chuyển màn. Màn nào không khai báo thì dùng mặc định. */}
-            {/* index và login tắt hiệu ứng để lúc mở app không bị lóe hai lần. */}
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* CHỈ khai màn nào cần đổi hiệu ứng chuyển cảnh. Expo Router tự đăng ký
+                mọi route theo tên file trong app/, nên khai tên suông không kèm
+                option là không làm gì cả. Trước ngày 9/8/2026 chỗ này có 20 dòng
+                như vậy, và chính hai màn KHÔNG được khai là exercise/guided với
+                profile/help vẫn chạy bình thường, đó là bằng chứng. */}
+            {/* index cùng ba màn auth tắt hiệu ứng để lúc mở app không lóe hai lần. */}
             <Stack.Screen name="index" options={{ animation: "none" }} />
             <Stack.Screen name="auth/login" options={{ animation: "none" }} />
             <Stack.Screen name="auth/register" options={{ animation: "none" }} />
@@ -64,26 +68,6 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding" options={{ animation: "fade_from_bottom" }} />
             {/* Tắt vuốt để quay lại, vì vuốt từ tabs sẽ rơi ngược về màn đăng nhập. */}
             <Stack.Screen name="tabs" options={{ gestureEnabled: false }} />
-            <Stack.Screen name="scan" />
-            <Stack.Screen name="profile/edit" />
-            <Stack.Screen name="profile/goals" />
-            <Stack.Screen name="profile/settings" />
-            <Stack.Screen name="profile/change-password" />
-            <Stack.Screen name="profile/reminders" />
-            <Stack.Screen name="profile/progress" />
-            <Stack.Screen name="community/notifications" />
-            <Stack.Screen name="community/post-create" />
-            <Stack.Screen name="community/post-detail" />
-            <Stack.Screen name="community/post-edit" />
-            <Stack.Screen name="community/user-profile" />
-            <Stack.Screen name="community/user-list" />
-            <Stack.Screen name="community/discover" />
-            <Stack.Screen name="meals/add" />
-            <Stack.Screen name="meals/edit" />
-            <Stack.Screen name="meals/detail" />
-            <Stack.Screen name="meals/history" />
-            <Stack.Screen name="plan/weekly" />
-            <Stack.Screen name="exercise/log-workout" />
           </Stack>
         </MealsProvider>
       </HealthDataRefreshProvider>

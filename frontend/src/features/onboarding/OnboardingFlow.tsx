@@ -7,15 +7,13 @@
 // Khi lỗi:    thiếu trường bắt buộc thì nút Tiếp bị khóa, không cho bỏ qua
 
 // Bốn bước nằm trong CÙNG một màn, đổi bằng biến step chứ không chuyển màn.
-// LUỒNG THIẾT LẬP LẦN ĐẦU
-// 1. Đăng ký xong, RegisterScreen đá tới đây
-// 2. Người dùng đi qua bốn bước: giới thiệu, mục tiêu, cơ thể, sức khỏe
-// 3. Bấm Hoàn tất ở bước cuối, chạy finish
-// 4. AuthContext.updateProfile
-// 5. accountApi.updateProfileRequest   (PUT /profile)
-// 6. Route gọi hàm updateProfile trong backend/src/controllers/profileController.js;
-//    hàm này gọi calorieGoal.autoGoal rồi lưu
-// 7. router.replace sang /tabs
+// Đăng ký xong là RegisterScreen đá tới đây. Người dùng đi qua bốn màn hỏi
+// gồm giới thiệu, mục tiêu, cơ thể, sức khỏe. Bấm Hoàn tất ở màn cuối thì đi:
+//   src/features/auth/AuthContext.tsx → src/features/auth/authApi.ts
+//   → src/utils/apiClient.ts → backend/src/routes/profileRoutes.js, PUT /profile
+//   → backend/src/controllers/profileController.js
+//   → backend/src/services/nutrition/calorieGoal.js tính mục tiêu calo rồi lưu
+//   Xong thì replace sang /tabs.
 // Thiết lập tài khoản mới đi từ giới thiệu, mục tiêu, cơ thể đến sức khỏe và khẩu vị.
 // Câu trả lời cung cấp dữ liệu cho Coach, gợi ý và kế hoạch tuần ngay từ đầu.
 // Mọi bước đều có thể bỏ qua và người dùng vẫn vào được Home.
@@ -33,24 +31,43 @@ import { Button } from "@/ui/components/Button";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { TextField } from "@/ui/components/TextField";
-import { estimateTDEE, estimateCalorieGoal, PROFILE_LIMITS, type WeightGoal } from "@/config/nutritionCalculations";
+import { ACTIVITY_LEVELS, estimateTDEE, estimateCalorieGoal, HEALTH_CONDITIONS, PROFILE_LIMITS, type WeightGoal } from "@/config/nutritionCalculations";
 import { INPUT_LIMITS, DIGIT_LIMITS } from "@/config/inputLimits";
 
 type Step = "intro" | "goal" | "body" | "health";
 const STEPS: Step[] = ["intro", "goal", "body", "health"];
 
-// ══════════════════════════════════════════════════════════
+// Lựa chọn dạng thẻ, dùng ở bước chọn giới tính, mức vận động và bệnh nền.
+// Khai NGOÀI OnboardingFlow. Khai bên trong thì mỗi lần màn vẽ lại là React thấy
+// một kiểu component mới và dựng lại từ đầu, kể cả ô nhập đang gõ ở cùng nhánh.
+function Chip({ active, label, onPress, flex }: {
+  active: boolean; label: string; onPress: () => void; flex?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        flex && styles.flex1,
+        active && styles.chipActive,
+        pressed && styles.pressed,
+      ]}
+    >
+      <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
+    </Pressable>
+  );
+}
+
 // THIẾT LẬP LẦN ĐẦU
 //
-// Đến từ màn Đăng ký, ngay sau khi tạo tài khoản xong. Năm bước,
-// đọc từ trên xuống là đúng thứ tự. Chỉ MỘT chặng chờ mạng, ở BƯỚC 5.
+// Đến từ màn Đăng ký, ngay sau khi tạo tài khoản xong.
+// Chỉ MỘT chặng chờ mạng, lúc bấm Hoàn tất ở màn cuối.
 // Xong thì vào thẳng Trang chủ.
 //
 // Nhớ: TDEE và mục tiêu calo hiện trên màn chỉ để XEM TRƯỚC, tính tại máy.
 //      Số chính thức do profileController tính lại lúc lưu, và có thể lệch.
-// ══════════════════════════════════════════════════════════
 
-// THIẾT LẬP BƯỚC 1. Dựng ba bảng lựa chọn cho ba màn hỏi.
+// Dựng ba bảng lựa chọn cho ba màn hỏi.
 // Phải dựng trong thân hàm chứ không để ngoài file, vì nhãn lấy từ bảng dịch,
 // mà bảng dịch đổi theo ngôn ngữ đang chọn.
 export function OnboardingFlow() {
@@ -65,22 +82,12 @@ export function OnboardingFlow() {
     { key: "gain_weight", icon: "barbell", label: t.labels.goal.gain_weight },
     { key: "maintain_weight", icon: "leaf", label: t.labels.goal.maintain_weight },
   ];
-  // Ba mức vận động, dùng ở màn hỏi số đo.
-  const ACTIVITIES = [
-    { key: "sedentary", label: t.labels.activity.sedentary },
-    { key: "moderate", label: t.labels.activity.moderate },
-    { key: "active", label: t.labels.activity.active },
-  ];
-  // Năm bệnh nền, phải khớp với RULES trong backend foodSafetyFilter.js.
-  const CONDITIONS = [
-    { key: "diabetes", label: t.labels.condition.diabetes },
-    { key: "hypertension", label: t.labels.condition.hypertension },
-    { key: "gout", label: t.labels.condition.gout },
-    { key: "high_cholesterol", label: t.labels.condition.high_cholesterol },
-    { key: "gastritis", label: t.labels.condition.gastritis },
-  ];
+  // Ba mức vận động và năm bệnh nền lấy từ config, không gõ lại danh sách ở đây.
+  // Nhãn tra theo khóa, nên thêm một mục ở config là màn này hiện luôn.
+  const ACTIVITIES = ACTIVITY_LEVELS.map((key) => ({ key, label: t.labels.activity[key] }));
+  const CONDITIONS = HEALTH_CONDITIONS.map((key) => ({ key, label: t.labels.condition[key] }));
 
-  // THIẾT LẬP BƯỚC 2. Giữ câu trả lời của cả bốn màn trong một chỗ.
+  // Giữ câu trả lời của cả bốn màn trong một chỗ.
   // step cho biết đang ở màn nào, mảng STEPS ở đầu file quyết định thứ tự.
   const [step, setStep] = useState<Step>("intro");
   // Mặc định là giữ cân, mức trung tính nhất, không đẩy người dùng theo hướng nào.
@@ -96,21 +103,21 @@ export function OnboardingFlow() {
 
   const stepIndex = STEPS.indexOf(step);
 
-  // THIẾT LẬP BƯỚC 3. Tính thử TDEE với mục tiêu calo, đổi ngay theo từng phím gõ.
+  // Tính thử TDEE với mục tiêu calo, đổi ngay theo từng phím gõ.
   // Thiếu bất kỳ số nào thì trả null, và màn giấu phần xem trước đi
   // chứ KHÔNG hiện một con số bịa.
   const w = Number(weight), h = Number(height), a = Number(age);
   const tdee = gender && w > 0 && h > 0 && a > 0 ? estimateTDEE(w, h, a, gender, activity) : null;
   const goalCal = gender ? estimateCalorieGoal(tdee, gender, goal) : null;
 
-  // THIẾT LẬP BƯỚC 4. Bật tắt một bệnh nền. Chọn được nhiều bệnh cùng lúc.
+  // Bật tắt một bệnh nền. Chọn được nhiều bệnh cùng lúc.
   const toggleCondition = (c: string) =>
     setConditions((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
 
   // Vào Trang chủ. Dùng replace chứ không push, để vuốt ngược không quay lại đây.
   const goHome = () => router.replace("/tabs");
 
-  // THIẾT LẬP BƯỚC 5. Bấm Xong ở màn cuối.
+  // Bấm Xong ở màn cuối.
   // Đường đi: AuthContext.updateProfile → authApi → apiClient → PUT /profile
   //           → profileController.updateProfile → services/nutrition/calorieGoal.js
   // Bên đó tính lại mục tiêu calo chính thức từ đúng bộ số này.
@@ -131,27 +138,16 @@ export function OnboardingFlow() {
         tastePreferences: taste.trim(),
       });
     } catch {
+      // CỐ Ý vẫn vào Trang chủ dù lưu hỏng, vì mọi bước ở đây đều bỏ qua được
+      // và hồ sơ sửa lại được bất cứ lúc nào trong màn Hồ sơ. Giữ người dùng
+      // kẹt lại màn thiết lập chỉ vì một lần gọi mạng hỏng là tệ hơn.
+      // Câu báo lỗi vẫn hiện, và nó nói rõ có thể cập nhật lại sau.
       Alert.alert("", L.saveErr);
     } finally {
       setSaving(false);
       goHome();
     }
   };
-
-  // Lựa chọn dạng thẻ dùng chung cho nhiều bước.
-  const Chip = ({ active, label, onPress, flex }: { active: boolean; label: string; onPress: () => void; flex?: boolean }) => (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        flex && styles.flex1,
-        active && styles.chipActive,
-        pressed && styles.pressed,
-      ]}
-    >
-      <AppText style={[styles.chipText, active && styles.chipTextActive]}>{label}</AppText>
-    </Pressable>
-  );
 
   return (
     <Screen padded={false} keyboard>

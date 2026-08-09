@@ -21,7 +21,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/features/auth/AuthContext";
 import { resolveLanguage, localeTag } from "@/utils/languageUtils";
 import { getPost, toggleLike, toggleSave, deletePost, type FeedPost } from "@/features/community/communityApi";
-import { initials, communityTime, mealPortionLabel } from "@/features/community/communityDisplay";
+import { initials, communityTime } from "@/features/community/communityDisplay";
+import { mealPortionLabel } from "@/features/meals/mealHelpers";
 import { CommunityStateCard } from "@/features/community/CommunityStateCard";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -30,16 +31,12 @@ import { ActionSheet } from "@/ui/components/ActionSheet";
 import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
-
-// ══════════════════════════════════════════════════════════
 // MỞ CHI TIẾT BÀI
 //
 // Đến từ màn Cộng đồng, từ PostTile, và từ Trang cá nhân. Mã bài đi theo đường dẫn.
-// Ba bước, đọc từ trên xuống là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 2.
+// Một chặng chờ mạng, lúc tải bài viết.
 // Xong thì hiện ảnh, chú thích, và các nút.
-// ══════════════════════════════════════════════════════════
-
-// MỞ CHI TIẾT BÀI BƯỚC 1. Lấy mã bài từ đường dẫn.
+// Lấy mã bài từ đường dẫn.
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -53,7 +50,7 @@ export default function PostDetailScreen() {
   const [imageIndex, setImageIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
 
-  // MỞ CHI TIẾT BÀI BƯỚC 2. Tải bài theo mã. Đây là màn DUY NHẤT gọi lấy một bài lẻ,
+  // Tải bài theo mã. Đây là màn DUY NHẤT gọi lấy một bài lẻ,
   // vì lưới ở màn Cộng đồng chỉ có bản rút gọn, thiếu ảnh đầy đủ và thiếu ghi chú.
   // Đường đi: getPost → apiClient → GET /community/posts/:id → postController.getPost
   const load = useCallback(async () => {
@@ -66,18 +63,14 @@ export default function PostDetailScreen() {
     }
   }, [token, id]);
 
-  // MỞ CHI TIẾT BÀI BƯỚC 3. Tự chạy mỗi lần màn được nhìn thấy, không ai bấm.
+  // Tự chạy mỗi lần màn được nhìn thấy, không ai bấm.
   // Nhờ vậy sửa bài xong quay về là thấy nội dung mới, và số tim cũng khớp
   // kể cả khi người khác vừa bấm tim trong lúc mình đi màn khác.
   useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  // ══════════════════════════════════════════════════════════
   // BỐN NÚT TRÊN BÀI
   //
-  // Không phải luồng. Bốn nút độc lập, bấm cái nào cũng được.
+  // Bốn nút độc lập, bấm cái nào cũng được.
   // Hai nút đầu gọi mạng, hai nút sau chỉ chuyển màn.
-  // ══════════════════════════════════════════════════════════
-
   // Nút tim. Đổi giao diện TRƯỚC rồi mới gọi mạng, gửi hụt thì lật ngược lại.
   // Đường đi: toggleLike → apiClient → POST /community/posts/:id/like
   //           → postController.toggleLike
@@ -217,7 +210,7 @@ export default function PostDetailScreen() {
         />
 
         <Card style={styles.card}>
-          {/* Author row */}
+          {/* Hàng thông tin người đăng */}
           <Pressable
             onPress={() => router.push({ pathname: "/community/user-profile", params: { id: post.author.id } })}
             style={styles.authorRow}
@@ -296,7 +289,7 @@ export default function PostDetailScreen() {
             />
           ) : null}
 
-          {/* Nutrition snapshot */}
+          {/* Ảnh chụp dinh dưỡng lúc đăng bài, không đổi theo nhật ký */}
           {dishName && (
             <View style={styles.mealChip}>
               <View style={styles.mealIcon}>

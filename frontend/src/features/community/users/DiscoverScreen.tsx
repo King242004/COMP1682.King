@@ -21,16 +21,12 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { INPUT_LIMITS } from "@/config/inputLimits";
-
-// ══════════════════════════════════════════════════════════
 // TÌM NGƯỜI
 //
-// Đến từ màn Cộng đồng. Bốn bước, đọc từ trên xuống là đúng thứ tự.
-// Chặng chờ mạng ở BƯỚC 4, nhưng chỉ chạy sau khi người dùng ngừng gõ 350 ms.
+// Đến từ màn Cộng đồng.
+// Chặng chờ mạng lúc tìm, chỉ chạy sau khi người dùng ngừng gõ 350 ms.
 // Xong thì hiện danh sách người, mỗi dòng có nút Theo dõi.
-// ══════════════════════════════════════════════════════════
-
-// TÌM NGƯỜI BƯỚC 1. Ô tìm trống thì hiện danh sách gợi ý, gõ vào thì hiện kết quả tìm.
+// Ô tìm trống thì hiện danh sách gợi ý, gõ vào thì hiện kết quả tìm.
 export default function DiscoverScreen() {
   const { token } = useAuth();
   const t = useT();
@@ -48,10 +44,10 @@ export default function DiscoverScreen() {
   // Bản sao chữ đang gõ, cho mấy hàm chạy trễ đọc được giá trị mới nhất.
   const queryRef = useRef("");
 
-  // TÌM NGƯỜI BƯỚC 4. Gửi đi rồi ĐỨNG ĐÂY CHỜ.
+  // Gửi đi rồi ĐỨNG ĐÂY CHỜ.
   // Đường đi: searchUsers → apiClient → GET /community/users/search?q=...
   //           → socialController.searchUsers
-  // Nằm dưới chỗ gọi ở BƯỚC 3, nhưng chạy sau, vì BƯỚC 3 hẹn giờ mới gọi tới đây.
+  // Nằm dưới chỗ gọi nhưng chạy sau, vì chỗ đó hẹn giờ mới gọi tới đây.
   const runSearch = useCallback(async (q: string) => {
     if (!token) return;
     const id = ++reqIdRef.current;
@@ -68,7 +64,7 @@ export default function DiscoverScreen() {
     }
   }, [token]);
 
-  // TÌM NGƯỜI BƯỚC 3. Mỗi phím gõ vào đây, nhưng KHÔNG gọi mạng ngay.
+  // Mỗi phím gõ vào đây, nhưng KHÔNG gọi mạng ngay.
   // Hủy hẹn giờ cũ rồi hẹn lại 350 ms, nên gõ liên tục thì chỉ lượt cuối được gọi.
   // Không có bước này là gõ "Nam" bắn ba lượt gọi mạng.
   const onChangeQuery = (text: string) => {
@@ -88,7 +84,7 @@ export default function DiscoverScreen() {
     debounceRef.current = setTimeout(() => runSearch(q), 350);
   };
 
-  // TÌM NGƯỜI BƯỚC 2. Tải danh sách gợi ý mỗi lần màn được nhìn thấy.
+  // Tải danh sách gợi ý mỗi lần màn được nhìn thấy.
   // Đường đi: getSuggestions → apiClient → GET /community/suggestions
   //           → socialController.getSuggestions
   // clearFollowOverrides xóa mấy nút Theo dõi đang giữ trạng thái tạm,
@@ -117,7 +113,7 @@ export default function DiscoverScreen() {
         header={
           <View style={styles.header}>
             <ScreenHeader title={t.community.discover} />
-            {/* Search box */}
+            {/* Ô tìm người dùng */}
             <View style={styles.searchBox}>
               <Ionicons name="search" size={18} color={theme.colors.subtle} />
               <TextInput

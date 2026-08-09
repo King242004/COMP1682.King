@@ -16,7 +16,7 @@ import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
 import { Card } from "@/ui/components/Card";
-import { mealPortionLabel } from "../communityDisplay";
+import { mealPortionLabel } from "@/features/meals/mealHelpers";
 
 export type PostMealChoice = Pick<
   Meal,
@@ -49,14 +49,11 @@ export function PostMealSelector({
 }) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
-  // ══════════════════════════════════════════════════════════
   // CHỌN MÓN ĐÍNH KÈM
   //
   // Đến từ màn Tạo bài và màn Sửa bài. Hai bước, không gọi mạng.
   // Danh sách món do màn cha đưa xuống, đây chỉ lo phần chọn.
-  // ══════════════════════════════════════════════════════════
-
-  // CHỌN MÓN BƯỚC 1. Ghép danh sách để hiện.
+  // Ghép danh sách để hiện.
   // Tên món đang chọn, đã hạ chữ thường, để so trùng tên ở dòng dưới.
   const selectedName = selectedMeal?.name.trim().toLocaleLowerCase();
   // Món đang chọn mà KHÔNG nằm trong tám món gần đây thì phải chèn nó lên đầu,
@@ -66,7 +63,7 @@ export function PostMealSelector({
     ? [selectedMeal, ...recentMeals.filter((meal) => meal.name.trim().toLocaleLowerCase() !== selectedName)]
     : recentMeals;
 
-  // CHỌN MÓN BƯỚC 2. Chọn xong thì tự thu danh sách lại, đỡ phải bấm thêm một lần để đóng.
+  // Chọn xong thì tự thu danh sách lại, đỡ phải bấm thêm một lần để đóng.
   const selectMeal = (meal: PostMealChoice) => {
     onSelectMeal(meal);
     setExpanded(false);

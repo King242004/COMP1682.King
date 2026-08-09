@@ -8,23 +8,22 @@
 //             để người lạ không dò được email nào đã có tài khoản
 const bcrypt = require("bcryptjs");
 const { sendOTP } = require("../services/emailRelayClient");
-// ══════════════════════════════════════════════════════════
 // BA CỬA CỦA MÀN ĐĂNG NHẬP ĐĂNG KÝ
 //
-// Không phải luồng. Ba cửa độc lập, app gọi cửa nào tùy việc:
+// Ba cửa độc lập, app gọi cửa nào tùy việc:
 // gửi mã đăng ký, tạo tài khoản, và đăng nhập.
-// 
+//
 // Nhớ: mọi câu từ chối đều CHUNG CHUNG như nhau, không nói rõ sai email hay
 //      sai mật khẩu, để người lạ không dò được email nào đã có tài khoản.
-// ══════════════════════════════════════════════════════════
-
 // Bảng lưu mã 6 số đã băm, dùng cho luồng đăng ký.
 const OTP = require("../models/OTP");
 const User = require("../models/User");
 const { reserveOTP, verifyOTPCode } = require("../services/otpService");
 const { OTP_PURPOSE, OTP_TTL_MS, generateOTP, hashOTP, normalizeEmail, waitForResponseFloor } = require("../utils/otpSecurity");
-const { INPUT_LIMITS } = require("../config/inputLimits");
 const { createAuthToken } = require("../utils/authToken");
+// Ba luật kiểm email, mật khẩu và tên nằm chung một chỗ với accountController,
+// để đường đăng ký và đường đặt lại mật khẩu không bao giờ lệch luật.
+const { isValidEmail, isValidName, isValidPassword, resolveEmailLanguage } = require("../validators/accountInputValidator");
 
 // Lọc lại hồ sơ trước khi gửi cho app, bỏ hẳn mật khẩu đã mã hóa.
 const publicUser = (u) => ({
@@ -49,22 +48,7 @@ const publicUser = (u) => ({
   isPrivate: !!u.isPrivate,
 });
 
-// ─── Validation helpers ───────────────────────────────────────────────────────
-// Chặn trần độ dài email vì trường này có unique index, mà khóa index của MongoDB
-// giới hạn 1024 byte nên chuỗi quá dài sẽ làm lỗi index thay vì ra câu báo lỗi tử tế.
-const isValidEmail = (email) =>
-  email.length <= INPUT_LIMITS.EMAIL && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-// Trần mật khẩu là 64 vì bcrypt chỉ băm 72 byte đầu và bỏ im lặng phần dư,
-// nghĩa là mật khẩu dài hơn sẽ có một phần đuôi không hề có tác dụng.
-const isValidPassword = (pw) =>
-  typeof pw === "string" && pw.length >= 6 && pw.length <= INPUT_LIMITS.PASSWORD && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
-// Ngôn ngữ email chỉ nhận vi hoặc en, giá trị lạ thì về mặc định.
-const resolveEmailLanguage = (value) => value === "vi" ? "vi" : "en";
-// \p{L} = any Unicode letter (supports Vietnamese diacritics, Chinese, etc.)
-const isValidName = (name) =>
-  typeof name === "string" && name.trim().length >= 2 && name.trim().length <= INPUT_LIMITS.DISPLAY_NAME && /^[\p{L}\s]+$/u.test(name.trim());
-
-// ─── Send registration OTP ───────────────────────────────────────────────────
+// ─── GỬI MÃ ĐĂNG KÝ ───
 // Vì sao câu trả lời luôn giống nhau và có chờ thêm cho đủ thời gian:
 // để người lạ không thử từng email rồi đoán ra email nào đã đăng ký.
 exports.sendRegistrationOTP = async (req, res) => {
@@ -108,9 +92,9 @@ exports.sendRegistrationOTP = async (req, res) => {
   res.json({ message: "If this email can be used, a verification code will be sent." });
 };
 
-// ─── Register ─────────────────────────────────────────────────────────────────
+// ─── TẠO TÀI KHOẢN ───
 exports.register = async (req, res) => {
-  const { name, password, otp, goal, conditions, calorieGoal, weight, height, age, language } = req.body;
+  const { name, password, otp, language } = req.body;
   const email = normalizeEmail(req.body.email);
 
   // Kiểm các trường bắt buộc trước khi đụng tới database
@@ -151,11 +135,6 @@ exports.register = async (req, res) => {
       email,
       emailVerifiedAt: new Date(),
       password: hashed,
-      goal: goal || "maintain_weight",
-      conditions: conditions || [],
-      // Chưa có số đo thì để rỗng, bước thiết lập lần đầu sẽ tính mục tiêu thật.
-      calorieGoal: calorieGoal || null,
-      weight, height, age,
       // Ngôn ngữ người dùng chọn ở màn Đăng ký. Lưu luôn để app khỏi gọi
       // thêm một lượt PUT /profile ngay sau khi tạo tài khoản.
       // Ngôn ngữ lạ thì bỏ qua, để undefined và model dùng mặc định.
@@ -172,7 +151,7 @@ exports.register = async (req, res) => {
   res.status(201).json({ token: createAuthToken(user._id, user.tokenVersion), user: publicUser(user) });
 };
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+// ─── ĐĂNG NHẬP ───
 // Nhận thêm language, là ngôn ngữ người dùng đã chọn ở màn Đăng nhập trước khi bấm.
 // Trước kia app phải gọi thêm một lượt PUT /profile chỉ để đẩy lựa chọn đó lên,
 // giờ gộp vào đây nên đăng nhập chỉ còn một lượt mạng.
@@ -200,10 +179,4 @@ exports.login = async (req, res) => {
   }
 
   res.json({ token: createAuthToken(user._id, user.tokenVersion), user: publicUser(user) });
-};
-
-// App gọi khi cần lấy lại hồ sơ mới nhất mà không phải đăng nhập lại.
-exports.getMe = async (req, res) => {
-  const user = await User.findById(req.user.id).select("-password");
-  res.json(user);
 };

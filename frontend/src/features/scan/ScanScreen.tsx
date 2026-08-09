@@ -64,13 +64,10 @@ export default function ScanScreen() {
     }
   }, [permission, requestPermission]);
 
-  // ══════════════════════════════════════════════════════════
   // QUÉT ẢNH
   //
-  // Đến từ nút chụp giữa màn, hoặc nút chọn ảnh từ thư viện.
-  // Năm bước, đọc từ trên xuống là đúng thứ tự.
-  // Xong thì sang màn Thêm món với dữ liệu đã điền sẵn.
-  // ══════════════════════════════════════════════════════════
+  // Đến từ nút chụp giữa màn, hoặc nút chọn ảnh từ thư viện
+  // Xong thì sang màn Thêm món, form ở đó hiện ra đã điền sẵn
 
   // Nếu camera bị từ chối, người dùng vẫn có thể chọn ảnh hoặc mở cài đặt.
   const handleCapture = async () => {
@@ -106,8 +103,8 @@ export default function ScanScreen() {
     if (uri) await processImage(uri);
   };
 
-  // QUÉT ẢNH BƯỚC 1. Đã có ảnh trong tay, bắt đầu xử lý.
-  // AbortController cho phép người dùng hủy giữa chừng mà không hiện lỗi giả.
+  // Đã có ảnh trong tay, bắt đầu xử lý
+  // AbortController cho phép hủy giữa chừng mà không hiện lỗi giả
   const processImage = async (uri: string) => {
     if (!token) {
       Alert.alert(t.scan.notLoggedIn, t.scan.loginAgain);
@@ -118,22 +115,20 @@ export default function ScanScreen() {
     setPreviewUri(uri);
     setIsScanning(true);
     try {
-      // QUÉT ẢNH BƯỚC 2. Nén trước khi gửi. Ảnh gốc điện thoại nặng vài MB,
-      // gửi thẳng thì rất chậm trên mạng di động mà AI cũng không đoán đúng hơn.
+      // Nén trước khi gửi, ảnh gốc điện thoại nặng vài MB
+      // Gửi thẳng thì rất chậm trên mạng di động mà AI cũng không đoán đúng hơn
       const compressed = await compressImage(uri);
-      // QUÉT ẢNH BƯỚC 3. scanApi.scanImage → POST /scan/photo
-      // → scanController.scanPhoto → aiClient.generateWithFallback.
-      // Gửi kèm language để Gemini trả tên món đúng tiếng đang chọn.
-      // scanController.scanPhoto dùng scanTranslation.hasLanguageMismatch;
-      // nếu Gemini lẫn ngôn ngữ thì generateJson dịch và mergeLocalizedText ghép lại phần chữ.
+      // Đi tiếp: src/features/scan/scanApi.ts, rồi POST /scan/photo
+      // Gửi kèm language để Gemini trả tên món đúng tiếng đang chọn
+      // Backend còn kiểm lại, Gemini lẫn ngôn ngữ thì nó dịch rồi mới trả về
       const cs = await scanImage(compressed, token, language, controller.signal);
       if (cs.length === 0) {
         Alert.alert(t.scan.noFood, t.scan.noFoodMsg);
         setPreviewUri(null);
         return;
       }
-      // QUÉT ẢNH BƯỚC 4. Mở bảng cho người dùng chọn.
-      // AI chỉ ĐỀ XUẤT, không tự ghi món nào vào nhật ký cả.
+      // Ra màn: bảng trượt lên cho chọn một trong các món AI đoán
+      // AI chỉ ĐỀ XUẤT, không tự ghi món nào vào nhật ký cả
       setCandidates(cs);
     } catch (error) {
       // Người dùng tự bấm hủy thì không phải lỗi, không hiện thông báo.
@@ -173,13 +168,11 @@ export default function ScanScreen() {
     setPreviewUri(null);
   };
 
-  // ══════════════════════════════════════════════════════════
   // QUÉT MÃ VẠCH
   //
   // Có BA lối vào: camera đọc được mã, đọc mã từ ảnh trong thư viện,
   // hoặc người dùng gõ tay dãy số. Cả ba đều dồn về doBarcodeLookup.
   // Xong thì sang màn Thêm món với dữ liệu đã điền sẵn.
-  // ══════════════════════════════════════════════════════════
 
   // Camera phát hiện liên tục nên khóa sau lần gọi đầu tiên.
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
@@ -211,7 +204,7 @@ export default function ScanScreen() {
     doBarcodeLookup(code);
   };
 
-  // MÃ VẠCH BƯỚC 1. Đã có dãy số mã vạch, đi tra sản phẩm.
+  // Đã có dãy số mã vạch, đi tra sản phẩm. Không tốn lượt AI
   const doBarcodeLookup = async (code: string) => {
     if (!token) {
       Alert.alert(t.scan.notLoggedIn, t.scan.loginAgain);
@@ -267,12 +260,8 @@ export default function ScanScreen() {
     });
   };
 
-  // ══════════════════════════════════════════════════════════
-  // DÙNG CHUNG CHO CẢ HAI LUỒNG
-  //
-  // Mấy việc mà cả quét ảnh lẫn quét mã vạch đều cần.
-  // Không thuộc riêng luồng nào nên không đánh số bước.
-  // ══════════════════════════════════════════════════════════
+  // DÙNG CHUNG
+  // Mấy việc mà cả quét ảnh lẫn quét mã vạch đều cần
 
   // Mở thư viện ảnh của máy. Dùng chung cho cả quét ảnh lẫn quét mã vạch,
   // nên có tham số quality: quét ảnh nén 0.7 cho nhẹ, quét mã vạch để 1 cho nét.
@@ -311,8 +300,11 @@ export default function ScanScreen() {
         prefillProtein: String(protein),
         prefillCarbs: String(carbs),
         prefillFat: String(fat),
-        prefillAmount: "1",
-        prefillUnit: unit,
+        // Gửi thẳng chuỗi khẩu phần, ví dụ "1 khẩu phần trong ảnh".
+        // Trước đây chỗ này tách làm hai tham số prefillAmount với prefillUnit,
+        // mà AddMealScreen gọi cặp đó là đường lùi cho bản cũ, tức luồng quét
+        // đang đi đúng con đường mà bên kia coi là đã cũ.
+        prefillPortion: `1 ${unit}`,
         ...(note ? { prefillNote: note } : {}),
         source,
         mealType: mealSlotByHour(new Date().getHours()),
@@ -361,7 +353,7 @@ export default function ScanScreen() {
       onCapture={handleCapture}
       onLibrary={mode === "barcode" ? handleBarcodeFromLibrary : handlePickFromLibrary}
       onManualBarcode={() => setManualVisible(true)}
-      onToggleFlash={() => setTorch((t) => !t)}
+      onToggleFlash={() => setTorch((current) => !current)}
       torchOn={torchOn}
       isScanning={isScanning}
       cameraGranted={cameraGranted}
@@ -395,7 +387,7 @@ export default function ScanScreen() {
             {mode === "barcode" ? t.scan.loadingBarcodeSub : t.scan.loadingPhotoSub}
           </AppText>
           {mode === "photo" && (
-            <Pressable onPress={handleCancelScan} style={({ pressed }) => [styles.cancelBtn, pressed && styles.dim]}>
+            <Pressable onPress={handleCancelScan} style={({ pressed }) => [styles.cancelBtn, pressed && styles.cancelPressed]}>
               <AppText style={styles.cancelText}>{t.common.cancel}</AppText>
             </Pressable>
           )}
@@ -428,7 +420,8 @@ export default function ScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  dim: { opacity: 0.6 },
+  // Đặt tên riêng chứ không gọi là dim, vì ScanOverlay cũng có dim mà giá trị khác.
+  cancelPressed: { opacity: 0.6 },
   screen: { flex: 1, backgroundColor: "#000" },
   loadingScreen: { flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" },
   loadingOverlay: {

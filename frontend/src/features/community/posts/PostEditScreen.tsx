@@ -79,22 +79,18 @@ export default function PostEditScreen() {
       })
       .catch(() => setLoadError(true));
   }, [token, id]);
-
-  // ══════════════════════════════════════════════════════════
   // SỬA BÀI
   //
   // Đến từ nút Sửa ở màn Chi tiết bài, chỉ chủ bài mới thấy nút đó.
-  // Ba bước, đọc từ trên xuống là đúng thứ tự. Chặng chờ mạng ở BƯỚC 3.
+  // Có một chặng chờ mạng, lúc bấm Lưu.
   // Xong thì quay về màn Chi tiết bài, màn đó tự tải lại nội dung mới.
-  // ══════════════════════════════════════════════════════════
-
-  // SỬA BÀI BƯỚC 1. Đếm ảnh. Tính cả ảnh CŨ giữ lại lẫn ảnh MỚI vừa chọn,
+  // Đếm ảnh. Tính cả ảnh CŨ giữ lại lẫn ảnh MỚI vừa chọn,
   // vì bài sau khi sửa gồm cả hai loại.
   const totalImages = keepUrls.length + newUris.length;
   // Tám món gần đây, mỗi tên một lần, cho hàng chọn nhanh món đính kèm.
   const recentMeals = recentUniqueMeals(historyMeals, 8);
 
-  // SỬA BÀI BƯỚC 2. Bài phải còn ít nhất một ảnh. Xóa hết ảnh thì nút Lưu mờ đi.
+  // Bài phải còn ít nhất một ảnh. Xóa hết ảnh thì nút Lưu mờ đi.
   const canSave = totalImages > 0 && !saving;
 
   // Gỡ món đính kèm. Xóa cả hai chỗ vì bài cũ lưu tên món dưới dạng chuỗi,
@@ -110,7 +106,7 @@ export default function PostEditScreen() {
     setLegacyDishName("");
   };
 
-  // SỬA BÀI BƯỚC 3. Người dùng bấm Lưu.
+  // Người dùng bấm Lưu.
   // Đường đi: updatePost → apiClient → PATCH /community/posts/:id
   //           → postController.updatePost
   // Không có ảnh mới thì gửi JSON thường, có ảnh mới thì gửi FormData,

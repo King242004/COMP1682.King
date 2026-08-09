@@ -12,13 +12,11 @@
 const { INPUT_LIMITS, LEGACY_LIMITS, DIGIT_LIMITS } = require("../config/inputLimits");
 const { MEAL_TYPES, NUTRITION_SOURCES } = require("../config/mealEnums");
 
-// ══════════════════════════════════════════════════════════
 // KIỂM DỮ LIỆU MÓN
 //
-// Không phải luồng. Mấy hàm kiểm độc lập, gọi cái nào cũng được.
+// Mấy hàm kiểm độc lập, gọi cái nào cũng được.
 // Đến từ mealController và planController, hai bên dùng CHUNG bộ luật này
 // nên luồng thêm món và luồng kế hoạch không bao giờ lệch nhau.
-// ══════════════════════════════════════════════════════════
 
 // Trần calo và trần ba chất, suy ra từ số chữ số mà ô nhập bên app cho gõ.
 // Tính ra từ DIGIT_LIMITS chứ không gõ số cứng, để app với backend luôn khớp.
@@ -58,7 +56,7 @@ function validateNutritionValues(input) {
   return { value };
 }
 
-// Cửa vào của file này, thuộc LUỒNG LƯU MÓN.
+// Cửa vào của file này, mealController gọi trước khi ghi database.
 // Đến từ mealController.addMeal hoặc addMeals.
 function validateMealInput(input, userId, currentDate = new Date().toISOString().slice(0, 10)) {
   const name = validateMealName(input?.name);

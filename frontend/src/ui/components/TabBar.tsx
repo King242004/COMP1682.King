@@ -27,32 +27,24 @@ type TabItem = {
 // Thứ tự trong mảng chính là thứ tự hiện trên thanh.
 // Nhớ: name phải trùng tên file route trong app/tabs, sai một chữ là bấm không đi đâu cả.
 const LEFT_TABS: TabItem[] = [
-  { name: "index", icon: "home-outline", activeIcon: "home", labelKey: "home" as const },
-  { name: "community", icon: "people-outline", activeIcon: "people", labelKey: "community" as const },
+  { name: "index", icon: "home-outline", activeIcon: "home", labelKey: "home" },
+  { name: "community", icon: "people-outline", activeIcon: "people", labelKey: "community" },
 ];
 const RIGHT_TABS: TabItem[] = [
-  { name: "coach", icon: "sparkles-outline", activeIcon: "sparkles", labelKey: "coach" as const },
-  { name: "profile", icon: "person-outline", activeIcon: "person", labelKey: "profile" as const },
+  { name: "coach", icon: "sparkles-outline", activeIcon: "sparkles", labelKey: "coach" },
+  { name: "profile", icon: "person-outline", activeIcon: "person", labelKey: "profile" },
 ];
 
-// ══════════════════════════════════════════════════════════
-// VẼ THANH TAB
-//
-// Đến từ app/tabs/_layout, thay hẳn thanh tab mặc định của thư viện.
-// Ba bước, đọc từ trên xuống là đúng thứ tự. Không gọi mạng.
-// Xong thì bấm tab nào là navigation đưa sang màn đó.
-// ══════════════════════════════════════════════════════════
-
-// VẼ THANH TAB BƯỚC 1. Thư viện đưa state với navigation vào đây.
-// state.routes[state.index] là tab đang mở, lấy tên nó để biết tô sáng cái nào.
+// Thay hẳn thanh tab mặc định của thư viện.
+// state.routes[state.index] là tab đang mở, lấy tên nó để biết tô sáng cái nào
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const router = useRouter();
   const t = useT();
   const current = state.routes[state.index]?.name;
   const [modalVisible, setModalVisible] = useState(false);
 
-  // VẼ THANH TAB BƯỚC 2. Vẽ một tab. Viết một lần rồi map cho cả bốn tab ở dưới.
-  // Đang mở thì đổi sang icon đặc và tô màu chính, còn lại thì icon rỗng màu xám.
+  // Khuôn của một tab, viết một lần rồi map cho cả bốn tab ở dưới
+  // Tab đang mở dùng icon đặc màu chính, tab kia dùng icon rỗng màu xám
   const renderTab = (tab: TabItem) => {
     const active = current === tab.name;
     return (
@@ -71,8 +63,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
     );
   };
 
-  // VẼ THANH TAB BƯỚC 3. Ghép thanh: hai tab trái, nút quét giữa, hai tab phải.
-  // Nút giữa không đi màn nào cả, nó mở ActionSheet cho chọn Quét ảnh hay Nhập tay.
+  // Ghép thanh: hai tab trái, nút tròn giữa, hai tab phải
+  // Nút giữa không đi màn nào, nó mở bảng chọn Quét ảnh hay Thêm thủ công
   return (
     <>
       <ActionSheet

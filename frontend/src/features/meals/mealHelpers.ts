@@ -11,15 +11,14 @@
 import type { Strings } from "@/i18n";
 import type { NutritionSource } from "@/features/meals/mealTypes";
 import { parseDecimal } from "@/utils/numberUtils";
+import { INPUT_LIMITS } from "@/config/inputLimits";
 
 export type MealSlot = "breakfast" | "lunch" | "snack" | "dinner";
 
 export type NutritionFields = Record<"calories" | "protein" | "carbs" | "fat", string>;
 
-// ══════════════════════════════════════════════════════════
 // KIỂM SỐ DINH DƯỠNG. Ba hàm kiểm bốn ô số
 // Đến từ màn Thêm món và màn Sửa món, chạy mỗi lần người dùng gõ
-// ══════════════════════════════════════════════════════════
 
 // Có gõ được ít nhất MỘT ô hay chưa
 export function hasAnyNutrition(values: NutritionFields): boolean {
@@ -32,8 +31,8 @@ export function hasCompleteNutrition(values: NutritionFields): boolean {
   const calories = parseDecimal(values.calories);
   // Ba chất gộp một mảng vì luật kiểm giống hệt nhau, chỉ calo phải lớn hơn 0
   const macros = [values.protein, values.carbs, values.fat].map(parseDecimal);
-  return Number.isFinite(calories) && calories > 0 && calories <= 9999
-    && macros.every((value) => Number.isFinite(value) && value >= 0 && value <= 9999);
+  return Number.isFinite(calories) && calories > 0 && calories <= INPUT_LIMITS.NUTRITION_VALUE
+    && macros.every((value) => Number.isFinite(value) && value >= 0 && value <= INPUT_LIMITS.NUTRITION_VALUE);
 }
 
 // Câu lỗi đỏ dưới MỘT ô, allowZero tắt cho ô calo vì món 0 kcal là vô lý
@@ -47,13 +46,23 @@ export function nutritionNumberError(
   const number = parseDecimal(value);
   if (!Number.isFinite(number) || number < 0 || (!allowZero && number === 0))
     return t.meals.numPositive(field);
-  if (number > 9999) return t.meals.numTooHigh(field);
+  if (number > INPUT_LIMITS.NUTRITION_VALUE) return t.meals.numTooHigh(field);
 }
 
-// ══════════════════════════════════════════════════════════
 // NHÃN NGUỒN SỐ. Hai hàm tra bảng, cho biết số dinh dưỡng ở đâu ra
 // Đến từ màn Chi tiết món và màn Sửa món
-// ══════════════════════════════════════════════════════════
+
+// Nhãn khẩu phần của một món, ví dụ "1 tô lớn" hoặc "2 phần".
+// Ưu tiên chuỗi portionText người dùng gõ; bản ghi cũ chưa có chuỗi đó thì ghép
+// lại từ cặp số và đơn vị. Trước ngày 9/8/2026 biểu thức này bị chép ở năm chỗ
+// trong ba màn, thêm một dạng khẩu phần mới là phải nhớ sửa đủ năm.
+export function mealPortionLabel(meal: {
+  portionText?: string | null;
+  portionAmount?: number | null;
+  portionUnit?: string | null;
+}): string {
+  return meal.portionText || [meal.portionAmount, meal.portionUnit].filter(Boolean).join(" ");
+}
 
 // Nguồn AI đoán thì hiện dấu ngã trước calo, mã vạch và món ghi lại thì không
 export function isApproximateSource(source: NutritionSource): boolean {
@@ -74,9 +83,7 @@ export function nutritionSourceLabel(source: NutritionSource, t: Strings): strin
   }[source];
 }
 
-// ══════════════════════════════════════════════════════════
 // ĐOÁN BỮA VÀ GỢI MÓN. Hai hàm lo phần đoán sẵn cho màn Thêm món
-// ══════════════════════════════════════════════════════════
 
 // Đoán bữa theo giờ máy, sau 21 giờ tính là bữa phụ chứ không phải bữa tối
 export function mealSlotByHour(h: number): MealSlot {
@@ -106,11 +113,9 @@ export function recentUniqueMeals<T extends { name: string; date: string }>(
   return out;
 }
 
-// ══════════════════════════════════════════════════════════
 // DÒ TÊN GÕ GẦN GIỐNG. Đến từ màn Thêm món, chạy khi gõ xong tên món
 // Ra màn: câu hỏi "có phải ý bạn là bánh mì thịt không" dưới ô tên
 // Không gọi mạng
-// ══════════════════════════════════════════════════════════
 
 // Chuẩn hóa hai kiểu, bản còn dấu để loại trùng khít, bản bỏ dấu để so độ giống
 export function similarRecentMealName<T extends { name: string }>(query: string, meals: T[]): T | undefined {

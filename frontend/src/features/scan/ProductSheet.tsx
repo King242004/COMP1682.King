@@ -20,58 +20,57 @@ export function ProductSheet({ visible, product, onAdd, onAskCoach, onClose }: {
   visible: boolean;
   product: Product | null;
   onAdd: (p: Product) => void;
-  // Coach dùng tình trạng sức khỏe của người dùng để đánh giá sản phẩm.
   onAskCoach: (p: Product) => void;
   onClose: () => void;
 }) {
   const t = useT();
   return (
     <ScanBottomSheet visible={visible} title={t.scan.productFound} onClose={onClose}>
-          {product && (
-            <>
-              <Card style={styles.card}>
-                <View style={styles.productRow}>
-                  <View style={styles.thumb}>
-                    {product.image ? (
-                      <Image source={{ uri: product.image }} style={styles.thumbImg} resizeMode="cover" />
-                    ) : (
-                      <AppText style={styles.thumbEmoji}>🛒</AppText>
-                    )}
-                  </View>
-                  <View style={styles.productInfo}>
-                    <AppText variant="h2" style={styles.productName}>{product.name}</AppText>
-                    {product.brand ? <AppText variant="muted" style={styles.brand}>{product.brand}</AppText> : null}
-                    {product.servingSize ? <AppText variant="subtle" style={styles.serving}>{t.scan.perServing(product.servingSize)}</AppText> : null}
-                  </View>
-                </View>
-                <View style={styles.macroStrip}>
-                  {[
-                    { label: t.common.kcal, value: product.calories, color: theme.colors.primary },
-                    { label: "P", value: product.protein, color: theme.colors.accent2 },
-                    { label: "C", value: product.carbs, color: theme.colors.accent },
-                    { label: "F", value: product.fat, color: theme.colors.indigo },
-                  ].map((m) => (
-                    <View key={m.label} style={styles.macroCol}>
-                    {/* Màu của từng chỉ số chỉ biết khi component đang chạy. */}
-                      <AppText style={[styles.macroVal, { color: m.color }]}>{Math.round(m.value)}</AppText>
-                      <AppText variant="subtle" style={styles.macroLabel}>{m.label}</AppText>
-                    </View>
-                  ))}
-                </View>
-              </Card>
-              <View style={styles.actionWrap}>
-                <Button title={t.scan.addToMeal} size="lg" onPress={() => onAdd(product)} />
-                {/* Coach dùng tình trạng sức khỏe để đánh giá sản phẩm cụ thể này. */}
-                <Pressable
-                  onPress={() => onAskCoach(product)}
-                  style={({ pressed }) => [styles.askBtn, pressed && styles.askBtnPressed]}
-                >
-                  <Ionicons name="chatbubble-ellipses-outline" size={17} color={theme.colors.primary} />
-                  <AppText style={styles.askText}>{t.scan.suitsMe}</AppText>
-                </Pressable>
+      {product && (
+        <>
+          <Card style={styles.card}>
+            <View style={styles.productRow}>
+              <View style={styles.thumb}>
+                {product.image ? (
+                  <Image source={{ uri: product.image }} style={styles.thumbImg} resizeMode="cover" />
+                ) : (
+                  <AppText style={styles.thumbEmoji}>🛒</AppText>
+                )}
               </View>
-            </>
-          )}
+              <View style={styles.productInfo}>
+                <AppText variant="h2" style={styles.productName}>{product.name}</AppText>
+                {product.brand ? <AppText variant="muted" style={styles.brand}>{product.brand}</AppText> : null}
+                {product.servingSize ? <AppText variant="subtle" style={styles.serving}>{t.scan.perServing(product.servingSize)}</AppText> : null}
+              </View>
+            </View>
+            <View style={styles.macroStrip}>
+              {[
+                { label: t.common.kcal, value: product.calories, color: theme.colors.primary },
+                { label: "P", value: product.protein, color: theme.colors.accent2 },
+                { label: "C", value: product.carbs, color: theme.colors.accent },
+                { label: "F", value: product.fat, color: theme.colors.indigo },
+              ].map((m) => (
+                <View key={m.label} style={styles.macroCol}>
+                  {/* Màu của từng chỉ số chỉ biết khi component đang chạy. */}
+                  <AppText style={[styles.macroVal, { color: m.color }]}>{Math.round(m.value)}</AppText>
+                  <AppText variant="subtle" style={styles.macroLabel}>{m.label}</AppText>
+                </View>
+              ))}
+            </View>
+          </Card>
+          <View style={styles.actionWrap}>
+            <Button title={t.scan.addToMeal} size="lg" onPress={() => onAdd(product)} />
+            {/* Coach dùng tình trạng sức khỏe để đánh giá sản phẩm cụ thể này. */}
+            <Pressable
+              onPress={() => onAskCoach(product)}
+              style={({ pressed }) => [styles.askBtn, pressed && styles.askBtnPressed]}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={17} color={theme.colors.primary} />
+              <AppText style={styles.askText}>{t.scan.suitsMe}</AppText>
+            </Pressable>
+          </View>
+        </>
+      )}
     </ScanBottomSheet>
   );
 }

@@ -18,47 +18,16 @@ const { generateWithFallback } = require("../services/aiClient");
 const { CONDITION_GUIDE } = require("../services/coach/coachContext");
 const { filterDishes } = require("../services/nutrition/foodSafetyFilter");
 const { dateKey, requestTodayKey } = require("../utils/dateUtils");
-const { validateMealName, validateNutritionValues } = require("../validators/mealInputValidator");
+const { validateNutritionValues } = require("../validators/mealInputValidator");
 const { replacePlanRange } = require("../services/planReplacement");
 const {
   HOME_EXERCISE_CATEGORIES,
   HOME_EXERCISE_DURATIONS,
   isAllowedHomeExercise,
 } = require("../config/homeRoutineRules");
-const { getGuidedRoutine, buildExerciseSnapshot } = require("../config/exerciseCatalog");
+const { getGuidedRoutine, buildExerciseSnapshot, computeBurned } = require("../config/exerciseCatalog");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
 const { MEAL_TYPES } = require("../config/mealEnums");
-
-// Khác với nhật ký món, ở đây ngày ở tương lai là hợp lệ vì đang lên kế hoạch.
-// Người dùng tự thêm một món vào kế hoạch, không qua AI.
-exports.addPlanMeal = async (req, res) => {
-  const { name, mealType, calories, protein, carbs, fat, note, date } = req.body;
-
-  if (!name || !mealType || calories === undefined || !date)
-    return res.status(400).json({ message: "Name, mealType, calories and date are required." });
-
-  if (!MEAL_TYPES.includes(mealType))
-    return res.status(400).json({ message: "mealType must be breakfast, lunch, dinner or snack." });
-
-  const normalizedName = validateMealName(name);
-  if (normalizedName.error) return res.status(400).json({ message: normalizedName.error });
-  const nutrition = validateNutritionValues({ calories, protein, carbs, fat });
-  if (nutrition.error) return res.status(400).json({ message: nutrition.error });
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
-    return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
-
-  const planMeal = await PlanMeal.create({
-    user: req.user.id,
-    name: normalizedName.value,
-    mealType,
-    ...nutrition.value,
-    note: note || "",
-    date,
-  });
-
-  res.status(201).json({ message: "Planned meal added.", planMeal });
-};
 
 // Lấy mọi thứ đã lên lịch trong một khoảng ngày, cả món ăn lẫn buổi tập.
 // Hai lệnh đọc chạy song song vì không cái nào cần kết quả của cái kia.
@@ -86,7 +55,7 @@ exports.generatePlan = async (req, res) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(endDate || ""))
     return res.status(400).json({ message: "startDate and endDate must be YYYY-MM-DD." });
 
-  // Bước 1. Chặn ở 14 ngày để một lần gọi AI không phình quá to.
+  // Chặn ở 14 ngày để một lần gọi AI không phình quá to.
   const dates = [];
   const cur = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
@@ -95,10 +64,12 @@ exports.generatePlan = async (req, res) => {
     cur.setDate(cur.getDate() + 1);
   }
   if (dates.length === 0) return res.status(400).json({ message: "Invalid date range." });
+  if (cur <= end)
+    return res.status(400).json({ message: "A plan can cover at most 14 days." });
 
   try {
-    // Bước 2. Đọc hồ sơ để lấy bệnh nền, mục tiêu calo và sở thích ăn uống.
-    // Đây là nguồn dữ liệu cho cả hai lớp an toàn ở bước 3 và bước 5.
+    // Đọc hồ sơ để lấy bệnh nền, mục tiêu calo và sở thích ăn uống.
+    // Đây là nguồn dữ liệu cho cả hai lớp an toàn ở dưới.
     const user = await User.findById(req.user.id).select("gender age weight height goal activityLevel conditions calorieGoal tastePreferences weeklyWorkoutTarget");
     const conditions = user?.conditions?.length ? user.conditions.join(", ") : "none";
     // Kế hoạch tuần xoay quanh mục tiêu calo, nên chưa có mục tiêu thì dừng lại
@@ -117,9 +88,9 @@ exports.generatePlan = async (req, res) => {
       .filter(Boolean)
       .join("; ");
 
-    // Bước 3. LỚP AN TOÀN THỨ NHẤT.
+    // LỚP AN TOÀN THỨ NHẤT.
     // Nhét bệnh nền, mục tiêu calo và sở thích vào câu lệnh gửi cho AI.
-    // Đây mới chỉ là LỜI DẶN, AI vẫn có thể quên, nên còn lớp thứ hai ở bước 5.
+    // Đây mới chỉ là LỜI DẶN, AI vẫn có thể quên, nên còn lớp thứ hai ở dưới.
     const prompt = `You are a nutrition coach creating a personalized weekly meal and at-home activity plan.
 
 USER PROFILE:
@@ -156,7 +127,7 @@ Return ONLY valid JSON:
       return res.status(500).json({ message: "AI returned an invalid plan. Please try again." });
     }
 
-    // Bước 4. Không tin thẳng dữ liệu AI trả về. Ép mọi số về số nguyên không âm,
+    // Không tin thẳng dữ liệu AI trả về. Ép mọi số về số nguyên không âm,
     // cắt chữ quá dài, và bỏ qua ngày nào không nằm trong khoảng đã yêu cầu.
     const mealDocs = [];
     // Gợi ý tập của từng ngày. Lọc bỏ những gợi ý mà app không có mục tương ứng,
@@ -196,7 +167,7 @@ Return ONLY valid JSON:
         });
       }
     }
-    // Bước 5. Lớp an toàn thứ hai, chạy ở server nên người dùng không bỏ qua được.
+    // Lớp an toàn thứ hai, chạy ở server nên người dùng không bỏ qua được.
     const { kept: safeMealDocs, removed } = filterDishes(mealDocs, user?.conditions || []);
     if (removed.length)
       console.warn("Plan condition-filter removed:", removed.map((r) => `${r.name} (${r.condition})`).join(", "));
@@ -204,7 +175,7 @@ Return ONLY valid JSON:
     if (safeMealDocs.length === 0)
       return res.status(500).json({ message: "AI plan came back empty. Please try again." });
 
-    // Bước 6. Ghi bản mới thành công rồi mới xóa bản cũ trong đúng khoảng ngày.
+    // Ghi bản mới thành công rồi mới xóa bản cũ trong đúng khoảng ngày.
     // Nếu database lỗi giữa chừng, người dùng vẫn còn kế hoạch trước đó.
     const range = { user: req.user.id, date: { $gte: startDate, $lte: endDate } };
     await replacePlanRange(range, safeMealDocs, workoutDocs);
@@ -271,48 +242,6 @@ Return ONLY valid JSON:
   }
 };
 
-// Sửa một món đã lên lịch. Chỉ đổi những trường người dùng thật sự gửi lên,
-// trường nào không gửi thì giữ nguyên giá trị cũ.
-// Kiểm chủ sở hữu trước mọi thứ, để người này không sửa được kế hoạch người kia.
-exports.updatePlanMeal = async (req, res) => {
-  const planMeal = await PlanMeal.findById(req.params.id);
-
-  if (!planMeal) return res.status(404).json({ message: "Planned meal not found." });
-
-  if (planMeal.user.toString() !== req.user.id)
-    return res.status(403).json({ message: "Not authorized to update this planned meal." });
-
-  const { name, mealType, calories, protein, carbs, fat, note, date } = req.body;
-
-  if (mealType !== undefined && !MEAL_TYPES.includes(mealType))
-    return res.status(400).json({ message: "mealType must be breakfast, lunch, dinner or snack." });
-
-  const nutrition = validateNutritionValues({
-    calories: calories ?? planMeal.calories,
-    protein: protein ?? planMeal.protein,
-    carbs: carbs ?? planMeal.carbs,
-    fat: fat ?? planMeal.fat,
-  });
-  if (nutrition.error) return res.status(400).json({ message: nutrition.error });
-  const normalizedName = name === undefined ? null : validateMealName(name);
-  if (normalizedName?.error) return res.status(400).json({ message: normalizedName.error });
-
-  if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date))
-    return res.status(400).json({ message: "Date must be in format YYYY-MM-DD." });
-
-  if (normalizedName) planMeal.name = normalizedName.value;
-  if (mealType !== undefined) planMeal.mealType = mealType;
-  if (calories !== undefined) planMeal.calories = nutrition.value.calories;
-  if (protein !== undefined) planMeal.protein = nutrition.value.protein;
-  if (carbs !== undefined) planMeal.carbs = nutrition.value.carbs;
-  if (fat !== undefined) planMeal.fat = nutrition.value.fat;
-  if (note !== undefined) planMeal.note = note;
-  if (date !== undefined) planMeal.date = date;
-
-  await planMeal.save();
-  res.json({ message: "Planned meal updated.", planMeal });
-};
-
 // Xóa một món đã lên lịch. Cũng phải kiểm chủ sở hữu trước khi xóa.
 exports.deletePlanMeal = async (req, res) => {
   const planMeal = await PlanMeal.findById(req.params.id);
@@ -360,7 +289,7 @@ exports.markWorkoutDone = async (req, res) => {
   const user = await User.findById(req.user.id).select("weight");
   if (!(user?.weight > 0))
     return res.status(400).json({ message: "PROFILE_WEIGHT_REQUIRED" });
-  const caloriesBurned = Math.round(met * user.weight * (durationMin / 60));
+  const caloriesBurned = computeBurned(met, durationMin, user.weight);
   const snapshot = buildExerciseSnapshot("guided", req.body.routineKey, routine, user.weight);
 
   // Giành quyền trước rồi mới ghi, cùng lý do với nút "Đã ăn" bên dưới:

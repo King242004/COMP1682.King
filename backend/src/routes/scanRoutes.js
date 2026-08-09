@@ -21,7 +21,7 @@ const { aiLimiter } = require("../middleware/rateLimiters");
 const router = express.Router();
 
 // Giữ ảnh trong bộ nhớ để lấy thẳng req.file.buffer, không ghi ra ổ đĩa
-// Limit 8MB - large enough for high-quality phone photos
+// Trần 8MB, đủ cho ảnh chụp chất lượng cao của điện thoại
 const upload = createImageUpload({ maxFileBytes: 8 * 1024 * 1024 });
 const scanUploadLimiter = imageUploadLimiter(30);
 

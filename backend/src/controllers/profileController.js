@@ -14,21 +14,17 @@ const {
   calculateBMR, calculateTDEE, autoGoal, resolveRate, resolveWeightDirection,
 } = require("../services/nutrition/calorieGoal");
 const {
-  PROFILE_LIMITS, WEEKLY_RATE_KG, WEIGHT_RATE_OPTIONS,
+  PROFILE_LIMITS, WEEKLY_RATE_KG, WEIGHT_RATE_OPTIONS, ACTIVITY_MULTIPLIERS,
   WEIGHT_GOALS, WEIGHT_GOAL_VALUES, MAINTAIN_WEIGHT_THRESHOLD_KG, HEALTH_CONDITIONS,
 } = require("../config/nutritionConstants");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
-
-// ══════════════════════════════════════════════════════════
 // HAI CỬA VỀ HỒ SƠ
 //
-// Không phải luồng. Một cửa đọc hồ sơ, một cửa lưu hồ sơ.
-// 
+// Một cửa đọc hồ sơ, một cửa lưu hồ sơ.
+//
 // Nhớ: đây là nơi DUY NHẤT chốt mục tiêu calo chính thức.
 //      App có tính một bản để xem trước, nhưng bản đó chỉ để hiện,
 //      và có thể lệch với bản này khi calorieGoal áp mức sàn.
-// ══════════════════════════════════════════════════════════
-
 // BMI bằng cân nặng chia cho bình phương chiều cao tính theo mét.
 const calculateBMI = (weight, height) => {
   if (!weight || !height) return null;
@@ -92,7 +88,9 @@ exports.updateProfile = async (req, res) => {
   if (goal && !WEIGHT_GOAL_VALUES.includes(goal))
     return res.status(400).json({ message: "Invalid goal." });
 
-  if (activityLevel && !["sedentary", "moderate", "active"].includes(activityLevel))
+  // Danh sách mức vận động lấy thẳng từ bảng hệ số, để thêm mức mới vào
+  // nutritionConstants là chỗ này tự nhận, không phải sửa hai nơi.
+  if (activityLevel && !Object.keys(ACTIVITY_MULTIPLIERS).includes(activityLevel))
     return res.status(400).json({ message: "Invalid activity level." });
 
   // Chặn ngay ở cửa chứ không đợi model. Trường này nuôi thẳng lớp lọc an toàn,
@@ -199,7 +197,7 @@ exports.updateProfile = async (req, res) => {
       ...((adjustedGoal || goal !== undefined) && { goal: nextGoal }),
       ...(activityLevel && { activityLevel }),
       ...(conditions && { conditions }),
-      ...(nextCalorieGoal != null && { calorieGoal: nextCalorieGoal }),
+      ...(nextCalorieGoal !== undefined && { calorieGoal: nextCalorieGoal }),
       customGoal: usesCustomCalorieGoal,
       ...(avatar !== undefined && { avatar }),
       ...(language && { language }),

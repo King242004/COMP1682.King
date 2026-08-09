@@ -51,11 +51,12 @@ exports.unfollowUser = async (req, res) => {
 
 // Ô tìm người trong màn Khám phá.
 exports.searchUsers = async (req, res) => {
-  // Cắt từ khóa trước khi ghép vào truy vấn. Dài hơn tên cho phép thì không thể
-  // khớp ai, nên đây chỉ là chặn chuỗi vô hạn bị ném thẳng vào $regex.
+  // Kiểm KIỂU trước. Gửi lên một object thì String() ra "[object Object]"
+  // và lọt qua mọi cửa kiểm bên dưới.
   if (req.query.q !== undefined && typeof req.query.q !== "string")
     return res.status(400).json({ message: "Search query must be text." });
-  // Cắt từ khóa trước khi ghép vào truy vấn, chặn chuỗi dài vô hạn.
+  // Cắt từ khóa trước khi ghép vào truy vấn. Dài hơn tên cho phép thì không
+  // khớp được ai, nên đây chỉ là chặn chuỗi vô hạn bị ném thẳng vào $regex.
   const query = (req.query.q || "").trim().slice(0, INPUT_LIMITS.USER_SEARCH);
   if (!query) return res.json({ users: [] });
 
@@ -69,21 +70,7 @@ exports.searchUsers = async (req, res) => {
     .select("name avatar goal")
     .limit(20);
 
-  const followingIds = await Follow.find({
-    follower: req.user.id,
-    following: { $in: users.map((user) => user._id) },
-  }).distinct("following");
-  const followingSet = new Set(followingIds.map((id) => id.toString()));
-
-  res.json({
-    users: users.map((user) => ({
-      id: user._id,
-      name: user.name,
-      avatar: user.avatar || null,
-      goal: user.goal,
-      isFollowing: followingSet.has(user._id.toString()),
-    })),
-  });
+  res.json({ users: await withFollowState(users, req.user.id) });
 };
 
 // Phần gợi ý người nên theo dõi trong màn Khám phá.

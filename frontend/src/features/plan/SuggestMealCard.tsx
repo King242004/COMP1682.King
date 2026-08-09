@@ -6,18 +6,16 @@
 // Trả ra:     một món được gợi ý, kèm nút Thêm vào nhật ký
 // Khi lỗi:    AI hết lượt thì thẻ hiện lời nhắc thử lại sau, không biến mất
 
-// LUỒNG GỢI Ý MÓN
-// 1. Bấm nút xin gợi ý tại đây
-// 2. suggestNextMeal              (POST /coach/suggest-meal)
-// 3. Route gọi hàm suggestMeal trong backend/src/controllers/coachController.js;
-//    hàm này xem giờ và các bữa đã ăn
-//    để đoán bữa kế tiếp, tính calo còn lại
-// 4. Gemini đề xuất 3 món
-// 5. backend/src/services/nutrition/foodSafetyFilter.js lọc lại theo bệnh nền
-// 6. thẻ hiện 3 món kèm lý do chọn
-// 7. Bấm một món, sang /meals/add điền sẵn tên và dinh dưỡng
-// Kết quả được lưu tạm theo ngày, bữa và ngôn ngữ, để mở lại
-// không tốn thêm một lượt gọi AI.
+// Bấm nút xin gợi ý thì đi:
+//   src/features/coach/mealSuggestions.ts → src/utils/apiClient.ts
+//   → backend/src/routes/coachRoutes.js, POST /coach/suggest-meal
+//   → backend/src/controllers/coachController.js xem giờ và các bữa đã ăn
+//     để đoán bữa kế tiếp rồi tính calo còn lại
+//   → Gemini đề xuất 3 món
+//   → backend/src/services/nutrition/foodSafetyFilter.js lọc theo bệnh nền
+//   Ra màn: 3 món kèm lý do chọn. Bấm một món thì sang /meals/add điền sẵn.
+//
+// Kết quả lưu tạm theo ngày, bữa và ngôn ngữ, mở lại không tốn thêm lượt AI.
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -28,6 +26,7 @@ import { suggestNextMeal, getCachedSuggestions, cacheSuggestions, nextMealSlot, 
 import type { PlanMeal } from "@/features/plan/planApi";
 import { todayKey } from "@/utils/dateUtils";
 import { aiResetWhen } from "@/utils/aiQuota";
+import { getErrorMessage } from "@/utils/errorUtils";
 import { resolveLanguage } from "@/utils/languageUtils";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
@@ -42,7 +41,8 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
   const { meals } = useMeals();
   const lang = resolveLanguage(user?.language);
   const t = useT();
-  const dateKey = todayKey();
+  // Đặt tên là today chứ không phải dateKey, vì dateKey là tên một hàm dùng khắp app.
+  const today = todayKey();
 
   const [suggest, setSuggest] = useState<MealSuggestions | null>(null);
   const [loading, setLoading] = useState(false);
@@ -52,25 +52,28 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
   // Tự đọc gợi ý đã lưu trong máy khi mở thẻ, để không phải chờ.
   // Chưa có bản lưu thì để trống, chờ người dùng bấm xin gợi ý.
   useEffect(() => {
-    void getCachedSuggestions(dateKey, currentSlot, lang).then(setSuggest).catch(() => {});
-  }, [dateKey, currentSlot, lang]);
+    void getCachedSuggestions(today, currentSlot, lang).then(setSuggest).catch(() => {});
+  }, [today, currentSlot, lang]);
 
-  // GỢI Ý MÓN BƯỚC 1. Bấm xin gợi ý, hoặc bấm nút làm mới.
+  // Bấm xin gợi ý, hoặc bấm nút làm mới.
   // force bật khi bấm làm mới, để bỏ qua bản nhớ tạm và hỏi AI lại từ đầu.
   const loadSuggestions = async (force = false) => {
     if (!token || loading) return;
     setError(null);
     if (!force) {
-      const cached = await getCachedSuggestions(dateKey, currentSlot, lang);
+      const cached = await getCachedSuggestions(today, currentSlot, lang);
       if (cached) { setSuggest(cached); return; }
     }
     setLoading(true);
     try {
       const fresh = await suggestNextMeal(token, lang);
       setSuggest(fresh);
-      cacheSuggestions(dateKey, currentSlot, lang, fresh);
-    } catch (e: any) {
-      setError(e?.message === "QUOTA" ? t.plan.suggestQuota(aiResetWhen(t)) : t.plan.suggestErr);
+      cacheSuggestions(today, currentSlot, lang, fresh);
+    } catch (error) {
+      // Dò bằng regex như ScanScreen, CoachScreen và WeeklyPlanScreen.
+      // So bằng dấu bằng sẽ vỡ nếu backend đổi câu chữ, còn regex thì không.
+      const quota = /quota/i.test(getErrorMessage(error));
+      setError(quota ? t.plan.suggestQuota(aiResetWhen(t)) : t.plan.suggestErr);
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,7 @@ export function SuggestMealCard({ planToday }: { planToday: PlanMeal[] }) {
 
   const slot = suggest?.mealType || currentSlot;
   const slotName = t.plan.slotShort[slot] || slot;
-  // Planned-but-uneaten dish for this slot → suggestions act as swap options
+  // Món đã lên kế hoạch mà chưa ăn cho bữa này, lúc đó gợi ý thành lựa chọn thay thế
   const plannedForSlot = planToday.find((p) => p.mealType === slot && !p.done);
 
   return (

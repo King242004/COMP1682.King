@@ -30,12 +30,10 @@ async function addNotification({ user, actor, type, post = null }) {
   }
 }
 
-// ══════════════════════════════════════════════════════════
 // ĐỒ NGHỀ DÙNG CHUNG CỦA CỘNG ĐỒNG
 //
-// Không phải luồng. Mấy hàm dùng chung cho bốn controller của Cộng đồng:
+// Mấy hàm dùng chung cho bốn controller của Cộng đồng:
 // kiểm quyền xem, dựng bài để trả về, tải ảnh, và tạo thông báo.
-// ══════════════════════════════════════════════════════════
 
 // Đẩy một ảnh bài đăng lên kho ảnh, thu về tối đa 1080 pixel chiều ngang.
 function uploadToCloudinary(buffer) {

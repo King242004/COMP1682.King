@@ -4,7 +4,7 @@
 // Ai gọi tới: PostCreateScreen, PostEditScreen
 // Nhận vào:   nội dung đang gõ
 // Trả ra:     ô nhập kèm bộ đếm ký tự
-// Khi lỗi:    vượt giới hạn thì bộ đếm đổi màu
+// Khi lỗi:    maxLength chặn không cho nhập quá giới hạn.
 
 // Nhận giá trị từ màn cha, áp giới hạn ký tự rồi trả nội dung mới qua onChange.
 import { StyleSheet, TextInput } from "react-native";

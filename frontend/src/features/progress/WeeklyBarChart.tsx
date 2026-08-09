@@ -10,6 +10,15 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useT } from "@/i18n";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
+import { ChartLegend } from "./ConsistencyRow";
+import { ON_TRACK_MAX_PERCENT, ON_TRACK_MIN_PERCENT } from "./progressSummary";
+
+// Chiều cao vùng vẽ, và chiều cao tối đa của một cột bên trong vùng đó.
+// Hai số này vừa dùng trong style vừa dùng trong phép tính vạch mục tiêu,
+// nên phải khai một chỗ. Trước đây chúng bị gõ tay ở ba nơi rời nhau, sửa
+// chiều cao trong style là vạch mục tiêu lệch khỏi cột mà không có gì báo.
+const CHART_HEIGHT = 100;
+const BAR_MAX_HEIGHT = 80;
 
 export type Bar = { key: string; label: string; fullLabel?: string; value: number; color: string; dim?: boolean };
 
@@ -23,17 +32,17 @@ export function WeeklyBarChart({ bars, maxValue, goalTop, focusKey, onSelect }: 
 }) {
   const t = useT();
   const max = maxValue || 1;
-  // Dense (month) mode: bars get thin — drop per-bar values, label every 5th
+  // Chế độ tháng cột rất mảnh, nên bỏ số trên từng cột và chỉ ghi nhãn cách 5 cột
   const many = bars.length > 10;
   return (
     <View style={styles.wrap}>
       <View style={styles.chartWrap}>
         {goalTop != null && (
-          <View style={[styles.goalLine, { top: 100 - (goalTop / max) * 80 }]} />
+          <View style={[styles.goalLine, { top: CHART_HEIGHT - (goalTop / max) * BAR_MAX_HEIGHT }]} />
         )}
         <View style={[styles.bars, many && styles.barsTight]}>
           {bars.map((bar, i) => {
-            const barH = Math.max(4, (bar.value / max) * 80);
+            const barH = Math.max(4, (bar.value / max) * BAR_MAX_HEIGHT);
             const isFocus = !!focusKey && bar.key === focusKey;
             const dim = !!focusKey ? !isFocus : !!bar.dim;
             const label = bars.length > 13 && !(i % 5 === 0 || i === bars.length - 1 || isFocus)
@@ -66,20 +75,13 @@ export function WeeklyBarChart({ bars, maxValue, goalTop, focusKey, onSelect }: 
         </View>
       </View>
       {goalTop != null && (
-        <View style={styles.legend}>
-          <View style={styles.legendItem}>
-            <View style={styles.legendLine} />
-            <AppText variant="subtle" style={styles.legendText}>{t.progress.goalLine(goalTop.toLocaleString())}</AppText>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, styles.legendOnTrack]} />
-            <AppText variant="subtle" style={styles.legendText}>{t.progress.onTrackRange}</AppText>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, styles.legendOver]} />
-            <AppText variant="subtle" style={styles.legendText}>{t.progress.overGoalShort}</AppText>
-          </View>
-        </View>
+        <ChartLegend
+          items={[
+            { color: theme.colors.subtle, label: t.progress.goalLine(goalTop.toLocaleString()), line: true },
+            { color: theme.colors.accent, label: t.progress.onTrackRange(ON_TRACK_MIN_PERCENT, ON_TRACK_MAX_PERCENT) },
+            { color: theme.colors.accent2, label: t.progress.overGoalShort },
+          ]}
+        />
       )}
     </View>
   );
@@ -89,7 +91,7 @@ const styles = StyleSheet.create({
   wrap: { gap: theme.space.md },
   chartWrap: { position: "relative" },
   goalLine: { position: "absolute", left: 0, right: 0, height: 1.5, backgroundColor: theme.colors.subtle, zIndex: 1 },
-  bars: { flexDirection: "row", alignItems: "flex-end", gap: 6, height: 100 },
+  bars: { flexDirection: "row", alignItems: "flex-end", gap: 6, height: CHART_HEIGHT },
   barsTight: { gap: 2 },
   barCol: { flex: 1, alignItems: "center", gap: 4, justifyContent: "flex-end" },
   barValue: { fontSize: 9, color: theme.colors.subtle },
@@ -98,11 +100,4 @@ const styles = StyleSheet.create({
   barLabel: { fontSize: 10, fontWeight: "500", color: theme.colors.subtle },
   barLabelFocus: { fontWeight: "700", color: theme.colors.primary },
   dimmed: { opacity: 0.3 },
-  legend: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  legendLine: { width: 16, height: 2, backgroundColor: theme.colors.subtle },
-  legendDot: { width: 10, height: 10, borderRadius: 3 },
-  legendOnTrack: { backgroundColor: theme.colors.accent },
-  legendOver: { backgroundColor: theme.colors.accent2 },
-  legendText: { fontSize: 11 },
 });

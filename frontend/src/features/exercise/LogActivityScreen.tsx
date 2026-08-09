@@ -61,21 +61,22 @@ export default function LogActivityScreen() {
   const [externalDate, setExternalDate] = useState(todayKey());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  // Ghi hoạt động ngoài BẮT BUỘC có cân nặng, vì calo đốt tính từ MET nhân cân nặng.
+  // Đặt một biến rồi dùng ba chỗ, thay vì viết lại biểu thức ở từng chỗ.
+  const hasWeight = !!user?.weight && user.weight > 0;
   const [externalSaving, setExternalSaving] = useState(false);
   const [externalError, setExternalError] = useState("");
 
-  // ══════════════════════════════════════════════════════════
   // CHỌN BÀI TẬP
   //
-  // Đường thứ nhất. Ba bước, đọc từ trên xuống là đúng thứ tự. KHÔNG gọi mạng,
+  // Đường thứ nhất. KHÔNG gọi mạng,
   // vì các bài nằm sẵn trong guidedRoutines.ts.
   // Xong thì sang màn GuidedRoutineScreen, màn ĐÓ mới là nơi ghi buổi tập.
-  // ══════════════════════════════════════════════════════════
 
-  // CHỌN BÀI TẬP BƯỚC 1 nằm ở hai state category với duration khai báo phía trên,
+  // Phần chọn bài tập nằm ở hai state category với duration khai báo phía trên,
   // người dùng bấm nhóm bài và độ dài buổi tập là hai state đó đổi.
   //
-  // CHỌN BÀI TẬP BƯỚC 2. Lọc danh sách theo đúng hai lựa chọn đó.
+  // Lọc danh sách theo đúng hai lựa chọn đó.
   // Bọc useMemo nên chỉ lọc lại khi một trong hai đổi, chứ không lọc mỗi nhịp vẽ.
   const selectedRoutines = useMemo(
     () => GUIDED_ROUTINES.filter(
@@ -84,17 +85,15 @@ export default function LogActivityScreen() {
     [category, duration],
   );
 
-  // ══════════════════════════════════════════════════════════
   // GHI HOẠT ĐỘNG NGOÀI
   //
-  // Đường thứ hai, cho việc đã làm ở ngoài app. Ba bước, đọc từ trên xuống
-  // là đúng thứ tự. Một chặng chờ mạng ở BƯỚC 3.
+  // Đường thứ hai, cho việc đã làm ở ngoài app.
+  // Một chặng chờ mạng, lúc gửi buổi tập lên.
   // Xong thì Trang chủ và màn Tiến trình tự tải lại.
-  // ══════════════════════════════════════════════════════════
 
-  // GHI NGOÀI BƯỚC 1 nằm ở nút mở hộp trong JSX, nó bật externalVisible lên.
+  // Phần ghi bài ngoài bắt đầu ở nút mở hộp trong JSX, nó bật externalVisible.
   //
-  // GHI NGOÀI BƯỚC 2. Mấy nhãn cho hộp chọn ngày, tính lại mỗi nhịp vẽ.
+  // Mấy nhãn cho hộp chọn ngày, tính lại mỗi nhịp vẽ.
   // Ghép "T00:00:00" để máy hiểu là giờ địa phương, thiếu đuôi đó thì máy hiểu
   // là UTC và múi giờ âm sẽ hiện lùi mất một ngày.
   const externalDateLabel = new Date(`${externalDate}T00:00:00`).toLocaleDateString(locale, {
@@ -126,7 +125,7 @@ export default function LogActivityScreen() {
     setDatePickerVisible((visible) => !visible);
   };
 
-  // GHI NGOÀI BƯỚC 3. Người dùng bấm Lưu trong hộp Ghi hoạt động khác.
+  // Người dùng bấm Lưu trong hộp Ghi hoạt động khác.
   // Đường đi: addExercise → apiClient → POST /exercise
   //           → exerciseController.addExercise → computeBurned
   // Chỉ gửi MÃ hoạt động, không gửi hệ số MET. Backend tự tra bảng của nó,
@@ -494,17 +493,17 @@ export default function LogActivityScreen() {
                 ) : null}
               </View>
 
-              <View style={[styles.estimateNote, (!user?.weight || user.weight <= 0) && styles.estimateNoteWarn]}>
+              <View style={[styles.estimateNote, !hasWeight && styles.estimateNoteWarn]}>
                 <Ionicons
-                  name={!user?.weight || user.weight <= 0 ? "alert-circle-outline" : "information-circle-outline"}
+                  name={hasWeight ? "information-circle-outline" : "alert-circle-outline"}
                   size={18}
-                  color={!user?.weight || user.weight <= 0 ? theme.colors.danger : theme.colors.accent}
+                  color={hasWeight ? theme.colors.accent : theme.colors.danger}
                 />
                 <AppText
                   variant="subtle"
-                  style={[styles.estimateNoteText, (!user?.weight || user.weight <= 0) && styles.estimateNoteTextWarn]}
+                  style={[styles.estimateNoteText, !hasWeight && styles.estimateNoteTextWarn]}
                 >
-                  {!user?.weight || user.weight <= 0 ? t.exercise.weightRequired : t.exercise.externalEstimateNote}
+                  {hasWeight ? t.exercise.externalEstimateNote : t.exercise.weightRequired}
                 </AppText>
               </View>
 
@@ -513,7 +512,7 @@ export default function LogActivityScreen() {
               <Button
                 title={externalSaving ? t.common.saving : t.exercise.saveExternal}
                 size="lg"
-                disabled={externalSaving || !user?.weight || user.weight <= 0}
+                disabled={externalSaving || !hasWeight}
                 onPress={saveExternalActivity}
               />
             </ScrollView>

@@ -10,6 +10,11 @@
 // Vì sao cần: thêm một món ở màn Thêm món thì ba màn khác phải đổi theo.
 // Để các màn tự gọi nhau thì rối như mạng nhện, nên dùng chung một con số
 // làm tín hiệu. Màn nào quan tâm thì đặt nó vào useEffect là xong.
+//
+// Vì sao nằm ở src/context chứ không ở features như AuthContext và MealsContext:
+// hai cái kia thuộc về một feature và feature đó sở hữu dữ liệu. Còn tín hiệu này
+// KHÔNG thuộc feature nào, nó nối bốn feature khác nhau lại, nên đặt trong một
+// feature bất kỳ là buộc ba feature còn lại phải import chéo sang.
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 type HealthDataRefreshContextValue = {

@@ -1,8 +1,8 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Tính mục tiêu calo mỗi ngày từ hồ sơ người dùng.
 //
-// Ai gọi tới: profileController (khi lưu hồ sơ), coachContext (đưa cho AI),
-//             planController (dựng thực đơn theo mục tiêu)
+// Ai gọi tới: profileController (khi lưu hồ sơ), weightController (tính lại
+//             mục tiêu sau mỗi lần ghi cân), coachContext (đưa cho AI)
 // Nhận vào:   giới tính, tuổi, cân nặng, chiều cao, mức vận động, mục tiêu cân
 // Trả ra:     số calo mục tiêu mỗi ngày
 // Khi lỗi:    thiếu dữ liệu hồ sơ thì trả rỗng, KHÔNG bịa một con số mặc định.
@@ -13,22 +13,16 @@
 // Có một mức SÀN không cho tụt xuống dưới, để app không đề xuất ăn quá ít.
 //
 // Mọi con số dùng ở đây đều lấy từ config/nutritionConstants, không gõ thẳng vào file này.
+// Đây là bản CHÍNH THỨC của phép tính, app chỉ có bản xem trước để hiện lên màn hình.
+//
+// Nhớ: hệ số mức vận động ĐÃ bao gồm phần vận động thường ngày.
+//      Vì vậy KHÔNG được trừ thêm calo của buổi tập, trừ nữa là tính hai lần.
 const {
   MIFFLIN_ST_JEOR, ACTIVITY_MULTIPLIERS, DEFAULT_ACTIVITY_LEVEL, CALORIE_FLOOR,
   KCAL_PER_KG_BODY_WEIGHT, WEEKLY_RATE_KG, WEIGHT_GOALS,
   MAINTAIN_WEIGHT_THRESHOLD_KG,
 } = require("../../config/nutritionConstants");
 const { dateKey } = require("../../utils/dateUtils");
-
-// ══════════════════════════════════════════════════════════
-// TÍNH MỤC TIÊU CALO
-//
-// Không phải luồng. Chuỗi hàm tính, gọi nối nhau: BMR rồi TDEE rồi mục tiêu.
-// Đến từ profileController. Đây là bản CHÍNH THỨC, app chỉ có bản xem trước.
-// 
-// Nhớ: hệ số mức vận động ĐÃ bao gồm phần vận động thường ngày.
-//      Vì vậy KHÔNG được trừ thêm calo của buổi tập, trừ nữa là tính hai lần.
-// ══════════════════════════════════════════════════════════
 
 // Tách riêng khỏi calculateTDEE để màn Hồ sơ hiện được BMR cạnh TDEE.
 // Hai số chênh nhau đúng một biến là mức vận động, nên đặt cạnh nhau thì
@@ -93,7 +87,7 @@ function resolveRate(weightDirection, weeklyRateKg) {
 }
 
 // Đây là hàm chính của file, và là chỗ đáng đọc kỹ nhất khi bảo vệ.
-// Bước 4 là chỗ quan trọng nhất. Bản cũ chặn sàn rồi im lặng, nên một người
+// là chỗ quan trọng nhất. Bản cũ chặn sàn rồi im lặng, nên một người
 // nhỏ con chọn tốc độ 1 kg mỗi tuần vẫn thấy app ghi 1 kg mỗi tuần trong khi
 // mức thâm hụt thật chỉ đủ cho khoảng nửa con số đó. Ngày dự kiến vì thế sai gần gấp đôi.
 // Nay hàm trả về cả tốc độ đã yêu cầu lẫn tốc độ thật để màn hình hiện đúng.

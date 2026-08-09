@@ -13,12 +13,7 @@ import { AppText } from "./AppText";
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "lg" | "md";
 
-// ══════════════════════════════════════════════════════════
-// BỐN BẢNG TRA KIỂU
-//
-// Không phải luồng, chỉ là bốn bảng tra nhỏ. Gọi cái nào trước cũng được.
-// Cả bốn đều được gọi ở khối DỰNG NÚT bên dưới, lúc xếp chồng style.
-// ══════════════════════════════════════════════════════════
+// Bốn hàm tra kiểu dưới đây đều được gọi lúc xếp chồng style trong Button.
 
 // Cỡ nút chỉ có hai mức, lg cao 56 còn md cao 48. Không có cỡ nhỏ hơn.
 function getSizeStyle(size: Size): ViewStyle {
@@ -55,15 +50,7 @@ function getTextVariantStyle(variant: Variant): TextStyle {
   return textStyles[variant];
 }
 
-// ══════════════════════════════════════════════════════════
-// DỰNG NÚT
-//
-// Đến từ gần như mọi màn. Hai bước, đọc từ trên xuống là đúng thứ tự.
-// Xong thì trả về một Pressable đã đủ cỡ, đủ màu nền, đủ màu chữ.
-// ══════════════════════════════════════════════════════════
-
-// DỰNG NÚT BƯỚC 1. Nhận props. variant với size đã có sẵn giá trị mặc định,
-// nên nơi gọi chỉ cần truyền title và onPress là chạy được.
+// variant và size có sẵn giá trị mặc định, nơi gọi chỉ cần title và onPress
 export function Button({
   title,
   onPress,
@@ -82,8 +69,7 @@ export function Button({
   size?: Size;
   style?: ViewStyle;
 }) {
-  // DỰNG NÚT BƯỚC 2. Xếp chồng style rồi trả nút ra.
-  // Nhớ: THỨ TỰ trong mảng style là quan trọng, cái dưới đè cái trên.
+  // THỨ TỰ trong mảng style là quan trọng, cái dưới đè cái trên
   // base rồi cỡ rồi màu nền, sau đó mới tới màu lúc đang đè, rồi mờ khi bị khóa,
   // cuối cùng là style nơi gọi truyền vào nên nơi gọi luôn đè được hết.
   return (

@@ -1,13 +1,3 @@
-// ══════════════════════════════════════════════════════════
-// DỊCH TÊN MÓN AI TRẢ VỀ
-//
-// Không phải luồng. Mấy hàm dò xem AI có trả lời sai ngôn ngữ hay không,
-// và dịch lại nếu có.
-// 
-// Nhớ: Gemini thỉnh thoảng trả tên món bằng tiếng Anh dù đã dặn nói tiếng Việt.
-//      File này bắt lại chuyện đó, chứ không sửa được cách AI nghĩ.
-// ══════════════════════════════════════════════════════════
-
 // ═══ FILE NÀY LÀM GÌ ═══
 // Lớp chắn ngôn ngữ cho Quét ảnh, chạy SAU khi AI đã nhận diện xong.
 //
@@ -15,6 +5,9 @@
 // Nhận vào:   danh sách món AI đoán được, và ngôn ngữ app đang chọn
 // Trả ra:     danh sách đã đúng ngôn ngữ
 // Khi lỗi:    dịch lại thất bại thì giữ nguyên kết quả gốc
+//
+// Nhớ: Gemini thỉnh thoảng trả tên món bằng tiếng Anh dù đã dặn nói tiếng Việt.
+//      File này bắt lại chuyện đó, chứ không sửa được cách AI nghĩ.
 //
 // Điểm quan trọng: lượt dịch lại CHỈ đổi tên món và mô tả khẩu phần,
 // giữ nguyên toàn bộ con số dinh dưỡng và độ tin cậy của lượt đầu.

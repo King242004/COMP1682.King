@@ -3,10 +3,19 @@
 // Model được mock để khóa thứ tự ghi/xóa và nhánh rollback an toàn.
 jest.mock("../../src/models/PlanMeal", () => ({ insertMany: jest.fn(), deleteMany: jest.fn() }));
 jest.mock("../../src/models/PlanWorkout", () => ({ insertMany: jest.fn(), deleteMany: jest.fn() }));
+jest.mock("../../src/models/User", () => ({ findById: jest.fn() }));
+jest.mock("../../src/config/geminiModels", () => ({ insightModels: [] }));
 
 const PlanMeal = require("../../src/models/PlanMeal");
 const PlanWorkout = require("../../src/models/PlanWorkout");
 const { replacePlanRange } = require("../../src/services/planReplacement");
+const { generatePlan } = require("../../src/controllers/planController");
+
+const response = () => {
+  const res = { status: jest.fn(), json: jest.fn() };
+  res.status.mockReturnValue(res);
+  return res;
+};
 
 describe("replacePlanRange", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -37,5 +46,22 @@ describe("replacePlanRange", () => {
     expect(PlanMeal.deleteMany).toHaveBeenCalledTimes(1);
     expect(PlanMeal.deleteMany).toHaveBeenCalledWith({ _id: { $in: ["new-meal"] } });
     expect(PlanWorkout.deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("generatePlan date range", () => {
+  test("rejects a range longer than 14 days before reading profile or replacing data", async () => {
+    jest.clearAllMocks();
+    const User = require("../../src/models/User");
+    const res = response();
+
+    await generatePlan({
+      body: { startDate: "2026-08-01", endDate: "2026-08-30" },
+      user: { id: "u1" },
+    }, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(User.findById).not.toHaveBeenCalled();
+    expect(PlanMeal.insertMany).not.toHaveBeenCalled();
   });
 });

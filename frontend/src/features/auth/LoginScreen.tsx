@@ -6,7 +6,6 @@
 // Trả ra:     không trả gì, chỉ chuyển màn sang /tabs khi đăng nhập được
 // Khi lỗi:    sai email hoặc mật khẩu thì hiện một câu chung chung,
 //             không nói rõ sai cái nào, để người lạ không dò được tài khoản
-//
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Image, Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Link, useRouter } from "expo-router";
@@ -38,12 +37,10 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ══════════════════════════════════════════════════════════
   // BÀN PHÍM
   //
   // Không liên quan gì tới đăng nhập, chỉ lo phần nhìn.
   // Bàn phím bật lên thì đẩy nội dung lên vừa đủ để thấy ô đang gõ.
-  // ══════════════════════════════════════════════════════════
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -68,12 +65,10 @@ export default function LoginScreen() {
       keyboardShift.stopAnimation();
     };
   }, [keyboardShift]);
-  // ══════════════════════════════════════════════════════════
   // ĐĂNG NHẬP
   //
   // Ba bước: bấm nút, giao cho AuthContext, rồi chuyển màn.
   // AuthContext.login điều phối authApi.loginRequest và lưu AuthSession; màn này chỉ quản lý form.
-  // ══════════════════════════════════════════════════════════
 
   // Kiểm ngay tại máy trước khi gọi mạng, báo lỗi liền mà không tốn một lượt gọi.
   // Backend vẫn kiểm lại lần nữa, vì kiểm ở app thì người ta bỏ qua được.
@@ -91,7 +86,7 @@ export default function LoginScreen() {
     return okEmail && okPassword && !isLoading;
   }, [email, password, isLoading]);
 
-  // ĐĂNG NHẬP BƯỚC 1. Người dùng bấm nút Đăng nhập là vào đây.
+  // Bấm nút Đăng nhập là vào đây
   const handleLogin = async () => {
     Keyboard.dismiss();
     const validationError = validate();
@@ -99,12 +94,12 @@ export default function LoginScreen() {
     setError("");
     setIsLoading(true);
     try {
-      // BƯỚC 2. AuthContext.login → authApi.loginRequest → POST /auth/login
+      // Đi tiếp: src/features/auth/AuthContext.tsx
       // → authController.login kiểm mật khẩu và trả AuthSession,
       // rồi AuthContext lưu thẻ với hồ sơ vào state và xuống máy.
       // Dòng này chạy xong nghĩa là đăng nhập đã thành công hết rồi.
       await login(email.trim(), password);
-      // BƯỚC 3. Chuyển màn. Dùng replace chứ không push, để vuốt ngược không quay lại đây.
+      // Dùng replace chứ không push, để vuốt ngược không quay lại màn này
       router.replace("/tabs");
     } catch (error) {
       setError(getUserErrorMessage(error, t, t.auth.invalidCredentials));

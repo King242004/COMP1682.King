@@ -1,6 +1,6 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Khai hình dạng của một món ĐÃ ăn trong nhật ký.
-// Đây là điểm CUỐI của LUỒNG LƯU MÓN, nơi dữ liệu thật sự chạm vào MongoDB.
+// Đây là điểm CUỐI khi lưu món, nơi dữ liệu thật sự chạm vào MongoDB.
 // Đây là bảng trung tâm của app: gần như mọi con số trên Trang chủ
 // và Tiến trình đều cộng từ bảng này ra.
 //
@@ -10,14 +10,16 @@
 // Trả ra:     một dòng Meal đã kiểm hợp lệ
 // Khi lỗi:    thiếu tên, buổi ăn hoặc ngày thì Mongoose chặn lại
 //
-// Năm lối ghi vào bảng này: nhập tay, quét ảnh, quét mã vạch,
-// bấm "Đã ăn" ở kế hoạch tuần, và bấm "Thêm" trên tin nhắn Coach.
+// Nơi ghi vào: năm lối, gồm nhập tay, quét ảnh, quét mã vạch, bấm "Đã ăn"
+//              ở kế hoạch tuần, và bấm "Thêm" trên tin nhắn Coach. Cả năm lối
+//              đều đi qua màn Thêm món rồi mới tới mealController.
+// Nơi đọc ra:  Trang chủ, Tiến trình, Lịch sử món, và ngữ cảnh đưa cho Coach.
 //
 // Ngày lưu dạng chuỗi "2026-08-03" chứ không lưu kiểu ngày tháng,
 // để so sánh và lọc theo ngày địa phương mà không lo lệch múi giờ.
 const mongoose = require("mongoose");
 const { INPUT_LIMITS, LEGACY_LIMITS } = require("../config/inputLimits");
-const nutritionFields = require("./nutritionFields");
+const { nutritionFields } = require("./nutritionFields");
 const { MEAL_TYPES, NUTRITION_SOURCES } = require("../config/mealEnums");
 // Đến từ mealController, đã qua mealInputValidator rồi.
 // Mongoose vẫn kiểm lần NỮA theo khuôn dưới đây, vì có thể ai đó gọi thẳng

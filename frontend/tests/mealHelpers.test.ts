@@ -4,9 +4,27 @@
 import {
   hasAnyNutrition,
   hasCompleteNutrition,
+  mealPortionLabel,
   mealSlotByHour,
   similarRecentMealName,
 } from "@/features/meals/mealHelpers";
+import fs from "fs";
+import path from "path";
+
+function backendMealTypeByHour(): (hour: number) => string {
+  const source = fs.readFileSync(
+    path.join(__dirname, "../../backend/src/controllers/coachController.js"),
+    "utf8",
+  );
+  const start = source.indexOf("function mealTypeByHour(h) {");
+  const body = source.slice(start, source.indexOf("\n}", start) + 2);
+  const rules = [...body.matchAll(/if \(h < (\d+)\) return "(\w+)";/g)]
+    .map((match) => ({ limit: Number(match[1]), slot: match[2] }));
+  const fallback = body.match(/return "(\w+)";\s*\n\}/)?.[1];
+  if (start === -1 || !rules.length || !fallback)
+    throw new Error("Không đọc được mealTypeByHour bên backend");
+  return (hour: number) => rules.find((rule) => hour < rule.limit)?.slot ?? fallback;
+}
 
 describe("mealSlotByHour", () => {
   test.each([
@@ -22,6 +40,21 @@ describe("mealSlotByHour", () => {
     [23, "snack"],
   ])("maps hour %i to %s", (hour, expected) => {
     expect(mealSlotByHour(hour)).toBe(expected);
+  });
+
+  const backend = backendMealTypeByHour();
+  test.each(Array.from({ length: 24 }, (_, hour) => hour))(
+    "matches the backend at hour %i",
+    (hour) => expect(mealSlotByHour(hour)).toBe(backend(hour)),
+  );
+});
+
+describe("mealPortionLabel", () => {
+  test("prefers text and otherwise joins amount with unit", () => {
+    expect(mealPortionLabel({ portionAmount: 250, portionUnit: "g", portionText: "1 tô vừa" }))
+      .toBe("1 tô vừa");
+    expect(mealPortionLabel({ portionAmount: 250, portionUnit: "g" })).toBe("250 g");
+    expect(mealPortionLabel({})).toBe("");
   });
 });
 

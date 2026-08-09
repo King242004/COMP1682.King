@@ -11,16 +11,14 @@
 // imageUploadLimiter đếm số lần tải lên trong 15 phút để chặn spam.
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
-
-// ══════════════════════════════════════════════════════════
 // CỬA NHẬN ẢNH
 //
-// Không phải luồng. Một khuôn dựng bộ nhận ảnh, cộng một bộ đếm lượt.
+// Một khuôn dựng bộ nhận ảnh, cộng một bộ đếm lượt.
 // Đến từ mấy route có tải ảnh: ảnh đại diện, ảnh bài đăng, ảnh quét món.
-// 
-// Nhớ: ảnh giữ trong BỘ NHỚ chứ không ghi ra đĩa, vì đẩy thẳng lên Cloudinary.
-// ══════════════════════════════════════════════════════════
-
+//
+// Nhớ: ảnh giữ trong BỘ NHỚ chứ không ghi ra đĩa. Ảnh đại diện và ảnh bài đăng
+//      được đẩy tiếp lên Cloudinary, còn ảnh quét món CHỈ gửi cho Gemini rồi bỏ,
+//      không lưu ở đâu cả. Xem scanController.js, nó không hề dùng Cloudinary.
 // Chỉ nhận mấy định dạng ảnh này. Chặn ở đây để file lạ không lên tới Cloudinary.
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -31,7 +29,7 @@ const ALLOWED_IMAGE_TYPES = new Set([
 ]);
 
 // Dựng một bộ nhận ảnh với trần dung lượng và trần số file truyền vào.
-// Giữ ảnh trong bộ nhớ chứ không ghi ra đĩa, vì ảnh đẩy thẳng lên Cloudinary.
+// Giữ ảnh trong bộ nhớ chứ không ghi ra đĩa, để controller lấy req.file.buffer.
 function createImageUpload({ maxFileBytes, maxFiles = 1, maxFields = 10 }) {
   return multer({
     storage: multer.memoryStorage(),

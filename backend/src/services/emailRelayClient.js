@@ -10,16 +10,10 @@
 // Vì sao không gửi thẳng bằng SMTP: máy chủ Render chặn cổng SMTP,
 // nên phải đi qua một dịch vụ trung gian gọi bằng HTTPS.
 // Mỗi lần gọi đều ký bằng khóa bí mật để relay biết đúng là app mình gọi.
-const crypto = require("crypto");
-
-// ══════════════════════════════════════════════════════════
-// GỬI EMAIL QUA RELAY RIÊNG
 //
-// Không phải luồng. Một hàm gửi mã, một hàm báo trạng thái cấu hình.
-// 
 // Nhớ: KHÔNG dùng Gmail SMTP và KHÔNG dùng Brevo. App gửi qua một relay riêng
 //      bằng HTTPS, cấu hình ở EMAIL_RELAY_URL và EMAIL_RELAY_SECRET.
-// ══════════════════════════════════════════════════════════
+const crypto = require("crypto");
 
 // Hai lý do được phép gửi mã. Chặn ở đây để không ai nhờ relay gửi thư linh tinh.
 const ALLOWED_PURPOSES = new Set(["registration", "password_reset"]);
@@ -45,11 +39,12 @@ const getRelayConfig = () => {
 // Chữ ký này phải giống hệt cách tính bên email-relay/src/requestSignature.js.
 // Lệch một ký tự là bên kia từ chối nhận.
 const createRelaySignature = (payload, timestamp, secret) => {
+  // Đúng bốn khóa, đúng thứ tự này. Bên relay dựng lại y hệt trong
+  // email-relay/src/requestSignature.js, thừa hay thiếu một khóa là chữ ký lệch.
   const canonicalPayload = JSON.stringify({
     to: payload.to,
     otp: payload.otp,
     purpose: payload.purpose,
-    language: payload.language,
     language: payload.language,
   });
 

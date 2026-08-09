@@ -6,19 +6,17 @@
 // Trả ra:     câu trả lời của Coach, hoặc điểm sức khỏe
 // Khi lỗi:    AI hết lượt thì trả QUOTA, màn hiện lời nhắc thử lại sau
 
+// File này KHÔNG gọi fetch. Nó nhờ apiRequest bên src/utils/apiClient.ts,
+// chỗ đó lo địa chỉ server, thẻ đăng nhập, múi giờ, hạn chờ và lỗi 401.
+//
 // Ngoài gọi mạng, nó còn lo hai việc phụ:
 //   xóa ký hiệu Markdown khỏi câu trả lời AI, vì app hiện chữ thuần.
 //   lưu tạm điểm sức khỏe theo ngày và ngôn ngữ, để đỡ tốn lượt gọi AI.
-// Mọi lệnh gọi AI ở đây chờ tới 120 giây, vì Gemini chạy lâu hơn
-// các request thường, nhất là lần đầu khi Render vừa ngủ dậy.
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiRequest } from "@/utils/apiClient";
+import { apiRequest, AI_TIMEOUT_MS } from "@/utils/apiClient";
 import type { Lang } from "@/utils/languageUtils";
 import { todayKey } from "@/utils/dateUtils";
 
-// Chờ tới 120 giây cho mọi lệnh gọi AI, gấp gần ba lần mức mặc định 45 giây
-// của apiClient. Cần dài vậy vì Gemini chạy lâu, nhất là lần đầu khi Render vừa ngủ dậy.
-const AI_TIMEOUT_MS = 120_000;
 
 export type CoachInsight = {
   date: string;
@@ -45,25 +43,18 @@ export type ChatMessage = {
   meal?: SuggestedMeal | null;
   // Chỉ hiện nút thêm món khi người dùng xác nhận họ đang ăn món này.
   eating?: boolean;
-  // Giữ trạng thái của các tin lịch sử từng được ghi trực tiếp từ Coach.
-  loggedId?: string | null;
   // Thời gian ISO dùng để chia tin nhắn theo ngày.
   createdAt?: string;
 };
 
 export type CachedInsight = { insight: CoachInsight; at: number };
 
-// ─── CHUẨN HÓA DỮ LIỆU HIỂN THỊ ───
-
-// Cần hàm này vì app hiện chữ thuần, không dựng Markdown.
-// ══════════════════════════════════════════════════════════
 // CÁC CỬA GỌI COACH
+// Mỗi hàm là một cửa riêng, màn nào cần gì thì gọi cái đó.
+// stripMarkdown chạy tại máy, bốn hàm giữa ra mạng, hai hàm cuối lo bộ nhớ đệm.
 //
-// Không phải luồng. Mỗi hàm là một cửa riêng, màn nào cần gì thì gọi cái đó.
-// Bốn hàm đầu đi ra mạng, hai hàm cuối chỉ đọc ghi bộ nhớ đệm trong máy.
-//
-// Nhớ: mọi lệnh ra mạng ở đây đều truyền AI_TIMEOUT_MS, KHÔNG dùng mức mặc định.
-// ══════════════════════════════════════════════════════════
+// Nhớ: chỉ getInsight và chatWithCoach truyền AI_TIMEOUT_MS, vì hai hàm đó gọi AI.
+//      getChatHistory và clearChatHistory chỉ đọc xóa database nên để mặc định 45 giây.
 
 // Bóc mấy ký tự định dạng mà AI hay chèn vào, như dấu sao đậm hay dấu thăng tiêu đề.
 // Cần vì app hiện chữ thô, không dựng markdown, để nguyên là người dùng thấy đầy dấu sao.
@@ -149,7 +140,6 @@ export async function getChatHistory(token: string, language: Lang): Promise<Cha
     image: m.image,
     meal: m.meal || null,
     eating: !!m.eating,
-    loggedId: m.loggedId || null,
     createdAt: m.createdAt,
   }));
 }
@@ -189,5 +179,6 @@ export async function cacheInsight(date: string, language: Lang, insight: CoachI
   try {
     await AsyncStorage.setItem(insightKey(date, language), JSON.stringify({ insight, at: Date.now() }));
   } catch {
+    // Ghi bộ nhớ đệm hỏng thì bỏ qua, điểm vẫn hiện được từ mạng.
   }
 }

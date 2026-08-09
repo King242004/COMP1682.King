@@ -5,7 +5,6 @@ const {
   buildScopePrompt,
   parseScope,
   outOfScopeSignals,
-  hasBlockedCoachIntent,
   classifyCoachScope,
   resolveCoachScope,
   COACH_CAPABILITIES,
@@ -95,7 +94,6 @@ describe("Coach capability gate", () => {
 
   test.each(OUT_OF_SCOPE_MESSAGES)("chặn trước khi gọi Gemini, %s: %s", async (_label, message) => {
     const generate = jest.fn();
-    expect(hasBlockedCoachIntent(message)).toBe(true);
     expect(outOfScopeSignals(message).length).toBeGreaterThan(0);
     const decision = await resolveCoachScope({ message }, generate);
     expect(decision.scope).toBe(OUT_OF_SCOPE);
@@ -105,7 +103,7 @@ describe("Coach capability gate", () => {
 
   test.each(SUPPORTED_MESSAGES)("không chặn nhầm câu hỏi hợp lệ: %s", async (message) => {
     const generate = supportedGenerator();
-    expect(hasBlockedCoachIntent(message)).toBe(false);
+    expect(outOfScopeSignals(message)).toEqual([]);
     const decision = await resolveCoachScope({ message }, generate);
     expect(decision.scope).toBe(SUPPORTED);
     expect(generate).toHaveBeenCalledTimes(1);

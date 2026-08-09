@@ -17,7 +17,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { useT } from "@/i18n";
 import { ApiTimeoutError } from "@/utils/apiClient";
 import { getUserErrorMessage } from "@/utils/errorUtils";
-import { isStrongPassword, isValidEmail, isValidOtp } from "@/features/auth/authValidation";
+import { isStrongPassword, isValidEmail, isValidOtp, passwordErrorMessage } from "@/features/auth/authValidation";
 import { useOtpCooldown } from "@/features/auth/useOtpCooldown";
 import { theme } from "@/ui/theme";
 import { AppText } from "@/ui/components/AppText";
@@ -28,16 +28,13 @@ import { INPUT_LIMITS } from "@/config/inputLimits";
 
 type RegisterStep = "details" | "verify";
 
-// ══════════════════════════════════════════════════════════
 // ĐĂNG KÝ
 //
-// Đến từ liên kết Đăng ký ở màn Đăng nhập. Bốn bước, đọc từ trên xuống
-// là đúng thứ tự. Hai chặng chờ mạng, ở BƯỚC 2 xin mã và BƯỚC 3 tạo tài khoản.
+// Đến từ liên kết Đăng ký ở màn Đăng nhập.
+// Hai chặng chờ mạng, một lúc xin mã và một lúc tạo tài khoản.
 // Xong thì đi thẳng sang màn Thiết lập lần đầu, KHÔNG phải đăng nhập lại,
 // vì backend đã trả thẻ về ngay lúc tạo tài khoản.
-// ══════════════════════════════════════════════════════════
 
-// ĐĂNG KÝ BƯỚC 1. Nhận thông tin người dùng gõ.
 export default function RegisterScreen() {
   const router = useRouter();
   const { requestRegistrationOTP, register } = useAuth();
@@ -60,10 +57,8 @@ export default function RegisterScreen() {
     if (name.trim().length < 2) return t.auth.nameTooShort;
     if (!/^[\p{L}\s]+$/u.test(name.trim())) return t.auth.nameNoSpecial;
     if (!isValidEmail(email)) return t.auth.invalidEmail;
-    if (password.length < 6) return t.auth.passwordTooShort;
-    if (!/[A-Z]/.test(password)) return t.auth.passwordNeedUpper;
-    if (!/[0-9]/.test(password)) return t.auth.passwordNeedNumber;
-    return null;
+    // Ba luật mật khẩu nằm trong authValidation, ở đây chỉ lấy câu lỗi ra hiện.
+    return passwordErrorMessage(password, t);
   };
 
   // Điều kiện bật nút. Lỏng hơn hàm kiểm ở trên, chỉ để nút đừng mờ mãi.
@@ -77,7 +72,7 @@ export default function RegisterScreen() {
       && isStrongPassword(password);
   }, [email, isLoading, name, otp, password, step]);
 
-  // ĐĂNG KÝ BƯỚC 2. Bấm nút Gửi mã.
+  // Bấm nút Gửi mã. Đi tiếp: src/features/auth/AuthContext.tsx
   // Kiểm hết tại máy trước, sai thì báo ngay chứ đừng để họ chờ một lượt mạng rồi mới biết.
   // Đường đi: AuthContext.requestRegistrationOTP → authApi → apiClient
   //           → POST /auth/register/send-otp → authController.sendRegistrationOTP
@@ -104,7 +99,7 @@ export default function RegisterScreen() {
     }
   };
 
-  // ĐĂNG KÝ BƯỚC 3. Bấm nút Tạo tài khoản, kèm mã 6 số vừa nhận trong email.
+  // Bấm nút Tạo tài khoản, kèm mã 6 số vừa nhận trong email
   // Đường đi: AuthContext.register → authApi → apiClient → POST /auth/register
   //           → authController.register
   // Bên đó so mã, tạo tài khoản, rồi trả THẺ về luôn. Nhờ vậy dòng dưới đi thẳng
@@ -128,8 +123,8 @@ export default function RegisterScreen() {
     }
   };
 
-  // ĐĂNG KÝ BƯỚC 4. Nút Gửi lại mã, chỉ bấm được khi đồng hồ đã về 0.
-  // Đi cùng một đường với BƯỚC 2. Xóa ô mã cũ đi, vì mã cũ đã hết hiệu lực.
+  // Nút Gửi lại mã, chỉ bấm được khi đồng hồ đã về 0
+  // Đi cùng đường với nút Gửi mã. Xóa ô mã cũ đi vì mã đó hết hiệu lực
   const handleResend = async () => {
     if (resendSeconds > 0 || isLoading) return;
     setError("");

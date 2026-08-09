@@ -78,11 +78,15 @@ describe("bảng giá trị hợp lệ của món ăn", () => {
     ]);
   });
 
+  // coachController.js đã bỏ khỏi danh sách sau khi gỡ luồng ghi món từ tin nhắn.
+  // File đó không còn kiểm giá trị bữa ăn nữa. Mảng trong nextSlotToSuggest là
+  // THỨ TỰ BỮA TRONG NGÀY, bữa phụ nằm giữa trưa và tối, khác thứ tự MEAL_TYPES.
+  // Ép hai mảng dùng chung sẽ làm hàm gợi ý món trả về sai bữa.
   test("mọi file dùng bảng này đều import chứ không chép tay danh sách", () => {
     const users = [
       "models/Meal.js", "models/PlanMeal.js", "models/Post.js",
       "validators/mealInputValidator.js", "controllers/mealController.js",
-      "controllers/planController.js", "controllers/coachController.js",
+      "controllers/planController.js",
       "controllers/community/postController.js",
     ];
     for (const file of users) {
@@ -112,9 +116,18 @@ describe("route tốn lượt AI phải nằm SAU lớp kiểm đăng nhập", (
 describe("hai trường hồ sơ nuôi phép tính đều có enum ở tầng model", () => {
   // activityLevel nhân thẳng vào TDEE, goal quyết định cộng hay trừ calo.
   // Không có enum thì một giá trị lạ đi thẳng vào công thức.
+  // Trước đây test này khóa nguyên chuỗi ["sedentary", "moderate", "active"] gõ tay
+  // trong model. Danh sách đó nay lấy từ nutritionConstants, nên test đổi sang khóa
+  // đúng thứ cần bảo vệ: model dùng hằng số chung, và hằng số đó đúng bằng các khóa
+  // của bảng hệ số TDEE. Khóa chuỗi gõ tay là khóa nhầm vào bản sao.
   test("User.js khai enum cho activityLevel và goal", () => {
     const model = readSource("models/User.js");
-    expect(model).toMatch(/activityLevel:\s*\{[^}]*enum:\s*\["sedentary", "moderate", "active"\]/s);
+    expect(model).toMatch(/activityLevel:\s*\{[^}]*enum:\s*ACTIVITY_LEVELS/s);
     expect(model).toMatch(/goal:\s*\{[^}]*enum:\s*WEIGHT_GOAL_VALUES/s);
+  });
+
+  test("ACTIVITY_LEVELS đúng bằng các khóa của bảng hệ số TDEE", () => {
+    const { ACTIVITY_LEVELS, ACTIVITY_MULTIPLIERS } = require("../../src/config/nutritionConstants");
+    expect([...ACTIVITY_LEVELS]).toEqual(Object.keys(ACTIVITY_MULTIPLIERS));
   });
 });

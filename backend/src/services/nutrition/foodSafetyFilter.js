@@ -1,13 +1,3 @@
-// ══════════════════════════════════════════════════════════
-// LỌC MÓN THEO BỆNH NỀN
-//
-// Không phải luồng. Bảng luật, cộng mấy hàm lọc.
-// Đến từ coachController và planController, chạy SAU khi AI đã trả lời.
-// 
-// Nhớ: đây là LỚP CHẮN THỨ HAI. Lớp thứ nhất chỉ là lời dặn trong câu lệnh,
-//      mà AI thì vẫn quên được. Lớp này chạy ở server nên người dùng không tắt được.
-// ══════════════════════════════════════════════════════════
-
 // ═══ FILE NÀY LÀM GÌ ═══
 // LỚP AN TOÀN THỨ HAI. Lọc bỏ món không hợp với bệnh nền của người dùng.
 //
@@ -16,6 +6,9 @@
 // Nhận vào:   danh sách tên món, và danh sách bệnh nền của người dùng
 // Trả ra:     danh sách đã bỏ những món có tên chạm từ khóa cần tránh
 // Khi lỗi:    không có bệnh nền thì trả nguyên danh sách, không lọc gì
+//
+// Nhớ: lớp thứ nhất chỉ là lời dặn trong câu lệnh gửi AI, mà AI thì vẫn quên được.
+//      Lớp này chạy ở server sau khi AI đã trả lời, người dùng không tắt được.
 //
 // GIỚI HẠN cần nói rõ khi bảo vệ: nó chỉ đọc TÊN món, không phân tích được
 // nguyên liệu bên trong. Món tên vô hại mà chứa thành phần cần tránh thì lọt lưới.
@@ -70,6 +63,8 @@
 // dõi hay kiểm tra. App không bao giờ hiện một con số natri, một mục tiêu natri,
 // hay bất kỳ đánh giá nào dựa trên mấy chất đó. Đừng đọc chúng thành cam kết.
 //
+const { normalizeText } = require("../../utils/textNormalize");
+
 // Mỗi bệnh có một danh sách từ khóa cần tránh, gồm cả tiếng Việt và tiếng Anh.
 const RULES = {
   // Purin và rượu bia. Nguồn: FitzGerald và cộng sự (2020), 2020 American College
@@ -149,16 +144,9 @@ const FOOD_ALIASES = [
 ];
 
 // Hạ chữ thường và bỏ dấu, để so tên món không phụ thuộc cách gõ.
-function normalizeFoodText(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    // NFD bỏ được dấu thanh nhưng không chuyển đ thành d, nên xử lý đ riêng.
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+// Dùng hàm chung ở utils/textNormalize. Trước đây bốn file chép y hệt sáu phép
+// này, sửa một chỗ thì ba chỗ kia vẫn chạy theo luật cũ.
+const normalizeFoodText = normalizeText;
 
 // Lọc theo sở thích người dùng tự khai, ví dụ không ăn thịt gà.
 // Khác forbiddenFor ở chỗ đây là lựa chọn cá nhân, không phải bệnh nền.
@@ -182,11 +170,11 @@ function forbiddenFor(name, conditions = []) {
   const n = String(name || "");
   for (const c of conditions) {
     // Phải dùng Object.hasOwn chứ không tra thẳng RULES[c] rồi kiểm truthy.
-    // `conditions` đến từ User.healthConditions; profileController.updateProfile chỉ
-    // kiểm kiểu mảng chứ không giới hạn từng giá trị, nên
-    // một khoá như "constructor" sẽ tra trúng thuộc tính mà mọi object thừa kế,
-    // lọt qua phép kiểm truthy rồi chết ở `re.test`. `exerciseCatalog.js` đã
-    // dùng đúng cách này từ trước, chỉ file này bị sót.
+    // `conditions` đến từ trường cùng tên của model User. Nay trường đó đã có
+    // enum HEALTH_CONDITIONS nên giá trị lạ khó vào được, nhưng phép kiểm này
+    // vẫn giữ: một khoá như "constructor" sẽ tra trúng thuộc tính mà mọi object
+    // thừa kế, lọt qua phép kiểm truthy rồi chết ở `re.test`, và lớp an toàn
+    // thì không nên phụ thuộc vào việc tầng trên đã lọc sạch hay chưa.
     if (!Object.hasOwn(RULES, c)) continue;
     // Thử HAI lần: tên món như người dùng gõ, rồi bản đã bỏ dấu.
     // Lần một bắt được cả những từ ngắn mà bỏ dấu sẽ mất nghĩa, ví dụ bò và dê.

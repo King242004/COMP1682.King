@@ -28,6 +28,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   PROFILE_LIMITS,
   estimateCalorieGoal,
+  MAX_WEEKLY_WORKOUT_TARGET,
   resolveDraftWeightDirection,
   WEIGHT_GOAL_BY_DIRECTION,
   type WeightDirection,
@@ -46,6 +47,7 @@ import { SectionLabel } from "@/ui/components/SectionLabel";
 import { ActionSheet } from "@/ui/components/ActionSheet";
 import { TextField } from "@/ui/components/TextField";
 import { DIGIT_LIMITS } from "@/config/inputLimits";
+import { parseDecimal } from "@/utils/numberUtils";
 
 type CalorieMode = "automatic" | "custom";
 const DIRECTIONS: WeightDirection[] = ["lose", "maintain", "gain"];
@@ -57,22 +59,24 @@ const DIRECTION_ICONS = {
 } as const;
 
 // Số buổi tập mỗi tuần cho người dùng chọn. null đứng đầu là "Không đặt".
-// Trần 7 khớp luật trong profileController.updateProfile.
-const WORKOUT_TARGET_OPTIONS: (number | null)[] = [null, 1, 2, 3, 4, 5, 6, 7];
+// Trần lấy từ config, đúng con số mà profileController.updateProfile kiểm lại.
+const WORKOUT_TARGET_OPTIONS: (number | null)[] = [
+  null,
+  ...Array.from({ length: MAX_WEEKLY_WORKOUT_TARGET }, (_, i) => i + 1),
+];
 
-// Đọc số từ ô nhập. Đổi dấu phẩy thành dấu chấm, vì người Việt hay gõ "65,5".
-const parseNumber = (value: string) => Number(value.trim().replace(",", "."));
+// Đọc số từ ô nhập. Phép đọc nằm ở utils/numberUtils, nó lo luôn dấu phẩy
+// thập phân mà người Việt hay gõ, ví dụ "65,5".
+const parseNumber = parseDecimal;
 
-// ══════════════════════════════════════════════════════════
 // ĐẶT MỤC TIÊU
 //
 // Đến từ màn Hồ sơ, qua địa chỉ /profile/goals.
-// Sáu bước, đọc từ trên xuống là đúng thứ tự. Hai chặng chờ mạng,
-// một ở BƯỚC 1 tải hồ sơ, một ở BƯỚC 6 lưu.
+// Hai chặng chờ mạng,
+// một lúc tải hồ sơ, một lúc bấm Lưu.
 // Xong thì quay về màn Hồ sơ, và vòng calo ở Trang chủ đổi theo mục tiêu mới.
-// ══════════════════════════════════════════════════════════
 
-// ĐẶT MỤC TIÊU BƯỚC 1. Mỗi lần quay lại màn thì tải lại hồ sơ.
+// Mỗi lần quay lại màn thì tải lại hồ sơ.
 // Cần vì cân nặng có thể vừa được ghi ở màn Tiến trình, mà mọi phép tính
 // ở màn này đều dựa vào cân nặng hiện tại.
 // Đường đi: AuthContext.fetchProfile → authApi → apiClient → GET /profile
@@ -98,7 +102,7 @@ export default function WeightGoalsScreen() {
   // trong AuthContext vẫn dùng được, hiện bản cũ hơn là chắn màn bằng thông báo.
   useFocusEffect(useCallback(() => { void fetchProfile().catch(() => {}); }, [fetchProfile]));
 
-  // ĐẶT MỤC TIÊU BƯỚC 2. Đổ hồ sơ vừa tải về vào form. Cũng tự chạy, không ai bấm.
+  // Đổ hồ sơ vừa tải về vào form. Cũng tự chạy, không ai bấm.
   // Chạy lại mỗi khi một trong tám giá trị ở mảng phụ thuộc phía dưới đổi.
   useEffect(() => {
     setTargetInput(user?.targetWeight == null ? "" : String(user.targetWeight));
@@ -128,7 +132,7 @@ export default function WeightGoalsScreen() {
   const draftTargetWeight = targetInput.trim() ? parseNumber(targetInput) : null;
   const threshold = stats?.maintainWeightThresholdKg;
 
-  // ĐẶT MỤC TIÊU BƯỚC 3. Hướng và cân đích ràng buộc lẫn nhau, hai chiều.
+  // Hướng và cân đích ràng buộc lẫn nhau, hai chiều.
   //
   // Chiều thứ nhất, GÕ CÂN ĐÍCH thì hướng tự đổi. Suy ra hướng từ cân hiện tại
   // với cân đích, nhưng phải chênh quá threshold mới tính là giảm hay tăng,
@@ -154,7 +158,7 @@ export default function WeightGoalsScreen() {
     }
   };
 
-  // ĐẶT MỤC TIÊU BƯỚC 4. Danh sách tốc độ kg mỗi tuần cho hướng đang chọn.
+  // Danh sách tốc độ kg mỗi tuần cho hướng đang chọn.
   // Danh sách do BACKEND đưa qua stats.rateOptions, app không tự nghĩ ra mức nào.
   // Giữ cân thì không có tốc độ nào cả, trả mảng rỗng.
   const rateOptions = useMemo(
@@ -210,9 +214,9 @@ export default function WeightGoalsScreen() {
       && customCalorieGoal <= calorieLimit.max);
   const rateIsValid = selectedDirection === "maintain" || selectedRate != null;
   const canSave = currentWeightIsValid && targetWeightIsValid && customCaloriesAreValid && rateIsValid;
-  // ĐẶT MỤC TIÊU BƯỚC 5. Tính thử mục tiêu calo để hiện ngay trên màn.
+  // Tính thử mục tiêu calo để hiện ngay trên màn.
   // Nhớ: con số này chỉ để XEM TRƯỚC, tính tại máy. Số lưu chính thức do backend
-  //      tính lại ở BƯỚC 6, và có thể lệch khi backend áp mức sàn calo.
+  //      tính lại lúc bấm Lưu, và có thể lệch khi backend áp mức sàn calo.
   // Thiếu giới tính thì không tính được, trả null và màn hiện lời mời hoàn tất hồ sơ.
   const gender = user?.gender === "male" || user?.gender === "female" ? user.gender : null;
   const automaticCalorieGoal = gender
@@ -230,7 +234,7 @@ export default function WeightGoalsScreen() {
     ? Math.round(Math.abs(previewTargetWeight - currentWeight) * 10) / 10
     : null;
 
-  // ĐẶT MỤC TIÊU BƯỚC 6. Người dùng bấm Lưu.
+  // Người dùng bấm Lưu.
   // Đường đi: AuthContext.updateProfile → authApi → apiClient → PUT /profile
   //           → profileController.updateProfile → services/nutrition/calorieGoal.js
   // Nhớ: chọn tự động thì gửi calorieGoal là null. Đó KHÔNG phải xóa mục tiêu,

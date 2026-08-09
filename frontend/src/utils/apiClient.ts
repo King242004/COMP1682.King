@@ -8,11 +8,8 @@
 //             Mạng hỏng thì ném lỗi lên cho màn hình tự báo
 import Constants from "expo-constants";
 
-// ══════════════════════════════════════════════════════════
-// CHỐT ĐỊA CHỈ BACKEND
-// Không ai gọi, cả khối chạy MỘT LẦN lúc app nạp file này
-// Xong thì BASE_URL cố định cho tới khi tắt app
-// ══════════════════════════════════════════════════════════
+// Khối chốt địa chỉ backend chạy MỘT LẦN lúc app nạp file này,
+// xong thì BASE_URL cố định cho tới khi tắt app.
 
 // Dò địa chỉ laptop đang chạy Expo, vì điện thoại thật không hiểu localhost
 // Bốn dòng nối bằng dấu hoặc, vì mỗi bản Expo cất địa chỉ ở một chỗ khác nhau
@@ -47,12 +44,8 @@ function resolveBaseUrl(): string {
 // Chốt ngay lúc nạp file, mọi request về sau đều dán chuỗi này lên đầu
 const BASE_URL = resolveBaseUrl();
 
-// ══════════════════════════════════════════════════════════
-// ĐƯỜNG DÂY BÁO THẺ HẾT HẠN
-// Chỗ để AuthContext gửi vào một hàm, file này giữ đó rồi gọi lại khi gặp 401
-// File này không tự biết cách đăng xuất nên phải nhờ AuthContext làm hộ
-// ══════════════════════════════════════════════════════════
-
+// Chỗ để AuthContext gửi vào một hàm, file này giữ đó rồi gọi lại khi gặp 401.
+// File này không tự biết cách đăng xuất nên phải nhờ AuthContext làm hộ.
 let onUnauthorized: (() => void) | null = null;
 // AuthContext gọi một lần lúc dựng, và gọi lại với null khi bị gỡ
 export function setOnUnauthorized(fn: (() => void) | null) {
@@ -75,13 +68,14 @@ type ApiRequestOptions = {
 // Chờ tối đa 45 giây, đủ dài cho lần gọi đầu khi Render còn đang thức dậy
 const DEFAULT_TIMEOUT_MS = 45_000;
 
-// ══════════════════════════════════════════════════════════
-// GỌI MẠNG
-// Đến từ mọi file api của mọi feature, đây là cửa RA cuối cùng của app
-// Xong thì trả dữ liệu đã đọc sẵn về cho file api gọi tới
-// ══════════════════════════════════════════════════════════
+// Hạn chờ riêng cho mọi lượt gọi AI, gấp gần ba lần mức thường.
+// Cần dài vậy vì Gemini nghĩ lâu, nhất là lần đầu khi Render vừa ngủ dậy.
+// Khai ở đây vì trước ngày 9/8/2026 ba file coachApi, mealSuggestions và planApi
+// mỗi file tự khai một bản y hệt.
+export const AI_TIMEOUT_MS = 120_000;
 
-// Mọi request trong app đều vào đây
+// Mọi request trong app đều vào đây. Đây là cửa RA cuối cùng,
+// xong thì trả dữ liệu đã đọc sẵn về cho file api gọi tới.
 export async function apiFetch<T = any>(
   endpoint: string,
   init: RequestInit = {},

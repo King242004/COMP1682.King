@@ -37,12 +37,21 @@ export const INPUT_LIMITS = {
   PASSWORD: 64,
   // Ô tìm tên người dùng.
   USER_SEARCH: 50,
-  // Mã vạch, đúng bằng luật 8–14 chữ số trong scanController.scanBarcode.
+  // Mã vạch, đúng bằng luật 8 tới 14 chữ số trong scanController.scanBarcode.
   BARCODE: 14,
+  // Số chữ số ít nhất của một mã vạch, đúng bằng EAN-8.
+  BARCODE_MIN: 8,
+  // Số món tối đa của MỘT lần lưu, và của MỘT lượt nhờ AI ước tính.
+  MEAL_ITEMS: 8,
+  // Trần của calo và của mỗi chất trong MỘT món.
+  NUTRITION_VALUE: 9999,
   // Giờ nhắc bữa, dạng HH:MM.
   REMINDER_TIME: 5,
   // Mã xác minh do services/otpService.js sinh đúng 6 chữ số.
   OTP_CODE: 6,
+  // Số ảnh tối đa của MỘT bài Community. Bản gốc ở backend/src/config/inputLimits.js,
+  // hai bản phải khớp nhau, có test giữ chuyện đó.
+  POST_IMAGES: 10,
 } as const;
 
 // Số CHỮ SỐ tối đa của các ô nhập số. Khoảng giá trị hợp lệ vẫn do

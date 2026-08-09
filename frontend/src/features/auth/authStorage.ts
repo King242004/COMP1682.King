@@ -10,12 +10,10 @@
 // JWT và hồ sơ sức khỏe đều nhạy cảm nên cất cả hai trong SecureStore.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
-// ══════════════════════════════════════════════════════════
 // BỐN KHÓA LƯU TRỮ
 //
-// Không phải luồng. Hai khóa của kho mã hóa, và hai khóa của kho thường đời cũ.
+// Hai khóa của kho mã hóa, và hai khóa của kho thường đời cũ.
 // Mọi hàm bên dưới đều dùng tới bốn khóa này.
-// ══════════════════════════════════════════════════════════
 
 // Hai khóa hiện dùng, nằm trong SecureStore, tức kho có mã hóa của hệ điều hành.
 const SECURE_TOKEN_KEY = "mealmate.auth.token";
@@ -33,15 +31,13 @@ const secureOptions: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
-// ══════════════════════════════════════════════════════════
 // SÁU CỬA ĐỌC GHI
 //
-// Không phải luồng. Ba cặp đọc, ghi, xóa cho thẻ và cho hồ sơ.
+// Ba cặp đọc, ghi, xóa cho thẻ và cho hồ sơ.
 // Đến từ authSession, gọi cái nào cũng được.
 //
 // Nhớ: hai hàm ĐỌC còn kiêm việc chuyển dữ liệu đời cũ sang kho mã hóa.
 //      Chuyển đúng một lần cho mỗi máy, vì chuyển xong là xóa bản cũ đi.
-// ══════════════════════════════════════════════════════════
 
 // Đọc thẻ. Có trong kho mã hóa thì trả luôn, không có thì mới dò kho cũ.
 export async function loadAuthToken(): Promise<string | null> {

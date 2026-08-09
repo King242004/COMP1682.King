@@ -59,9 +59,9 @@ export const theme = {
 } as const;
 
 export function shadow(level: 1 | 2 | 3 = 2) {
-  // Soft, premium shadow that works on iOS + Android.
-  // Level 1 = quiet RESTING shadow for ordinary cards — kept subtle so level 2+
-  // (hero/summary cards) visibly float above them (depth hierarchy, not noise).
+  // Bóng đổ mềm, chạy được trên cả iOS lẫn Android.
+  // Mức 1 là bóng NGHỈ cho thẻ thường, để nhạt để mức 2 trở lên
+  // tức thẻ tổng và thẻ nổi bật, nhìn thấy rõ là nổi cao hơn hẳn.
   if (level === 1) {
     return {
       shadowColor: theme.colors.shadow,

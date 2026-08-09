@@ -5,8 +5,8 @@
 // Nhận vào:   chuỗi người dùng gõ
 // Trả ra:     một con số, hoặc rỗng nếu gõ không ra số
 // Khi lỗi:    gõ chữ thì trả rỗng, để màn hình hiện lỗi thay vì tính ra NaN
-// Đọc số người dùng nhập với cả dấu chấm và dấu phẩy thập phân.
-// Bàn phím số tiếng Việt trên iOS thường hiển thị dấu phẩy.
+//
+// Nhớ: bàn phím số tiếng Việt trên iOS thường hiện dấu phẩy, nên phải nhận cả hai.
 export function parseDecimal(raw: string): number {
   return Number(raw.trim().replace(",", "."));
 }

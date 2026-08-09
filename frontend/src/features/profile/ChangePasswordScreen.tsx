@@ -7,14 +7,12 @@
 // Khi lỗi:    sai mật khẩu hiện tại thì báo lỗi. Khác màn Quên mật khẩu, ở đây không cần mã email
 
 // Khác hẳn màn Quên mật khẩu, ở đây không cần mã 6 số qua email.
-// LUỒNG ĐỔI MẬT KHẨU
-// 1. Nhập mật khẩu hiện tại và mật khẩu mới, bấm Lưu
-// 2. POST /user/change-password
-// 3. Route gọi hàm changePassword trong backend/src/controllers/accountController.js;
-//    hàm này so mật khẩu hiện tại,
-//    mã hóa và lưu mật khẩu mới
-// 4. changePassword tăng tokenVersion để vô hiệu hóa token cũ và trả token mới
-// 5. AuthContext lưu token mới, hiện thông báo rồi quay về màn trước
+// Nhập mật khẩu hiện tại và mật khẩu mới rồi bấm Lưu, thì đi:
+//   src/features/auth/authApi.ts → src/utils/apiClient.ts
+//   → backend/src/routes/accountRoutes.js, POST /user/change-password
+//   → backend/src/controllers/accountController.js so mật khẩu cũ,
+//     mã hóa và lưu mật khẩu mới, rồi tăng tokenVersion để thẻ cũ hết hiệu lực
+//   Backend trả THẺ MỚI, màn này phải thay thẻ, không thay là bị đăng xuất.
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -29,7 +27,7 @@ import { Card } from "@/ui/components/Card";
 import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
-import { isStrongPassword } from "@/features/auth/authValidation";
+import { isStrongPassword, passwordErrorMessage } from "@/features/auth/authValidation";
 import { INPUT_LIMITS } from "@/config/inputLimits";
 
 // Đổi mật khẩu khi đang đăng nhập cần xác minh bằng mật khẩu hiện tại.
@@ -47,9 +45,8 @@ export default function ChangePasswordScreen() {
 
   // Nút Lưu của màn đổi mật khẩu.
   const handleSubmit = async () => {
-    if (next.length < 6) return Alert.alert(t.common.errorTitle, t.auth.passwordTooShort);
-    if (!/[A-Z]/.test(next)) return Alert.alert(t.common.errorTitle, t.auth.passwordNeedUpper);
-    if (!/[0-9]/.test(next)) return Alert.alert(t.common.errorTitle, t.auth.passwordNeedNumber);
+    const passwordError = passwordErrorMessage(next, t);
+    if (passwordError) return Alert.alert(t.common.errorTitle, passwordError);
     if (next !== confirm) return Alert.alert(t.common.errorTitle, t.auth.passwordsNoMatch);
     setSaving(true);
     try {

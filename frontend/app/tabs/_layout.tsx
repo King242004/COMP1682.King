@@ -6,9 +6,10 @@
 // Trả ra:     khung bốn tab, kèm thanh tab dưới và thanh đầu cho riêng Trang chủ
 // Khi lỗi:    không có nhánh lỗi, đây chỉ là khai báo giao diện
 //
-// Route mỏng cho khu vực tab. Giao diện chung nằm trong src/ui/components.
-// AppHeader gồm thanh đầu màu xanh và streak. TabBar là thanh tab phía dưới.
-// Chỉ Home dùng AppHeader vì các tab khác đã có hàng tiêu đề riêng.
+// Hai mảnh giao diện chung lấy từ src/ui/components:
+//   AppHeader  thanh đầu màu xanh kèm streak, CHỈ tab Trang chủ dùng
+//   TabBar     thanh bốn tab phía dưới, mọi tab đều dùng
+// Ba tab kia không dùng AppHeader vì đã có hàng tiêu đề riêng trong màn.
 import { Tabs } from "expo-router";
 import { AppHeader } from "@/ui/components/AppHeader";
 import { TabBar } from "@/ui/components/TabBar";

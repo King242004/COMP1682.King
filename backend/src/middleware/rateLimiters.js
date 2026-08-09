@@ -1,7 +1,8 @@
 // ═══ FILE NÀY LÀM GÌ ═══
 // Bộ đếm số lần gọi; middleware trong từng route chặn request quá dày trước hàm controller.
 //
-// Ai gọi tới: authRoutes, accountRoutes, coachRoutes
+// Ai gọi tới: app.js (authLimiter gắn cho cả nhóm /api/auth), accountRoutes,
+//             coachRoutes, planRoutes, scanRoutes
 // Nhận vào:   request đi vào
 // Trả ra:     không trả gì nếu còn lượt, cho đi tiếp
 // Khi lỗi:    hết lượt thì trả 429 và bảo thử lại sau

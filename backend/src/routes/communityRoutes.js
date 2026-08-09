@@ -28,6 +28,7 @@
 const express = require("express");
 const protect = require("../middleware/authenticateUser");
 const { createImageUpload, imageUploadLimiter } = require("../middleware/imageUpload");
+const { INPUT_LIMITS } = require("../config/inputLimits");
 const { createPost, deletePost, getPost, toggleLike, toggleSave, updatePost } = require("../controllers/community/postController");
 const { getExplore, getFeed, getSavedPosts, getUserPosts } = require("../controllers/community/feedController");
 const { followUser, getFollowers, getFollowing, getPublicProfile, getSuggestions, searchUsers, unfollowUser } = require("../controllers/community/socialController");
@@ -37,22 +38,21 @@ const router = express.Router();
 
 const upload = createImageUpload({
   maxFileBytes: 5 * 1024 * 1024,
-  maxFiles: 10,
+  maxFiles: INPUT_LIMITS.POST_IMAGES,
   maxFields: 10,
 });
 const postUploadLimiter = imageUploadLimiter(20);
 
 router.use(protect);
-// Instagram-style: up to 10 images per post
-router.post("/posts", postUploadLimiter, upload.array("images", 10), createPost);
+router.post("/posts", postUploadLimiter, upload.array("images", INPUT_LIMITS.POST_IMAGES), createPost);
 router.get("/posts/feed", getFeed);
 router.get("/posts/explore", getExplore);
 router.get("/posts/saved", getSavedPosts);
 router.get("/posts/user/:id", getUserPosts);
 router.delete("/posts/:id", deletePost);
-// Caption/meal-only edits arrive as plain JSON (multer skips non-multipart);
+// Sửa mỗi chú thích hoặc mỗi món thì gửi JSON thuần, multer bỏ qua;
 // sửa ảnh gửi lên dạng multipart, gồm keepUrls và các file mới
-router.patch("/posts/:id", postUploadLimiter, upload.array("images", 10), updatePost);
+router.patch("/posts/:id", postUploadLimiter, upload.array("images", INPUT_LIMITS.POST_IMAGES), updatePost);
 router.post("/posts/:id/like", toggleLike);
 router.post("/posts/:id/save", toggleSave);
 // Đăng ký SAU các địa chỉ feed, explore, saved và user/:id, để những chuỗi cố định đó khớp trước

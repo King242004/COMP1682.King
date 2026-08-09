@@ -25,14 +25,10 @@ import { Screen } from "@/ui/components/Screen";
 import { ScreenHeader } from "@/ui/components/ScreenHeader";
 import { TextField } from "@/ui/components/TextField";
 import { INPUT_LIMITS, DIGIT_LIMITS } from "@/config/inputLimits";
-import { PROFILE_LIMITS } from "@/config/nutritionCalculations";
+import { ACTIVITY_LEVELS, HEALTH_CONDITIONS, PROFILE_LIMITS } from "@/config/nutritionCalculations";
 
-// Ba mức vận động. Backend nhân TDEE với hệ số tương ứng của mức này.
-const ACTIVITY_KEYS = ["sedentary", "moderate", "active"] as const;
-// Năm bệnh app có hỗ trợ, cộng thêm mục "không có".
-// Nhớ: danh sách này phải khớp với RULES trong backend services/nutrition/foodSafetyFilter.js.
-//      Thêm bệnh ở đây mà bên đó không có luật lọc thì chọn xong chẳng có tác dụng gì.
-const CONDITION_KEYS = ["diabetes", "hypertension", "gout", "high_cholesterol", "gastritis", "none"] as const;
+// "none" chỉ là lựa chọn giao diện đại diện cho mảng bệnh nền rỗng.
+const CONDITION_KEYS = [...HEALTH_CONDITIONS, "none"] as const;
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -49,12 +45,10 @@ export default function EditProfileScreen() {
   const [conditions, setConditions] = useState<string[]>(user?.conditions ?? []);
   const [taste, setTaste] = useState(user?.tastePreferences ?? "");
 
-  // ══════════════════════════════════════════════════════════
   // CHỌN BỆNH NỀN
   //
-  // Không phải luồng. Hai hàm nhỏ lo riêng hàng chọn bệnh, vì hàng này
+  // Hai hàm nhỏ lo riêng hàng chọn bệnh, vì hàng này
   // có một luật riêng: mục "không có" LOẠI TRỪ mọi mục khác.
-  // ══════════════════════════════════════════════════════════
 
   // Bấm "không có" thì xóa sạch danh sách. Bấm một bệnh thì bật tắt bệnh đó,
   // đồng thời gỡ "không có" ra, vì không thể vừa có bệnh vừa không có bệnh.
@@ -69,15 +63,13 @@ export default function EditProfileScreen() {
   // Vì vậy phải xét riêng, chứ tra includes như mấy mục kia thì luôn ra sai.
   const isConditionActive = (c: string) => (c === "none" ? conditions.length === 0 : conditions.includes(c));
 
-  // ══════════════════════════════════════════════════════════
   // LƯU HỒ SƠ
   //
-  // Đến từ nút Lưu của màn này. Ba bước, đọc từ trên xuống là đúng thứ tự.
-  // Nhớ: một lần bấm có thể gửi HAI lượt lên server, xem BƯỚC 2.
+  // Đến từ nút Lưu của màn này.
+  // Nhớ: một lần bấm Lưu có thể gửi HAI lượt lên server, xem hàm save.
   // Xong thì quay về màn Hồ sơ, và mục tiêu calo đã được backend tính lại.
-  // ══════════════════════════════════════════════════════════
 
-  // LƯU HỒ SƠ BƯỚC 1. Kiểm hết tại máy trước, sai chỗ nào báo chỗ đó rồi dừng.
+  // Kiểm hết tại máy trước, sai chỗ nào báo chỗ đó rồi dừng.
   // Khoảng hợp lệ lấy từ PROFILE_LIMITS, bản gốc nằm ở backend nutritionConstants.js.
   // KHÔNG gõ lại số ở đây, kẻo lệch với luật mà profileController đang kiểm.
   const handleSave = async () => {
@@ -109,7 +101,7 @@ export default function EditProfileScreen() {
     }
     setIsSaving(true);
     try {
-      // LƯU HỒ SƠ BƯỚC 2. Gửi đi rồi ĐỨNG ĐÂY CHỜ. Có thể là hai lượt liên tiếp.
+      // Gửi đi rồi ĐỨNG ĐÂY CHỜ. Có thể là hai lượt liên tiếp.
       //
       // Lượt một chỉ chạy KHI TÊN CÓ ĐỔI, vì tên đi đường riêng.
       // Đường đi: AuthContext.changeName → authApi → apiClient → PUT /user/name
@@ -130,7 +122,7 @@ export default function EditProfileScreen() {
         // Chuỗi rỗng sẽ xóa sở thích ăn uống đã lưu trước đó.
         tastePreferences: taste.trim(),
       });
-      // LƯU HỒ SƠ BƯỚC 3. Backend có TỰ đổi mục tiêu thì báo rồi mới quay về,
+      // Backend có TỰ đổi mục tiêu thì báo rồi mới quay về,
       // để người dùng đọc xong mới thoát màn. Không đổi thì quay về luôn.
       if (result?.adjustedGoal) {
         Alert.alert(
@@ -158,7 +150,7 @@ export default function EditProfileScreen() {
         <ScreenHeader title={t.editProfile.title} />
 
         <Card style={styles.card}>
-          {/* Ô tên. Đây là ô DUY NHẤT đi đường riêng khi lưu, xem BƯỚC 2. */}
+          {/* Ô tên. Đây là ô DUY NHẤT đi đường riêng khi lưu, xem hàm save. */}
           <TextField label={t.editProfile.nameLabel} placeholder={t.editProfile.namePlaceholder} value={name} onChangeText={setName} autoCapitalize="words" maxLength={INPUT_LIMITS.DISPLAY_NAME} />
 
           {/* Giới tính. Chỉ có hai lựa chọn vì công thức TDEE của backend chỉ nhận hai. */}
@@ -184,11 +176,11 @@ export default function EditProfileScreen() {
           <TextField label={t.editProfile.weightLabel} placeholder={t.editProfile.weightPlaceholder} value={weight} onChangeText={setWeight} keyboardType="number-pad" maxLength={DIGIT_LIMITS.WEIGHT} />
           <TextField label={t.editProfile.heightLabel} placeholder={t.editProfile.heightPlaceholder} value={height} onChangeText={setHeight} keyboardType="number-pad" maxLength={DIGIT_LIMITS.HEIGHT} />
 
-          {/* Activity Level */}
+          {/* Mức vận động */}
           <View style={styles.field}>
             <AppText variant="muted">{t.editProfile.activityLabel}</AppText>
             <View style={styles.stackList}>
-              {ACTIVITY_KEYS.map((key) => {
+              {ACTIVITY_LEVELS.map((key) => {
                 const active = activityLevel === key;
                 return (
                   <Pressable key={key} onPress={() => setActivityLevel(key)} style={[styles.stackBtn, active ? styles.optActive : styles.optIdle]}>
@@ -215,7 +207,7 @@ export default function EditProfileScreen() {
             </View>
           </View>
 
-          {/* Taste preferences — read by every AI feature (suggest, coach, weekly plan) */}
+          {/* Khẩu vị, mọi chức năng AI đều đọc: gợi ý món, Coach, kế hoạch tuần */}
           <View style={styles.field}>
             <TextField
               label={t.editProfile.tasteLabel}
