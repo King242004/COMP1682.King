@@ -1,0 +1,8 @@
+# Thư viện cài bằng npm
+node_modules/
+
+# Khóa bí mật: chỉ nằm trên máy, không bao giờ lên git
+.env
+
+# File Expo tự sinh khi chạy
+.expo/

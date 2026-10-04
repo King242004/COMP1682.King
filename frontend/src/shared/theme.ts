@@ -1,0 +1,22 @@
+// Màu của app, lấy đúng theo tai-lieu/GiaoDien.md
+export const colors = {
+  primary: '#0369A1',
+  textOnPrimary: '#FFFFFF',
+  primaryLight: '#E0F2FE',
+  textOnPrimaryLight: '#075985',
+  background: '#FFFFFF',
+  card: '#F4F4F5',
+  border: '#E4E4E7',
+  text: '#18181B',
+  textSecondary: '#52525B',
+  overlay: 'rgba(0, 0, 0, 0.3)',
+  error: '#DC2626',
+  errorBackground: '#FEF2F2',
+  errorText: '#B91C1C',
+  warning: '#B45309',
+  warningBackground: '#FEF3C7',
+  warningText: '#92400E',
+  protein: '#059669',
+  carbs: '#D97706',
+  fat: '#DB2777',
+};
