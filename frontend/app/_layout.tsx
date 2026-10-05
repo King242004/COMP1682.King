@@ -6,7 +6,10 @@ import { AuthProvider } from '../src/auth/AuthContext';
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Màn thêm / sửa món trượt từ dưới lên */}
+        <Stack.Screen name="bua-an/sua" options={{ presentation: 'modal' }} />
+      </Stack>
     </AuthProvider>
   );
 }

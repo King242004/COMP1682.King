@@ -1,7 +1,12 @@
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
+import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { layBuaAnTheoNgay, layMonHayAn, layMotBuaAn, suaBuaAn, themBuaAn, xoaBuaAn } from './BuaAnQueries.ts';
 import type { BuaAn, DuLieuBuaAn, MonHayAn } from './BuaAnQueries.ts';
+import { tinhGioiHanNenHanChe } from './TinhGioiHanNenHanChe.ts';
+import type { GioiHanNenHanChe } from './TinhGioiHanNenHanChe.ts';
+import { tinhMucTieuChat } from './TinhMucTieuChat.ts';
+import type { MucTieuChat } from './TinhMucTieuChat.ts';
 import { tongHopNgay } from './TongHopNgay.ts';
 import type { TongHop } from './TongHopNgay.ts';
 
@@ -20,6 +25,8 @@ const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
 type NhatKyNgay = {
   ngay: string;
   muc_tieu_calo: number | null;
+  muc_tieu_chat: MucTieuChat | null;
+  gioi_han_nen_han_che: GioiHanNenHanChe | null;
   bua_an: BuaAn[];
   tong_hop: TongHop;
 };
@@ -33,7 +40,7 @@ function docBuaAnId(buaAnIdChu: string): number {
   return buaAnId;
 }
 
-// Đọc một ô đạm / tinh bột / béo: để trống là null, có thì phải là số không âm
+// Đọc một ô số gam (đạm, tinh bột, béo, muối, đường, béo no): để trống là null, có thì phải là số không âm
 function docSoGam(giaTri: unknown, tenO: string): number | null {
   if (giaTri === null || giaTri === undefined) {
     return null;
@@ -74,6 +81,15 @@ function kiemTraDuLieuBuaAn(duLieu: Record<string, unknown>): DuLieuBuaAn {
     throw new HttpError(400, `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT}`);
   }
 
+  // Không gửi nguồn số liệu thì coi là tự nhập
+  let nguonSoLieu: 'nhap_tay' | 'ai' | 'ma_vach' = 'nhap_tay';
+  if (duLieu.nguon_so_lieu !== undefined) {
+    if (duLieu.nguon_so_lieu !== 'nhap_tay' && duLieu.nguon_so_lieu !== 'ai' && duLieu.nguon_so_lieu !== 'ma_vach') {
+      throw new HttpError(400, 'Nguồn số liệu không hợp lệ');
+    }
+    nguonSoLieu = duLieu.nguon_so_lieu;
+  }
+
   return {
     ngay: ngay,
     loai_bua: loaiBua,
@@ -83,6 +99,10 @@ function kiemTraDuLieuBuaAn(duLieu: Record<string, unknown>): DuLieuBuaAn {
     dam_g: docSoGam(duLieu.dam_g, 'Đạm'),
     tinh_bot_g: docSoGam(duLieu.tinh_bot_g, 'Tinh bột'),
     beo_g: docSoGam(duLieu.beo_g, 'Béo'),
+    muoi_g: docSoGam(duLieu.muoi_g, 'Muối'),
+    duong_g: docSoGam(duLieu.duong_g, 'Đường'),
+    beo_no_g: docSoGam(duLieu.beo_no_g, 'Béo no'),
+    nguon_so_lieu: nguonSoLieu,
   };
 }
 
@@ -93,9 +113,37 @@ export async function xemNhatKyNgay(nguoiDungId: number, ngay: string): Promise<
   }
   const danhSachBuaAn = await layBuaAnTheoNgay(nguoiDungId, ngay);
   const hoSo = await layHoSo(nguoiDungId);
+
+  // Khoảng gam nên ăn cho đạm, tinh bột, béo và giới hạn muối, đường, béo no, tính từ mục tiêu calo
+  let mucTieuChat: MucTieuChat | null = null;
+  let gioiHanNenHanChe: GioiHanNenHanChe | null = null;
+  if (hoSo.muc_tieu_calo !== null) {
+    const kcalMoiGTinhBot = await layQuyDinh('kcal_moi_g_tinh_bot');
+    const kcalMoiGBeo = await layQuyDinh('kcal_moi_g_beo');
+    mucTieuChat = tinhMucTieuChat(hoSo.muc_tieu_calo, {
+      tyLeDamThap: await layQuyDinh('ty_le_nang_luong_dam_thap'),
+      tyLeDamCao: await layQuyDinh('ty_le_nang_luong_dam_cao'),
+      tyLeBeoThap: await layQuyDinh('ty_le_nang_luong_beo_thap'),
+      tyLeBeoCao: await layQuyDinh('ty_le_nang_luong_beo_cao'),
+      kcalMoiGDam: await layQuyDinh('kcal_moi_g_dam'),
+      kcalMoiGTinhBot: kcalMoiGTinhBot,
+      kcalMoiGBeo: kcalMoiGBeo,
+    });
+    // Đường là một loại chất bột đường nên dùng chung hệ số kcal mỗi gam với tinh bột
+    gioiHanNenHanChe = tinhGioiHanNenHanChe(hoSo.muc_tieu_calo, {
+      muoiToiDaG: await layQuyDinh('muoi_toi_da_g'),
+      tyLeDuongToiDa: await layQuyDinh('ty_le_nang_luong_duong_toi_da'),
+      tyLeBeoNoToiDa: await layQuyDinh('ty_le_nang_luong_beo_no_toi_da'),
+      kcalMoiGDuong: kcalMoiGTinhBot,
+      kcalMoiGBeo: kcalMoiGBeo,
+    });
+  }
+
   return {
     ngay: ngay,
     muc_tieu_calo: hoSo.muc_tieu_calo,
+    muc_tieu_chat: mucTieuChat,
+    gioi_han_nen_han_che: gioiHanNenHanChe,
     bua_an: danhSachBuaAn,
     tong_hop: tongHopNgay(danhSachBuaAn, hoSo.muc_tieu_calo),
   };

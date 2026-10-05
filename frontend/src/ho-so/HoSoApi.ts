@@ -19,7 +19,6 @@ export type HoSo = {
   muc_van_dong: MucVanDong | null;
   muc_tieu: MucTieu | null;
   muc_tieu_calo: number | null;
-  benh_nen: string[];
   bmi: number | null;
   phan_loai_bmi: string | null;
 };
@@ -35,12 +34,10 @@ export type HoSoGuiLen = {
   so_phut_moi_buoi: number | null;
   cam_nhan_khi_tap: CamNhanKhiTap | null;
   muc_tieu: MucTieu;
-  benh_nen: string[];
 };
 
 // Các lựa chọn cho màn hồ sơ
 export type LuaChonHoSo = {
-  benh_nen: { ma: string; ten: string }[];
   bmi_thieu_can: number;
   bmi_ly_tuong: number;
 };
@@ -51,7 +48,7 @@ export async function layHoSo(): Promise<HoSo> {
   return ketQua as HoSo;
 }
 
-// Lấy danh sách bệnh nền và ngưỡng BMI
+// Lấy ngưỡng BMI
 export async function layLuaChonHoSo(): Promise<LuaChonHoSo> {
   const ketQua = await callApi('GET', '/ho-so/lua-chon');
   return ketQua as LuaChonHoSo;

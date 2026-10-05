@@ -7,13 +7,13 @@ test('ngày chưa ăn gì: tổng 0, còn lại bằng mục tiêu', () => {
   const ketQua = tongHopNgay([], 2000);
   assert.equal(ketQua.tong_calo, 0);
   assert.equal(ketQua.con_lai, 2000);
-  assert.equal(ketQua.so_mon_thieu_chat, 0);
+  assert.equal(ketQua.so_mon_thieu_so_lieu, 0);
 });
 
 test('cộng calo và ba chất; món thiếu chất vẫn cộng calo và được đếm', () => {
   const danhSachMon = [
-    { so_calo: 350, dam_g: 20, tinh_bot_g: 45.5, beo_g: 9 },
-    { so_calo: 530, dam_g: null, tinh_bot_g: null, beo_g: null },
+    { so_calo: 350, dam_g: 20, tinh_bot_g: 45.5, beo_g: 9, muoi_g: 1.2, duong_g: 4, beo_no_g: 3 },
+    { so_calo: 530, dam_g: null, tinh_bot_g: null, beo_g: null, muoi_g: null, duong_g: null, beo_no_g: null },
   ];
   const ketQua = tongHopNgay(danhSachMon, 2000);
   assert.equal(ketQua.tong_calo, 880);
@@ -21,22 +21,35 @@ test('cộng calo và ba chất; món thiếu chất vẫn cộng calo và đư�
   assert.equal(ketQua.tong_dam_g, 20);
   assert.equal(ketQua.tong_tinh_bot_g, 45.5);
   assert.equal(ketQua.tong_beo_g, 9);
-  assert.equal(ketQua.so_mon_thieu_chat, 1);
+  assert.equal(ketQua.so_mon_thieu_so_lieu, 1);
 });
 
 test('ăn vượt mục tiêu thì còn lại là số âm', () => {
-  const ketQua = tongHopNgay([{ so_calo: 2300, dam_g: 50, tinh_bot_g: 300, beo_g: 80 }], 2000);
+  const ketQua = tongHopNgay([{ so_calo: 2300, dam_g: 50, tinh_bot_g: 300, beo_g: 80, muoi_g: null, duong_g: null, beo_no_g: null }], 2000);
   assert.equal(ketQua.con_lai, -300);
 });
 
 test('số gam làm tròn 1 số lẻ, không để lộ số lẻ dài do cộng số thực', () => {
   const danhSachMon = [
-    { so_calo: 100, dam_g: 0.1, tinh_bot_g: 0, beo_g: 0 },
-    { so_calo: 100, dam_g: 0.2, tinh_bot_g: 0, beo_g: 0 },
+    { so_calo: 100, dam_g: 0.1, tinh_bot_g: 0, beo_g: 0, muoi_g: null, duong_g: null, beo_no_g: null },
+    { so_calo: 100, dam_g: 0.2, tinh_bot_g: 0, beo_g: 0, muoi_g: null, duong_g: null, beo_no_g: null },
   ];
   assert.equal(tongHopNgay(danhSachMon, 2000).tong_dam_g, 0.3);
 });
 
 test('chưa có mục tiêu calo thì còn lại là null', () => {
   assert.equal(tongHopNgay([], null).con_lai, null);
+});
+
+test('cộng muối, đường, béo no; món nhập tay thiếu số liệu thì được đếm', () => {
+  const danhSachMon = [
+    { so_calo: 550, dam_g: 35, tinh_bot_g: 70, beo_g: 12, muoi_g: 4.5, duong_g: 5, beo_no_g: 6.5 },
+    { so_calo: 350, dam_g: 3, tinh_bot_g: 55, beo_g: 14, muoi_g: 0.2, duong_g: 55, beo_no_g: 6.5 },
+    { so_calo: 300, dam_g: null, tinh_bot_g: null, beo_g: null, muoi_g: null, duong_g: null, beo_no_g: null },
+  ];
+  const ketQua = tongHopNgay(danhSachMon, 2000);
+  assert.equal(ketQua.tong_muoi_g, 4.7);
+  assert.equal(ketQua.tong_duong_g, 60);
+  assert.equal(ketQua.tong_beo_no_g, 13);
+  assert.equal(ketQua.so_mon_thieu_so_lieu, 1);
 });

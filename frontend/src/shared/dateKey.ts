@@ -1,5 +1,6 @@
-// Tên thứ trong tuần, Chủ nhật đứng đầu giống getDay() của JavaScript
+// Tên thứ đầy đủ và viết ngắn, Chủ nhật đứng đầu giống getDay() của JavaScript
 const WEEKDAY_NAMES = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+const SHORT_WEEKDAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 // Thêm số 0 phía trước cho đủ 2 chữ số, ví dụ 4 thành "04"
 function twoDigits(value: number): string {
@@ -43,4 +44,29 @@ export function formatDateLabel(dateKey: string): string {
     return `Hôm qua, ${dayAndMonth}`;
   }
   return `${WEEKDAY_NAMES[date.getDay()]}, ${dayAndMonth}`;
+}
+
+// 7 ngày từ thứ Hai tới Chủ nhật của tuần chứa ngày này
+export function weekDateKeys(dateKey: string): string[] {
+  // getDay() cho Chủ nhật là 0; đổi sang số ngày tính từ thứ Hai
+  let daysFromMonday = fromDateKey(dateKey).getDay() - 1;
+  if (daysFromMonday < 0) {
+    daysFromMonday = 6;
+  }
+  const monday = shiftDateKey(dateKey, -daysFromMonday);
+  const keys: string[] = [];
+  for (let offset = 0; offset < 7; offset++) {
+    keys.push(shiftDateKey(monday, offset));
+  }
+  return keys;
+}
+
+// Thứ viết ngắn, ví dụ "T3" hoặc "CN"
+export function shortWeekdayName(dateKey: string): string {
+  return SHORT_WEEKDAY_NAMES[fromDateKey(dateKey).getDay()];
+}
+
+// Ngày trong tháng, ví dụ 6
+export function dayOfMonth(dateKey: string): number {
+  return fromDateKey(dateKey).getDate();
 }

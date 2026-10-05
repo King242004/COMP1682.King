@@ -1,8 +1,6 @@
-import { layDanhSachBenhNen } from '../benh-nen/BenhNenQueries.ts';
-import type { BenhNen } from '../benh-nen/BenhNenQueries.ts';
 import { layHeSoVanDong, layKcalMoiKg, layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { layBenhNenCuaNguoiDung, layHoSo, luuHoSo } from './HoSoQueries.ts';
+import { layHoSo, luuHoSo } from './HoSoQueries.ts';
 import type { HoSo, HoSoDeLuu } from './HoSoQueries.ts';
 import { phanLoaiBmi, tinhBmi } from './TinhBmi.ts';
 import { tinhMucTieuCalo } from './TinhMucTieuCalo.ts';
@@ -11,16 +9,14 @@ import { xacDinhMucVanDong } from './XacDinhMucVanDong.ts';
 // Tuổi nhỏ nhất được dùng app
 const TUOI_TOI_THIEU = 18;
 
-// Hồ sơ gửi về app: các cột đã lưu, kèm bệnh nền và BMI
+// Hồ sơ gửi về app: các cột đã lưu, kèm BMI
 type HoSoHienThi = HoSo & {
-  benh_nen: string[];
   bmi: number | null;
   phan_loai_bmi: string | null;
 };
 
-// Những lựa chọn màn hồ sơ cần: danh sách bệnh nền và hai ngưỡng BMI để làm mờ lựa chọn mục tiêu
+// Những lựa chọn màn hồ sơ cần: hai ngưỡng BMI để làm mờ lựa chọn mục tiêu
 type LuaChonHoSo = {
-  benh_nen: BenhNen[];
   bmi_thieu_can: number;
   bmi_ly_tuong: number;
 };
@@ -28,10 +24,9 @@ type LuaChonHoSo = {
 // Lấy hồ sơ kèm BMI và phân loại; chưa thiết lập thì BMI là null
 export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
   const hoSo = await layHoSo(nguoiDungId);
-  const benhNen = await layBenhNenCuaNguoiDung(nguoiDungId);
 
   if (hoSo.chieu_cao_cm === null || hoSo.can_nang_kg === null) {
-    return { ...hoSo, benh_nen: benhNen, bmi: null, phan_loai_bmi: null };
+    return { ...hoSo, bmi: null, phan_loai_bmi: null };
   }
 
   const bmi = tinhBmi(hoSo.can_nang_kg, hoSo.chieu_cao_cm);
@@ -41,13 +36,12 @@ export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
     beoPhiDo1: await layQuyDinh('bmi_beo_phi_do_1'),
     beoPhiDo2: await layQuyDinh('bmi_beo_phi_do_2'),
   };
-  return { ...hoSo, benh_nen: benhNen, bmi: bmi, phan_loai_bmi: phanLoaiBmi(bmi, nguong) };
+  return { ...hoSo, bmi: bmi, phan_loai_bmi: phanLoaiBmi(bmi, nguong) };
 }
 
 // Lấy các lựa chọn cho màn thiết lập / sửa hồ sơ
 export async function xemLuaChonHoSo(): Promise<LuaChonHoSo> {
   return {
-    benh_nen: await layDanhSachBenhNen(),
     bmi_thieu_can: await layQuyDinh('bmi_thieu_can'),
     bmi_ly_tuong: await layQuyDinh('bmi_ly_tuong'),
   };
@@ -105,11 +99,6 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     throw new HttpError(400, 'Mục tiêu không hợp lệ');
   }
 
-  const danhSachBenhNen = duLieu.benh_nen;
-  if (!Array.isArray(danhSachBenhNen) || !danhSachBenhNen.every((benhNen) => typeof benhNen === 'string')) {
-    throw new HttpError(400, 'Danh sách bệnh nền không hợp lệ');
-  }
-
   // Bước 2. Rào an toàn theo BMI, giống lựa chọn bị làm mờ ở app
   const bmi = tinhBmi(canNangKg, chieuCaoCm);
   const bmiThieuCan = await layQuyDinh('bmi_thieu_can');
@@ -155,6 +144,6 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     muc_tieu: mucTieu,
     muc_tieu_calo: mucTieuCalo,
   };
-  await luuHoSo(nguoiDungId, hoSoDeLuu, danhSachBenhNen);
+  await luuHoSo(nguoiDungId, hoSoDeLuu);
   return xemHoSo(nguoiDungId);
 }

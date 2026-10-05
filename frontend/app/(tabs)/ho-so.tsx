@@ -4,8 +4,8 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../src/auth/AuthContext';
-import { layHoSo, layLuaChonHoSo } from '../../src/ho-so/HoSoApi';
-import type { HoSo, LuaChonHoSo } from '../../src/ho-so/HoSoApi';
+import { layHoSo } from '../../src/ho-so/HoSoApi';
+import type { HoSo } from '../../src/ho-so/HoSoApi';
 import { Button } from '../../src/shared/components/Button';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { colors } from '../../src/shared/theme';
@@ -18,7 +18,6 @@ const TEN_GIOI_TINH = { nam: 'Nam', nu: 'Nữ' };
 export default function ManHoSo() {
   const { user, logout, deleteAccount } = useAuth();
   const [hoSo, setHoSo] = useState<HoSo | null>(null);
-  const [luaChon, setLuaChon] = useState<LuaChonHoSo | null>(null);
   const [loi, setLoi] = useState('');
 
   // Mỗi lần quay lại màn này (ví dụ sau khi sửa hồ sơ) thì tải lại
@@ -32,7 +31,6 @@ export default function ManHoSo() {
     setLoi('');
     try {
       setHoSo(await layHoSo());
-      setLuaChon(await layLuaChonHoSo());
     } catch (loiTai) {
       setLoi((loiTai as Error).message);
     }
@@ -58,13 +56,6 @@ export default function ManHoSo() {
 
   if (!user) {
     return null;
-  }
-
-  // Tên các bệnh nền đã chọn, nối bằng dấu phẩy
-  let tenBenhNen = 'Không có';
-  if (hoSo && luaChon && hoSo.benh_nen.length > 0) {
-    const danhSachTen = luaChon.benh_nen.filter((benh) => hoSo.benh_nen.includes(benh.ma)).map((benh) => benh.ten);
-    tenBenhNen = danhSachTen.join(', ');
   }
 
   return (
@@ -98,7 +89,6 @@ export default function ManHoSo() {
             <DongThongTin nhan="Cân nặng" giaTri={`${hoSo.can_nang_kg?.toLocaleString('vi-VN')} kg`} />
             <DongThongTin nhan="Mức vận động" giaTri={hoSo.muc_van_dong ? TEN_MUC_VAN_DONG[hoSo.muc_van_dong] : ''} />
             <DongThongTin nhan="Mục tiêu" giaTri={hoSo.muc_tieu ? TEN_MUC_TIEU[hoSo.muc_tieu] : ''} />
-            <DongThongTin nhan="Bệnh nền" giaTri={tenBenhNen} />
           </View>
         ) : null}
 

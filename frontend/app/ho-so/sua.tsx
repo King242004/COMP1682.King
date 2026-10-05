@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../src/auth/AuthContext';
-import { ChonNamSinh } from '../../src/ho-so/components/ChonNamSinh';
+import { ChonNamSinh } from '../../src/ho-so/sua/ChonNamSinh';
 import { layHoSo, layLuaChonHoSo, luuHoSo } from '../../src/ho-so/HoSoApi';
 import type { CamNhanKhiTap, CongViec, GioiTinh, LuaChonHoSo, MucTieu } from '../../src/ho-so/HoSoApi';
 import { Button } from '../../src/shared/components/Button';
@@ -57,7 +57,6 @@ export default function SuaHoSo() {
   const [soPhutMoiBuoi, setSoPhutMoiBuoi] = useState<number | null>(null);
   const [camNhan, setCamNhan] = useState<CamNhanKhiTap | null>(null);
   const [mucTieu, setMucTieu] = useState<MucTieu>('giu');
-  const [benhNen, setBenhNen] = useState<string[]>([]);
 
   // Lỗi dưới từng ô (theo tên ô), lỗi từ server, trạng thái đang lưu
   const [loiNhap, setLoiNhap] = useState<Record<string, string>>({});
@@ -84,7 +83,6 @@ export default function SuaHoSo() {
         setSoPhutMoiBuoi(hoSo.so_phut_moi_buoi);
         setCamNhan(hoSo.cam_nhan_khi_tap);
         setMucTieu(hoSo.muc_tieu ?? 'giu');
-        setBenhNen(hoSo.benh_nen);
       }
     } catch (loi) {
       setLoiTai((loi as Error).message);
@@ -111,15 +109,6 @@ export default function SuaHoSo() {
       setMucTieu('giu');
     }
   }, [choPhepGiam, choPhepTang]);
-
-  // Bấm chọn hoặc bỏ chọn một bệnh nền
-  function doiBenhNen(ma: string) {
-    if (benhNen.includes(ma)) {
-      setBenhNen(benhNen.filter((maDaChon) => maDaChon !== ma));
-    } else {
-      setBenhNen([...benhNen, ma]);
-    }
-  }
 
   // Kiểm các ô, đúng thì gửi lên server
   async function handleLuu() {
@@ -165,7 +154,6 @@ export default function SuaHoSo() {
         so_phut_moi_buoi: soBuoiTap > 0 ? soPhutMoiBuoi : null,
         cam_nhan_khi_tap: soBuoiTap > 0 ? camNhan : null,
         muc_tieu: mucTieu,
-        benh_nen: benhNen,
       });
       await refreshUser();
       // Bước 3. Lần đầu thì vào trang chủ, sửa thì quay lại màn hồ sơ
@@ -271,14 +259,6 @@ export default function SuaHoSo() {
         {!choPhepTang ? (
           <Text style={styles.chuPhu}>Tăng cân dành cho BMI dưới {luaChon.bmi_ly_tuong.toLocaleString('vi-VN')}</Text>
         ) : null}
-
-        {/* Bệnh nền: chọn nhiều, có thể không chọn */}
-        <Text style={styles.nhanNhom}>Bệnh nền (nếu có)</Text>
-        <View style={styles.hangChip}>
-          {luaChon.benh_nen.map((benh) => (
-            <Chip key={benh.ma} label={benh.ten} isSelected={benhNen.includes(benh.ma)} onPress={() => doiBenhNen(benh.ma)} />
-          ))}
-        </View>
 
         <View style={styles.khoangNut}>
           <Button title="Lưu hồ sơ" loadingTitle="Đang lưu…" isLoading={dangLuu} onPress={handleLuu} />

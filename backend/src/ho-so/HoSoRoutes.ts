@@ -10,7 +10,7 @@ hoSoRoutes.get('/', async (request, response) => {
   response.json(hoSo);
 });
 
-// Lấy các lựa chọn cho màn hồ sơ (bệnh nền, ngưỡng BMI)
+// Lấy các lựa chọn cho màn hồ sơ (ngưỡng BMI)
 hoSoRoutes.get('/lua-chon', async (request, response) => {
   const luaChon = await xemLuaChonHoSo();
   response.json(luaChon);
