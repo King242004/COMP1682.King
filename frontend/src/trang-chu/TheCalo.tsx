@@ -8,24 +8,22 @@ type VongChatProps = {
   ten: string;
   mau: string;
   daAn: number;
-  thap: number;
-  cao: number;
+  mucDay: number;
+  chuMucTieu: string;
 };
 
-// Một vòng nhỏ cho đạm, tinh bột hoặc béo; vòng đầy khi chạm mức cao của khoảng nên ăn
-function VongChat({ ten, mau, daAn, thap, cao }: VongChatProps) {
+// Một vòng nhỏ cho đạm, tinh bột hoặc béo; vòng đầy khi ăn tới mucDay, dưới vòng ghi mục tiêu bằng chữ
+function VongChat({ ten, mau, daAn, mucDay, chuMucTieu }: VongChatProps) {
   let phanTram = 0;
-  if (cao > 0) {
-    phanTram = (daAn / cao) * 100;
+  if (mucDay > 0) {
+    phanTram = (daAn / mucDay) * 100;
   }
   return (
     <View style={styles.cotChat}>
       <VongTienDo kichThuoc={52} doDay={6} phanTram={phanTram} mau={mau} />
       <Text style={styles.soGam}>{daAn.toLocaleString('vi-VN')} g</Text>
       <Text style={styles.tenChat}>{ten}</Text>
-      <Text style={styles.khoang}>
-        {thap.toLocaleString('vi-VN')}–{cao.toLocaleString('vi-VN')} g
-      </Text>
+      <Text style={styles.khoang}>{chuMucTieu}</Text>
     </View>
   );
 }
@@ -60,33 +58,33 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
             <Text style={styles.nhan}>Mục tiêu</Text>
             <Text style={styles.giaTri}>{mucTieu.toLocaleString('vi-VN')}</Text>
           </View>
-          <Text style={styles.nguon}>kcal mỗi ngày, theo Bộ Y tế 2016</Text>
+          <Text style={styles.nguon}>kcal mỗi ngày (ước tính)</Text>
         </View>
       </View>
 
-      {/* Ba vòng đạm, tinh bột, béo so với khoảng nên ăn (Bộ Y tế 2016) */}
+      {/* Ba vòng: đạm đầy khi ăn đủ mức tối thiểu; tinh bột, béo đầy khi chạm mức cao của khoảng nên ăn */}
       {nhatKy.muc_tieu_chat ? (
         <View style={styles.hangChat}>
           <VongChat
             ten="Đạm"
             mau={colors.protein}
             daAn={tongHop.tong_dam_g}
-            thap={nhatKy.muc_tieu_chat.dam_g_thap}
-            cao={nhatKy.muc_tieu_chat.dam_g_cao}
+            mucDay={nhatKy.muc_tieu_chat.dam_g_toi_thieu}
+            chuMucTieu={`ít nhất ${nhatKy.muc_tieu_chat.dam_g_toi_thieu.toLocaleString('vi-VN')} g`}
           />
           <VongChat
             ten="Tinh bột"
             mau={colors.carbs}
             daAn={tongHop.tong_tinh_bot_g}
-            thap={nhatKy.muc_tieu_chat.tinh_bot_g_thap}
-            cao={nhatKy.muc_tieu_chat.tinh_bot_g_cao}
+            mucDay={nhatKy.muc_tieu_chat.tinh_bot_g_cao}
+            chuMucTieu={`${nhatKy.muc_tieu_chat.tinh_bot_g_thap.toLocaleString('vi-VN')}–${nhatKy.muc_tieu_chat.tinh_bot_g_cao.toLocaleString('vi-VN')} g`}
           />
           <VongChat
             ten="Béo"
             mau={colors.fat}
             daAn={tongHop.tong_beo_g}
-            thap={nhatKy.muc_tieu_chat.beo_g_thap}
-            cao={nhatKy.muc_tieu_chat.beo_g_cao}
+            mucDay={nhatKy.muc_tieu_chat.beo_g_cao}
+            chuMucTieu={`${nhatKy.muc_tieu_chat.beo_g_thap.toLocaleString('vi-VN')}–${nhatKy.muc_tieu_chat.beo_g_cao.toLocaleString('vi-VN')} g`}
           />
         </View>
       ) : null}

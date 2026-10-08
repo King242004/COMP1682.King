@@ -6,3 +6,9 @@ node_modules/
 
 # File Expo tự sinh khi chạy
 .expo/
+
+# Dữ liệu Nutrition5k tải về để đo độ chính xác của AI: nặng, tải lại được
+backend/do-chinh-xac/nutrition5k/
+
+# Ảnh món Việt tải từ Wikimedia Commons; danh-sach.json (tác giả, giấy phép) vẫn lên git
+backend/do-chinh-xac/mon-viet/anh/

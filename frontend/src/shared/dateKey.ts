@@ -70,3 +70,15 @@ export function shortWeekdayName(dateKey: string): string {
 export function dayOfMonth(dateKey: string): number {
   return fromDateKey(dateKey).getDate();
 }
+
+// Số ngày từ ngày này tới ngày kia, ví dụ daysBetween("2026-10-01", "2026-10-06") ra 5
+export function daysBetween(fromKey: string, toKey: string): number {
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((fromDateKey(toKey).getTime() - fromDateKey(fromKey).getTime()) / millisecondsPerDay);
+}
+
+// Ngày viết ngắn kiểu "6/10" cho trục biểu đồ
+export function formatShortDate(dateKey: string): string {
+  const date = fromDateKey(dateKey);
+  return `${date.getDate()}/${date.getMonth() + 1}`;
+}

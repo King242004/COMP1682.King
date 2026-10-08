@@ -22,7 +22,7 @@ const SO_MON_HAY_AN = 6;
 const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
 
 // Mọi thứ trang chủ cần cho một ngày
-type NhatKyNgay = {
+export type NhatKyNgay = {
   ngay: string;
   muc_tieu_calo: number | null;
   muc_tieu_chat: MucTieuChat | null;
@@ -114,18 +114,18 @@ export async function xemNhatKyNgay(nguoiDungId: number, ngay: string): Promise<
   const danhSachBuaAn = await layBuaAnTheoNgay(nguoiDungId, ngay);
   const hoSo = await layHoSo(nguoiDungId);
 
-  // Khoảng gam nên ăn cho đạm, tinh bột, béo và giới hạn muối, đường, béo no, tính từ mục tiêu calo
+  // Mục tiêu đạm, tinh bột, béo và giới hạn muối, đường, béo no, tính từ mục tiêu calo và cân nặng
   let mucTieuChat: MucTieuChat | null = null;
   let gioiHanNenHanChe: GioiHanNenHanChe | null = null;
-  if (hoSo.muc_tieu_calo !== null) {
+  if (hoSo.muc_tieu_calo !== null && hoSo.can_nang_kg !== null) {
     const kcalMoiGTinhBot = await layQuyDinh('kcal_moi_g_tinh_bot');
     const kcalMoiGBeo = await layQuyDinh('kcal_moi_g_beo');
-    mucTieuChat = tinhMucTieuChat(hoSo.muc_tieu_calo, {
-      tyLeDamThap: await layQuyDinh('ty_le_nang_luong_dam_thap'),
-      tyLeDamCao: await layQuyDinh('ty_le_nang_luong_dam_cao'),
+    mucTieuChat = tinhMucTieuChat(hoSo.muc_tieu_calo, hoSo.can_nang_kg, {
+      damGMoiKg: await layQuyDinh('dam_g_moi_kg'),
+      tyLeTinhBotThap: await layQuyDinh('ty_le_nang_luong_tinh_bot_thap'),
+      tyLeTinhBotCao: await layQuyDinh('ty_le_nang_luong_tinh_bot_cao'),
       tyLeBeoThap: await layQuyDinh('ty_le_nang_luong_beo_thap'),
       tyLeBeoCao: await layQuyDinh('ty_le_nang_luong_beo_cao'),
-      kcalMoiGDam: await layQuyDinh('kcal_moi_g_dam'),
       kcalMoiGTinhBot: kcalMoiGTinhBot,
       kcalMoiGBeo: kcalMoiGBeo,
     });

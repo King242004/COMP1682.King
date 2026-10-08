@@ -3,8 +3,8 @@ import { GoogleGenAI } from '@google/genai';
 import environment from '../environment.ts';
 import { HttpError } from './errorHandler.ts';
 
-// Một lần hỏi AI chờ tối đa 30 giây, quá thì bỏ để người dùng không chờ mãi
-const REQUEST_TIMEOUT_MS = 30000;
+// Một lần hỏi AI chờ tối đa 15 giây (bình thường AI trả lời trong khoảng 2 giây); quá thì báo AI bận để người dùng thử lại
+const REQUEST_TIMEOUT_MS = 15000;
 
 // Mức "được phép đoán" của AI: thấp để cùng một câu hỏi ra kết quả gần giống nhau
 const TEMPERATURE = 0.2;

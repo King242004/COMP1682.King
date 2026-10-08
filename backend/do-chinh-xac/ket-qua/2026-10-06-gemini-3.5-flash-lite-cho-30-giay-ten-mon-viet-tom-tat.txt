@@ -1,0 +1,5 @@
+Bộ ảnh: 27 ảnh món Việt từ Wikimedia Commons (2 ảnh đầu tiên trong danh mục mỗi món), giấy phép từng ảnh ghi trong file .csv
+Model: gemini-3.5-flash-lite, ngày đo: 2026-10-06
+AI trả lời được: 27/27 ảnh
+Đúng tên ở khả năng đầu: 23/27 (85.2%)
+Đúng tên trong 3 khả năng: 25/27 (92.6%)

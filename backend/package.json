@@ -11,7 +11,9 @@
     "start": "node --env-file=.env src/server.ts",
     "migrate": "node --env-file=.env src/database/migrate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "node --test",
+    "do-chinh-xac": "node --env-file=.env src/quet-mon/DoChinhXac.ts",
+    "do-ten-mon-viet": "node --env-file=.env src/quet-mon/DoTenMonViet.ts"
   },
   "dependencies": {
     "@google/genai": "^2.27.0",

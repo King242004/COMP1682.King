@@ -1,0 +1,7 @@
+Bộ dữ liệu: Nutrition5k (Thames và cộng sự, CVPR 2021), 30 đĩa đầu tiên có ảnh chụp từ trên xuống
+Model: gemini-3.5-flash-lite, ngày đo: 2026-10-06
+AI trả lời được: 30/30 đĩa; AI bận (quá thời gian chờ hoặc lỗi): 0; AI nói không phải đồ ăn: 0
+Calo: sai số tuyệt đối trung bình 86.4 kcal; sai số % trung vị 27.6%; sai số có dấu trung bình 53.8 kcal (âm là đoán thấp)
+Đạm: sai số tuyệt đối trung bình 6.3 g
+Tinh bột: sai số tuyệt đối trung bình 7.9 g
+Béo: sai số tuyệt đối trung bình 6.8 g

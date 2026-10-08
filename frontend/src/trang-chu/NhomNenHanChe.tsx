@@ -41,7 +41,7 @@ function OHanChe({ ten, daAn, gioiHan }: OHanCheProps) {
   );
 }
 
-// Nhóm "Nên hạn chế" trên trang chủ: ba ô muối, đường, béo no so với giới hạn mỗi ngày (Bộ Y tế 2016)
+// Nhóm "Nên hạn chế" trên trang chủ: ba ô muối, đường, béo no so với giới hạn mỗi ngày
 export function NhomNenHanChe({ nhatKy }: { nhatKy: NhatKyNgay }) {
   const gioiHan = nhatKy.gioi_han_nen_han_che;
   if (!gioiHan) {

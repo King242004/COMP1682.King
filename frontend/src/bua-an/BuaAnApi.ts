@@ -33,17 +33,16 @@ export type TongHop = {
   so_mon_thieu_so_lieu: number;
 };
 
-// Khoảng gam nên ăn mỗi ngày cho từng chất
+// Mục tiêu mỗi ngày cho từng chất: đạm là mức tối thiểu, tinh bột và béo là khoảng
 export type MucTieuChat = {
-  dam_g_thap: number;
-  dam_g_cao: number;
+  dam_g_toi_thieu: number;
   tinh_bot_g_thap: number;
   tinh_bot_g_cao: number;
   beo_g_thap: number;
   beo_g_cao: number;
 };
 
-// Số gam tối đa mỗi ngày cho muối, đường, béo no (Bộ Y tế 2016)
+// Số gam tối đa mỗi ngày cho muối, đường, béo no
 export type GioiHanNenHanChe = {
   muoi_g_toi_da: number;
   duong_g_toi_da: number;

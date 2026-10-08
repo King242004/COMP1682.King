@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { tinhGioiHanNenHanChe } from './TinhGioiHanNenHanChe.ts';
 
-// Giống bảng quy_dinh: Bộ Y tế 2016 (muối dưới 5 g, đường và béo no tối đa 10% năng lượng), Atwater 4 và 9
+// Giống bảng quy_dinh: Viện Dinh dưỡng 2026 (muối dưới 5 g, đường tối đa 10% năng lượng, chia 4 và 9), WHO 2023 (béo no tối đa 10%)
 const quyDinh = {
   muoiToiDaG: 5,
   tyLeDuongToiDa: 10,

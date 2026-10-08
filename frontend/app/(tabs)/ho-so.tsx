@@ -89,6 +89,7 @@ export default function ManHoSo() {
             <DongThongTin nhan="Cân nặng" giaTri={`${hoSo.can_nang_kg?.toLocaleString('vi-VN')} kg`} />
             <DongThongTin nhan="Mức vận động" giaTri={hoSo.muc_van_dong ? TEN_MUC_VAN_DONG[hoSo.muc_van_dong] : ''} />
             <DongThongTin nhan="Mục tiêu" giaTri={hoSo.muc_tieu ? TEN_MUC_TIEU[hoSo.muc_tieu] : ''} />
+            <DongThongTin nhan="Dị ứng, kiêng ăn" giaTri={hoSo.di_ung_kieng_an === '' ? 'Không có' : hoSo.di_ung_kieng_an} />
           </View>
         ) : null}
 

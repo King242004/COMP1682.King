@@ -128,3 +128,22 @@ export async function layMonHayAn(nguoiDungId: number, soMonToiDa: number): Prom
   );
   return ketQua.rows;
 }
+
+// Tổng calo của một ngày, dùng cho nhận xét nhiều ngày
+export type CaloMotNgay = {
+  ngay: string;
+  tong_calo: number;
+};
+
+// Tổng calo từng ngày trong soNgay ngày tính tới denNgay (gồm cả denNgay); ngày chưa ghi món thì không có dòng
+export async function layTongCaloCacNgay(nguoiDungId: number, denNgay: string, soNgay: number): Promise<CaloMotNgay[]> {
+  const ketQua = await database.query<CaloMotNgay>(
+    `SELECT ngay, SUM(so_calo)::int AS tong_calo
+     FROM bua_an
+     WHERE nguoi_dung_id = $1 AND ngay BETWEEN $2::date - ($3::int - 1) AND $2::date
+     GROUP BY ngay
+     ORDER BY ngay`,
+    [nguoiDungId, denNgay, soNgay],
+  );
+  return ketQua.rows;
+}

@@ -21,6 +21,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="tu-van"
+        options={{
+          title: 'Coach',
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="tien-do"
+        options={{
+          title: 'Tiến độ',
+          tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="ho-so"
         options={{
           title: 'Hồ sơ',

@@ -1,8 +1,6 @@
 import { callApi } from '../shared/apiClient';
 
 export type GioiTinh = 'nam' | 'nu';
-export type CongViec = 'ngoi_nhieu' | 'di_lai_nhieu' | 'lao_dong_nang';
-export type CamNhanKhiTap = 'nhe' | 'vua' | 'nang';
 export type MucVanDong = 'nhe' | 'trung_binh' | 'nang';
 export type MucTieu = 'giam' | 'giu' | 'tang';
 
@@ -12,13 +10,10 @@ export type HoSo = {
   nam_sinh: number | null;
   chieu_cao_cm: number | null;
   can_nang_kg: number | null;
-  cong_viec: CongViec | null;
-  so_buoi_tap: number | null;
-  so_phut_moi_buoi: number | null;
-  cam_nhan_khi_tap: CamNhanKhiTap | null;
   muc_van_dong: MucVanDong | null;
   muc_tieu: MucTieu | null;
   muc_tieu_calo: number | null;
+  di_ung_kieng_an: string;
   bmi: number | null;
   phan_loai_bmi: string | null;
 };
@@ -29,17 +24,18 @@ export type HoSoGuiLen = {
   nam_sinh: number;
   chieu_cao_cm: number;
   can_nang_kg: number;
-  cong_viec: CongViec;
-  so_buoi_tap: number;
-  so_phut_moi_buoi: number | null;
-  cam_nhan_khi_tap: CamNhanKhiTap | null;
+  muc_van_dong: MucVanDong;
   muc_tieu: MucTieu;
+  di_ung_kieng_an: string;
 };
 
-// Các lựa chọn cho màn hồ sơ
+// Các con số màn hồ sơ cần để làm mờ lựa chọn: ngưỡng BMI và ngưỡng tuổi
 export type LuaChonHoSo = {
   bmi_thieu_can: number;
   bmi_ly_tuong: number;
+  tuoi_cao_tuoi: number;
+  bmi_thieu_can_cao_tuoi: number;
+  tuoi_khong_co_muc_nang: number;
 };
 
 // Lấy hồ sơ của người đang đăng nhập
@@ -48,7 +44,7 @@ export async function layHoSo(): Promise<HoSo> {
   return ketQua as HoSo;
 }
 
-// Lấy ngưỡng BMI
+// Lấy ngưỡng BMI và ngưỡng tuổi
 export async function layLuaChonHoSo(): Promise<LuaChonHoSo> {
   const ketQua = await callApi('GET', '/ho-so/lua-chon');
   return ketQua as LuaChonHoSo;
