@@ -5,8 +5,9 @@ import type { HoSo, HoSoDeLuu } from './HoSoQueries.ts';
 import { phanLoaiBmi, tinhBmi } from './TinhBmi.ts';
 import { tinhMucTieuCalo } from './TinhMucTieuCalo.ts';
 
-// Tuổi nhỏ nhất được dùng app
+// Tuổi nhỏ nhất và lớn nhất được dùng app (giống danh sách năm sinh ở app: 83 năm tính từ 18 tuổi)
 const TUOI_TOI_THIEU = 18;
+const TUOI_TOI_DA = 100;
 
 // Giới hạn chiều cao, cân nặng để chặn gõ nhầm (giống CHECK trong 004_ho_so.sql)
 const CHIEU_CAO_NHO_NHAT = 100;
@@ -79,7 +80,10 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
 
   const namSinh = duLieu.nam_sinh;
   const namHienTai = new Date().getFullYear();
-  if (typeof namSinh !== 'number' || !Number.isInteger(namSinh) || namHienTai - namSinh < TUOI_TOI_THIEU) {
+  if (
+    typeof namSinh !== 'number' || !Number.isInteger(namSinh) ||
+    namHienTai - namSinh < TUOI_TOI_THIEU || namHienTai - namSinh > TUOI_TOI_DA
+  ) {
     throw new HttpError(400, 'Năm sinh không hợp lệ');
   }
   const tuoi = namHienTai - namSinh;

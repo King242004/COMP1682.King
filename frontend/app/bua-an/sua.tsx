@@ -21,6 +21,7 @@ import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { TextField } from '../../src/shared/components/TextField';
 import { formatDateLabel, todayKey } from '../../src/shared/dateKey';
 import { colors } from '../../src/shared/theme';
+import { TraMon } from '../../src/tra-mon/TraMon';
 
 // Giới hạn chặn gõ nhầm, giống backend (BuaAnService.ts)
 const TEN_MON_DAI_NHAT = 100;
@@ -70,9 +71,10 @@ export default function SuaBuaAn() {
   const [nhatKy, setNhatKy] = useState<NhatKyNgay | null>(null);
   const [monCu, setMonCu] = useState<SoNenHanChe | null>(null);
 
-  // Ảnh vừa chụp (mở màn nhận món), màn quét mã vạch, và trạng thái đang nhờ AI ước tính
+  // Ảnh vừa chụp (mở màn nhận món), màn quét mã vạch, màn tra món, và trạng thái đang nhờ AI ước tính
   const [anhVuaChup, setAnhVuaChup] = useState<AnhVuaChup | null>(null);
   const [dangMoQuetMa, setDangMoQuetMa] = useState(false);
+  const [dangMoTraMon, setDangMoTraMon] = useState(false);
   const [dangUocTinh, setDangUocTinh] = useState(false);
 
   // Dữ liệu tải từ server và trạng thái màn hình
@@ -292,6 +294,7 @@ export default function SuaBuaAn() {
             monHayAn={monHayAn}
             onChupAnh={chupAnh}
             onQuetMaVach={() => setDangMoQuetMa(true)}
+            onTraMon={() => setDangMoTraMon(true)}
             onGoTen={chonGoTen}
             onChonMonHayAn={dienSan}
           />
@@ -386,9 +389,10 @@ export default function SuaBuaAn() {
         ) : null}
       </ScrollView>
 
-      {/* Màn nhận món từ ảnh và màn quét mã vạch; chọn xong thì điền vào thẻ kết quả */}
+      {/* Màn nhận món từ ảnh, màn quét mã vạch và màn tra món; chọn xong thì điền vào thẻ kết quả */}
       <ChupAnhNhanMon anh={anhVuaChup} onChon={dienSan} onDong={() => setAnhVuaChup(null)} />
       <QuetMaVach dangMo={dangMoQuetMa} onChon={dienSan} onDong={() => setDangMoQuetMa(false)} />
+      <TraMon dangMo={dangMoTraMon} onChon={dienSan} onDong={() => setDangMoTraMon(false)} />
     </SafeAreaView>
   );
 }

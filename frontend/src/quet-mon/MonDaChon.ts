@@ -1,4 +1,4 @@
-// Món người dùng chọn từ ảnh hoặc mã vạch, đã nhân theo phần thực ăn, để điền vào form thêm món
+// Món người dùng chọn từ ảnh, mã vạch hoặc tra món, đã nhân theo phần thực ăn, để điền vào form thêm món
 export type MonDaChon = {
   ten_mon: string;
   khau_phan: string;
@@ -9,5 +9,5 @@ export type MonDaChon = {
   muoi_g: number | null;
   duong_g: number | null;
   beo_no_g: number | null;
-  nguon_so_lieu: 'ai' | 'ma_vach';
+  nguon_so_lieu: 'ai' | 'ma_vach' | 'vien_dinh_duong';
 };

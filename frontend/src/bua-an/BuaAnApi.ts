@@ -1,7 +1,7 @@
 import { callApi } from '../shared/apiClient';
 
 export type LoaiBua = 'sang' | 'trua' | 'toi' | 'phu';
-export type NguonSoLieu = 'nhap_tay' | 'ai' | 'ma_vach';
+export type NguonSoLieu = 'nhap_tay' | 'ai' | 'ma_vach' | 'vien_dinh_duong';
 
 // Một món đã ăn server gửi về
 export type BuaAn = {

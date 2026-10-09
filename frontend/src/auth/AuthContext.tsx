@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
-import { ApiError, deleteToken, readToken, saveToken } from '../shared/apiClient';
+import { ApiError, deleteToken, readToken, saveToken, setSessionExpiredHandler } from '../shared/apiClient';
 import { changePasswordRequest, deleteAccountRequest, getMeRequest, loginRequest, registerRequest } from './AuthApi';
 import type { User } from './AuthApi';
 
@@ -27,6 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [connectionError, setConnectionError] = useState('');
 
+  // Phiên đăng nhập hết hạn lúc đang dùng app thì quên người dùng, màn tab sẽ tự về màn đăng nhập
+  useEffect(() => {
+    setSessionExpiredHandler(() => setUser(null));
+  }, []);
+
   // Mở app là kiểm tra phiên đăng nhập đã lưu một lần
   useEffect(() => {
     loadSavedSession();
@@ -41,10 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setUser(await getMeRequest());
       } catch (error) {
-        // Token hết hạn thì xóa để đăng nhập lại; lỗi khác (mất mạng…) thì báo để thử lại
-        if (error instanceof ApiError && error.status === 401) {
-          await deleteToken();
-        } else {
+        // Token hết hạn (401) thì callApi đã xóa token, chỉ cần đăng nhập lại; lỗi khác (mất mạng…) thì báo để thử lại
+        const isSessionExpired = error instanceof ApiError && error.status === 401;
+        if (!isSessionExpired) {
           setConnectionError((error as Error).message);
         }
       }

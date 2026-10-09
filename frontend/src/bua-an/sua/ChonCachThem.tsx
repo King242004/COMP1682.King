@@ -26,17 +26,19 @@ type ChonCachThemProps = {
   monHayAn: MonHayAn[];
   onChupAnh: () => void;
   onQuetMaVach: () => void;
+  onTraMon: () => void;
   onGoTen: () => void;
   onChonMonHayAn: (mon: MonHayAn) => void;
 };
 
-// Bước 1 của màn thêm món: ba ô lớn (chụp ảnh, mã vạch, gõ tên), mẹo chụp, danh sách món hay ăn
-export function ChonCachThem({ monHayAn, onChupAnh, onQuetMaVach, onGoTen, onChonMonHayAn }: ChonCachThemProps) {
+// Bước 1 của màn thêm món: bốn ô lớn xếp 2 hàng (chụp ảnh, mã vạch, tra món, gõ tên), mẹo chụp, danh sách món hay ăn
+export function ChonCachThem({ monHayAn, onChupAnh, onQuetMaVach, onTraMon, onGoTen, onChonMonHayAn }: ChonCachThemProps) {
   return (
     <View>
       <View style={styles.hangCachThem}>
         <OCachThem bieuTuong="camera-outline" ten="Chụp ảnh" onPress={onChupAnh} />
         <OCachThem bieuTuong="barcode-outline" ten="Mã vạch" onPress={onQuetMaVach} />
+        <OCachThem bieuTuong="search-outline" ten="Tra món" onPress={onTraMon} />
         <OCachThem bieuTuong="create-outline" ten="Gõ tên" onPress={onGoTen} />
       </View>
       <Text style={styles.chuPhu}>Mẹo: chụp phần bạn ăn, từ trên xuống, đặt đũa hoặc thìa bên cạnh.</Text>
@@ -64,10 +66,12 @@ export function ChonCachThem({ monHayAn, onChupAnh, onQuetMaVach, onGoTen, onCho
 const styles = StyleSheet.create({
   hangCachThem: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   oCachThem: {
-    flex: 1,
+    flexBasis: '45%',
+    flexGrow: 1,
     height: 92,
     borderRadius: 16,
     backgroundColor: colors.primaryLight,

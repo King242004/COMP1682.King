@@ -82,9 +82,14 @@ function kiemTraDuLieuBuaAn(duLieu: Record<string, unknown>): DuLieuBuaAn {
   }
 
   // Không gửi nguồn số liệu thì coi là tự nhập
-  let nguonSoLieu: 'nhap_tay' | 'ai' | 'ma_vach' = 'nhap_tay';
+  let nguonSoLieu: 'nhap_tay' | 'ai' | 'ma_vach' | 'vien_dinh_duong' = 'nhap_tay';
   if (duLieu.nguon_so_lieu !== undefined) {
-    if (duLieu.nguon_so_lieu !== 'nhap_tay' && duLieu.nguon_so_lieu !== 'ai' && duLieu.nguon_so_lieu !== 'ma_vach') {
+    if (
+      duLieu.nguon_so_lieu !== 'nhap_tay' &&
+      duLieu.nguon_so_lieu !== 'ai' &&
+      duLieu.nguon_so_lieu !== 'ma_vach' &&
+      duLieu.nguon_so_lieu !== 'vien_dinh_duong'
+    ) {
       throw new HttpError(400, 'Nguồn số liệu không hợp lệ');
     }
     nguonSoLieu = duLieu.nguon_so_lieu;

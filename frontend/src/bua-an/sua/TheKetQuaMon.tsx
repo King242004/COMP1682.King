@@ -67,6 +67,7 @@ export function TheKetQuaMon({ tenMon, khauPhan, soCalo, dam, tinhBot, beo, nguo
         <Text style={styles.chuNguon}>Kết quả do AI ước tính, không chính xác 100%. Bạn kiểm tra và sửa lại nếu cần.</Text>
       ) : null}
       {nguonSoLieu === 'ma_vach' ? <Text style={styles.chuNguon}>Số liệu theo nhãn sản phẩm (Open Food Facts).</Text> : null}
+      {nguonSoLieu === 'vien_dinh_duong' ? <Text style={styles.chuNguon}>Số liệu theo suất Viện Dinh dưỡng đã cân.</Text> : null}
 
       <View style={styles.hangChat}>
         <OChat ten="Đạm" so={dam} mau={colors.protein} />

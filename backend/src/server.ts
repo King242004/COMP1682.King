@@ -9,6 +9,8 @@ import hoSoRoutes from './ho-so/HoSoRoutes.ts';
 import quetMonRoutes from './quet-mon/QuetMonRoutes.ts';
 import { errorHandler } from './shared/errorHandler.ts';
 import tienDoRoutes from './tien-do/TienDoRoutes.ts';
+import thucDonRoutes from './thuc-don/ThucDonRoutes.ts';
+import traMonRoutes from './tra-mon/TraMonRoutes.ts';
 import tuVanRoutes from './tu-van/TuVanRoutes.ts';
 
 // Ảnh chụp món gửi lên dạng base64 nên cần cho phép dữ liệu lớn hơn mặc định (100 KB)
@@ -38,11 +40,17 @@ app.use('/bua-an', requireAuth, buaAnRoutes);
 // Ước tính bằng AI, nhận món từ ảnh, tra mã vạch (cần đăng nhập)
 app.use('/quet-mon', requireAuth, quetMonRoutes);
 
+// Tra món Viện Dinh dưỡng đã cân (cần đăng nhập)
+app.use('/tra-mon', requireAuth, traMonRoutes);
+
 // Trò chuyện với coach (cần đăng nhập)
 app.use('/tu-van', requireAuth, tuVanRoutes);
 
 // Cân nặng và tiến độ (cần đăng nhập)
 app.use('/tien-do', requireAuth, tienDoRoutes);
+
+// Thực đơn hôm nay do AI lập (cần đăng nhập)
+app.use('/thuc-don', requireAuth, thucDonRoutes);
 
 // Đường dẫn không có ở trên thì báo không tìm thấy
 app.use((request, response) => {

@@ -81,12 +81,12 @@ export default function SuaHoSo() {
     }
   }
 
-  // BMI tính ngay khi đã nhập đủ chiều cao và cân nặng, để làm mờ mục tiêu không phù hợp
+  // BMI tính ngay khi đã nhập đủ chiều cao và cân nặng, làm tròn 1 số lẻ giống server, để làm mờ mục tiêu không phù hợp
   const chieuCaoSo = Number(chieuCao.replace(',', '.'));
   const canNangSo = Number(canNang.replace(',', '.'));
   let bmi: number | null = null;
   if (chieuCaoSo > 0 && canNangSo > 0) {
-    bmi = canNangSo / ((chieuCaoSo / 100) * (chieuCaoSo / 100));
+    bmi = Math.round((canNangSo / ((chieuCaoSo / 100) * (chieuCaoSo / 100))) * 10) / 10;
   }
 
   // Tuổi tính ngay khi đã chọn năm sinh; người cao tuổi có ngưỡng BMI giảm cân riêng và không có mức vận động nặng

@@ -1,7 +1,7 @@
 import database from '../database/database.ts';
 
 export type LoaiBua = 'sang' | 'trua' | 'toi' | 'phu';
-export type NguonSoLieu = 'nhap_tay' | 'ai' | 'ma_vach';
+export type NguonSoLieu = 'nhap_tay' | 'ai' | 'ma_vach' | 'vien_dinh_duong';
 
 // Một món đã ăn như lưu trong bảng bua_an
 export type BuaAn = {

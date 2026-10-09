@@ -16,6 +16,14 @@ export class ApiError extends Error {
   }
 }
 
+// Việc cần làm khi server báo phiên đăng nhập hết hạn; AuthProvider đăng ký lúc mở app
+let onSessionExpired: (() => void) | null = null;
+
+// AuthProvider gọi hàm này để được báo khi phiên đăng nhập hết hạn
+export function setSessionExpiredHandler(handler: () => void): void {
+  onSessionExpired = handler;
+}
+
 // Lưu token sau khi đăng nhập
 export async function saveToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -60,6 +68,15 @@ export async function callApi(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: s
   const NO_CONTENT_STATUS = 204;
   if (response.status === NO_CONTENT_STATUS) {
     return null;
+  }
+
+  // 401 là token hết dùng được: xóa token và báo để app về màn đăng nhập (trừ khi người dùng vừa đăng nhập lại, token đã khác)
+  const UNAUTHORIZED_STATUS = 401;
+  if (response.status === UNAUTHORIZED_STATUS && (await readToken()) === token) {
+    await deleteToken();
+    if (onSessionExpired) {
+      onSessionExpired();
+    }
   }
 
   // Server trả mã lỗi thì lấy câu báo trong { message }

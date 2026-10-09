@@ -3,7 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import environment from '../environment.ts';
 import { HttpError } from './errorHandler.ts';
 
-// Một lần hỏi AI chờ tối đa 15 giây (bình thường AI trả lời trong khoảng 2 giây); quá thì báo AI bận để người dùng thử lại
+// Mặc định một lần hỏi AI chờ tối đa 15 giây (câu trả lời ngắn, bình thường khoảng 2 giây); quá thì báo AI bận để người dùng thử lại
 const REQUEST_TIMEOUT_MS = 15000;
 
 // Mức "được phép đoán" của AI: thấp để cùng một câu hỏi ra kết quả gần giống nhau
@@ -15,8 +15,13 @@ export type ImageInput = {
   mimeType: string;
 };
 
-// Hỏi Gemini và nhận về JSON đúng khuôn jsonSchema; chưa có khóa hoặc AI lỗi thì báo 503 để app mời nhập tay
-export async function askGeminiForJson(prompt: string, jsonSchema: object, image?: ImageInput): Promise<unknown> {
+// Hỏi Gemini và nhận về JSON đúng khuôn jsonSchema; câu trả lời dài thì truyền timeoutMs lớn hơn; chưa có khóa hoặc AI lỗi thì báo 503
+export async function askGeminiForJson(
+  prompt: string,
+  jsonSchema: object,
+  image?: ImageInput,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<unknown> {
   if (!environment.geminiApiKey || !environment.geminiModel) {
     throw new HttpError(503, 'Tính năng AI chưa được cấu hình, hãy nhập tay');
   }
@@ -39,7 +44,7 @@ export async function askGeminiForJson(prompt: string, jsonSchema: object, image
         responseMimeType: 'application/json',
         responseJsonSchema: jsonSchema,
         temperature: TEMPERATURE,
-        httpOptions: { timeout: REQUEST_TIMEOUT_MS },
+        httpOptions: { timeout: timeoutMs },
       },
     });
     responseText = response.text;

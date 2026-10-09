@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,6 +24,12 @@ export default function TrangChu() {
   const [nhatKy, setNhatKy] = useState<NhatKyNgay | null>(null);
   const [loi, setLoi] = useState('');
 
+  // Nhớ ngày đang xem mới nhất, để bỏ kết quả của ngày cũ về trễ khi đổi ngày nhanh
+  const ngayDangXem = useRef(ngay);
+  useEffect(() => {
+    ngayDangXem.current = ngay;
+  }, [ngay]);
+
   // Mỗi lần mở tab, đổi ngày, hoặc quay lại từ màn thêm / sửa món thì tải lại nhật ký
   useFocusEffect(
     useCallback(() => {
@@ -34,9 +40,15 @@ export default function TrangChu() {
   async function taiNhatKy() {
     setLoi('');
     try {
-      setNhatKy(await layNhatKyNgay(ngay));
+      const ketQua = await layNhatKyNgay(ngay);
+      // Trong lúc chờ mà người dùng đã đổi sang ngày khác thì bỏ kết quả này, tránh hiện nhầm ngày
+      if (ngay === ngayDangXem.current) {
+        setNhatKy(ketQua);
+      }
     } catch (loiTai) {
-      setLoi((loiTai as Error).message);
+      if (ngay === ngayDangXem.current) {
+        setLoi((loiTai as Error).message);
+      }
     }
   }
 
@@ -82,6 +94,15 @@ export default function TrangChu() {
                 {nhatKy.tong_hop.so_mon_thieu_so_lieu} món chưa đủ số liệu nên các số có thể thấp hơn thực tế
               </Text>
             ) : null}
+
+            {/* Lối vào màn thực đơn của ngày đang xem */}
+            <Pressable style={styles.dongThucDon} onPress={() => router.push({ pathname: '/thuc-don', params: { ngay: ngay } })}>
+              <View>
+                <Text style={styles.chuThucDon}>Gợi ý thực đơn</Text>
+                <Text style={styles.chuNho}>AI lập 1 ngày theo mục tiêu của bạn</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </Pressable>
 
             {/* Bốn bữa, luôn hiện */}
             <Text style={styles.tieuDeNhom}>Bữa ăn</Text>
@@ -147,6 +168,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginBottom: 8,
+  },
+  dongThucDon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 8,
+  },
+  chuThucDon: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
   },
   tieuDeNhom: {
     fontSize: 16,
