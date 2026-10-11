@@ -9,12 +9,14 @@ type VongTienDoProps = {
   doDay: number;
   phanTram: number;
   mau: string;
+  // Màu vòng nền (không bắt buộc); mặc định xám, trên nền xanh thì dùng trắng mờ
+  mauNen?: string;
   // Chữ hoặc số đặt ở giữa vòng (không bắt buộc)
   children?: ReactNode;
 };
 
-// Vòng tròn tiến độ: vòng xám làm nền, cung màu dài theo phần trăm (tối đa 100%), bắt đầu từ đỉnh
-export function VongTienDo({ kichThuoc, doDay, phanTram, mau, children }: VongTienDoProps) {
+// Vòng tròn tiến độ: vòng nền, cung màu dài theo phần trăm (tối đa 100%), bắt đầu từ đỉnh
+export function VongTienDo({ kichThuoc, doDay, phanTram, mau, mauNen, children }: VongTienDoProps) {
   const tam = kichThuoc / 2;
   const banKinh = (kichThuoc - doDay) / 2;
   const chuVi = 2 * Math.PI * banKinh;
@@ -32,7 +34,7 @@ export function VongTienDo({ kichThuoc, doDay, phanTram, mau, children }: VongTi
   return (
     <View style={{ width: kichThuoc, height: kichThuoc }}>
       <Svg width={kichThuoc} height={kichThuoc}>
-        <Circle cx={tam} cy={tam} r={banKinh} stroke={colors.border} strokeWidth={doDay} fill="none" />
+        <Circle cx={tam} cy={tam} r={banKinh} stroke={mauNen ?? colors.border} strokeWidth={doDay} fill="none" />
         {/* Chưa có gì thì không vẽ cung, tránh hiện một chấm tròn */}
         {doDaiCung > 0 ? (
           <Circle

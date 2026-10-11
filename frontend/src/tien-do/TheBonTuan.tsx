@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../shared/theme';
+import { Card } from '../shared/components/Card';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { TienDo } from './TienDoApi';
 
 type TheBonTuanProps = {
@@ -41,10 +42,10 @@ export function TheBonTuan({ tienDo, onHoiCoach }: TheBonTuanProps) {
   }
 
   return (
-    <View>
+    <Card>
       <View style={styles.hangTieuDe}>
         <Text style={styles.tieuDe}>{tomTat.so_ngay / 7} tuần qua</Text>
-        <Pressable style={styles.nutHoiCoach} onPress={onHoiCoach}>
+        <Pressable style={({ pressed }) => [styles.nutHoiCoach, pressed ? styles.dangBam : null]} onPress={onHoiCoach}>
           <Text style={styles.chuHoiCoach}>Hỏi coach ›</Text>
         </Pressable>
       </View>
@@ -64,7 +65,7 @@ export function TheBonTuan({ tienDo, onHoiCoach }: TheBonTuanProps) {
           <Text style={[styles.chuPhu, giamNhanhQua ? styles.chuCanhBao : null]}>{chuPhuCan}</Text>
         </View>
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -73,10 +74,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: spacing.small,
   },
   tieuDe: {
-    fontSize: 16,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
@@ -85,33 +86,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chuHoiCoach: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     color: colors.primary,
   },
   hangO: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.small,
   },
   o: {
     flex: 1,
     backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: radius.input,
+    padding: spacing.small,
     gap: 2,
   },
   oCanhBao: {
     backgroundColor: colors.warningBackground,
   },
   so: {
-    fontSize: 18,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
   chuPhu: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
   chuCanhBao: {
     color: colors.warningText,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

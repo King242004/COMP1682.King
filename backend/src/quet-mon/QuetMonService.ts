@@ -10,6 +10,8 @@ import type { SanPhamMaVach } from './DocSanPhamMaVach.ts';
 const TEN_MON_DAI_NHAT = 100;
 const KHAU_PHAN_DAI_NHAT = 100;
 const GHI_CHU_DAI_NHAT = 200;
+const NGUYEN_LIEU_DAI_NHAT = 200;
+const CALO_LON_NHAT = 10000;
 
 // Ảnh nhận món đưa 3 khả năng; ước tính theo tên chỉ cần 1
 const SO_KHA_NANG_ANH = 3;
@@ -70,9 +72,32 @@ export async function uocTinhTheoTen(duLieu: Record<string, unknown>): Promise<K
   if (khauPhan === '') {
     throw new HttpError(400, 'Hãy nhập khẩu phần đã ăn để AI ước tính, ví dụ "1 tô lớn"');
   }
+  const nguyenLieu = docChuKhongBatBuoc(duLieu.nguyen_lieu, NGUYEN_LIEU_DAI_NHAT, 'Nguyên liệu, cách nấu');
+
+  // Calo người dùng đã biết (không bắt buộc): có thì AI chỉ ước tính các số còn lại
+  let soCaloDaBiet: number | null = null;
+  if (duLieu.so_calo !== undefined && duLieu.so_calo !== null) {
+    const soCalo = duLieu.so_calo;
+    if (typeof soCalo !== 'number' || !Number.isInteger(soCalo) || soCalo < 0 || soCalo > CALO_LON_NHAT) {
+      throw new HttpError(400, `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT}`);
+    }
+    soCaloDaBiet = soCalo;
+  }
+
+  // Dòng thêm vào lời nhắc khi người dùng ghi nguyên liệu hoặc đã biết calo
+  let dongNguyenLieu = '';
+  if (nguyenLieu !== '') {
+    dongNguyenLieu = `Nguyên liệu, cách nấu người dùng ghi: "${nguyenLieu}". Hãy dùng thông tin này khi ước tính.`;
+  }
+  let dongCalo = '';
+  if (soCaloDaBiet !== null) {
+    dongCalo = `Người dùng đã biết tổng là ${soCaloDaBiet} kcal: so_calo phải đúng bằng ${soCaloDaBiet}, các số còn lại ước tính cho khớp với tổng này.`;
+  }
 
   const loiNhac = `Bạn là chuyên gia dinh dưỡng, rành món ăn Việt Nam.
 Người dùng đã ăn: "${tenMon.trim()}", khẩu phần: "${khauPhan}".
+${dongNguyenLieu}
+${dongCalo}
 Hãy ước tính số liệu của đúng khẩu phần đó, theo cách nấu phổ biến ở Việt Nam.
 Trả về la_mon_an = true và đúng 1 khả năng trong kha_nang:
 - ten_mon: tên món bằng tiếng Việt
@@ -83,7 +108,15 @@ Trả về la_mon_an = true và đúng 1 khả năng trong kha_nang:
 Nếu tên không phải đồ ăn hoặc đồ uống, trả về la_mon_an = false và kha_nang rỗng.`;
 
   const traLoi = await askGeminiForJson(loiNhac, KHUON_KET_QUA);
-  return docKetQuaNhanMon(traLoi, SO_KHA_NANG_TEN);
+  const ketQua = docKetQuaNhanMon(traLoi, SO_KHA_NANG_TEN);
+
+  // Người dùng đã biết calo thì giữ đúng số của họ, không tin số AI trả về
+  if (soCaloDaBiet !== null) {
+    for (const khaNang of ketQua.kha_nang) {
+      khaNang.so_calo = soCaloDaBiet;
+    }
+  }
+  return ketQua;
 }
 
 // Nhận món từ ảnh chụp, trả tối đa 3 khả năng

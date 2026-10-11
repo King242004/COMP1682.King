@@ -1,8 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { layMonHayAn, layMotBuaAn, layNhatKyNgay, suaBuaAn, themBuaAn, xoaBuaAn } from '../../src/bua-an/BuaAnApi';
 import type { LoaiBua, MonHayAn, NguonSoLieu, NhatKyNgay } from '../../src/bua-an/BuaAnApi';
@@ -18,14 +17,16 @@ import { uocTinhTheoTen } from '../../src/quet-mon/QuetMonApi';
 import { Button } from '../../src/shared/components/Button';
 import { Chip } from '../../src/shared/components/Chip';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
+import { Screen } from '../../src/shared/components/Screen';
+import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { TextField } from '../../src/shared/components/TextField';
 import { formatDateLabel, todayKey } from '../../src/shared/dateKey';
-import { colors } from '../../src/shared/theme';
-import { TraMon } from '../../src/tra-mon/TraMon';
+import { colors, fontSizes, pressedOpacity, spacing } from '../../src/shared/theme';
 
-// Giới hạn chặn gõ nhầm, giống backend (BuaAnService.ts)
+// Giới hạn chặn gõ nhầm, giống backend (BuaAnService.ts, QuetMonService.ts)
 const TEN_MON_DAI_NHAT = 100;
 const KHAU_PHAN_DAI_NHAT = 100;
+const NGUYEN_LIEU_DAI_NHAT = 200;
 const CALO_LON_NHAT = 10000;
 
 // Nén ảnh còn 50% chất lượng trước khi gửi cho AI, để gửi nhanh và không quá giới hạn của server
@@ -52,7 +53,11 @@ export default function SuaBuaAn() {
   // Các ô nhập
   const [tenMon, setTenMon] = useState('');
   const [khauPhan, setKhauPhan] = useState('');
+  // Nguyên liệu, cách nấu: chỉ gửi kèm cho AI để đoán sát hơn, không lưu vào nhật ký
+  const [nguyenLieu, setNguyenLieu] = useState('');
   const [soCalo, setSoCalo] = useState('');
+  // AI đã ước tính mà giữ calo người dùng tự nhập thì đánh dấu, để khi xóa số của AI không xóa mất calo đó
+  const [caloDoNguoiDungNhap, setCaloDoNguoiDungNhap] = useState(false);
   const [dam, setDam] = useState('');
   const [tinhBot, setTinhBot] = useState('');
   const [beo, setBeo] = useState('');
@@ -71,10 +76,9 @@ export default function SuaBuaAn() {
   const [nhatKy, setNhatKy] = useState<NhatKyNgay | null>(null);
   const [monCu, setMonCu] = useState<SoNenHanChe | null>(null);
 
-  // Ảnh vừa chụp (mở màn nhận món), màn quét mã vạch, màn tra món, và trạng thái đang nhờ AI ước tính
+  // Ảnh vừa chụp (mở màn nhận món), màn quét mã vạch, và trạng thái đang nhờ AI ước tính
   const [anhVuaChup, setAnhVuaChup] = useState<AnhVuaChup | null>(null);
   const [dangMoQuetMa, setDangMoQuetMa] = useState(false);
-  const [dangMoTraMon, setDangMoTraMon] = useState(false);
   const [dangUocTinh, setDangUocTinh] = useState(false);
 
   // Dữ liệu tải từ server và trạng thái màn hình
@@ -83,6 +87,10 @@ export default function SuaBuaAn() {
   const [loiNhap, setLoiNhap] = useState<Record<string, string>>({});
   const [loiServer, setLoiServer] = useState('');
   const [dangLuu, setDangLuu] = useState(false);
+  const [dangXoa, setDangXoa] = useState(false);
+
+  // Đang chờ AI, đang lưu hoặc đang xóa thì khóa cả form để không ai sửa giữa chừng
+  const dangChay = dangUocTinh || dangLuu || dangXoa;
 
   // Mở màn: sửa thì tải món cũ để điền sẵn, thêm thì tải danh sách món hay ăn; cả hai đều tải nhật ký của ngày
   useEffect(() => {
@@ -121,6 +129,7 @@ export default function SuaBuaAn() {
     setDuong(mon.duong_g);
     setBeoNo(mon.beo_no_g);
     setNguonSoLieu(mon.nguon_so_lieu);
+    setCaloDoNguoiDungNhap(false);
     setDaCoMon(true);
     setMoO(false);
   }
@@ -135,6 +144,42 @@ export default function SuaBuaAn() {
   function doiSoCalo(chu: string) {
     setSoCalo(chu);
     setNguonSoLieu('nhap_tay');
+  }
+
+  // Đổi tên, khẩu phần hoặc nguyên liệu sau khi AI đã điền số thì xóa các số AI điền, vì số đó là của món cũ
+  function xoaSoCuaAi() {
+    if (nguonSoLieu !== 'ai') {
+      return;
+    }
+    if (!caloDoNguoiDungNhap) {
+      setSoCalo('');
+    }
+    setDam('');
+    setTinhBot('');
+    setBeo('');
+    setMuoi(null);
+    setDuong(null);
+    setBeoNo(null);
+    setNguonSoLieu('nhap_tay');
+    setCaloDoNguoiDungNhap(false);
+  }
+
+  // Gõ vào ô tên món: cập nhật ô rồi xóa số cũ của AI (nếu có)
+  function doiTenMon(chu: string) {
+    setTenMon(chu);
+    xoaSoCuaAi();
+  }
+
+  // Gõ vào ô khẩu phần: cập nhật ô rồi xóa số cũ của AI (nếu có)
+  function doiKhauPhan(chu: string) {
+    setKhauPhan(chu);
+    xoaSoCuaAi();
+  }
+
+  // Gõ vào ô nguyên liệu, cách nấu: cập nhật ô rồi xóa số cũ của AI (nếu có)
+  function doiNguyenLieu(chu: string) {
+    setNguyenLieu(chu);
+    xoaSoCuaAi();
   }
 
   // Mở camera của máy để chụp món; chụp xong thì mở màn nhận món
@@ -156,7 +201,7 @@ export default function SuaBuaAn() {
     setAnhVuaChup({ uri: anh.uri, base64: anh.base64, mimeType: anh.mimeType ?? 'image/jpeg' });
   }
 
-  // Nhờ AI ước tính theo tên món và khẩu phần đã gõ
+  // Nhờ AI ước tính theo tên món, khẩu phần, nguyên liệu; đã nhập calo thì AI giữ đúng số đó
   async function uocTinhBangAi() {
     const loiMoi: Record<string, string> = {};
     if (tenMon.trim() === '') {
@@ -165,17 +210,28 @@ export default function SuaBuaAn() {
     if (khauPhan.trim() === '') {
       loiMoi.khauPhan = 'Hãy nhập khẩu phần để AI ước tính, ví dụ: 1 tô lớn';
     }
+    const soCaloNhap = Number(soCalo);
+    if (soCalo.trim() !== '' && (!Number.isInteger(soCaloNhap) || soCaloNhap < 0 || soCaloNhap > CALO_LON_NHAT)) {
+      loiMoi.soCalo = `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT.toLocaleString('vi-VN')}`;
+    }
     setLoiNhap(loiMoi);
     if (Object.keys(loiMoi).length > 0) {
       return;
     }
 
+    // Calo coi là "đã biết" khi ô có số và số đó không phải do AI tự đoán (người dùng gõ, mã vạch, món Viện)
+    let soCaloDaBiet: number | null = null;
+    if (soCalo.trim() !== '' && (nguonSoLieu !== 'ai' || caloDoNguoiDungNhap)) {
+      soCaloDaBiet = soCaloNhap;
+    }
+
     setLoiServer('');
     setDangUocTinh(true);
     try {
-      const ketQua = await uocTinhTheoTen(tenMon.trim(), khauPhan.trim());
+      const ketQua = await uocTinhTheoTen(tenMon.trim(), khauPhan.trim(), nguyenLieu.trim(), soCaloDaBiet);
       if (ketQua.la_mon_an && ketQua.kha_nang.length > 0) {
         dienSan({ ...ketQua.kha_nang[0], nguon_so_lieu: 'ai' });
+        setCaloDoNguoiDungNhap(soCaloDaBiet !== null);
       } else {
         setLoiServer('AI không nhận ra món này, hãy nhập tay');
       }
@@ -198,7 +254,9 @@ export default function SuaBuaAn() {
     if (tenMon.trim() === '') {
       loiMoi.tenMon = 'Hãy nhập tên món';
     }
-    if (soCalo.trim() === '' || !Number.isInteger(soCaloSo) || soCaloSo < 0 || soCaloSo > CALO_LON_NHAT) {
+    if (soCalo.trim() === '') {
+      loiMoi.soCalo = 'Nhập calo, hoặc bấm AI ước tính';
+    } else if (!Number.isInteger(soCaloSo) || soCaloSo < 0 || soCaloSo > CALO_LON_NHAT) {
       loiMoi.soCalo = `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT.toLocaleString('vi-VN')}`;
     }
     for (const soGam of [damSo, tinhBotSo, beoSo]) {
@@ -253,11 +311,14 @@ export default function SuaBuaAn() {
         text: 'Xóa',
         style: 'destructive',
         onPress: async () => {
+          setLoiServer('');
+          setDangXoa(true);
           try {
             await xoaBuaAn(buaAnId);
             router.back();
           } catch (loi) {
             setLoiServer((loi as Error).message);
+            setDangXoa(false);
           }
         },
       },
@@ -267,192 +328,211 @@ export default function SuaBuaAn() {
   // Đang tải món cũ, hoặc tải lỗi
   if (dangTai) {
     return (
-      <SafeAreaView style={styles.giuaManHinh}>
+      <Screen>
         {loiServer ? <ErrorBox message={loiServer} onRetry={taiDuLieu} /> : <ActivityIndicator color={colors.primary} />}
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.tieuDe}>{dangSua ? 'Sửa món' : `Thêm vào ${TEN_BUA[loaiBua].toLowerCase()}`}</Text>
-        <Text style={styles.moTa}>{formatDateLabel(ngay)}</Text>
+    <Screen>
+      <ScreenTitle
+        title={dangSua ? 'Sửa món' : `Thêm vào ${TEN_BUA[loaiBua].toLowerCase()}`}
+        subtitle={formatDateLabel(ngay)}
+        onBack={() => router.back()}
+      />
 
-        {loiServer ? <ErrorBox message={loiServer} /> : null}
+      {loiServer ? <ErrorBox message={loiServer} /> : null}
 
-        {/* Chọn bữa; trang chủ đã chọn sẵn, người dùng đổi được */}
-        <View style={styles.hangChip}>
-          {THU_TU_BUA.map((bua) => (
-            <Chip key={bua} label={TEN_BUA[bua]} isSelected={loaiBua === bua} onPress={() => setLoaiBua(bua)} />
-          ))}
-        </View>
+      {/* Chọn bữa; trang chủ đã chọn sẵn, người dùng đổi được */}
+      <View style={styles.hangChip}>
+        {THU_TU_BUA.map((bua) => (
+          <Chip key={bua} label={TEN_BUA[bua]} isSelected={loaiBua === bua} isDisabled={dangChay} onPress={() => setLoaiBua(bua)} />
+        ))}
+      </View>
 
-        {/* Bước 1. Chưa có món: chọn cách thêm hoặc bấm món hay ăn */}
-        {!daCoMon ? (
-          <ChonCachThem
-            monHayAn={monHayAn}
-            onChupAnh={chupAnh}
-            onQuetMaVach={() => setDangMoQuetMa(true)}
-            onTraMon={() => setDangMoTraMon(true)}
-            onGoTen={chonGoTen}
-            onChonMonHayAn={dienSan}
+      {/* Bước 1. Chưa có món: chọn cách thêm hoặc bấm món hay ăn */}
+      {!daCoMon ? (
+        <ChonCachThem
+          monHayAn={monHayAn}
+          onChupAnh={chupAnh}
+          onQuetMaVach={() => setDangMoQuetMa(true)}
+          onGoTen={chonGoTen}
+          onChonMonHayAn={dienSan}
+        />
+      ) : null}
+
+      {/* Bước 2. Đã có món: thẻ kết quả, các ô nhập khi bấm "Sửa số liệu", nút lưu */}
+      {daCoMon ? (
+        <View>
+          <TheKetQuaMon
+            tenMon={tenMon}
+            khauPhan={khauPhan}
+            soCalo={soCalo.trim() === '' ? null : soCaloSo}
+            dam={damSo}
+            tinhBot={tinhBotSo}
+            beo={beoSo}
+            nguonSoLieu={nguonSoLieu}
+            monNay={{ muoi_g: muoi, duong_g: duong, beo_no_g: beoNo }}
+            monCu={monCu}
+            nhatKy={nhatKy}
           />
-        ) : null}
 
-        {/* Bước 2. Đã có món: thẻ kết quả, các ô nhập khi bấm "Sửa số liệu", nút lưu */}
-        {daCoMon ? (
-          <View>
-            <TheKetQuaMon
-              tenMon={tenMon}
-              khauPhan={khauPhan}
-              soCalo={soCalo.trim() === '' ? null : soCaloSo}
-              dam={damSo}
-              tinhBot={tinhBotSo}
-              beo={beoSo}
-              nguonSoLieu={nguonSoLieu}
-              monNay={{ muoi_g: muoi, duong_g: duong, beo_no_g: beoNo }}
-              monCu={monCu}
-              nhatKy={nhatKy}
-            />
+          {!moO ? (
+            <Button title="Sửa số liệu" loadingTitle="" isLoading={false} isDisabled={dangChay} onPress={() => setMoO(true)} isSecondary />
+          ) : null}
 
-            {!moO ? (
-              <Button title="Sửa số liệu" loadingTitle="" isLoading={false} onPress={() => setMoO(true)} isSecondary />
-            ) : null}
+          {/* Các ô nhập: tên, khẩu phần, nguyên liệu, calo kèm nút AI cùng hàng, rồi đạm / tinh bột / béo */}
+          {moO ? (
+            <View>
+              <TextField
+                label="Tên món"
+                value={tenMon}
+                onChangeText={doiTenMon}
+                error={loiNhap.tenMon ?? ''}
+                placeholder="Ví dụ: Cơm sườn"
+                maxLength={TEN_MON_DAI_NHAT}
+                isDisabled={dangChay}
+              />
+              <TextField
+                label="Khẩu phần đã ăn"
+                value={khauPhan}
+                onChangeText={doiKhauPhan}
+                error={loiNhap.khauPhan ?? ''}
+                placeholder="Ví dụ: 2 chén, 1 tô nhỏ, 150 g"
+                maxLength={KHAU_PHAN_DAI_NHAT}
+                isDisabled={dangChay}
+              />
+              <TextField
+                label="Nguyên liệu, cách nấu (không bắt buộc)"
+                value={nguyenLieu}
+                onChangeText={doiNguyenLieu}
+                error=""
+                placeholder="Ví dụ: sườn nướng, thêm trứng ốp la, ít mỡ hành"
+                maxLength={NGUYEN_LIEU_DAI_NHAT}
+                isDisabled={dangChay}
+              />
 
-            {moO ? (
-              <View>
-                <TextField
-                  label="Tên món"
-                  value={tenMon}
-                  onChangeText={setTenMon}
-                  error={loiNhap.tenMon ?? ''}
-                  placeholder="Ví dụ: Cơm sườn"
-                  maxLength={TEN_MON_DAI_NHAT}
-                />
-                <TextField
-                  label="Khẩu phần đã ăn (không bắt buộc)"
-                  value={khauPhan}
-                  onChangeText={setKhauPhan}
-                  error={loiNhap.khauPhan ?? ''}
-                  placeholder="Ví dụ: 2 chén, 1 tô nhỏ, 150 g"
-                  maxLength={KHAU_PHAN_DAI_NHAT}
-                />
-                {/* Không biết calo: nhờ AI ước tính theo tên và khẩu phần */}
-                <View style={styles.khoiUocTinh}>
+              {/* Ô calo và nút AI cùng hàng: chưa biết calo thì bấm AI; đã nhập calo thì AI giữ đúng số đó */}
+              <View style={styles.hangCalo}>
+                <View style={styles.oCalo}>
+                  <TextField
+                    label="Calo (kcal)"
+                    value={soCalo}
+                    onChangeText={doiSoCalo}
+                    error={loiNhap.soCalo ?? ''}
+                    placeholder="Chưa biết thì bấm AI"
+                    isNumber
+                    isDisabled={dangChay}
+                  />
+                </View>
+                <View style={styles.nutAi}>
                   <Button
-                    title="Ước tính bằng AI"
-                    loadingTitle="AI đang ước tính…"
+                    title="AI ước tính"
+                    loadingTitle="Đang ước tính…"
                     isLoading={dangUocTinh}
+                    isDisabled={dangLuu || dangXoa}
                     onPress={uocTinhBangAi}
                     isSecondary
                   />
                 </View>
-                <TextField
-                  label="Calo của phần đã ăn (kcal)"
-                  value={soCalo}
-                  onChangeText={doiSoCalo}
-                  error={loiNhap.soCalo ?? ''}
-                  placeholder="Ví dụ: 450"
-                  isNumber
-                />
-                <View style={styles.hangBaO}>
-                  <View style={styles.motO}>
-                    <TextField label="Đạm (g)" value={dam} onChangeText={setDam} error="" isNumber />
-                  </View>
-                  <View style={styles.motO}>
-                    <TextField label="Tinh bột (g)" value={tinhBot} onChangeText={setTinhBot} error="" isNumber />
-                  </View>
-                  <View style={styles.motO}>
-                    <TextField label="Béo (g)" value={beo} onChangeText={setBeo} error="" isNumber />
-                  </View>
-                </View>
-                {loiNhap.chiTiet ? <Text style={styles.chuLoi}>{loiNhap.chiTiet}</Text> : null}
               </View>
-            ) : null}
 
-            <View style={styles.khoangNut}>
-              <Button
-                title={`Lưu vào ${TEN_BUA[loaiBua].toLowerCase()}`}
-                loadingTitle="Đang lưu…"
-                isLoading={dangLuu}
-                onPress={handleLuu}
-              />
+              <Text style={styles.chuPhu}>Đạm, tinh bột, béo không bắt buộc; điền nếu nhãn có ghi</Text>
+              <View style={styles.hangBaO}>
+                <View style={styles.motO}>
+                  <TextField label="Đạm (g)" value={dam} onChangeText={setDam} error="" isNumber isDisabled={dangChay} />
+                </View>
+                <View style={styles.motO}>
+                  <TextField label="Tinh bột (g)" value={tinhBot} onChangeText={setTinhBot} error="" isNumber isDisabled={dangChay} />
+                </View>
+                <View style={styles.motO}>
+                  <TextField label="Béo (g)" value={beo} onChangeText={setBeo} error="" isNumber isDisabled={dangChay} />
+                </View>
+              </View>
+              {loiNhap.chiTiet ? <Text style={styles.chuLoi}>{loiNhap.chiTiet}</Text> : null}
             </View>
+          ) : null}
 
-            {dangSua ? (
-              <Pressable style={styles.nutXoa} onPress={xacNhanXoa}>
-                <Text style={styles.chuXoa}>Xóa món</Text>
-              </Pressable>
-            ) : null}
+          <View style={styles.khoangNut}>
+            <Button
+              title={`Lưu vào ${TEN_BUA[loaiBua].toLowerCase()}`}
+              loadingTitle="Đang lưu…"
+              isLoading={dangLuu}
+              isDisabled={dangUocTinh || dangXoa}
+              onPress={handleLuu}
+            />
           </View>
-        ) : null}
-      </ScrollView>
 
-      {/* Màn nhận món từ ảnh, màn quét mã vạch và màn tra món; chọn xong thì điền vào thẻ kết quả */}
+          {dangSua ? (
+            <Pressable
+              style={({ pressed }) => [styles.nutXoa, dangChay ? styles.nutKhoa : null, pressed ? styles.nutDangBam : null]}
+              disabled={dangChay}
+              onPress={xacNhanXoa}
+            >
+              <Text style={styles.chuXoa}>{dangXoa ? 'Đang xóa…' : 'Xóa món'}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* Màn nhận món từ ảnh và màn quét mã vạch; chọn xong thì điền vào thẻ kết quả */}
       <ChupAnhNhanMon anh={anhVuaChup} onChon={dienSan} onDong={() => setAnhVuaChup(null)} />
       <QuetMaVach dangMo={dangMoQuetMa} onChon={dienSan} onDong={() => setDangMoQuetMa(false)} />
-      <TraMon dangMo={dangMoTraMon} onChon={dienSan} onDong={() => setDangMoTraMon(false)} />
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  giuaManHinh: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  tieuDe: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  moTa: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginBottom: 16,
-  },
   hangChip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    gap: spacing.small,
+    marginBottom: spacing.large,
   },
-  khoiUocTinh: {
-    marginBottom: 12,
+  hangCalo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.small,
+  },
+  oCalo: {
+    flex: 1,
+  },
+  nutAi: {
+    marginTop: spacing.xlarge,
+  },
+  chuPhu: {
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
+    marginBottom: spacing.small,
   },
   hangBaO: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.small,
   },
   motO: {
     flex: 1,
   },
   chuLoi: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.error,
   },
   khoangNut: {
-    marginTop: 16,
+    marginTop: spacing.large,
   },
   nutXoa: {
-    marginTop: 16,
+    marginTop: spacing.large,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.medium,
+  },
+  nutKhoa: {
+    opacity: 0.5,
+  },
+  nutDangBam: {
+    opacity: pressedOpacity,
   },
   chuXoa: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.error,
   },
 });

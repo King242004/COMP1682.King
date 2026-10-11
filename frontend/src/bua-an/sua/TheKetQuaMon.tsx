@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../../shared/theme';
+import { colors, fontSizes, radius, shadows, spacing } from '../../shared/theme';
 import type { NguonSoLieu, NhatKyNgay } from '../BuaAnApi';
 import { CanhBaoNenHanChe } from './CanhBaoNenHanChe';
 import type { SoNenHanChe } from './CanhBaoNenHanChe';
@@ -82,59 +82,60 @@ export function TheKetQuaMon({ tenMon, khauPhan, soCalo, dam, tinhBot, beo, nguo
 
 const styles = StyleSheet.create({
   the: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+    borderRadius: radius.card,
+    padding: spacing.large,
+    marginBottom: spacing.medium,
   },
   hangDau: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: spacing.medium,
   },
   cotTen: {
     flex: 1,
   },
   tenMon: {
-    fontSize: 18,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
   chuPhu: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
   },
   cotCalo: {
     alignItems: 'flex-end',
   },
   soCalo: {
-    fontSize: 28,
+    fontSize: fontSizes.bigNumber,
     fontWeight: '600',
     color: colors.primary,
   },
   chuNguon: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
-    marginTop: 6,
+    marginTop: spacing.small,
   },
   hangChat: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
+    gap: spacing.small,
+    marginTop: spacing.medium,
   },
   oChat: {
     flex: 1,
-    backgroundColor: colors.background,
-    borderRadius: 10,
-    padding: 8,
+    backgroundColor: colors.card,
+    borderRadius: radius.input,
+    padding: spacing.small,
     alignItems: 'center',
   },
   soChat: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     fontWeight: '600',
   },
   tenChat: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
 });

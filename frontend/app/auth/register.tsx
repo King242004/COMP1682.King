@@ -1,13 +1,14 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
 import { Button } from '../../src/shared/components/Button';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
+import { Screen } from '../../src/shared/components/Screen';
+import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { TextField } from '../../src/shared/components/TextField';
-import { colors } from '../../src/shared/theme';
+import { colors, fontSizes, spacing } from '../../src/shared/theme';
 
 // Mật khẩu ngắn nhất, giống luật ở backend (AuthService.ts)
 const MIN_PASSWORD_LENGTH = 8;
@@ -61,71 +62,52 @@ export default function RegisterScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Tạo tài khoản</Text>
-        <Text style={styles.subtitle}>Bắt đầu theo dõi bữa ăn của bạn</Text>
+    <Screen>
+      <ScreenTitle title="Tạo tài khoản" subtitle="Bắt đầu theo dõi bữa ăn của bạn" />
 
-        {serverError ? <ErrorBox message={serverError} /> : null}
+      {serverError ? <ErrorBox message={serverError} /> : null}
 
-        <TextField
-          label="Tên hiển thị"
-          value={displayName}
-          onChangeText={setDisplayName}
-          error={displayNameError}
-          placeholder="Hoàng King"
-        />
-        <TextField
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          error={emailError}
-          placeholder="ten@gmail.com"
-          isEmail
-        />
-        <TextField
-          label="Mật khẩu"
-          value={password}
-          onChangeText={setPassword}
-          error={passwordError}
-          placeholder={`Ít nhất ${MIN_PASSWORD_LENGTH} ký tự`}
-          isPassword
-        />
+      <TextField
+        label="Tên hiển thị"
+        value={displayName}
+        onChangeText={setDisplayName}
+        error={displayNameError}
+        placeholder="Hoàng King"
+        isDisabled={isSubmitting}
+      />
+      <TextField
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        error={emailError}
+        placeholder="ten@gmail.com"
+        isEmail
+        isDisabled={isSubmitting}
+      />
+      <TextField
+        label="Mật khẩu"
+        value={password}
+        onChangeText={setPassword}
+        error={passwordError}
+        placeholder={`Ít nhất ${MIN_PASSWORD_LENGTH} ký tự`}
+        isPassword
+        isDisabled={isSubmitting}
+      />
 
-        <Button title="Tạo tài khoản" loadingTitle="Đang tạo…" isLoading={isSubmitting} onPress={handleRegister} />
+      <Button title="Tạo tài khoản" loadingTitle="Đang tạo…" isLoading={isSubmitting} onPress={handleRegister} />
 
-        <Link href="/auth/login" style={styles.link}>
-          Đã có tài khoản? Đăng nhập
-        </Link>
-      </ScrollView>
-    </SafeAreaView>
+      <Link href="/auth/login" style={styles.link}>
+        Đã có tài khoản? Đăng nhập
+      </Link>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingTop: 48,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginBottom: 24,
-  },
   link: {
-    marginTop: 16,
+    marginTop: spacing.large,
     textAlign: 'center',
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.primary,
   },
 });

@@ -1,7 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../shared/theme';
-import type { MonThucDon } from './ThucDonApi';
+import { Card } from '../shared/components/Card';
+import { SectionTitle } from '../shared/components/SectionTitle';
+import { colors, fontSizes, spacing } from '../shared/theme';
+import type { MonThucDon } from '../thuc-don/ThucDonApi';
 
 // Danh sách đi chợ: nguyên liệu của từng món tự nấu, ghi theo món (không cộng dồn vì lượng ghi bằng chữ)
 export function DanhSachDiCho({ danhSachMon }: { danhSachMon: MonThucDon[] }) {
@@ -12,8 +14,8 @@ export function DanhSachDiCho({ danhSachMon }: { danhSachMon: MonThucDon[] }) {
   }
 
   return (
-    <View style={styles.khoi}>
-      <Text style={styles.tieuDe}>Đi chợ (món tự nấu)</Text>
+    <Card>
+      <SectionTitle title="Đi chợ (món tự nấu)" />
       {monCanMua.map((mon) => (
         <View key={mon.loai_bua + mon.ten_mon} style={styles.mon}>
           <Text style={styles.tenMon}>{mon.ten_mon}</Text>
@@ -24,30 +26,21 @@ export function DanhSachDiCho({ danhSachMon }: { danhSachMon: MonThucDon[] }) {
           ))}
         </View>
       ))}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  khoi: {
-    marginTop: 8,
-  },
-  tieuDe: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
   mon: {
-    marginBottom: 10,
+    marginBottom: spacing.medium,
   },
   tenMon: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
   },
   nguyenLieu: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     color: colors.text,
     lineHeight: 20,
   },

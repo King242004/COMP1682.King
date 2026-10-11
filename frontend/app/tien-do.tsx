@@ -1,17 +1,20 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { Button } from '../../src/shared/components/Button';
-import { ErrorBox } from '../../src/shared/components/ErrorBox';
-import { TextField } from '../../src/shared/components/TextField';
-import { todayKey } from '../../src/shared/dateKey';
-import { colors } from '../../src/shared/theme';
-import { BieuDoCanNang } from '../../src/tien-do/BieuDoCanNang';
-import { TheBonTuan } from '../../src/tien-do/TheBonTuan';
-import { ghiCanNang, layTienDo } from '../../src/tien-do/TienDoApi';
-import type { TienDo } from '../../src/tien-do/TienDoApi';
+import { Button } from '../src/shared/components/Button';
+import { Card } from '../src/shared/components/Card';
+import { ErrorBox } from '../src/shared/components/ErrorBox';
+import { Screen } from '../src/shared/components/Screen';
+import { ScreenTitle } from '../src/shared/components/ScreenTitle';
+import { SectionTitle } from '../src/shared/components/SectionTitle';
+import { TextField } from '../src/shared/components/TextField';
+import { todayKey } from '../src/shared/dateKey';
+import { colors, fontSizes, spacing } from '../src/shared/theme';
+import { BieuDoCanNang } from '../src/tien-do/BieuDoCanNang';
+import { TheBonTuan } from '../src/tien-do/TheBonTuan';
+import { ghiCanNang, layTienDo } from '../src/tien-do/TienDoApi';
+import type { TienDo } from '../src/tien-do/TienDoApi';
 
 // Giới hạn cân nặng (giống backend) và số ngày của biểu đồ (giống backend)
 const CAN_NANG_NHO_NHAT = 30;
@@ -66,11 +69,11 @@ export default function ManTienDo() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.tieuDe}>Tiến độ</Text>
+    <Screen>
+      <ScreenTitle title="Tiến độ" onBack={() => router.back()} />
 
-        {/* Ghi cân hôm nay */}
+      {/* Ghi cân hôm nay */}
+      <Card>
         <View style={styles.hangGhiCan}>
           <View style={styles.oCan}>
             <TextField
@@ -80,20 +83,23 @@ export default function ManTienDo() {
               error={loiCanNang}
               placeholder={tienDo && tienDo.can_nang_xu_huong !== null ? String(tienDo.can_nang_xu_huong) : 'Ví dụ: 55'}
               isNumber
+              isDisabled={dangGhi}
             />
           </View>
           <View style={styles.nutGhi}>
             <Button title="Ghi" loadingTitle="…" isLoading={dangGhi} onPress={handleGhi} />
           </View>
         </View>
+      </Card>
 
-        {loi ? <ErrorBox message={loi} onRetry={taiTienDo} /> : null}
-        {!tienDo && !loi ? <ActivityIndicator color={colors.primary} /> : null}
+      {loi ? <ErrorBox message={loi} onRetry={taiTienDo} /> : null}
+      {!tienDo && !loi ? <ActivityIndicator color={colors.primary} /> : null}
 
-        {tienDo ? (
-          <>
-            {/* Cân nặng theo đường xu hướng và biểu đồ 30 ngày */}
-            <Text style={styles.nhanNhom}>Cân nặng</Text>
+      {tienDo ? (
+        <>
+          {/* Cân nặng theo đường xu hướng và biểu đồ 30 ngày */}
+          <Card>
+            <SectionTitle title="Cân nặng" />
             {tienDo.can_nang_xu_huong !== null ? (
               <Text style={styles.soCan}>
                 {tienDo.can_nang_xu_huong.toLocaleString('vi-VN')} <Text style={styles.chuPhu}>kg (xu hướng 7 ngày)</Text>
@@ -103,67 +109,42 @@ export default function ManTienDo() {
             {tienDo.can_nang.length > 0 ? (
               <Text style={styles.chuThich}>Chấm xám: cân từng ngày · Đường xanh: trung bình 7 ngày</Text>
             ) : null}
+          </Card>
 
-            {/* Thẻ 4 tuần qua */}
-            <View style={styles.khoiBonTuan}>
-              <TheBonTuan tienDo={tienDo} onHoiCoach={moHoiCoach} />
-            </View>
-          </>
-        ) : null}
-      </ScrollView>
-    </SafeAreaView>
+          {/* Thẻ 4 tuần qua */}
+          <TheBonTuan tienDo={tienDo} onHoiCoach={moHoiCoach} />
+        </>
+      ) : null}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  tieuDe: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-  },
   hangGhiCan: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: spacing.small,
   },
   oCan: {
     flex: 1,
   },
   nutGhi: {
     width: 88,
-    marginTop: 24,
-  },
-  nhanNhom: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 8,
+    marginTop: spacing.xlarge,
   },
   soCan: {
-    fontSize: 26,
+    fontSize: fontSizes.bigNumber,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
   },
   chuPhu: {
-    fontSize: 14,
+    fontSize: fontSizes.secondary,
     fontWeight: '400',
     color: colors.textSecondary,
   },
   chuThich: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textSecondary,
-  },
-  khoiBonTuan: {
-    marginTop: 20,
   },
 });

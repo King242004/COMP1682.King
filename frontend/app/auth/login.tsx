@@ -1,13 +1,14 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
 import { Button } from '../../src/shared/components/Button';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
+import { Screen } from '../../src/shared/components/Screen';
+import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { TextField } from '../../src/shared/components/TextField';
-import { colors } from '../../src/shared/theme';
+import { colors, fontSizes, spacing } from '../../src/shared/theme';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -51,63 +52,43 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Đăng nhập</Text>
-        <Text style={styles.subtitle}>Theo dõi bữa ăn mỗi ngày</Text>
+    <Screen>
+      <ScreenTitle title="Đăng nhập" subtitle="Theo dõi bữa ăn mỗi ngày" />
 
-        {serverError ? <ErrorBox message={serverError} /> : null}
+      {serverError ? <ErrorBox message={serverError} /> : null}
 
-        <TextField
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          error={emailError}
-          placeholder="ten@gmail.com"
-          isEmail
-        />
-        <TextField
-          label="Mật khẩu"
-          value={password}
-          onChangeText={setPassword}
-          error={passwordError}
-          isPassword
-        />
+      <TextField
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        error={emailError}
+        placeholder="ten@gmail.com"
+        isEmail
+        isDisabled={isSubmitting}
+      />
+      <TextField
+        label="Mật khẩu"
+        value={password}
+        onChangeText={setPassword}
+        error={passwordError}
+        isPassword
+        isDisabled={isSubmitting}
+      />
 
-        <Button title="Đăng nhập" loadingTitle="Đang đăng nhập…" isLoading={isSubmitting} onPress={handleLogin} />
+      <Button title="Đăng nhập" loadingTitle="Đang đăng nhập…" isLoading={isSubmitting} onPress={handleLogin} />
 
-        <Link href="/auth/register" style={styles.link}>
-          Tạo tài khoản mới
-        </Link>
-      </ScrollView>
-    </SafeAreaView>
+      <Link href="/auth/register" style={styles.link}>
+        Tạo tài khoản mới
+      </Link>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingTop: 48,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginBottom: 24,
-  },
   link: {
-    marginTop: 16,
+    marginTop: spacing.large,
     textAlign: 'center',
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.primary,
   },
 });

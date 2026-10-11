@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../../shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../shared/theme';
 
 // Chỉ cho chọn năm sinh của người từ 18 tuổi (giống luật ở backend)
 const TUOI_TOI_THIEU = 18;
@@ -12,10 +12,12 @@ type ChonNamSinhProps = {
   namSinh: number | null;
   onChon: (namSinh: number) => void;
   loi: string;
+  // Khóa ô khi màn đang lưu
+  isDisabled?: boolean;
 };
 
 // Ô bấm vào thì mở danh sách năm sinh để chọn
-export function ChonNamSinh({ namSinh, onChon, loi }: ChonNamSinhProps) {
+export function ChonNamSinh({ namSinh, onChon, loi, isDisabled }: ChonNamSinhProps) {
   const [dangMo, setDangMo] = useState(false);
 
   // Danh sách năm, mới nhất (vừa đủ 18 tuổi) ở đầu
@@ -28,7 +30,11 @@ export function ChonNamSinh({ namSinh, onChon, loi }: ChonNamSinhProps) {
   return (
     <View style={styles.wrapper}>
       <Text style={styles.nhan}>Năm sinh</Text>
-      <Pressable style={[styles.o, loi ? styles.oLoi : null]} onPress={() => setDangMo(true)}>
+      <Pressable
+        style={({ pressed }) => [styles.o, loi ? styles.oLoi : null, isDisabled ? styles.oKhoa : null, pressed ? styles.dangBam : null]}
+        disabled={isDisabled}
+        onPress={() => setDangMo(true)}
+      >
         <Text style={namSinh ? styles.giaTri : styles.goiY}>{namSinh ? String(namSinh) : 'Chọn năm sinh'}</Text>
       </Pressable>
       {loi ? <Text style={styles.chuLoi}>{loi}</Text> : null}
@@ -41,7 +47,7 @@ export function ChonNamSinh({ namSinh, onChon, loi }: ChonNamSinhProps) {
               keyExtractor={(nam) => String(nam)}
               renderItem={({ item: nam }) => (
                 <Pressable
-                  style={styles.dongNam}
+                  style={({ pressed }) => [styles.dongNam, pressed ? styles.dangBam : null]}
                   onPress={() => {
                     onChon(nam);
                     setDangMo(false);
@@ -51,7 +57,7 @@ export function ChonNamSinh({ namSinh, onChon, loi }: ChonNamSinhProps) {
                 </Pressable>
               )}
             />
-            <Pressable style={styles.nutDong} onPress={() => setDangMo(false)}>
+            <Pressable style={({ pressed }) => [styles.nutDong, pressed ? styles.dangBam : null]} onPress={() => setDangMo(false)}>
               <Text style={styles.chuNutDong}>Đóng</Text>
             </Pressable>
           </View>
@@ -63,34 +69,37 @@ export function ChonNamSinh({ namSinh, onChon, loi }: ChonNamSinhProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 12,
+    marginBottom: spacing.medium,
   },
   nhan: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginBottom: 4,
   },
   o: {
     height: 48,
-    borderRadius: 10,
+    borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.medium,
     justifyContent: 'center',
+  },
+  oKhoa: {
+    opacity: 0.5,
   },
   oLoi: {
     borderColor: colors.error,
   },
   giaTri: {
-    fontSize: 16,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   goiY: {
-    fontSize: 16,
+    fontSize: fontSizes.body,
     color: colors.textSecondary,
   },
   chuLoi: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.error,
     marginTop: 4,
   },
@@ -101,10 +110,10 @@ const styles = StyleSheet.create({
   },
   bangChon: {
     maxHeight: '60%',
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingTop: 8,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.card,
+    borderTopRightRadius: radius.card,
+    paddingTop: spacing.small,
   },
   dongNam: {
     height: 48,
@@ -112,7 +121,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chuNam: {
-    fontSize: 17,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   chuNamDangChon: {
@@ -127,7 +136,10 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   chuNutDong: {
-    fontSize: 16,
+    fontSize: fontSizes.body,
     color: colors.primary,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

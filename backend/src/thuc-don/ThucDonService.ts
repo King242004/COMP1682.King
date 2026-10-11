@@ -5,7 +5,7 @@ import { askGeminiForJson } from '../shared/geminiClient.ts';
 import { LUAT_HEALTHY } from '../tu-van/TaoLoiNhac.ts';
 import { docThucDon } from './DocThucDon.ts';
 import type { MonThucDon } from './DocThucDon.ts';
-import { layThucDon, luuThucDon } from './ThucDonQueries.ts';
+import { layThucDon, layThucDonCacNgayTruoc, luuThucDon } from './ThucDonQueries.ts';
 
 // Giới hạn chữ của món, giống CHECK trong 005_bua_an.sql, để bấm "Đã ăn" lưu được
 const TEN_MON_DAI_NHAT = 100;
@@ -13,6 +13,9 @@ const KHAU_PHAN_DAI_NHAT = 100;
 
 // Thực đơn là câu trả lời dài (4 món kèm nguyên liệu, cách nấu) nên chờ AI tối đa 30 giây; các tính năng AI khác chờ 15 giây
 const THOI_GIAN_CHO_AI_MS = 30000;
+
+// Dặn AI tránh lặp món đã gợi ý trong 6 ngày trước (cùng hôm nay là 1 tuần); là lựa chọn thiết kế
+const SO_NGAY_TRANH_LAP = 6;
 
 // Ngày phải có dạng 2026-10-09 (ngày trên điện thoại người dùng)
 const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -89,6 +92,7 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
   }
   const hoSo = await layHoSo(nguoiDungId);
   const thucDonCu = await layThucDon(nguoiDungId, ngay);
+  const thucDonCacNgayTruoc = await layThucDonCacNgayTruoc(nguoiDungId, ngay, SO_NGAY_TRANH_LAP);
 
   // Bước 3. Ghép lời nhắc: mục tiêu, cấu trúc bữa, món Việt bình dân, healthy, cách ghi số liệu
   const dong = [
@@ -107,6 +111,19 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
   if (thucDonCu !== null) {
     const tenMonCu = thucDonCu.map((mon) => mon.ten_mon);
     dong.push(`Đổi khác các món của thực đơn trước: ${tenMonCu.join(', ')}.`);
+  }
+
+  // Gom tên các món đã gợi ý mấy ngày trước (bỏ tên trùng) để AI tránh lặp trong tuần
+  const tenMonDaGoiY: string[] = [];
+  for (const thucDonMotNgay of thucDonCacNgayTruoc) {
+    for (const mon of thucDonMotNgay) {
+      if (!tenMonDaGoiY.includes(mon.ten_mon)) {
+        tenMonDaGoiY.push(mon.ten_mon);
+      }
+    }
+  }
+  if (tenMonDaGoiY.length > 0) {
+    dong.push(`Tránh lặp các món đã gợi ý trong ${SO_NGAY_TRANH_LAP} ngày qua: ${tenMonDaGoiY.join(', ')}.`);
   }
 
   // Bước 4. Hỏi AI một lần (không gửi ảnh, chờ lâu hơn mặc định) rồi kiểm; không còn món nào dùng được thì báo để thử lại

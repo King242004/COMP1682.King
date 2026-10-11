@@ -4,6 +4,7 @@ import { callApi } from '../shared/apiClient';
 export type MonTraCuu = {
   ma_so: string;
   ten_mon: string;
+  ten_khong_dau: string;
   so_calo: number;
   dam_g: number;
   tinh_bot_g: number;
@@ -12,8 +13,8 @@ export type MonTraCuu = {
   anh_url: string;
 };
 
-// Tìm món theo từ khóa, có dấu hay không dấu đều được, ví dụ "pho bo"
-export async function timMon(tuKhoa: string): Promise<MonTraCuu[]> {
-  const ketQua = await callApi('GET', `/tra-mon?tu-khoa=${encodeURIComponent(tuKhoa)}`);
+// Lấy tất cả món Viện Dinh dưỡng đã cân
+export async function layTatCaMon(): Promise<MonTraCuu[]> {
+  const ketQua = await callApi('GET', '/tra-mon');
   return ketQua as MonTraCuu[];
 }

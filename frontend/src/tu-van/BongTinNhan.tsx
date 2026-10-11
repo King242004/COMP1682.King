@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../shared/theme';
+import { colors, fontSizes, radius, spacing } from '../shared/theme';
 import type { VaiTro } from './TuVanApi';
 
 type BongTinNhanProps = {
@@ -23,7 +23,7 @@ export function BongTinNhan({ vaiTro, noiDung }: BongTinNhanProps) {
 const styles = StyleSheet.create({
   hang: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: spacing.small,
   },
   hangPhai: {
     justifyContent: 'flex-end',
@@ -33,21 +33,23 @@ const styles = StyleSheet.create({
   },
   bong: {
     maxWidth: '85%',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: spacing.small,
+    paddingHorizontal: spacing.medium,
   },
   bongNguoiDung: {
     backgroundColor: colors.primary,
-    borderRadius: 18,
+    borderRadius: radius.card,
     borderBottomRightRadius: 4,
   },
   bongCoach: {
-    backgroundColor: colors.card,
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.card,
     borderBottomLeftRadius: 4,
   },
   chu: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     lineHeight: 22,
     color: colors.text,
   },

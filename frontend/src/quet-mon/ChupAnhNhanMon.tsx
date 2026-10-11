@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Button } from '../shared/components/Button';
 import { Chip } from '../shared/components/Chip';
 import { ErrorBox } from '../shared/components/ErrorBox';
+import { Screen } from '../shared/components/Screen';
+import { ScreenTitle } from '../shared/components/ScreenTitle';
 import { TextField } from '../shared/components/TextField';
-import { colors } from '../shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { MonDaChon } from './MonDaChon';
 import { nhanMonTuAnh } from './QuetMonApi';
 import type { KetQuaNhanMon } from './QuetMonApi';
@@ -111,9 +113,10 @@ export function ChupAnhNhanMon({ anh, onChon, onDong }: ChupAnhNhanMonProps) {
 
   return (
     <Modal visible={anh !== null} animationType="slide" onRequestClose={dong}>
-      <SafeAreaView style={styles.screen}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.tieuDe}>Nhận món từ ảnh</Text>
+      {/* Màn nổi cần lề an toàn riêng, nếu không nội dung sẽ đè lên giờ và pin */}
+      <SafeAreaProvider>
+        <Screen>
+          <ScreenTitle title="Nhận món từ ảnh" onBack={dong} />
           {anh ? <Image source={{ uri: anh.uri }} style={styles.anh} /> : null}
 
           {loi ? <ErrorBox message={loi} /> : null}
@@ -128,6 +131,7 @@ export function ChupAnhNhanMon({ anh, onChon, onDong }: ChupAnhNhanMonProps) {
                 error=""
                 placeholder="Ví dụ: tô lớn, ăn ở quán"
                 maxLength={GHI_CHU_DAI_NHAT}
+                isDisabled={dangGui}
               />
               <Button title="Nhận món" loadingTitle="AI đang xem ảnh…" isLoading={dangGui} onPress={guiChoAi} />
             </View>
@@ -145,7 +149,7 @@ export function ChupAnhNhanMon({ anh, onChon, onDong }: ChupAnhNhanMonProps) {
               {ketQua.kha_nang.map((khaNang, viTri) => (
                 <Pressable
                   key={`${khaNang.ten_mon}-${viTri}`}
-                  style={[styles.theKhaNang, viTri === viTriDangChon ? styles.theDangChon : null]}
+                  style={({ pressed }) => [styles.theKhaNang, viTri === viTriDangChon ? styles.theDangChon : null, pressed ? styles.dangBam : null]}
                   onPress={() => setViTriDangChon(viTri)}
                 >
                   <View style={styles.cotTen}>
@@ -174,54 +178,37 @@ export function ChupAnhNhanMon({ anh, onChon, onDong }: ChupAnhNhanMonProps) {
               </View>
             </View>
           ) : null}
-
-          <Pressable style={styles.nutDong} onPress={dong}>
-            <Text style={styles.chuNutDong}>Đóng</Text>
-          </Pressable>
-        </ScrollView>
-      </SafeAreaView>
+        </Screen>
+      </SafeAreaProvider>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  tieuDe: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-  },
   anh: {
     width: '100%',
     height: 220,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: radius.card,
+    marginBottom: spacing.large,
     backgroundColor: colors.card,
   },
   nhanNhom: {
-    fontSize: 15,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: spacing.small,
+    marginBottom: spacing.small,
   },
   theKhaNang: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
+    gap: spacing.medium,
+    padding: spacing.medium,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
-    marginBottom: 8,
+    borderRadius: radius.input,
+    marginBottom: spacing.small,
   },
   theDangChon: {
     borderWidth: 2,
@@ -231,33 +218,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tenMon: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   soCalo: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   hangChip: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.small,
+    marginBottom: spacing.small,
   },
   chuPhu: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginTop: 2,
   },
   khoangNut: {
-    marginTop: 16,
+    marginTop: spacing.large,
   },
-  nutDong: {
-    marginTop: 16,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  chuNutDong: {
-    fontSize: 15,
-    color: colors.primary,
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

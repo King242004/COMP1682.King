@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
 import { ChonNamSinh } from '../../src/ho-so/sua/ChonNamSinh';
@@ -10,8 +9,11 @@ import type { GioiTinh, LuaChonHoSo, MucTieu, MucVanDong } from '../../src/ho-so
 import { Button } from '../../src/shared/components/Button';
 import { Chip } from '../../src/shared/components/Chip';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
+import { Screen } from '../../src/shared/components/Screen';
+import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
+import { SectionTitle } from '../../src/shared/components/SectionTitle';
 import { TextField } from '../../src/shared/components/TextField';
-import { colors } from '../../src/shared/theme';
+import { colors, fontSizes, spacing } from '../../src/shared/theme';
 
 // Giới hạn chiều cao, cân nặng: giống ràng buộc CHECK trong 004_ho_so.sql
 const CHIEU_CAO_NHO_NHAT = 100;
@@ -181,146 +183,117 @@ export default function SuaHoSo() {
   // Đang tải, hoặc tải lỗi
   if (luaChon === null) {
     return (
-      <SafeAreaView style={styles.giuaManHinh}>
+      <Screen>
         {loiTai ? <ErrorBox message={loiTai} onRetry={taiDuLieu} /> : <ActivityIndicator color={colors.primary} />}
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.tieuDe}>{laLanDau ? 'Thiết lập hồ sơ' : 'Sửa hồ sơ'}</Text>
-        <Text style={styles.moTa}>Dùng để tính mục tiêu calo mỗi ngày của bạn</Text>
+    <Screen>
+      {/* Lần đầu thiết lập thì chưa có màn nào để quay lại */}
+      <ScreenTitle
+        title={laLanDau ? 'Thiết lập hồ sơ' : 'Sửa hồ sơ'}
+        subtitle="Dùng để tính mục tiêu calo mỗi ngày của bạn"
+        onBack={laLanDau ? undefined : () => router.back()}
+      />
 
-        {loiServer ? <ErrorBox message={loiServer} /> : null}
+      {loiServer ? <ErrorBox message={loiServer} /> : null}
 
-        {/* Cơ thể */}
-        <Text style={styles.nhanNhom}>Giới tính</Text>
-        <View style={styles.hangChip}>
-          <Chip label="Nam" isSelected={gioiTinh === 'nam'} onPress={() => setGioiTinh('nam')} />
-          <Chip label="Nữ" isSelected={gioiTinh === 'nu'} onPress={() => setGioiTinh('nu')} />
-        </View>
-        {loiNhap.gioiTinh ? <Text style={styles.chuLoi}>{loiNhap.gioiTinh}</Text> : null}
+      {/* Cơ thể */}
+      <SectionTitle title="Giới tính" />
+      <View style={styles.hangChip}>
+        <Chip label="Nam" isSelected={gioiTinh === 'nam'} isDisabled={dangLuu} onPress={() => setGioiTinh('nam')} />
+        <Chip label="Nữ" isSelected={gioiTinh === 'nu'} isDisabled={dangLuu} onPress={() => setGioiTinh('nu')} />
+      </View>
+      {loiNhap.gioiTinh ? <Text style={styles.chuLoi}>{loiNhap.gioiTinh}</Text> : null}
 
-        <ChonNamSinh namSinh={namSinh} onChon={setNamSinh} loi={loiNhap.namSinh ?? ''} />
-        <TextField label="Chiều cao (cm)" value={chieuCao} onChangeText={setChieuCao} error={loiNhap.chieuCao ?? ''} placeholder="165" isNumber />
-        <TextField label="Cân nặng (kg)" value={canNang} onChangeText={setCanNang} error={loiNhap.canNang ?? ''} placeholder="55" isNumber />
+      <ChonNamSinh namSinh={namSinh} onChon={setNamSinh} loi={loiNhap.namSinh ?? ''} isDisabled={dangLuu} />
+      <TextField label="Chiều cao (cm)" value={chieuCao} onChangeText={setChieuCao} error={loiNhap.chieuCao ?? ''} placeholder="165" isNumber isDisabled={dangLuu} />
+      <TextField label="Cân nặng (kg)" value={canNang} onChangeText={setCanNang} error={loiNhap.canNang ?? ''} placeholder="55" isNumber isDisabled={dangLuu} />
 
-        {/* Vận động: một câu, ba mức; từ tuổi không còn mức nặng thì "Nặng" bị làm mờ kèm một dòng lý do */}
-        <Text style={styles.nhanNhom}>Một ngày bình thường của bạn</Text>
-        {LUA_CHON_MUC_VAN_DONG.map((luaChonMuc) => (
-          <View key={luaChonMuc.giaTri} style={styles.dongMucVanDong}>
-            <Chip
-              label={luaChonMuc.ten}
-              isSelected={mucVanDong === luaChonMuc.giaTri}
-              isDisabled={luaChonMuc.giaTri === 'nang' && !choPhepNang}
-              onPress={() => setMucVanDong(luaChonMuc.giaTri)}
-            />
-            <Text style={styles.chuPhu}>{luaChonMuc.moTa}</Text>
-          </View>
-        ))}
-        {!choPhepNang ? (
-          <Text style={styles.chuPhu}>Từ {luaChon.tuoi_khong_co_muc_nang} tuổi chỉ chọn Nhẹ hoặc Trung bình</Text>
-        ) : null}
-        {loiNhap.mucVanDong ? <Text style={styles.chuLoi}>{loiNhap.mucVanDong}</Text> : null}
-
-        {/* Mục tiêu: lựa chọn không hợp với BMI thì làm mờ kèm một dòng lý do */}
-        <Text style={styles.nhanNhom}>Mục tiêu</Text>
-        <View style={styles.hangChip}>
-          <Chip label="Giảm cân" isSelected={mucTieu === 'giam'} isDisabled={!choPhepGiam} onPress={() => setMucTieu('giam')} />
-          <Chip label="Giữ cân" isSelected={mucTieu === 'giu'} onPress={() => setMucTieu('giu')} />
-          <Chip label="Tăng cân" isSelected={mucTieu === 'tang'} isDisabled={!choPhepTang} onPress={() => setMucTieu('tang')} />
-        </View>
-        {!choPhepGiam ? (
-          <Text style={styles.chuPhu}>Giảm cân dành cho BMI từ {nguongGiamCan.toLocaleString('vi-VN')} trở lên</Text>
-        ) : null}
-        {!choPhepTang ? (
-          <Text style={styles.chuPhu}>Tăng cân dành cho BMI dưới {luaChon.bmi_ly_tuong.toLocaleString('vi-VN')}</Text>
-        ) : null}
-
-        {/* Dị ứng hoặc kiêng ăn: không bắt buộc, chỉ coach dùng */}
-        <View style={styles.khoiDiUng}>
-          <TextField
-            label="Dị ứng hoặc kiêng ăn (không bắt buộc)"
-            value={diUngKiengAn}
-            onChangeText={setDiUngKiengAn}
-            error=""
-            placeholder="Ví dụ: tôm, cua, đậu phộng, ăn chay"
-            maxLength={DI_UNG_KIENG_AN_DAI_NHAT}
+      {/* Vận động: một câu, ba mức; từ tuổi không còn mức nặng thì "Nặng" bị làm mờ kèm một dòng lý do */}
+      <SectionTitle title="Một ngày bình thường của bạn" />
+      {LUA_CHON_MUC_VAN_DONG.map((luaChonMuc) => (
+        <View key={luaChonMuc.giaTri} style={styles.dongMucVanDong}>
+          <Chip
+            label={luaChonMuc.ten}
+            isSelected={mucVanDong === luaChonMuc.giaTri}
+            isDisabled={(luaChonMuc.giaTri === 'nang' && !choPhepNang) || dangLuu}
+            onPress={() => setMucVanDong(luaChonMuc.giaTri)}
           />
-          <Text style={styles.chuPhuDiUng}>Coach sẽ tránh gợi ý món có những thứ này</Text>
+          <Text style={styles.chuPhu}>{luaChonMuc.moTa}</Text>
         </View>
+      ))}
+      {!choPhepNang ? (
+        <Text style={styles.chuPhu}>Từ {luaChon.tuoi_khong_co_muc_nang} tuổi chỉ chọn Nhẹ hoặc Trung bình</Text>
+      ) : null}
+      {loiNhap.mucVanDong ? <Text style={styles.chuLoi}>{loiNhap.mucVanDong}</Text> : null}
 
-        <View style={styles.khoangNut}>
-          <Button title="Lưu hồ sơ" loadingTitle="Đang lưu…" isLoading={dangLuu} onPress={handleLuu} />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      {/* Mục tiêu: lựa chọn không hợp với BMI thì làm mờ kèm một dòng lý do */}
+      <SectionTitle title="Mục tiêu" />
+      <View style={styles.hangChip}>
+        <Chip label="Giảm cân" isSelected={mucTieu === 'giam'} isDisabled={!choPhepGiam || dangLuu} onPress={() => setMucTieu('giam')} />
+        <Chip label="Giữ cân" isSelected={mucTieu === 'giu'} isDisabled={dangLuu} onPress={() => setMucTieu('giu')} />
+        <Chip label="Tăng cân" isSelected={mucTieu === 'tang'} isDisabled={!choPhepTang || dangLuu} onPress={() => setMucTieu('tang')} />
+      </View>
+      {!choPhepGiam ? (
+        <Text style={styles.chuPhu}>Giảm cân dành cho BMI từ {nguongGiamCan.toLocaleString('vi-VN')} trở lên</Text>
+      ) : null}
+      {!choPhepTang ? (
+        <Text style={styles.chuPhu}>Tăng cân dành cho BMI dưới {luaChon.bmi_ly_tuong.toLocaleString('vi-VN')}</Text>
+      ) : null}
+
+      {/* Dị ứng hoặc kiêng ăn: không bắt buộc, chỉ coach dùng */}
+      <View style={styles.khoiDiUng}>
+        <TextField
+          label="Dị ứng hoặc kiêng ăn (không bắt buộc)"
+          value={diUngKiengAn}
+          onChangeText={setDiUngKiengAn}
+          error=""
+          placeholder="Ví dụ: tôm, cua, đậu phộng, ăn chay"
+          maxLength={DI_UNG_KIENG_AN_DAI_NHAT}
+          isDisabled={dangLuu}
+        />
+        <Text style={styles.chuPhuDiUng}>Coach sẽ tránh gợi ý món có những thứ này</Text>
+      </View>
+
+      <View style={styles.khoangNut}>
+        <Button title="Lưu hồ sơ" loadingTitle="Đang lưu…" isLoading={dangLuu} onPress={handleLuu} />
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  giuaManHinh: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  tieuDe: {
-    fontSize: 26,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  moTa: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginBottom: 20,
-  },
-  nhanNhom: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
   hangChip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.small,
     marginBottom: 4,
   },
   dongMucVanDong: {
-    marginBottom: 10,
+    marginBottom: spacing.small,
     gap: 4,
   },
   chuPhu: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginTop: 4,
   },
   chuLoi: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.error,
     marginTop: 4,
   },
   khoangNut: {
-    marginTop: 28,
+    marginTop: spacing.xlarge,
   },
   khoiDiUng: {
-    marginTop: 16,
+    marginTop: spacing.large,
   },
   chuPhuDiUng: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginTop: -6,
   },

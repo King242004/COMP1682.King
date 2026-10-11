@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors } from '../theme';
+import { colors, fontSizes, pressedOpacity, radius, shadows, spacing } from '../theme';
 
 type ChipProps = {
   label: string;
@@ -9,13 +9,18 @@ type ChipProps = {
   onPress: () => void;
 };
 
-// Nút lựa chọn nhỏ: đang chọn thì nền xanh nhạt, bị làm mờ thì không bấm được
+// Nút lựa chọn nhỏ: đang chọn thì nền xanh đặc chữ trắng, bị làm mờ thì không bấm được
 export function Chip({ label, isSelected, isDisabled, onPress }: ChipProps) {
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={[styles.chip, isSelected ? styles.chipSelected : null, isDisabled ? styles.chipDisabled : null]}
+      style={({ pressed }) => [
+        styles.chip,
+        isSelected ? styles.chipSelected : null,
+        isDisabled ? styles.chipDisabled : null,
+        pressed ? styles.chipPressed : null,
+      ]}
     >
       <Text style={[styles.label, isSelected ? styles.labelSelected : null]}>{label}</Text>
     </Pressable>
@@ -25,27 +30,28 @@ export function Chip({ label, isSelected, isDisabled, onPress }: ChipProps) {
 const styles = StyleSheet.create({
   chip: {
     minHeight: 44,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
+    paddingHorizontal: spacing.medium,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.card,
   },
   chipSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primary,
   },
   chipDisabled: {
     opacity: 0.4,
   },
+  chipPressed: {
+    opacity: pressedOpacity,
+  },
   label: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   labelSelected: {
-    color: colors.textOnPrimaryLight,
+    color: colors.textOnPrimary,
     fontWeight: '600',
   },
 });

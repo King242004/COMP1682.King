@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../shared/theme';
+import { colors, fontSizes, radius, shadows, spacing } from '../shared/theme';
 import type { NhatKyNgay } from '../bua-an/BuaAnApi';
 
 type OHanCheProps = {
@@ -66,41 +66,40 @@ export function NhomNenHanChe({ nhatKy }: { nhatKy: NhatKyNgay }) {
 
 const styles = StyleSheet.create({
   nhom: {
-    marginBottom: 8,
+    marginBottom: spacing.small,
   },
   hangTieuDe: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginBottom: 8,
+    marginBottom: spacing.small,
   },
   tieuDe: {
-    fontSize: 16,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
   hangO: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.small,
   },
   o: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    padding: 10,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+    borderRadius: radius.input,
+    padding: spacing.small,
     gap: 4,
   },
   oVuot: {
-    borderColor: colors.warningBackground,
     backgroundColor: colors.warningBackground,
   },
   ten: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
   },
   chuChinh: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
   },
@@ -111,7 +110,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   thanhNenVuot: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
   thanhDay: {
     height: '100%',
@@ -121,7 +120,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warning,
   },
   chuNho: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
   chuVuot: {

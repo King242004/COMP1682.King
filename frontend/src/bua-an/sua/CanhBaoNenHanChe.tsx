@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../../shared/theme';
+import { colors, fontSizes, radius, spacing } from '../../shared/theme';
 import type { NhatKyNgay } from '../BuaAnApi';
 
 // Muối, đường, béo no của một món (gam); null là chưa có số
@@ -101,27 +101,27 @@ export function CanhBaoNenHanChe({ monNay, monCu, nhatKy }: CanhBaoNenHanCheProp
 
 const styles = StyleSheet.create({
   khoi: {
-    marginTop: 8,
+    marginTop: spacing.small,
   },
   hangO: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.small,
   },
   o: {
     flex: 1,
-    borderRadius: 10,
-    padding: 8,
-    backgroundColor: colors.background,
+    borderRadius: radius.input,
+    padding: spacing.small,
+    backgroundColor: colors.card,
   },
   oVuot: {
     backgroundColor: colors.warningBackground,
   },
   ten: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
   so: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
   },
@@ -129,8 +129,8 @@ const styles = StyleSheet.create({
     color: colors.warningText,
   },
   dongCanhBao: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.warningText,
-    marginTop: 8,
+    marginTop: spacing.small,
   },
 });

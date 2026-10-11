@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
+import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { todayKey } from '../../src/shared/dateKey';
-import { colors } from '../../src/shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/shared/theme';
 import { BongTinNhan } from '../../src/tu-van/BongTinNhan';
 import { hoiCoach, layTinNhan, xoaTroChuyen } from '../../src/tu-van/TuVanApi';
 import type { TinNhan } from '../../src/tu-van/TuVanApi';
@@ -29,6 +30,8 @@ export default function ManCoach() {
   const [cauDangGui, setCauDangGui] = useState('');
   const [loi, setLoi] = useState('');
   const khungCuon = useRef<ScrollView>(null);
+  // Chiều cao vùng tai thỏ để đệm phía trên; phần đáy để thanh tab tự chừa
+  const insets = useSafeAreaInsets();
 
   // Màn khác (ví dụ Tiến độ) mở sang kèm câu hỏi thì điền sẵn vào ô nhập, người dùng tự bấm gửi
   const thamSo = useLocalSearchParams<{ cauHoi?: string }>();
@@ -92,16 +95,20 @@ export default function ManCoach() {
   }
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top']}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Tiêu đề và nút xóa trò chuyện */}
-        <View style={styles.hangTieuDe}>
-          <Text style={styles.tieuDe}>Coach</Text>
-          {danhSachTinNhan.length > 0 ? (
-            <Pressable style={styles.nutXoa} onPress={xacNhanXoa}>
-              <Text style={styles.chuXoa}>Xóa trò chuyện</Text>
-            </Pressable>
-          ) : null}
+        <View style={styles.khoiTieuDe}>
+          <ScreenTitle
+            title="Coach"
+            right={
+              danhSachTinNhan.length > 0 && cauDangGui === '' ? (
+                <Pressable style={({ pressed }) => [styles.nutXoa, pressed ? styles.dangBam : null]} onPress={xacNhanXoa}>
+                  <Text style={styles.chuXoa}>Xóa trò chuyện</Text>
+                </Pressable>
+              ) : null
+            }
+          />
         </View>
 
         {/* Các tin nhắn; có tin mới thì tự cuộn xuống cuối */}
@@ -139,7 +146,11 @@ export default function ManCoach() {
         {/* Ba câu bấm nhanh */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hangCauNhanh} contentContainerStyle={styles.noiDungCauNhanh}>
           {CAU_HOI_NHANH.map((cauNhanh) => (
-            <Pressable key={cauNhanh.nhan} style={styles.cauNhanh} onPress={() => guiCauHoi(cauNhanh.cauHoi)}>
+            <Pressable
+              key={cauNhanh.nhan}
+              style={({ pressed }) => [styles.cauNhanh, pressed ? styles.dangBam : null]}
+              onPress={() => guiCauHoi(cauNhanh.cauHoi)}
+            >
               <Text style={styles.chuCauNhanh}>{cauNhanh.nhan}</Text>
             </Pressable>
           ))}
@@ -157,15 +168,17 @@ export default function ManCoach() {
             multiline
           />
           <Pressable
-            style={[styles.nutGui, cauHoi.trim() === '' || cauDangGui !== '' ? styles.nutGuiMo : null]}
+            style={({ pressed }) => [styles.nutGui, cauHoi.trim() === '' || cauDangGui !== '' ? styles.nutGuiMo : null, pressed ? styles.dangBam : null]}
             disabled={cauHoi.trim() === '' || cauDangGui !== ''}
             onPress={() => guiCauHoi(cauHoi)}
+            accessibilityRole="button"
+            accessibilityLabel="Gửi câu hỏi"
           >
             <Ionicons name="send" size={18} color={colors.textOnPrimary} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -174,71 +187,64 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  hangTieuDe: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 8,
-  },
-  tieuDe: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.text,
+  khoiTieuDe: {
+    paddingHorizontal: spacing.large,
+    paddingTop: spacing.large,
   },
   nutXoa: {
     minHeight: 44,
     justifyContent: 'center',
   },
   chuXoa: {
-    fontSize: 14,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
   },
   khungTinNhan: {
     flex: 1,
   },
   noiDungTinNhan: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.large,
+    paddingBottom: spacing.small,
   },
   gioiThieu: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     lineHeight: 22,
     color: colors.textSecondary,
-    marginTop: 8,
+    marginTop: spacing.small,
   },
   khoiLoi: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.large,
   },
   hangCauNhanh: {
     flexGrow: 0,
   },
   noiDungCauNhanh: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    gap: 8,
+    paddingHorizontal: spacing.large,
+    paddingVertical: spacing.small,
+    gap: spacing.small,
   },
   cauNhanh: {
     minHeight: 36,
-    paddingHorizontal: 12,
-    borderRadius: 18,
+    paddingHorizontal: spacing.medium,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     justifyContent: 'center',
   },
   chuCauNhanh: {
-    fontSize: 14,
+    fontSize: fontSizes.secondary,
     color: colors.text,
   },
   hangNhap: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: spacing.small,
+    paddingHorizontal: spacing.large,
+    paddingVertical: spacing.small,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    backgroundColor: colors.surface,
   },
   oNhap: {
     flex: 1,
@@ -246,22 +252,25 @@ const styles = StyleSheet.create({
     maxHeight: 120,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 22,
-    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.large,
     paddingTop: 11,
     paddingBottom: 11,
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   nutGui: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radius.pill,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   nutGuiMo: {
     opacity: 0.4,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

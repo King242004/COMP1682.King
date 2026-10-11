@@ -1,12 +1,14 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Button } from '../shared/components/Button';
 import { ErrorBox } from '../shared/components/ErrorBox';
+import { Screen } from '../shared/components/Screen';
+import { ScreenTitle } from '../shared/components/ScreenTitle';
 import { TextField } from '../shared/components/TextField';
-import { colors } from '../shared/theme';
+import { colors, fontSizes, radius, shadows, spacing } from '../shared/theme';
 import type { MonDaChon } from './MonDaChon';
 import { traMaVach } from './QuetMonApi';
 import type { SanPhamMaVach } from './QuetMonApi';
@@ -111,9 +113,10 @@ export function QuetMaVach({ dangMo, onChon, onDong }: QuetMaVachProps) {
 
   return (
     <Modal visible={dangMo} animationType="slide" onRequestClose={dong}>
-      <SafeAreaView style={styles.screen}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.tieuDe}>Quét mã vạch</Text>
+      {/* Màn nổi cần lề an toàn riêng, nếu không nội dung sẽ đè lên giờ và pin */}
+      <SafeAreaProvider>
+        <Screen>
+          <ScreenTitle title="Quét mã vạch" onBack={dong} />
 
           {/* Chưa có quyền camera thì xin quyền */}
           {quyenCamera && !quyenCamera.granted ? (
@@ -165,75 +168,50 @@ export function QuetMaVach({ dangMo, onChon, onDong }: QuetMaVachProps) {
               </View>
             </View>
           ) : null}
-
-          <Pressable style={styles.nutDong} onPress={dong}>
-            <Text style={styles.chuNutDong}>Đóng</Text>
-          </Pressable>
-        </ScrollView>
-      </SafeAreaView>
+        </Screen>
+      </SafeAreaProvider>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  tieuDe: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-  },
   camera: {
     width: '100%',
     height: 320,
-    borderRadius: 12,
+    borderRadius: radius.card,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: spacing.small,
   },
   tenSanPham: {
-    fontSize: 17,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
   theSoLieu: {
-    backgroundColor: colors.card,
-    borderRadius: 10,
-    padding: 12,
-    marginVertical: 12,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+    borderRadius: radius.card,
+    padding: spacing.medium,
+    marginVertical: spacing.medium,
   },
   chuThuong: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   chuPhu: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginTop: 2,
   },
   tong: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.textOnPrimaryLight,
     backgroundColor: colors.primaryLight,
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: radius.input,
+    padding: spacing.medium,
+    overflow: 'hidden',
   },
   khoangNut: {
-    marginTop: 16,
-  },
-  nutDong: {
-    marginTop: 16,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  chuNutDong: {
-    fontSize: 15,
-    color: colors.primary,
+    marginTop: spacing.large,
   },
 });

@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '../src/auth/AuthContext';
 import { ErrorBox } from '../src/shared/components/ErrorBox';
-import { colors } from '../src/shared/theme';
+import { colors, spacing } from '../src/shared/theme';
 
 export default function StartScreen() {
   const { user, isLoading, connectionError, loadSavedSession } = useAuth();
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   center: {
     flex: 1,
     justifyContent: 'center',
-    padding: 16,
+    padding: spacing.large,
     backgroundColor: colors.background,
   },
 });

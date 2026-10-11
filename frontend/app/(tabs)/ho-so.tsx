@@ -1,14 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
 import { layHoSo } from '../../src/ho-so/HoSoApi';
 import type { HoSo } from '../../src/ho-so/HoSoApi';
-import { Button } from '../../src/shared/components/Button';
+import { Card } from '../../src/shared/components/Card';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
-import { colors } from '../../src/shared/theme';
+import { Screen } from '../../src/shared/components/Screen';
+import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
+import { colors, fontSizes, pressedOpacity, spacing } from '../../src/shared/theme';
 
 // Chữ hiển thị cho các giá trị lưu trong database
 const TEN_MUC_VAN_DONG = { nhe: 'Nhẹ', trung_binh: 'Trung bình', nang: 'Nặng' };
@@ -59,29 +61,28 @@ export default function ManHoSo() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <Screen>
+      <ScreenTitle title="Hồ sơ" />
+
+      {/* Tên và email */}
+      <Card>
         <Text style={styles.ten}>{user.ten_hien_thi}</Text>
-        <Text style={styles.email}>{user.email}</Text>
+        <Text style={styles.nhan}>{user.email}</Text>
+      </Card>
 
-        {loi ? <ErrorBox message={loi} onRetry={taiHoSo} /> : null}
-        {!hoSo && !loi ? <ActivityIndicator color={colors.primary} /> : null}
+      {loi ? <ErrorBox message={loi} onRetry={taiHoSo} /> : null}
+      {!hoSo && !loi ? <ActivityIndicator color={colors.primary} /> : null}
 
-        {/* Mục tiêu calo và BMI */}
-        {hoSo && hoSo.muc_tieu_calo !== null ? (
-          <View style={styles.the}>
-            <Text style={styles.nhan}>Mục tiêu mỗi ngày</Text>
-            <Text style={styles.soCalo}>
-              {hoSo.muc_tieu_calo.toLocaleString('vi-VN')} <Text style={styles.donVi}>kcal</Text>
-            </Text>
-            <Text style={styles.nhan}>
-              BMI {hoSo.bmi?.toLocaleString('vi-VN')} · {hoSo.phan_loai_bmi}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Thông tin hồ sơ */}
-        {hoSo && hoSo.muc_tieu_calo !== null ? (
+      {/* Mục tiêu calo, BMI và thông tin hồ sơ */}
+      {hoSo && hoSo.muc_tieu_calo !== null ? (
+        <Card>
+          <Text style={styles.nhan}>Mục tiêu mỗi ngày</Text>
+          <Text style={styles.soCalo}>
+            {hoSo.muc_tieu_calo.toLocaleString('vi-VN')} <Text style={styles.donVi}>kcal</Text>
+          </Text>
+          <Text style={styles.nhan}>
+            BMI {hoSo.bmi?.toLocaleString('vi-VN')} · {hoSo.phan_loai_bmi}
+          </Text>
           <View style={styles.danhSach}>
             <DongThongTin nhan="Giới tính" giaTri={hoSo.gioi_tinh ? TEN_GIOI_TINH[hoSo.gioi_tinh] : ''} />
             <DongThongTin nhan="Năm sinh" giaTri={String(hoSo.nam_sinh)} />
@@ -91,19 +92,31 @@ export default function ManHoSo() {
             <DongThongTin nhan="Mục tiêu" giaTri={hoSo.muc_tieu ? TEN_MUC_TIEU[hoSo.muc_tieu] : ''} />
             <DongThongTin nhan="Dị ứng, kiêng ăn" giaTri={hoSo.di_ung_kieng_an === '' ? 'Không có' : hoSo.di_ung_kieng_an} />
           </View>
-        ) : null}
+        </Card>
+      ) : null}
 
-        <View style={styles.nhomNut}>
-          <Button title="Sửa hồ sơ" loadingTitle="" isLoading={false} onPress={() => router.push('/ho-so/sua')} />
-          <Button title="Đổi mật khẩu" loadingTitle="" isLoading={false} isSecondary onPress={() => router.push('/auth/change-password')} />
-          <Button title="Đăng xuất" loadingTitle="" isLoading={false} isSecondary onPress={logout} />
-        </View>
+      {/* Lối vào màn Tiến độ (ghi cân, biểu đồ, 4 tuần qua); cần có hồ sơ trước */}
+      {hoSo && hoSo.muc_tieu_calo !== null ? (
+        <Card>
+          <DongBam
+            nhan="Tiến độ cân nặng"
+            giaTri={`${hoSo.can_nang_kg?.toLocaleString('vi-VN')} kg`}
+            onPress={() => router.push('/tien-do')}
+          />
+        </Card>
+      ) : null}
 
-        <Pressable style={styles.nutXoa} onPress={xacNhanXoaTaiKhoan}>
-          <Text style={styles.chuXoa}>Xóa tài khoản</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+      {/* Tài khoản */}
+      <Card>
+        <DongBam nhan="Sửa hồ sơ" giaTri="" onPress={() => router.push('/ho-so/sua')} />
+        <DongBam nhan="Đổi mật khẩu" giaTri="" onPress={() => router.push('/auth/change-password')} />
+        <DongBam nhan="Đăng xuất" giaTri="" onPress={logout} />
+      </Card>
+
+      <Pressable style={({ pressed }) => [styles.nutXoa, pressed ? styles.dangBam : null]} onPress={xacNhanXoaTaiKhoan}>
+        <Text style={styles.chuXoa}>Xóa tài khoản</Text>
+      </Pressable>
+    </Screen>
   );
 }
 
@@ -117,82 +130,85 @@ function DongThongTin({ nhan, giaTri }: { nhan: string; giaTri: string }) {
   );
 }
 
+// Một dòng bấm được: nhãn bên trái, giá trị và dấu › bên phải
+function DongBam({ nhan, giaTri, onPress }: { nhan: string; giaTri: string; onPress: () => void }) {
+  return (
+    <Pressable style={({ pressed }) => [styles.dongBam, pressed ? styles.dangBam : null]} onPress={onPress}>
+      <Text style={styles.chuDongBam}>{nhan}</Text>
+      <View style={styles.benPhai}>
+        <Text style={styles.nhanDong}>{giaTri}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
   ten: {
-    fontSize: 22,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
-    marginTop: 8,
-  },
-  email: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginBottom: 16,
-  },
-  the: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    gap: 4,
   },
   nhan: {
-    fontSize: 14,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
   },
   soCalo: {
-    fontSize: 30,
+    fontSize: fontSizes.bigNumber,
     fontWeight: '600',
     color: colors.primary,
   },
   donVi: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     fontWeight: '400',
     color: colors.textSecondary,
   },
   danhSach: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    marginBottom: 20,
+    marginTop: spacing.medium,
   },
   dong: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: 12,
+    paddingVertical: spacing.small,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.medium,
   },
   nhanDong: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.textSecondary,
   },
   giaTriDong: {
     flexShrink: 1,
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.text,
     textAlign: 'right',
   },
-  nhomNut: {
-    gap: 10,
+  dongBam: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 44,
+  },
+  chuDongBam: {
+    fontSize: fontSizes.body,
+    color: colors.text,
+  },
+  benPhai: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   nutXoa: {
-    marginTop: 24,
+    marginTop: spacing.xlarge,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.medium,
   },
   chuXoa: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.error,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { colors } from '../theme';
+import { colors, fontSizes, radius, spacing } from '../theme';
 
 type TextFieldProps = {
   label: string;
@@ -12,6 +12,8 @@ type TextFieldProps = {
   isEmail?: boolean;
   isNumber?: boolean;
   maxLength?: number;
+  // Khóa ô khi màn đang chạy việc khác (đang lưu, AI đang ước tính…)
+  isDisabled?: boolean;
 };
 
 // Chọn bàn phím hợp với loại ô: số, email, hay chữ thường
@@ -25,13 +27,13 @@ function chooseKeyboard(isEmail?: boolean, isNumber?: boolean): 'email-address' 
   return 'default';
 }
 
-// Ô nhập có nhãn ở trên, có lỗi thì viền đỏ và hiện chữ đỏ ở dưới
-export function TextField({ label, value, onChangeText, error, placeholder, isPassword, isEmail, isNumber, maxLength }: TextFieldProps) {
+// Ô nhập có nhãn ở trên, có lỗi thì viền đỏ và hiện chữ đỏ ở dưới, bị khóa thì mờ đi
+export function TextField({ label, value, onChangeText, error, placeholder, isPassword, isEmail, isNumber, maxLength, isDisabled }: TextFieldProps) {
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={[styles.input, error ? styles.inputError : null]}
+        style={[styles.input, error ? styles.inputError : null, isDisabled ? styles.inputDisabled : null]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -40,6 +42,7 @@ export function TextField({ label, value, onChangeText, error, placeholder, isPa
         keyboardType={chooseKeyboard(isEmail, isNumber)}
         autoCapitalize={isEmail || isPassword ? 'none' : 'words'}
         maxLength={maxLength}
+        editable={!isDisabled}
       />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
@@ -48,27 +51,31 @@ export function TextField({ label, value, onChangeText, error, placeholder, isPa
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 12,
+    marginBottom: spacing.medium,
   },
   label: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginBottom: 4,
   },
   input: {
     height: 48,
-    borderRadius: 10,
+    borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 12,
-    fontSize: 16,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.medium,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   inputError: {
     borderColor: colors.error,
   },
+  inputDisabled: {
+    opacity: 0.5,
+  },
   errorText: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.error,
     marginTop: 4,
   },

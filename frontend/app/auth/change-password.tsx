@@ -1,13 +1,14 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
 import { Button } from '../../src/shared/components/Button';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
+import { Screen } from '../../src/shared/components/Screen';
+import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { TextField } from '../../src/shared/components/TextField';
-import { colors } from '../../src/shared/theme';
+import { colors, fontSizes, spacing } from '../../src/shared/theme';
 
 // Mật khẩu ngắn nhất, giống luật ở backend (AuthService.ts)
 const MIN_PASSWORD_LENGTH = 8;
@@ -54,53 +55,33 @@ export default function ChangePasswordScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Đổi mật khẩu</Text>
-        <Text style={styles.subtitle}>Các máy khác đang đăng nhập sẽ bị đăng xuất</Text>
+    <Screen>
+      <ScreenTitle title="Đổi mật khẩu" subtitle="Các máy khác đang đăng nhập sẽ bị đăng xuất" onBack={() => router.back()} />
 
-        {serverError ? <ErrorBox message={serverError} /> : null}
+      {serverError ? <ErrorBox message={serverError} /> : null}
 
-        <TextField
-          label="Mật khẩu hiện tại"
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
-          error={currentPasswordError}
-          isPassword
-        />
-        <TextField
-          label="Mật khẩu mới"
-          value={newPassword}
-          onChangeText={setNewPassword}
-          error={newPasswordError}
-          placeholder={`Ít nhất ${MIN_PASSWORD_LENGTH} ký tự`}
-          isPassword
-        />
+      <TextField
+        label="Mật khẩu hiện tại"
+        value={currentPassword}
+        onChangeText={setCurrentPassword}
+        error={currentPasswordError}
+        isPassword
+        isDisabled={isSubmitting}
+      />
+      <TextField
+        label="Mật khẩu mới"
+        value={newPassword}
+        onChangeText={setNewPassword}
+        error={newPasswordError}
+        placeholder={`Ít nhất ${MIN_PASSWORD_LENGTH} ký tự`}
+        isPassword
+        isDisabled={isSubmitting}
+      />
 
-        <Button title="Đổi mật khẩu" loadingTitle="Đang đổi…" isLoading={isSubmitting} onPress={handleChangePassword} />
-      </ScrollView>
-    </SafeAreaView>
+      <Button title="Đổi mật khẩu" loadingTitle="Đang đổi…" isLoading={isSubmitting} onPress={handleChangePassword} />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingTop: 48,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginBottom: 24,
-  },
 });

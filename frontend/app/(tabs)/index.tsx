@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
 import { layNhatKyNgay } from '../../src/bua-an/BuaAnApi';
@@ -13,8 +12,11 @@ import { TheBua } from '../../src/trang-chu/TheBua';
 import { TheCalo } from '../../src/trang-chu/TheCalo';
 import { buaTheoGio, THU_TU_BUA } from '../../src/bua-an/TenBua';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
+import { Screen } from '../../src/shared/components/Screen';
+import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
+import { SectionTitle } from '../../src/shared/components/SectionTitle';
 import { formatDateLabel, todayKey } from '../../src/shared/dateKey';
-import { colors } from '../../src/shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/shared/theme';
 
 export default function TrangChu() {
   const { user } = useAuth();
@@ -67,18 +69,18 @@ export default function TrangChu() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Lời chào, ngày đang xem, chữ cái đầu tên (bấm để mở hồ sơ) */}
-        <View style={styles.hangChao}>
-          <View>
-            <Text style={styles.chuChao}>Chào {user.ten_hien_thi}</Text>
-            <Text style={styles.tieuDe}>{formatDateLabel(ngay)}</Text>
-          </View>
-          <Pressable style={styles.vongTen} onPress={() => router.push('/(tabs)/ho-so')}>
-            <Text style={styles.chuVongTen}>{user.ten_hien_thi.trim().charAt(0).toUpperCase()}</Text>
-          </Pressable>
-        </View>
+    <View style={styles.khung}>
+      <Screen>
+        {/* Ngày đang xem, lời chào, chữ cái đầu tên (bấm để mở hồ sơ) */}
+        <ScreenTitle
+          title={formatDateLabel(ngay)}
+          subtitle={`Chào ${user.ten_hien_thi}`}
+          right={
+            <Pressable style={({ pressed }) => [styles.vongTen, pressed ? styles.dangBam : null]} onPress={() => router.push('/(tabs)/ho-so')}>
+              <Text style={styles.chuVongTen}>{user.ten_hien_thi.trim().charAt(0).toUpperCase()}</Text>
+            </Pressable>
+          }
+        />
 
         <DaiNgay ngay={ngay} onChon={setNgay} />
 
@@ -95,17 +97,8 @@ export default function TrangChu() {
               </Text>
             ) : null}
 
-            {/* Lối vào màn thực đơn của ngày đang xem */}
-            <Pressable style={styles.dongThucDon} onPress={() => router.push({ pathname: '/thuc-don', params: { ngay: ngay } })}>
-              <View>
-                <Text style={styles.chuThucDon}>Gợi ý thực đơn</Text>
-                <Text style={styles.chuNho}>AI lập 1 ngày theo mục tiêu của bạn</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-            </Pressable>
-
             {/* Bốn bữa, luôn hiện */}
-            <Text style={styles.tieuDeNhom}>Bữa ăn</Text>
+            <SectionTitle title="Bữa ăn" />
             {THU_TU_BUA.map((loaiBua) => (
               <TheBua
                 key={loaiBua}
@@ -117,89 +110,55 @@ export default function TrangChu() {
             ))}
           </>
         ) : null}
-      </ScrollView>
+      </Screen>
 
       {/* Nút + nổi: thêm món vào bữa đoán theo giờ hiện tại */}
-      <Pressable style={styles.nutNoi} onPress={() => moThemMon(buaTheoGio(new Date().getHours()))}>
+      <Pressable
+        style={({ pressed }) => [styles.nutNoi, pressed ? styles.dangBam : null]}
+        onPress={() => moThemMon(buaTheoGio(new Date().getHours()))}
+        accessibilityRole="button"
+        accessibilityLabel="Thêm món"
+      >
         <Ionicons name="add" size={30} color={colors.textOnPrimary} />
       </Pressable>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  khung: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  hangChao: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  chuChao: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  tieuDe: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: colors.text,
   },
   vongTen: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.pill,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chuVongTen: {
-    fontSize: 17,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.textOnPrimaryLight,
   },
   chuNho: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  dongThucDon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 8,
-  },
-  chuThucDon: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  tieuDeNhom: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 12,
-    marginBottom: 8,
+    marginBottom: spacing.small,
   },
   nutNoi: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
+    right: spacing.large,
+    bottom: spacing.large,
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: radius.pill,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

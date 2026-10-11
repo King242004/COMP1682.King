@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { dayOfMonth, shiftDateKey, shortWeekdayName, todayKey, weekDateKeys } from '../shared/dateKey';
-import { colors } from '../shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 
 type DaiNgayProps = {
   ngay: string;
@@ -28,7 +28,7 @@ export function DaiNgay({ ngay, onChon }: DaiNgayProps) {
 
   return (
     <View style={styles.hang}>
-      <Pressable style={styles.nutTuan} onPress={() => doiTuan(-7)}>
+      <Pressable style={({ pressed }) => [styles.nutTuan, pressed ? styles.dangBam : null]} onPress={() => doiTuan(-7)}>
         <Ionicons name="chevron-back" size={20} color={colors.primary} />
       </Pressable>
 
@@ -38,7 +38,7 @@ export function DaiNgay({ ngay, onChon }: DaiNgayProps) {
         return (
           <Pressable
             key={ngayCuaO}
-            style={[styles.oNgay, dangChon ? styles.oNgayDangChon : null]}
+            style={({ pressed }) => [styles.oNgay, dangChon ? styles.oNgayDangChon : null, pressed ? styles.dangBam : null]}
             disabled={laTuongLai}
             onPress={() => onChon(ngayCuaO)}
           >
@@ -52,7 +52,7 @@ export function DaiNgay({ ngay, onChon }: DaiNgayProps) {
         );
       })}
 
-      <Pressable style={styles.nutTuan} disabled={!choTien} onPress={() => doiTuan(7)}>
+      <Pressable style={({ pressed }) => [styles.nutTuan, pressed ? styles.dangBam : null]} disabled={!choTien} onPress={() => doiTuan(7)}>
         <Ionicons name="chevron-forward" size={20} color={choTien ? colors.primary : colors.border} />
       </Pressable>
     </View>
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   hang: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.large,
   },
   nutTuan: {
     width: 28,
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   oNgay: {
     flex: 1,
     height: 52,
-    borderRadius: 12,
+    borderRadius: radius.input,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -83,11 +83,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   chuThu: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
   chuSo: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   chuDangChon: {
@@ -96,5 +96,8 @@ const styles = StyleSheet.create({
   },
   chuTuongLai: {
     color: colors.border,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

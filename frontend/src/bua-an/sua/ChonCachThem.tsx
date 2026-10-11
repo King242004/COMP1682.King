@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from '../../shared/components/Chip';
-import { colors } from '../../shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../shared/theme';
 import type { MonHayAn } from '../BuaAnApi';
 
 type OCachThemProps = {
@@ -15,7 +15,7 @@ type OCachThemProps = {
 // Một ô lớn để chọn cách thêm món
 function OCachThem({ bieuTuong, ten, onPress }: OCachThemProps) {
   return (
-    <Pressable style={styles.oCachThem} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.oCachThem, pressed ? styles.dangBam : null]} onPress={onPress}>
       <Ionicons name={bieuTuong} size={26} color={colors.textOnPrimaryLight} />
       <Text style={styles.chuCachThem}>{ten}</Text>
     </Pressable>
@@ -26,19 +26,17 @@ type ChonCachThemProps = {
   monHayAn: MonHayAn[];
   onChupAnh: () => void;
   onQuetMaVach: () => void;
-  onTraMon: () => void;
   onGoTen: () => void;
   onChonMonHayAn: (mon: MonHayAn) => void;
 };
 
-// Bước 1 của màn thêm món: bốn ô lớn xếp 2 hàng (chụp ảnh, mã vạch, tra món, gõ tên), mẹo chụp, danh sách món hay ăn
-export function ChonCachThem({ monHayAn, onChupAnh, onQuetMaVach, onTraMon, onGoTen, onChonMonHayAn }: ChonCachThemProps) {
+// Bước 1 của màn thêm món: ba ô lớn (chụp ảnh, mã vạch, gõ tên), mẹo chụp, danh sách món hay ăn
+export function ChonCachThem({ monHayAn, onChupAnh, onQuetMaVach, onGoTen, onChonMonHayAn }: ChonCachThemProps) {
   return (
     <View>
       <View style={styles.hangCachThem}>
         <OCachThem bieuTuong="camera-outline" ten="Chụp ảnh" onPress={onChupAnh} />
         <OCachThem bieuTuong="barcode-outline" ten="Mã vạch" onPress={onQuetMaVach} />
-        <OCachThem bieuTuong="search-outline" ten="Tra món" onPress={onTraMon} />
         <OCachThem bieuTuong="create-outline" ten="Gõ tên" onPress={onGoTen} />
       </View>
       <Text style={styles.chuPhu}>Mẹo: chụp phần bạn ăn, từ trên xuống, đặt đũa hoặc thìa bên cạnh.</Text>
@@ -66,41 +64,42 @@ export function ChonCachThem({ monHayAn, onChupAnh, onQuetMaVach, onTraMon, onGo
 const styles = StyleSheet.create({
   hangCachThem: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    gap: spacing.small,
   },
   oCachThem: {
-    flexBasis: '45%',
-    flexGrow: 1,
+    flex: 1,
     height: 92,
-    borderRadius: 16,
+    borderRadius: radius.card,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacing.small,
   },
   chuCachThem: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.textOnPrimaryLight,
   },
   chuPhu: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
-    marginTop: 8,
+    marginTop: spacing.small,
   },
   khoiMonHayAn: {
-    marginTop: 20,
+    marginTop: spacing.xlarge,
   },
   nhanNhom: {
-    fontSize: 15,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: spacing.small,
   },
   hangChip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.small,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

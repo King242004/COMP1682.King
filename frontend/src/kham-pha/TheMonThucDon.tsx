@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { TEN_BUA } from '../bua-an/TenBua';
-import { colors } from '../shared/theme';
-import type { MonThucDon } from './ThucDonApi';
+import { colors, fontSizes, pressedOpacity, radius, shadows, spacing } from '../shared/theme';
+import type { MonThucDon } from '../thuc-don/ThucDonApi';
 
 type TheMonThucDonProps = {
   mon: MonThucDon;
   daGhi: boolean;
   dangGhi: boolean;
+  // Đang ghi món khác hoặc đang tạo thực đơn mới thì khóa nút "Đã ăn"
+  khoa: boolean;
   onDaAn: () => void;
 };
 
@@ -16,7 +18,7 @@ type TheMonThucDonProps = {
 const TEN_CACH_AN = { an_ngoai: 'ăn ngoài', tu_nau: 'tự nấu' };
 
 // Thẻ một món trong thực đơn: bữa, cách ăn, tên, khẩu phần, số liệu, nút "Đã ăn"; món tự nấu bấm xem cách nấu
-export function TheMonThucDon({ mon, daGhi, dangGhi, onDaAn }: TheMonThucDonProps) {
+export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucDonProps) {
   const [moCachNau, setMoCachNau] = useState(false);
 
   // Chữ trên nút: đã có trong nhật ký, đang ghi, hoặc chưa ghi
@@ -35,7 +37,16 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, onDaAn }: TheMonThucDonProp
           <Text style={styles.nhanBua}>{TEN_BUA[mon.loai_bua]}</Text>
           <Text style={styles.nhanCachAn}>{TEN_CACH_AN[mon.cach_an]}</Text>
         </View>
-        <Pressable style={[styles.nut, daGhi ? styles.nutDaGhi : null]} disabled={daGhi || dangGhi} onPress={onDaAn}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.nut,
+            daGhi ? styles.nutDaGhi : null,
+            khoa && !daGhi ? styles.nutKhoa : null,
+            pressed ? styles.dangBam : null,
+          ]}
+          disabled={daGhi || dangGhi || khoa}
+          onPress={onDaAn}
+        >
           <Text style={[styles.chuNut, daGhi ? styles.chuNutDaGhi : null]}>{chuNut}</Text>
         </Pressable>
       </View>
@@ -48,7 +59,10 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, onDaAn }: TheMonThucDonProp
 
       {/* Món tự nấu: bấm để mở hoặc gập cách nấu */}
       {mon.cach_nau.length > 0 ? (
-        <Pressable style={styles.nutCachNau} onPress={() => setMoCachNau(!moCachNau)}>
+        <Pressable
+          style={({ pressed }) => [styles.nutCachNau, pressed ? styles.dangBam : null]}
+          onPress={() => setMoCachNau(!moCachNau)}
+        >
           <Text style={styles.chuCachNau}>{moCachNau ? 'Ẩn cách nấu' : 'Xem cách nấu'}</Text>
         </Pressable>
       ) : null}
@@ -65,11 +79,11 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, onDaAn }: TheMonThucDonProp
 
 const styles = StyleSheet.create({
   the: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+    borderRadius: radius.card,
+    padding: spacing.large,
+    marginBottom: spacing.medium,
   },
   hangTren: {
     flexDirection: 'row',
@@ -78,53 +92,59 @@ const styles = StyleSheet.create({
   },
   hangNhan: {
     flexDirection: 'row',
-    gap: 6,
+    gap: spacing.small,
   },
   nhanBua: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textOnPrimaryLight,
     backgroundColor: colors.primaryLight,
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.small,
     paddingVertical: 2,
     overflow: 'hidden',
   },
   nhanCachAn: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textSecondary,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.small,
     paddingVertical: 1,
   },
   nut: {
     minHeight: 36,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingHorizontal: spacing.medium,
+    borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.primary,
     justifyContent: 'center',
+  },
+  nutKhoa: {
+    opacity: 0.5,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
   nutDaGhi: {
     borderColor: colors.border,
     backgroundColor: colors.card,
   },
   chuNut: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     color: colors.primary,
   },
   chuNutDaGhi: {
     color: colors.textSecondary,
   },
   tenMon: {
-    fontSize: 16,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
-    marginTop: 8,
+    marginTop: spacing.small,
   },
   chuPhu: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginTop: 2,
   },
@@ -133,11 +153,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chuCachNau: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     color: colors.primary,
   },
   buocNau: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     color: colors.text,
     lineHeight: 20,
   },

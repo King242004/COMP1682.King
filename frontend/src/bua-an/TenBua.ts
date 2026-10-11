@@ -1,6 +1,7 @@
 import type { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
+import { colors } from '../shared/theme';
 import type { LoaiBua } from './BuaAnApi';
 
 // Thứ tự 4 bữa trên trang chủ
@@ -36,3 +37,11 @@ export function buaTheoGio(gio: number): LoaiBua {
   }
   return 'toi';
 }
+
+// Màu chữ (mau) và màu nền (nen) của ô biểu tượng từng bữa trong hộp bữa ở trang chủ
+export const MAU_BUA: Record<LoaiBua, { mau: string; nen: string }> = {
+  sang: { mau: colors.breakfast, nen: colors.breakfastLight },
+  trua: { mau: colors.primary, nen: colors.primaryLight },
+  toi: { mau: colors.dinner, nen: colors.dinnerLight },
+  phu: { mau: colors.snack, nen: colors.snackLight },
+};

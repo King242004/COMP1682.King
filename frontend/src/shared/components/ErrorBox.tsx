@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../theme';
 
 type ErrorBoxProps = {
   message: string;
@@ -13,7 +13,7 @@ export function ErrorBox({ message, onRetry }: ErrorBoxProps) {
     <View style={styles.box}>
       <Text style={styles.message}>{message}</Text>
       {onRetry ? (
-        <Pressable onPress={onRetry}>
+        <Pressable onPress={onRetry} hitSlop={12} style={({ pressed }) => (pressed ? styles.retryPressed : null)}>
           <Text style={styles.retry}>Thử lại</Text>
         </Pressable>
       ) : null}
@@ -25,20 +25,22 @@ const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.small,
     backgroundColor: colors.errorBackground,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 16,
+    borderRadius: radius.input,
+    padding: spacing.medium,
+    marginBottom: spacing.large,
   },
   message: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fontSizes.body,
     color: colors.errorText,
   },
+  retryPressed: {
+    opacity: pressedOpacity,
+  },
   retry: {
-    fontSize: 14,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.errorText,
   },

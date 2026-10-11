@@ -4,6 +4,7 @@ import database from '../database/database.ts';
 export type MonTraCuu = {
   ma_so: string;
   ten_mon: string;
+  ten_khong_dau: string;
   so_calo: number;
   dam_g: number;
   tinh_bot_g: number;
@@ -12,15 +13,12 @@ export type MonTraCuu = {
   anh_url: string;
 };
 
-// Tìm món có tên chứa từ khóa (so với tên có dấu và tên không dấu), tên ngắn đứng trước
-export async function timMonTraCuu(mauTim: string, soMonToiDa: number): Promise<MonTraCuu[]> {
+// Lấy tất cả món, xếp theo tên không dấu (chữ không dấu xếp giống nhau trên mọi máy chủ)
+export async function layTatCaMonTraCuu(): Promise<MonTraCuu[]> {
   const ketQua = await database.query<MonTraCuu>(
-    `SELECT ma_so, ten_mon, so_calo, dam_g, tinh_bot_g, beo_g, muoi_g, anh_url
+    `SELECT ma_so, ten_mon, ten_khong_dau, so_calo, dam_g, tinh_bot_g, beo_g, muoi_g, anh_url
      FROM mon_tra_cuu
-     WHERE ten_mon ILIKE $1 OR ten_khong_dau ILIKE $1
-     ORDER BY length(ten_mon), ten_mon
-     LIMIT $2`,
-    [mauTim, soMonToiDa],
+     ORDER BY ten_khong_dau`,
   );
   return ketQua.rows;
 }

@@ -1,34 +1,35 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { VongTienDo } from '../shared/components/VongTienDo';
-import { colors } from '../shared/theme';
+import { colors, fontSizes, radius, shadows, spacing } from '../shared/theme';
 import type { NhatKyNgay } from '../bua-an/BuaAnApi';
 
 type VongChatProps = {
   ten: string;
   mau: string;
+  mauNen: string;
   daAn: number;
   mucDay: number;
   chuMucTieu: string;
 };
 
-// Một vòng nhỏ cho đạm, tinh bột hoặc béo; vòng đầy khi ăn tới mucDay, dưới vòng ghi mục tiêu bằng chữ
-function VongChat({ ten, mau, daAn, mucDay, chuMucTieu }: VongChatProps) {
+// Một ô nền nhạt cho đạm, tinh bột hoặc béo: vòng đầy khi ăn tới mucDay, dưới vòng ghi mục tiêu bằng chữ
+function VongChat({ ten, mau, mauNen, daAn, mucDay, chuMucTieu }: VongChatProps) {
   let phanTram = 0;
   if (mucDay > 0) {
     phanTram = (daAn / mucDay) * 100;
   }
   return (
-    <View style={styles.cotChat}>
-      <VongTienDo kichThuoc={52} doDay={6} phanTram={phanTram} mau={mau} />
-      <Text style={styles.soGam}>{daAn.toLocaleString('vi-VN')} g</Text>
+    <View style={[styles.oChat, { backgroundColor: mauNen }]}>
+      <VongTienDo kichThuoc={48} doDay={6} phanTram={phanTram} mau={mau} />
+      <Text style={[styles.soGam, { color: mau }]}>{daAn.toLocaleString('vi-VN')} g</Text>
       <Text style={styles.tenChat}>{ten}</Text>
       <Text style={styles.khoang}>{chuMucTieu}</Text>
     </View>
   );
 }
 
-// Thẻ calo trên trang chủ: vòng lớn với số còn lại (hoặc đã vượt), đã ăn / mục tiêu, ba vòng nhỏ
+// Thẻ calo trên trang chủ (nền xanh, chữ trắng): vòng lớn với số còn lại (hoặc đã vượt), đã ăn / mục tiêu, ba ô chất
 export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
   const tongHop = nhatKy.tong_hop;
   const mucTieu = nhatKy.muc_tieu_calo ?? 0;
@@ -42,7 +43,13 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
   return (
     <View style={styles.the}>
       <View style={styles.hangTren}>
-        <VongTienDo kichThuoc={132} doDay={12} phanTram={phanTramDaAn} mau={daVuot ? colors.error : colors.primary}>
+        <VongTienDo
+          kichThuoc={132}
+          doDay={12}
+          phanTram={phanTramDaAn}
+          mau={daVuot ? colors.overOnPrimary : colors.textOnPrimary}
+          mauNen={colors.trackOnPrimary}
+        >
           <Text style={[styles.soConLai, daVuot ? styles.chuVuot : null]}>
             {Math.abs(tongHop.con_lai ?? 0).toLocaleString('vi-VN')}
           </Text>
@@ -68,6 +75,7 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
           <VongChat
             ten="Đạm"
             mau={colors.protein}
+            mauNen={colors.proteinLight}
             daAn={tongHop.tong_dam_g}
             mucDay={nhatKy.muc_tieu_chat.dam_g_toi_thieu}
             chuMucTieu={`ít nhất ${nhatKy.muc_tieu_chat.dam_g_toi_thieu.toLocaleString('vi-VN')} g`}
@@ -75,6 +83,7 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
           <VongChat
             ten="Tinh bột"
             mau={colors.carbs}
+            mauNen={colors.carbsLight}
             daAn={tongHop.tong_tinh_bot_g}
             mucDay={nhatKy.muc_tieu_chat.tinh_bot_g_cao}
             chuMucTieu={`${nhatKy.muc_tieu_chat.tinh_bot_g_thap.toLocaleString('vi-VN')}–${nhatKy.muc_tieu_chat.tinh_bot_g_cao.toLocaleString('vi-VN')} g`}
@@ -82,6 +91,7 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
           <VongChat
             ten="Béo"
             mau={colors.fat}
+            mauNen={colors.fatLight}
             daAn={tongHop.tong_beo_g}
             mucDay={nhatKy.muc_tieu_chat.beo_g_cao}
             chuMucTieu={`${nhatKy.muc_tieu_chat.beo_g_thap.toLocaleString('vi-VN')}–${nhatKy.muc_tieu_chat.beo_g_cao.toLocaleString('vi-VN')} g`}
@@ -94,27 +104,28 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
 
 const styles = StyleSheet.create({
   the: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.card,
+    padding: spacing.large,
+    marginBottom: spacing.large,
+    ...shadows.card,
   },
   hangTren: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.large,
   },
   soConLai: {
-    fontSize: 26,
+    fontSize: fontSizes.bigNumber,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textOnPrimary,
   },
   chuVuot: {
-    color: colors.error,
+    color: colors.overOnPrimary,
   },
   nhanConLai: {
-    fontSize: 12,
-    color: colors.textSecondary,
+    fontSize: fontSizes.label,
+    color: colors.textOnPrimary,
   },
   cotSo: {
     flex: 1,
@@ -125,38 +136,41 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   nhan: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: fontSizes.secondary,
+    color: colors.textOnPrimary,
   },
   giaTri: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textOnPrimary,
   },
   nguon: {
-    fontSize: 12,
-    color: colors.textSecondary,
+    fontSize: fontSizes.label,
+    color: colors.textOnPrimary,
   },
   hangChat: {
     flexDirection: 'row',
-    marginTop: 16,
+    gap: spacing.small,
+    marginTop: spacing.large,
   },
-  cotChat: {
+  oChat: {
     flex: 1,
     alignItems: 'center',
+    borderRadius: radius.input,
+    paddingVertical: spacing.small,
+    paddingHorizontal: 4,
   },
   soGam: {
-    fontSize: 15,
+    fontSize: fontSizes.body,
     fontWeight: '600',
-    color: colors.text,
     marginTop: 6,
   },
   tenChat: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
   },
   khoang: {
-    fontSize: 12,
+    fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
 });

@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { BuaAn } from '../bua-an/BuaAnApi';
 
 type TheBuaAnProps = {
@@ -8,10 +9,10 @@ type TheBuaAnProps = {
   onPress: () => void;
 };
 
-// Một dòng món ăn trong thẻ bữa: tên, khẩu phần, calo; bấm vào để sửa
+// Một dòng món ăn nền kem trong hộp bữa: tên, khẩu phần, calo, dấu ›; bấm vào để sửa
 export function TheBuaAn({ buaAn, onPress }: TheBuaAnProps) {
   return (
-    <Pressable style={styles.the} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]} onPress={onPress}>
       <View style={styles.cotTen}>
         <View style={styles.hangTen}>
           <Text style={styles.tenMon}>{buaAn.ten_mon}</Text>
@@ -20,21 +21,25 @@ export function TheBuaAn({ buaAn, onPress }: TheBuaAnProps) {
         </View>
         {buaAn.khau_phan ? <Text style={styles.khauPhan}>{buaAn.khau_phan}</Text> : null}
       </View>
-      <Text style={styles.soCalo}>{buaAn.so_calo.toLocaleString('vi-VN')}</Text>
+      <Text style={styles.soCalo}>{buaAn.so_calo.toLocaleString('vi-VN')} kcal</Text>
+      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  the: {
+  dong: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.small,
     minHeight: 44,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingVertical: spacing.small,
+    paddingHorizontal: spacing.medium,
+    borderRadius: radius.input,
+    backgroundColor: colors.background,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
   cotTen: {
     flex: 1,
@@ -46,11 +51,11 @@ const styles = StyleSheet.create({
   },
   tenMon: {
     flexShrink: 1,
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.text,
   },
   nhanAi: {
-    fontSize: 11,
+    fontSize: fontSizes.label,
     fontWeight: '600',
     color: colors.textOnPrimaryLight,
     backgroundColor: colors.primaryLight,
@@ -60,12 +65,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   khauPhan: {
-    fontSize: 13,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginTop: 2,
   },
   soCalo: {
-    fontSize: 15,
-    color: colors.text,
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
   },
 });

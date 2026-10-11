@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { daysBetween, formatShortDate, shiftDateKey } from '../shared/dateKey';
-import { colors } from '../shared/theme';
+import { colors, fontSizes, spacing } from '../shared/theme';
 import type { DiemCanNang } from './TienDoApi';
 
 type BieuDoCanNangProps = {
@@ -97,8 +97,8 @@ export function BieuDoCanNang({ diemCanNang, ngayCuoi, soNgay }: BieuDoCanNangPr
 
 const styles = StyleSheet.create({
   chuTrong: {
-    fontSize: 14,
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
-    paddingVertical: 24,
+    paddingVertical: spacing.xlarge,
   },
 });
