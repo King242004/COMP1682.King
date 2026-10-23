@@ -1,4 +1,6 @@
+import type { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
+import type { ComponentProps } from 'react';
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -13,8 +15,10 @@ import type { MonTraCuu, ThanhPhanSuat } from '../tra-mon/TraMonApi';
 type ChiTietMonProps = {
   mon: MonTraCuu;
   onDong: () => void;
-  // Bấm "Thêm vào nhật ký": danh sách mở màn thêm món đã điền sẵn để xem lại rồi mới lưu
-  onThem: () => void;
+  // Nút dưới cùng do nơi mở truyền vào: Khám phá là "Thêm vào nhật ký", thực đơn là "Hỏi Coach cách nấu"
+  tenNut: string;
+  bieuTuongNut: ComponentProps<typeof Ionicons>['name'];
+  onBamNut: () => void;
 };
 
 // Viết số kiểu Việt Nam, giữ tối đa 1 số lẻ, ví dụ 268,3
@@ -22,8 +26,8 @@ function vietSo(so: number): string {
   return (Math.round(so * 10) / 10).toLocaleString('vi-VN');
 }
 
-// Màn nổi chi tiết một món Viện Dinh dưỡng đã cân: ảnh suất, 1 suất nặng bao nhiêu và gồm những gì, nút mở màn thêm món
-export function ChiTietMon({ mon, onDong, onThem }: ChiTietMonProps) {
+// Màn nổi chi tiết một món Viện Dinh dưỡng đã cân: ảnh suất, 1 suất nặng bao nhiêu và gồm những gì, nút dưới cùng
+export function ChiTietMon({ mon, onDong, tenNut, bieuTuongNut, onBamNut }: ChiTietMonProps) {
   // Bảng "Trong 1 suất có"; null là đang tải, mảng rỗng là món chưa có bảng
   const [thanhPhan, setThanhPhan] = useState<ThanhPhanSuat[] | null>(null);
 
@@ -40,13 +44,18 @@ export function ChiTietMon({ mon, onDong, onThem }: ChiTietMonProps) {
     }
   }
 
-  // Cộng gam và kcal các dòng thành phần để ghi tổng
+  // Cộng gam và kcal các dòng có số để ghi tổng; dòng Viện để trống (không cân) thì không cộng
   let tongGam = 0;
   let tongCalo = 0;
+  let coDongTrong = false;
   if (thanhPhan !== null) {
     for (const dong of thanhPhan) {
-      tongGam += dong.so_gam;
-      tongCalo += dong.so_calo;
+      if (dong.so_gam === null || dong.so_calo === null) {
+        coDongTrong = true;
+      } else {
+        tongGam += dong.so_gam;
+        tongCalo += dong.so_calo;
+      }
     }
   }
   const coBang = thanhPhan !== null && thanhPhan.length > 0;
@@ -64,10 +73,10 @@ export function ChiTietMon({ mon, onDong, onThem }: ChiTietMonProps) {
             <Text style={styles.chuLienKet}>Bấm ảnh để phóng to</Text>
           </Pressable>
 
-          {/* 1 suất nặng bao nhiêu (khi có bảng) và số liệu của 1 suất */}
+          {/* 1 suất nặng bao nhiêu (khi có bảng đủ số) và số liệu của 1 suất */}
           <Card>
             <Text style={styles.soTo}>
-              1 suất{coBang ? ` · ${Math.round(tongGam).toLocaleString('vi-VN')} g` : ''} · {Math.round(mon.so_calo).toLocaleString('vi-VN')} kcal
+              1 suất{coBang && !coDongTrong ? ` · ${Math.round(tongGam).toLocaleString('vi-VN')} g` : ''} · {Math.round(mon.so_calo).toLocaleString('vi-VN')} kcal
             </Text>
             <Text style={styles.chuPhu}>
               Đạm {vietSo(mon.dam_g)} g · Tinh bột {vietSo(mon.tinh_bot_g)} g · Béo {vietSo(mon.beo_g)} g · Muối {vietSo(mon.muoi_g)} g
@@ -81,9 +90,12 @@ export function ChiTietMon({ mon, onDong, onThem }: ChiTietMonProps) {
               {thanhPhan.map((dong) => (
                 <View key={dong.thu_tu} style={styles.dongBang}>
                   <Text style={styles.tenThanhPhan}>{dong.ten_thanh_phan}</Text>
-                  <Text style={styles.soThanhPhan}>
-                    {vietSo(dong.so_gam)} g · {vietSo(dong.so_calo)} kcal
-                  </Text>
+                  {/* Dòng Viện để trống thì không ghi số */}
+                  {dong.so_gam !== null && dong.so_calo !== null ? (
+                    <Text style={styles.soThanhPhan}>
+                      {vietSo(dong.so_gam)} g · {vietSo(dong.so_calo)} kcal
+                    </Text>
+                  ) : null}
                 </View>
               ))}
               <View style={styles.dongCong}>
@@ -92,11 +104,12 @@ export function ChiTietMon({ mon, onDong, onThem }: ChiTietMonProps) {
                   {vietSo(tongGam)} g · {vietSo(tongCalo)} kcal
                 </Text>
               </View>
+              {coDongTrong ? <Text style={styles.chuPhu}>Dòng để trống: Viện không cân, chưa tính vào tổng.</Text> : null}
             </Card>
           ) : null}
 
-          {/* Mở màn thêm món đã điền sẵn 1 suất; ở đó chọn bữa, sửa lượng rồi mới lưu */}
-          <Button title="Thêm vào nhật ký" loadingTitle="" isLoading={false} onPress={onThem} iconName="add-circle-outline" />
+          {/* Nút dưới cùng do nơi mở truyền vào */}
+          <Button title={tenNut} loadingTitle="" isLoading={false} onPress={onBamNut} iconName={bieuTuongNut} />
           <Text style={styles.chuGiua}>Nguồn: Viện Dinh dưỡng Quốc gia</Text>
         </Screen>
       </SafeAreaProvider>

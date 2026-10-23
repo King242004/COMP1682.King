@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 
 import { buaTheoGio } from '../bua-an/TenBua';
 import type { MonDaChon } from '../quet-mon/MonDaChon';
@@ -45,7 +46,7 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
   // Khoảng cách từ đỉnh màn hình tới đáy nút xếp; null là menu xếp đang đóng
   const [dinhMenuXep, setDinhMenuXep] = useState<number | null>(null);
   // Nút xếp, để đo vị trí của nó trên màn
-  const nutXep = useRef<View>(null);
+  const nutXep = useRef<ViewInstance>(null);
   const [soMonDangHien, setSoMonDangHien] = useState(SO_MON_MOI_LAN);
   const [monDangXem, setMonDangXem] = useState<MonTraCuu | null>(null);
   const [loi, setLoi] = useState('');
@@ -246,7 +247,15 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
       ) : null}
 
       {/* Bấm một món thì mở màn nổi chi tiết */}
-      {monDangXem ? <ChiTietMon mon={monDangXem} onDong={() => setMonDangXem(null)} onThem={() => moManThemMon(monDangXem)} /> : null}
+      {monDangXem ? (
+        <ChiTietMon
+          mon={monDangXem}
+          onDong={() => setMonDangXem(null)}
+          tenNut="Thêm vào nhật ký"
+          bieuTuongNut="add-circle-outline"
+          onBamNut={() => moManThemMon(monDangXem)}
+        />
+      ) : null}
     </Screen>
   );
 }

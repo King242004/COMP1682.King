@@ -22,12 +22,12 @@ export type MonTraCuu = {
 
 export type NhomMon = 'bun_pho' | 'com_chao_xoi' | 'che_do_uong' | 'banh' | 'mon_khac';
 
-// Một dòng trong bảng "Trong 1 suất có", chép từ bảng thành phần Viện in trong ảnh suất
+// Một dòng trong bảng "Trong 1 suất có", chép từ bảng thành phần Viện in trong ảnh suất; ô Viện để trống (không cân) là null
 export type ThanhPhanSuat = {
   thu_tu: number;
   ten_thanh_phan: string;
-  so_gam: number;
-  so_calo: number;
+  so_gam: number | null;
+  so_calo: number | null;
 };
 
 // Lấy tất cả món Viện Dinh dưỡng đã cân

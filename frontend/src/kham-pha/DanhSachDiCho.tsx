@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { TEN_BUA } from '../bua-an/TenBua';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { MonThucDon } from '../thuc-don/ThucDonApi';
 
@@ -10,12 +11,12 @@ type DanhSachDiChoProps = {
   onDong: () => void;
 };
 
-// Tấm đi chợ trượt từ dưới lên: nguyên liệu của từng món tự nấu, ghi theo món (không cộng dồn vì lượng ghi bằng chữ); bấm một dòng để tick
+// Tấm đi chợ trượt từ dưới lên: nguyên liệu của từng món, ghi theo món (không cộng dồn vì lượng ghi bằng chữ); bấm một dòng để tick
 export function DanhSachDiCho({ danhSachMon, onDong }: DanhSachDiChoProps) {
-  // Các dòng đã tick, khóa là "tên món|nguyên liệu"; chỉ nhớ lúc tấm đang mở, không lưu
+  // Các dòng đã tick, khóa là "bữa|tên món|nguyên liệu"; chỉ nhớ lúc tấm đang mở, không lưu
   const [daTick, setDaTick] = useState<string[]>([]);
 
-  // Chỉ món tự nấu có nguyên liệu mới cần đi chợ
+  // Chỉ món có nguyên liệu (cơm nhà) mới cần đi chợ; món Viện là món quán, không có nguyên liệu
   const monCanMua = danhSachMon.filter((mon) => mon.nguyen_lieu.length > 0);
 
   // Bấm một dòng: chưa tick thì tick, đã tick thì bỏ
@@ -43,9 +44,11 @@ export function DanhSachDiCho({ danhSachMon, onDong }: DanhSachDiChoProps) {
           <ScrollView showsVerticalScrollIndicator={false}>
             {monCanMua.map((mon) => (
               <View key={mon.loai_bua + mon.ten_mon} style={styles.nhom}>
-                <Text style={styles.tenMon}>{mon.ten_mon}</Text>
+                <Text style={styles.tenMon}>
+                  {TEN_BUA[mon.loai_bua]} · {mon.ten_mon}
+                </Text>
                 {mon.nguyen_lieu.map((nguyenLieu, thuTu) => {
-                  const khoa = `${mon.ten_mon}|${nguyenLieu}`;
+                  const khoa = `${mon.loai_bua}|${mon.ten_mon}|${nguyenLieu}`;
                   const daMua = daTick.includes(khoa);
                   return (
                     <Pressable

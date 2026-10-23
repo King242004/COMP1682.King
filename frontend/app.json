@@ -33,7 +33,8 @@
         {
           "cameraPermission": "MealMate dùng camera để chụp món ăn và ước tính calo."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

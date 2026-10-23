@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
@@ -29,7 +30,7 @@ export default function Coach() {
   // Câu đang chờ coach trả lời; rỗng là không chờ gì
   const [cauDangGui, setCauDangGui] = useState('');
   const [loi, setLoi] = useState('');
-  const khungCuon = useRef<ScrollView>(null);
+  const khungCuon = useRef<ScrollViewInstance>(null);
   // Chiều cao vùng tai thỏ để đệm phía trên; phần đáy để thanh tab tự chừa
   const insets = useSafeAreaInsets();
 

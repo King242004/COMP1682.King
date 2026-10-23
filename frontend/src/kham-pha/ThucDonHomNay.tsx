@@ -1,28 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { layNhatKyNgay, themBuaAn } from '../bua-an/BuaAnApi';
 import type { BuaAn } from '../bua-an/BuaAnApi';
-import { THU_TU_BUA } from '../bua-an/TenBua';
+import { BIEU_TUONG_BUA, MAU_BUA, TEN_BUA, THU_TU_BUA } from '../bua-an/TenBua';
 import { Button } from '../shared/components/Button';
 import { Card } from '../shared/components/Card';
 import { ErrorBox } from '../shared/components/ErrorBox';
 import { Screen } from '../shared/components/Screen';
-import { todayKey } from '../shared/dateKey';
+import { formatDateLabel, todayKey } from '../shared/dateKey';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import { layThucDon, taoThucDon } from '../thuc-don/ThucDonApi';
-import type { MonThucDon, ThucDonNgay } from '../thuc-don/ThucDonApi';
+import type { CaiDatThucDon, MonThucDon, ThucDonNgay } from '../thuc-don/ThucDonApi';
+import { layTatCaMon } from '../tra-mon/TraMonApi';
+import type { MonTraCuu } from '../tra-mon/TraMonApi';
+import { ChiTietMon } from './ChiTietMon';
 import { DanhSachDiCho } from './DanhSachDiCho';
+import { CAI_DAT_MAC_DINH, TamCaiDatThucDon } from './TamCaiDatThucDon';
 import { TheMonThucDon } from './TheMonThucDon';
+import { TheMonVien } from './TheMonVien';
 
 type ThucDonHomNayProps = {
   // 2 tab của Khám phá, đứng yên trên cùng
   dauMan: ReactNode;
 };
 
-// Phần "Thực đơn hôm nay" của tab Khám phá: AI lập thực đơn, bấm "Đã ăn" để ghi vào nhật ký, danh sách đi chợ
+// Phần "Thực đơn hôm nay" của tab Khám phá: cài đặt rồi nhờ AI lập thực đơn (món Viện đã cân, mâm cơm nhà), bấm "Đã ăn" để ghi vào nhật ký, danh sách đi chợ
 export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
   // Thực đơn luôn là của hôm nay
   const ngay = todayKey();
@@ -34,6 +40,12 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
   // Món đang được ghi vào nhật ký (bữa + tên); rỗng là không ghi gì
   const [monDangGhi, setMonDangGhi] = useState('');
   const [dangMoDiCho, setDangMoDiCho] = useState(false);
+  // Lựa chọn của lần tạo gần nhất, để tấm cài đặt chọn sẵn khi tạo lại (chỉ nhớ lúc app đang mở)
+  const [caiDat, setCaiDat] = useState<CaiDatThucDon>(CAI_DAT_MAC_DINH);
+  const [dangMoCaiDat, setDangMoCaiDat] = useState(false);
+  // Món Viện đang mở chi tiết; cả bảng món tải một lần khi mở chi tiết lần đầu
+  const [monDangXem, setMonDangXem] = useState<MonTraCuu | null>(null);
+  const [tatCaMon, setTatCaMon] = useState<MonTraCuu[] | null>(null);
   const [loi, setLoi] = useState('');
 
   // Mở phần này là tải thực đơn và nhật ký hôm nay
@@ -52,24 +64,45 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
     }
   }
 
-  // Nhờ AI tạo (hoặc tạo lại) thực đơn
-  async function handleTao() {
+  // Bấm "Tạo thực đơn" trong tấm cài đặt: đóng tấm, nhớ lựa chọn, nhờ AI tạo (hoặc tạo lại) thực đơn
+  async function handleTao(caiDatMoi: CaiDatThucDon) {
+    setDangMoCaiDat(false);
+    setCaiDat(caiDatMoi);
     setLoi('');
     setDangTao(true);
     try {
-      setThucDon(await taoThucDon(ngay));
+      setThucDon(await taoThucDon(ngay, caiDatMoi));
     } catch (loiTao) {
       setLoi((loiTao as Error).message);
     }
     setDangTao(false);
   }
 
-  // Bấm "Tạo lại": hỏi trước vì thực đơn mới sẽ thay thực đơn hôm nay
-  function hoiTruocKhiTaoLai() {
-    Alert.alert('Tạo thực đơn khác?', 'Thực đơn hôm nay sẽ được thay bằng thực đơn mới.', [
-      { text: 'Hủy', style: 'cancel' },
-      { text: 'Tạo lại', onPress: handleTao },
-    ]);
+  // Bấm một món Viện: tìm món trong bảng món (tải lần đầu) rồi mở chi tiết
+  async function moChiTiet(mon: MonThucDon) {
+    setLoi('');
+    try {
+      let danhSach = tatCaMon;
+      if (danhSach === null) {
+        danhSach = await layTatCaMon();
+        setTatCaMon(danhSach);
+      }
+      const monTimThay = danhSach.find((monTrongBang) => monTrongBang.ma_so === mon.ma_so);
+      if (monTimThay !== undefined) {
+        setMonDangXem(monTimThay);
+      }
+    } catch (loiTai) {
+      setLoi((loiTai as Error).message);
+    }
+  }
+
+  // Bấm "Hỏi Coach cách nấu": đóng chi tiết, sang tab Coach với câu hỏi điền sẵn
+  function hoiCoachCachNau(mon: MonTraCuu) {
+    setMonDangXem(null);
+    router.push({
+      pathname: '/(tabs)/TuVan',
+      params: { cauHoi: `Gợi ý cho mình một cách nấu món "${mon.ten_mon}" ở nhà theo hướng tốt cho sức khỏe nhé.` },
+    });
   }
 
   // Món đã có trong nhật ký (cùng bữa, cùng tên) thì coi là đã ghi
@@ -77,7 +110,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
     return monTrongNhatKy.some((buaAn) => buaAn.loai_bua === mon.loai_bua && buaAn.ten_mon === mon.ten_mon);
   }
 
-  // Bấm "Đã ăn": ghi món vào nhật ký hôm nay, đúng bữa, nguồn số liệu là AI
+  // Bấm "Đã ăn": ghi món vào nhật ký hôm nay, đúng bữa; món Viện ghi nguồn Viện, cơm nhà ghi nguồn AI
   async function handleDaAn(mon: MonThucDon) {
     setLoi('');
     setMonDangGhi(mon.loai_bua + mon.ten_mon);
@@ -94,7 +127,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
         muoi_g: mon.muoi_g,
         duong_g: mon.duong_g,
         beo_no_g: mon.beo_no_g,
-        nguon_so_lieu: 'ai',
+        nguon_so_lieu: mon.kieu === 'mon_vien' ? 'vien_dinh_duong' : 'ai',
       });
       setMonTrongNhatKy([...monTrongNhatKy, buaAnMoi]);
     } catch (loiGhi) {
@@ -111,18 +144,18 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
     );
   }
 
-  // Tổng đạm, tinh bột, béo của cả thực đơn để hiện ở thẻ tổng; có món tự nấu thì mới có danh sách đi chợ
+  // Tổng đạm, tinh bột, béo của cả thực đơn để hiện ở thẻ tổng; có món có nguyên liệu thì mới có danh sách đi chợ
   let tongDam = 0;
   let tongTinhBot = 0;
   let tongBeo = 0;
-  let coMonTuNau = false;
+  let coNguyenLieu = false;
   if (danhSachMon !== null) {
     for (const mon of danhSachMon) {
       tongDam += mon.dam_g;
       tongTinhBot += mon.tinh_bot_g;
       tongBeo += mon.beo_g;
       if (mon.nguyen_lieu.length > 0) {
-        coMonTuNau = true;
+        coNguyenLieu = true;
       }
     }
   }
@@ -139,23 +172,27 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
             <Ionicons name="restaurant-outline" size={28} color={colors.primary} />
           </View>
           <Text style={styles.tieuDeTrong}>Chưa có thực đơn hôm nay</Text>
-          <Text style={styles.chuGioiThieu}>
-            AI lập thực đơn theo mục tiêu calo, đạm và dị ứng trong hồ sơ của bạn, ưu tiên món Việt thường ngày.
-          </Text>
+          <Text style={styles.chuGioiThieu}>AI chọn món theo mục tiêu calo và dị ứng trong hồ sơ của bạn.</Text>
           <View style={styles.dongSeCo}>
-            <Ionicons name="sunny-outline" size={16} color={colors.primary} />
-            <Text style={styles.chuSeCo}>Sáng, trưa, tối và có thể thêm bữa phụ</Text>
+            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            <Text style={styles.chuSeCo}>Món quán: số Viện Dinh dưỡng đã cân</Text>
           </View>
           <View style={styles.dongSeCo}>
-            <Ionicons name="book-outline" size={16} color={colors.primary} />
-            <Text style={styles.chuSeCo}>Món tự nấu có cách nấu</Text>
+            <Ionicons name="home-outline" size={16} color={colors.primary} />
+            <Text style={styles.chuSeCo}>Cơm nhà theo số món bạn chọn</Text>
           </View>
           <View style={styles.dongSeCo}>
             <Ionicons name="basket-outline" size={16} color={colors.primary} />
-            <Text style={styles.chuSeCo}>Có danh sách đi chợ</Text>
+            <Text style={styles.chuSeCo}>Có danh sách đi chợ cho cơm nhà</Text>
           </View>
           <View style={styles.khoangNut}>
-            <Button title="Tạo thực đơn" loadingTitle="AI đang lập thực đơn…" isLoading={dangTao} onPress={handleTao} iconName="sparkles-outline" />
+            <Button
+              title="Tạo thực đơn"
+              loadingTitle="AI đang lập thực đơn…"
+              isLoading={dangTao}
+              onPress={() => setDangMoCaiDat(true)}
+              iconName="sparkles-outline"
+            />
           </View>
           {dangTao ? <Text style={styles.chuCho}>Thường mất dưới 20 giây, chờ tối đa 30 giây.</Text> : null}
         </Card>
@@ -164,11 +201,11 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
       {/* Có thực đơn: thẻ tổng, lời nhắc, các món, đi chợ */}
       {thucDon && danhSachMon !== null ? (
         <>
-          {/* Thẻ tổng: calo cả thực đơn so với mục tiêu, ba chất, nút tạo lại ở góc */}
+          {/* Thẻ tổng: ngày, calo cả thực đơn so với mục tiêu, ba chất, nút tạo lại ở góc */}
           <Card>
             <View style={styles.hangDauThe}>
               <View>
-                <Text style={styles.chuNho}>Cả thực đơn hôm nay</Text>
+                <Text style={styles.chuNho}>{formatDateLabel(ngay)}</Text>
                 <View style={styles.hangSoCalo}>
                   <Text style={styles.soCalo}>{thucDon.tong_calo.toLocaleString('vi-VN')}</Text>
                   <Text style={styles.chuNho}>
@@ -179,7 +216,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
               <Pressable
                 style={({ pressed }) => [styles.nutTaoLai, dangTao || monDangGhi !== '' ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
                 disabled={dangTao || monDangGhi !== ''}
-                onPress={hoiTruocKhiTaoLai}
+                onPress={() => setDangMoCaiDat(true)}
               >
                 <Ionicons name="refresh" size={14} color={colors.textOnPrimaryLight} />
                 <Text style={styles.chuTaoLai}>{dangTao ? 'Đang tạo…' : 'Tạo lại'}</Text>
@@ -191,25 +228,77 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
               <Text style={[styles.chuChat, { color: colors.fat }]}>Béo {Math.round(tongBeo)} g</Text>
             </View>
           </Card>
-          <Text style={styles.chuPhu}>Số do AI ước tính. Có dị ứng thì hãy tự kiểm thành phần từng món; ăn ngoài thì hỏi quán.</Text>
+          <Text style={styles.chuPhu}>
+            Món quán là suất Viện Dinh dưỡng đã cân; cơm nhà là AI ước tính. Có dị ứng thì hãy tự kiểm thành phần.
+          </Text>
 
-          {danhSachMon.map((mon) => (
-            <TheMonThucDon
-              key={mon.loai_bua + mon.ten_mon}
-              mon={mon}
-              daGhi={laDaGhi(mon)}
-              dangGhi={monDangGhi === mon.loai_bua + mon.ten_mon}
-              khoa={monDangGhi !== '' || dangTao}
-              onDaAn={() => handleDaAn(mon)}
-            />
-          ))}
+          {/* Món chia theo bữa: tiêu đề bữa (biểu tượng màu và tên bữa), món nằm dưới; bữa không có món thì không hiện */}
+          {THU_TU_BUA.map((loaiBua) => {
+            const monCuaBua = danhSachMon.filter((mon) => mon.loai_bua === loaiBua);
+            if (monCuaBua.length === 0) {
+              return null;
+            }
+            return (
+              <View key={loaiBua}>
+                <View style={styles.tieuDeBua}>
+                  <Ionicons name={BIEU_TUONG_BUA[loaiBua]} size={18} color={MAU_BUA[loaiBua].mau} />
+                  <Text style={styles.chuTieuDeBua}>{TEN_BUA[loaiBua]}</Text>
+                </View>
+                {/* Món Viện thì thẻ có ảnh, bấm mở chi tiết; cơm nhà (và thực đơn cũ) thì thẻ AI ước tính có nút 📖 */}
+                {monCuaBua.map((mon) =>
+                  mon.kieu === 'mon_vien' ? (
+                    <TheMonVien
+                      key={mon.loai_bua + mon.ten_mon}
+                      mon={mon}
+                      daGhi={laDaGhi(mon)}
+                      dangGhi={monDangGhi === mon.loai_bua + mon.ten_mon}
+                      khoa={monDangGhi !== '' || dangTao}
+                      onDaAn={() => handleDaAn(mon)}
+                      onXemChiTiet={() => moChiTiet(mon)}
+                    />
+                  ) : (
+                    <TheMonThucDon
+                      key={mon.loai_bua + mon.ten_mon}
+                      mon={mon}
+                      daGhi={laDaGhi(mon)}
+                      dangGhi={monDangGhi === mon.loai_bua + mon.ten_mon}
+                      khoa={monDangGhi !== '' || dangTao}
+                      onDaAn={() => handleDaAn(mon)}
+                    />
+                  ),
+                )}
+              </View>
+            );
+          })}
 
-          {/* Có món tự nấu thì có nút mở danh sách đi chợ */}
-          {coMonTuNau ? (
+          {/* Có món có nguyên liệu thì có nút mở danh sách đi chợ */}
+          {coNguyenLieu ? (
             <Button title="Danh sách đi chợ" loadingTitle="" isLoading={false} onPress={() => setDangMoDiCho(true)} isSecondary iconName="basket-outline" />
           ) : null}
           {dangMoDiCho ? <DanhSachDiCho danhSachMon={danhSachMon} onDong={() => setDangMoDiCho(false)} /> : null}
         </>
+      ) : null}
+
+      {/* Tấm cài đặt trước khi tạo; đã có thực đơn thì là tạo lại */}
+      {dangMoCaiDat && thucDon ? (
+        <TamCaiDatThucDon
+          caiDatBanDau={caiDat}
+          laTaoLai={danhSachMon !== null}
+          mucTieuCalo={thucDon.muc_tieu_calo}
+          onTao={handleTao}
+          onDong={() => setDangMoCaiDat(false)}
+        />
+      ) : null}
+
+      {/* Chi tiết món Viện, nút dưới cùng hỏi Coach cách nấu */}
+      {monDangXem ? (
+        <ChiTietMon
+          mon={monDangXem}
+          onDong={() => setMonDangXem(null)}
+          tenNut="Hỏi Coach cách nấu"
+          bieuTuongNut="chatbubble-ellipses-outline"
+          onBamNut={() => hoiCoachCachNau(monDangXem)}
+        />
       ) : null}
     </Screen>
   );
@@ -311,6 +400,18 @@ const styles = StyleSheet.create({
   chuPhu: {
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
-    marginBottom: spacing.medium,
+    marginBottom: spacing.small,
+  },
+  tieuDeBua: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.small,
+    marginTop: spacing.small,
+    marginBottom: spacing.small,
+  },
+  chuTieuDeBua: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
   },
 });

@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BIEU_TUONG_BUA, MAU_BUA, TEN_BUA } from '../bua-an/TenBua';
 import { colors, fontSizes, pressedOpacity, radius, shadows, spacing } from '../shared/theme';
 import type { MonThucDon } from '../thuc-don/ThucDonApi';
 
@@ -15,28 +14,27 @@ type TheMonThucDonProps = {
   onDaAn: () => void;
 };
 
-// Thẻ một món trong thực đơn, 2 dòng: tên món; bữa, calo, đạm. Món tự nấu có nút 📖 mở cách nấu; bên phải là nút "Đã ăn"
+// Thẻ mâm cơm nhà AI ghép trong thực đơn: "Cơm nhà" và nhãn "AI ước tính"; các món trong mâm; calo và ba chất; nút 📖 mở nguyên liệu và cách nấu; nút "Đã ăn". Món đã ghi thì cả thẻ mờ
 export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucDonProps) {
   const [moCachNau, setMoCachNau] = useState(false);
-  const mauBua = MAU_BUA[mon.loai_bua];
 
   return (
-    <View style={styles.the}>
+    <View style={[styles.the, daGhi ? styles.theDaGhi : null]}>
       <View style={styles.hangNgang}>
-        {/* Ô biểu tượng màu của bữa, giống hộp bữa ở trang chủ */}
-        <View style={[styles.oBieuTuong, { backgroundColor: mauBua.nen }]}>
-          <Ionicons name={BIEU_TUONG_BUA[mon.loai_bua]} size={18} color={mauBua.mau} />
-        </View>
-
-        {/* Tên món (gạch ngang khi đã ghi); bữa, calo, đạm */}
+        {/* Tên (gạch ngang khi đã ghi) và nhãn "AI ước tính"; các món trong mâm; calo, đạm, tinh bột, béo ước tính */}
         <View style={styles.cotGiua}>
-          <Text style={[styles.tenMon, daGhi ? styles.tenMonDaGhi : null]}>{mon.ten_mon}</Text>
+          <View style={styles.hangTen}>
+            <Text style={[styles.tenMon, daGhi ? styles.tenMonDaGhi : null]}>{mon.ten_mon}</Text>
+            <Text style={styles.nhanAi}>AI ước tính</Text>
+          </View>
+          <Text style={styles.chuPhu}>{mon.khau_phan}</Text>
           <Text style={styles.chuPhu}>
-            {TEN_BUA[mon.loai_bua]} · {mon.so_calo.toLocaleString('vi-VN')} kcal · đạm {mon.dam_g.toLocaleString('vi-VN')} g
+            khoảng {mon.so_calo.toLocaleString('vi-VN')} kcal · đạm {mon.dam_g.toLocaleString('vi-VN')} g · tinh bột{' '}
+            {mon.tinh_bot_g.toLocaleString('vi-VN')} g · béo {mon.beo_g.toLocaleString('vi-VN')} g
           </Text>
         </View>
 
-        {/* Món tự nấu: nút 📖 mở hoặc gập cách nấu */}
+        {/* Có cách nấu thì có nút 📖 mở hoặc gập nguyên liệu và cách nấu */}
         {mon.cach_nau.length > 0 ? (
           <Pressable style={({ pressed }) => [styles.nutSach, pressed ? styles.dangBam : null]} hitSlop={6} onPress={() => setMoCachNau(!moCachNau)}>
             <Ionicons name={moCachNau ? 'book' : 'book-outline'} size={20} color={colors.primary} />
@@ -61,14 +59,23 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucD
         )}
       </View>
 
-      {/* Các bước nấu khi đã mở */}
-      {moCachNau
-        ? mon.cach_nau.map((buoc, thuTu) => (
-            <Text key={thuTu} style={styles.buocNau}>
+      {/* Khi đã mở: nguyên liệu cho 1 người, rồi các bước nấu */}
+      {moCachNau ? (
+        <View style={styles.phanCachNau}>
+          <Text style={styles.chuNho}>Nguyên liệu (1 người)</Text>
+          {mon.nguyen_lieu.map((nguyenLieu, thuTu) => (
+            <Text key={thuTu} style={styles.dongCachNau}>
+              • {nguyenLieu}
+            </Text>
+          ))}
+          <Text style={[styles.chuNho, styles.khoangTren]}>Cách nấu do AI gợi ý</Text>
+          {mon.cach_nau.map((buoc, thuTu) => (
+            <Text key={thuTu} style={styles.dongCachNau}>
               {thuTu + 1}. {buoc}
             </Text>
-          ))
-        : null}
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -81,17 +88,13 @@ const styles = StyleSheet.create({
     padding: spacing.medium,
     marginBottom: spacing.medium,
   },
+  theDaGhi: {
+    opacity: 0.55,
+  },
   hangNgang: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.small,
-  },
-  oBieuTuong: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   cotGiua: {
     flex: 1,
@@ -103,7 +106,22 @@ const styles = StyleSheet.create({
   },
   tenMonDaGhi: {
     textDecorationLine: 'line-through',
-    color: colors.textSecondary,
+  },
+  hangTen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.small,
+  },
+  // Nhãn vàng nhỏ báo số liệu là AI ước tính
+  nhanAi: {
+    fontSize: fontSizes.label,
+    color: colors.warningText,
+    backgroundColor: colors.warningBackground,
+    borderRadius: radius.input,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    overflow: 'hidden',
   },
   chuPhu: {
     fontSize: fontSizes.secondary,
@@ -143,12 +161,27 @@ const styles = StyleSheet.create({
   },
   chuDaGhi: {
     fontSize: fontSizes.secondary,
-    color: colors.textSecondary,
+    fontWeight: '600',
+    color: colors.protein,
   },
-  buocNau: {
+  // Phần mở ra dưới thẻ, ngăn với phần trên bằng một đường mảnh
+  phanCachNau: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    marginTop: spacing.medium,
+    paddingTop: spacing.small,
+  },
+  chuNho: {
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  khoangTren: {
+    marginTop: spacing.medium,
+  },
+  dongCachNau: {
     fontSize: fontSizes.body,
     color: colors.text,
-    lineHeight: 20,
-    marginTop: spacing.small,
+    lineHeight: 22,
   },
 });

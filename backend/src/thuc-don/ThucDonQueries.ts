@@ -1,9 +1,12 @@
 import database from '../database/database.ts';
 
-// Một món trong thực đơn, đã kiểm; món ăn ngoài thì không có nguyên liệu và cách nấu
+// Một món trong thực đơn, đã kiểm. "mon_vien": 1 suất Viện Dinh dưỡng đã cân (có mã món, ảnh); "com_nha": mâm cơm nhà AI ghép, số AI ước tính
+// Thực đơn tạo trước 24/10/2026 không có kieu, ma_so, anh_url và số là AI ước tính
 export type MonThucDon = {
   loai_bua: 'sang' | 'trua' | 'toi' | 'phu';
-  cach_an: 'an_ngoai' | 'tu_nau';
+  kieu: 'mon_vien' | 'com_nha';
+  ma_so: string | null;
+  anh_url: string | null;
   ten_mon: string;
   khau_phan: string;
   so_calo: number;
