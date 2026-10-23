@@ -1,47 +1,126 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Card } from '../shared/components/Card';
-import { SectionTitle } from '../shared/components/SectionTitle';
-import { colors, fontSizes, spacing } from '../shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { MonThucDon } from '../thuc-don/ThucDonApi';
 
-// Danh sách đi chợ: nguyên liệu của từng món tự nấu, ghi theo món (không cộng dồn vì lượng ghi bằng chữ)
-export function DanhSachDiCho({ danhSachMon }: { danhSachMon: MonThucDon[] }) {
+type DanhSachDiChoProps = {
+  danhSachMon: MonThucDon[];
+  onDong: () => void;
+};
+
+// Tấm đi chợ trượt từ dưới lên: nguyên liệu của từng món tự nấu, ghi theo món (không cộng dồn vì lượng ghi bằng chữ); bấm một dòng để tick
+export function DanhSachDiCho({ danhSachMon, onDong }: DanhSachDiChoProps) {
+  // Các dòng đã tick, khóa là "tên món|nguyên liệu"; chỉ nhớ lúc tấm đang mở, không lưu
+  const [daTick, setDaTick] = useState<string[]>([]);
+
   // Chỉ món tự nấu có nguyên liệu mới cần đi chợ
   const monCanMua = danhSachMon.filter((mon) => mon.nguyen_lieu.length > 0);
-  if (monCanMua.length === 0) {
-    return null;
+
+  // Bấm một dòng: chưa tick thì tick, đã tick thì bỏ
+  function doiTick(khoa: string) {
+    if (daTick.includes(khoa)) {
+      setDaTick(daTick.filter((khoaCu) => khoaCu !== khoa));
+    } else {
+      setDaTick([...daTick, khoa]);
+    }
   }
 
   return (
-    <Card>
-      <SectionTitle title="Đi chợ (món tự nấu)" />
-      {monCanMua.map((mon) => (
-        <View key={mon.loai_bua + mon.ten_mon} style={styles.mon}>
-          <Text style={styles.tenMon}>{mon.ten_mon}</Text>
-          {mon.nguyen_lieu.map((nguyenLieu, thuTu) => (
-            <Text key={thuTu} style={styles.nguyenLieu}>
-              • {nguyenLieu}
-            </Text>
-          ))}
+    <Modal visible transparent animationType="slide" onRequestClose={onDong}>
+      <View style={styles.nenToi}>
+        <View style={styles.tam}>
+          {/* Tiêu đề và nút ✕ đóng */}
+          <View style={styles.hangTieuDe}>
+            <Text style={styles.tieuDe}>Danh sách đi chợ</Text>
+            <Pressable style={({ pressed }) => (pressed ? styles.dangBam : null)} hitSlop={10} onPress={onDong}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          {/* Nguyên liệu nhóm theo món; dòng đã tick thì có dấu tick và gạch ngang */}
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {monCanMua.map((mon) => (
+              <View key={mon.loai_bua + mon.ten_mon} style={styles.nhom}>
+                <Text style={styles.tenMon}>{mon.ten_mon}</Text>
+                {mon.nguyen_lieu.map((nguyenLieu, thuTu) => {
+                  const khoa = `${mon.ten_mon}|${nguyenLieu}`;
+                  const daMua = daTick.includes(khoa);
+                  return (
+                    <Pressable
+                      key={thuTu}
+                      style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
+                      onPress={() => doiTick(khoa)}
+                    >
+                      <Ionicons
+                        name={daMua ? 'checkbox' : 'square-outline'}
+                        size={20}
+                        color={daMua ? colors.protein : colors.textSecondary}
+                      />
+                      <Text style={[styles.nguyenLieu, daMua ? styles.nguyenLieuDaMua : null]}>{nguyenLieu}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </ScrollView>
         </View>
-      ))}
-    </Card>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  mon: {
+  nenToi: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  tam: {
+    maxHeight: '80%',
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.card,
+    borderTopRightRadius: radius.card,
+    padding: spacing.large,
+    paddingBottom: spacing.xlarge * 2,
+  },
+  hangTieuDe: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.medium,
   },
-  tenMon: {
-    fontSize: fontSizes.body,
+  tieuDe: {
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
+  dangBam: {
+    opacity: pressedOpacity,
+  },
+  nhom: {
+    marginBottom: spacing.medium,
+  },
+  tenMon: {
+    fontSize: fontSizes.secondary,
+    fontWeight: '600',
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  dong: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.small,
+    paddingVertical: 6,
+  },
   nguyenLieu: {
+    flex: 1,
     fontSize: fontSizes.body,
     color: colors.text,
-    lineHeight: 20,
+  },
+  nguyenLieuDaMua: {
+    textDecorationLine: 'line-through',
+    color: colors.textSecondary,
   },
 });

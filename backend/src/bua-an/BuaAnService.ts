@@ -3,12 +3,6 @@ import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { layBuaAnTheoNgay, layMonHayAn, layMotBuaAn, suaBuaAn, themBuaAn, xoaBuaAn } from './BuaAnQueries.ts';
 import type { BuaAn, DuLieuBuaAn, MonHayAn } from './BuaAnQueries.ts';
-import { tinhGioiHanNenHanChe } from './TinhGioiHanNenHanChe.ts';
-import type { GioiHanNenHanChe } from './TinhGioiHanNenHanChe.ts';
-import { tinhMucTieuChat } from './TinhMucTieuChat.ts';
-import type { MucTieuChat } from './TinhMucTieuChat.ts';
-import { tongHopNgay } from './TongHopNgay.ts';
-import type { TongHop } from './TongHopNgay.ts';
 
 // Giới hạn độ dài và calo để chặn gõ nhầm; là lựa chọn giao diện, không phải luật dinh dưỡng (giống CHECK trong 005_bua_an.sql)
 const TEN_MON_DAI_NHAT = 100;
@@ -82,13 +76,14 @@ function kiemTraDuLieuBuaAn(duLieu: Record<string, unknown>): DuLieuBuaAn {
   }
 
   // Không gửi nguồn số liệu thì coi là tự nhập
-  let nguonSoLieu: 'nhap_tay' | 'ai' | 'ma_vach' | 'vien_dinh_duong' = 'nhap_tay';
+  let nguonSoLieu: 'nhap_tay' | 'ai' | 'ma_vach' | 'vien_dinh_duong' | 'thuc_pham' = 'nhap_tay';
   if (duLieu.nguon_so_lieu !== undefined) {
     if (
       duLieu.nguon_so_lieu !== 'nhap_tay' &&
       duLieu.nguon_so_lieu !== 'ai' &&
       duLieu.nguon_so_lieu !== 'ma_vach' &&
-      duLieu.nguon_so_lieu !== 'vien_dinh_duong'
+      duLieu.nguon_so_lieu !== 'vien_dinh_duong' &&
+      duLieu.nguon_so_lieu !== 'thuc_pham'
     ) {
       throw new HttpError(400, 'Nguồn số liệu không hợp lệ');
     }
@@ -108,6 +103,150 @@ function kiemTraDuLieuBuaAn(duLieu: Record<string, unknown>): DuLieuBuaAn {
     duong_g: docSoGam(duLieu.duong_g, 'Đường'),
     beo_no_g: docSoGam(duLieu.beo_no_g, 'Béo no'),
     nguon_so_lieu: nguonSoLieu,
+  };
+}
+
+// Số gam đạm mỗi kg cân nặng, tỷ lệ năng lượng khuyến nghị (%) và số kcal mỗi gam, lấy từ bảng quy_dinh
+export type QuyDinhChat = {
+  damGMoiKg: number;
+  tyLeTinhBotThap: number;
+  tyLeTinhBotCao: number;
+  tyLeBeoThap: number;
+  tyLeBeoCao: number;
+  kcalMoiGTinhBot: number;
+  kcalMoiGBeo: number;
+};
+
+// Mục tiêu mỗi ngày cho từng chất, gửi thẳng về app: đạm là mức tối thiểu, tinh bột và béo là khoảng
+export type MucTieuChat = {
+  dam_g_toi_thieu: number;
+  tinh_bot_g_thap: number;
+  tinh_bot_g_cao: number;
+  beo_g_thap: number;
+  beo_g_cao: number;
+};
+
+// Đạm tính theo cân nặng; tinh bột và béo đổi từ mục tiêu calo theo tỷ lệ năng lượng (ThuatToan.md bước 12-13)
+export function tinhMucTieuChat(mucTieuCalo: number, canNangKg: number, quyDinh: QuyDinhChat): MucTieuChat {
+  return {
+    dam_g_toi_thieu: Math.round(canNangKg * quyDinh.damGMoiKg),
+    tinh_bot_g_thap: Math.round((mucTieuCalo * quyDinh.tyLeTinhBotThap) / 100 / quyDinh.kcalMoiGTinhBot),
+    tinh_bot_g_cao: Math.round((mucTieuCalo * quyDinh.tyLeTinhBotCao) / 100 / quyDinh.kcalMoiGTinhBot),
+    beo_g_thap: Math.round((mucTieuCalo * quyDinh.tyLeBeoThap) / 100 / quyDinh.kcalMoiGBeo),
+    beo_g_cao: Math.round((mucTieuCalo * quyDinh.tyLeBeoCao) / 100 / quyDinh.kcalMoiGBeo),
+  };
+}
+
+// Giới hạn muối và tỷ lệ năng lượng tối đa (%), số kcal mỗi gam, lấy từ bảng quy_dinh
+export type QuyDinhNenHanChe = {
+  muoiToiDaG: number;
+  tyLeDuongToiDa: number;
+  tyLeBeoNoToiDa: number;
+  kcalMoiGDuong: number;
+  kcalMoiGBeo: number;
+};
+
+// Số gam tối đa mỗi ngày cho muối, đường, béo no, gửi thẳng về app
+export type GioiHanNenHanChe = {
+  muoi_g_toi_da: number;
+  duong_g_toi_da: number;
+  beo_no_g_toi_da: number;
+};
+
+// Muối có giới hạn cố định; đường và béo no tính theo % mục tiêu calo rồi đổi ra gam
+export function tinhGioiHanNenHanChe(mucTieuCalo: number, quyDinh: QuyDinhNenHanChe): GioiHanNenHanChe {
+  return {
+    muoi_g_toi_da: quyDinh.muoiToiDaG,
+    duong_g_toi_da: Math.round((mucTieuCalo * quyDinh.tyLeDuongToiDa) / 100 / quyDinh.kcalMoiGDuong),
+    beo_no_g_toi_da: Math.round((mucTieuCalo * quyDinh.tyLeBeoNoToiDa) / 100 / quyDinh.kcalMoiGBeo),
+  };
+}
+
+// Số liệu của một món cần để cộng tổng; các chất có thể chưa có (null)
+export type SoLieuMon = {
+  so_calo: number;
+  dam_g: number | null;
+  tinh_bot_g: number | null;
+  beo_g: number | null;
+  muoi_g: number | null;
+  duong_g: number | null;
+  beo_no_g: number | null;
+};
+
+// Kết quả tổng hợp một ngày, gửi thẳng về app
+export type TongHop = {
+  tong_calo: number;
+  con_lai: number | null;
+  tong_dam_g: number;
+  tong_tinh_bot_g: number;
+  tong_beo_g: number;
+  tong_muoi_g: number;
+  tong_duong_g: number;
+  tong_beo_no_g: number;
+  so_mon_thieu_so_lieu: number;
+};
+
+// Làm tròn 1 số lẻ cho số gam
+function lamTronMotSoLe(so: number): number {
+  return Math.round(so * 10) / 10;
+}
+
+// Cộng tổng calo, gam đạm, tinh bột, béo và muối, đường, béo no của các món trong ngày; còn lại = mục tiêu trừ đã ăn (âm là đã vượt)
+export function tongHopNgay(danhSachMon: SoLieuMon[], mucTieuCalo: number | null): TongHop {
+  let tongCalo = 0;
+  let tongDam = 0;
+  let tongTinhBot = 0;
+  let tongBeo = 0;
+  let tongMuoi = 0;
+  let tongDuong = 0;
+  let tongBeoNo = 0;
+  let soMonThieuSoLieu = 0;
+
+  for (const mon of danhSachMon) {
+    tongCalo = tongCalo + mon.so_calo;
+
+    // Món thiếu một trong sáu chất thì vẫn cộng phần đã có, và đếm vào số món thiếu số liệu
+    if (
+      mon.dam_g === null || mon.tinh_bot_g === null || mon.beo_g === null ||
+      mon.muoi_g === null || mon.duong_g === null || mon.beo_no_g === null
+    ) {
+      soMonThieuSoLieu = soMonThieuSoLieu + 1;
+    }
+    if (mon.dam_g !== null) {
+      tongDam = tongDam + mon.dam_g;
+    }
+    if (mon.tinh_bot_g !== null) {
+      tongTinhBot = tongTinhBot + mon.tinh_bot_g;
+    }
+    if (mon.beo_g !== null) {
+      tongBeo = tongBeo + mon.beo_g;
+    }
+    if (mon.muoi_g !== null) {
+      tongMuoi = tongMuoi + mon.muoi_g;
+    }
+    if (mon.duong_g !== null) {
+      tongDuong = tongDuong + mon.duong_g;
+    }
+    if (mon.beo_no_g !== null) {
+      tongBeoNo = tongBeoNo + mon.beo_no_g;
+    }
+  }
+
+  let conLai: number | null = null;
+  if (mucTieuCalo !== null) {
+    conLai = mucTieuCalo - tongCalo;
+  }
+
+  return {
+    tong_calo: tongCalo,
+    con_lai: conLai,
+    tong_dam_g: lamTronMotSoLe(tongDam),
+    tong_tinh_bot_g: lamTronMotSoLe(tongTinhBot),
+    tong_beo_g: lamTronMotSoLe(tongBeo),
+    tong_muoi_g: lamTronMotSoLe(tongMuoi),
+    tong_duong_g: lamTronMotSoLe(tongDuong),
+    tong_beo_no_g: lamTronMotSoLe(tongBeoNo),
+    so_mon_thieu_so_lieu: soMonThieuSoLieu,
   };
 }
 

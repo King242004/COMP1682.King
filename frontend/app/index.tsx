@@ -28,10 +28,10 @@ export default function StartScreen() {
 
   // Chưa đăng nhập thì sang màn đăng nhập, chưa có hồ sơ thì thiết lập, còn lại vào trang chủ
   if (!user) {
-    return <Redirect href="/auth/login" />;
+    return <Redirect href="/auth/Login" />;
   }
   if (!user.da_co_ho_so) {
-    return <Redirect href="/ho-so/sua" />;
+    return <Redirect href="/ho-so/SuaHoSo" />;
   }
   return <Redirect href="/(tabs)" />;
 }

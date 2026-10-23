@@ -1,12 +1,18 @@
 import { Router } from 'express';
 
-import { nhanMonTuAnh, traMaVach, uocTinhTheoTen } from './QuetMonService.ts';
+import { nhanMonTuAnh, traMaVach, uocTinhTheoMoTa, uocTinhTheoTen } from './QuetMonService.ts';
 
 const quetMonRoutes = Router();
 
 // Ước tính số liệu theo tên món và khẩu phần
 quetMonRoutes.post('/ten', async (request, response) => {
   const ketQua = await uocTinhTheoTen(request.body);
+  response.json(ketQua);
+});
+
+// Ước tính số liệu từ câu người dùng tả bữa vừa ăn
+quetMonRoutes.post('/mo-ta', async (request, response) => {
+  const ketQua = await uocTinhTheoMoTa(request.body);
   response.json(ketQua);
 });
 

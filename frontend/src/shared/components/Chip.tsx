@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { colors, fontSizes, pressedOpacity, radius, shadows, spacing } from '../theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../theme';
 
 type ChipProps = {
   label: string;
@@ -9,7 +9,7 @@ type ChipProps = {
   onPress: () => void;
 };
 
-// Nút lựa chọn nhỏ: đang chọn thì nền xanh đặc chữ trắng, bị làm mờ thì không bấm được
+// Nút lựa chọn nhỏ: chưa chọn thì nền trắng viền xám mảnh, đang chọn thì nền xanh đặc chữ trắng, bị làm mờ thì không bấm được
 export function Chip({ label, isSelected, isDisabled, onPress }: ChipProps) {
   return (
     <Pressable
@@ -33,12 +33,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.medium,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.card,
   },
   chipSelected: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   chipDisabled: {
     opacity: 0.4,

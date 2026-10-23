@@ -8,7 +8,7 @@ export default function RootLayout() {
     <AuthProvider>
       <Stack screenOptions={{ headerShown: false }}>
         {/* Màn thêm / sửa món trượt từ dưới lên, phủ toàn màn để lề trên tính đúng như các màn khác */}
-        <Stack.Screen name="bua-an/sua" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="bua-an/ThemSuaBuaAn" options={{ presentation: 'fullScreenModal' }} />
       </Stack>
     </AuthProvider>
   );

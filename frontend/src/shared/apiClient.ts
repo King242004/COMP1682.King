@@ -1,7 +1,11 @@
+import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 
-// Địa chỉ backend, lấy từ file frontend/.env
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+// IP laptop đang chạy Expo, cắt từ địa chỉ điện thoại vừa tải app về (ví dụ "192.168.110.90:8081" → "192.168.110.90")
+const laptopIp = Constants.expoConfig?.hostUri?.split(':')[0];
+
+// Cổng backend, lấy từ file frontend/.env
+const API_PORT = process.env.EXPO_PUBLIC_API_PORT;
 
 // Tên ô lưu token trong bộ nhớ an toàn của điện thoại
 const TOKEN_KEY = 'token';
@@ -41,8 +45,8 @@ export async function deleteToken(): Promise<void> {
 
 // Gọi backend: tự gắn token, server báo lỗi thì ném ApiError kèm câu báo tiếng Việt
 export async function callApi(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: object): Promise<unknown> {
-  if (!API_URL) {
-    throw new Error('Thiếu EXPO_PUBLIC_API_URL trong file frontend/.env');
+  if (!laptopIp || !API_PORT) {
+    throw new Error('Thiếu EXPO_PUBLIC_API_PORT trong file frontend/.env, hoặc app không mở bằng Expo');
   }
 
   // Có token thì gửi kèm để server biết ai đang gọi
@@ -55,7 +59,7 @@ export async function callApi(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: s
   // Mất mạng hoặc server tắt thì fetch tự ném lỗi
   let response: Response;
   try {
-    response = await fetch(API_URL + path, {
+    response = await fetch(`http://${laptopIp}:${API_PORT}${path}`, {
       method: method,
       headers: headers,
       body: body ? JSON.stringify(body) : undefined,

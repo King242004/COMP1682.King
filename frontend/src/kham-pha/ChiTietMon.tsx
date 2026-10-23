@@ -1,136 +1,103 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { themBuaAn } from '../bua-an/BuaAnApi';
-import type { LoaiBua } from '../bua-an/BuaAnApi';
-import { buaTheoGio, TEN_BUA, THU_TU_BUA } from '../bua-an/TenBua';
 import { Button } from '../shared/components/Button';
 import { Card } from '../shared/components/Card';
-import { Chip } from '../shared/components/Chip';
-import { ErrorBox } from '../shared/components/ErrorBox';
 import { Screen } from '../shared/components/Screen';
 import { ScreenTitle } from '../shared/components/ScreenTitle';
-import { SectionTitle } from '../shared/components/SectionTitle';
-import { todayKey } from '../shared/dateKey';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
-import type { MonTraCuu } from '../tra-mon/TraMonApi';
-
-// Người dùng ăn bao nhiêu so với 1 suất của Viện; là lựa chọn giao diện
-const LUA_CHON_PHAN_AN = [
-  { giaTri: 0.5, nhan: '½' },
-  { giaTri: 1, nhan: '1' },
-  { giaTri: 1.5, nhan: '1½' },
-  { giaTri: 2, nhan: '2' },
-];
+import { layThanhPhanSuat } from '../tra-mon/TraMonApi';
+import type { MonTraCuu, ThanhPhanSuat } from '../tra-mon/TraMonApi';
 
 type ChiTietMonProps = {
   mon: MonTraCuu;
   onDong: () => void;
-  // Thêm xong thì báo cho danh sách một câu để hiện, ví dụ "Đã thêm Phở bò vào bữa trưa hôm nay."
-  onDaThem: (cauBao: string) => void;
+  // Bấm "Thêm vào nhật ký": danh sách mở màn thêm món đã điền sẵn để xem lại rồi mới lưu
+  onThem: () => void;
 };
 
-// Làm tròn 1 số lẻ cho số gam
-function lamTronMotSoLe(so: number): number {
-  return Math.round(so * 10) / 10;
+// Viết số kiểu Việt Nam, giữ tối đa 1 số lẻ, ví dụ 268,3
+function vietSo(so: number): string {
+  return (Math.round(so * 10) / 10).toLocaleString('vi-VN');
 }
 
-// Màn nổi chi tiết một món Viện Dinh dưỡng đã cân: ảnh suất, chọn bữa và phần, thêm vào nhật ký hôm nay
-export function ChiTietMon({ mon, onDong, onDaThem }: ChiTietMonProps) {
-  // Bữa mặc định đoán theo giờ, giống nút + nổi ở trang chủ
-  const [loaiBua, setLoaiBua] = useState<LoaiBua>(buaTheoGio(new Date().getHours()));
-  const [phanAn, setPhanAn] = useState(1);
-  const [dangThem, setDangThem] = useState(false);
-  const [loi, setLoi] = useState('');
+// Màn nổi chi tiết một món Viện Dinh dưỡng đã cân: ảnh suất, 1 suất nặng bao nhiêu và gồm những gì, nút mở màn thêm món
+export function ChiTietMon({ mon, onDong, onThem }: ChiTietMonProps) {
+  // Bảng "Trong 1 suất có"; null là đang tải, mảng rỗng là món chưa có bảng
+  const [thanhPhan, setThanhPhan] = useState<ThanhPhanSuat[] | null>(null);
 
-  // Nhân số liệu 1 suất theo phần đã ăn rồi ghi vào nhật ký hôm nay; Viện không có số đường, béo no nên để trống
-  async function themVaoNhatKy() {
-    const luaChonPhan = LUA_CHON_PHAN_AN.find((luaChon) => luaChon.giaTri === phanAn);
-    let khauPhan = '1 suất';
-    if (phanAn !== 1 && luaChonPhan) {
-      khauPhan = `${luaChonPhan.nhan} suất`;
-    }
+  // Mở màn là tải bảng thành phần; tải lỗi thì coi như món chưa có bảng, vẫn thêm món được
+  useEffect(() => {
+    taiThanhPhan();
+  }, []);
 
-    setLoi('');
-    setDangThem(true);
+  async function taiThanhPhan() {
     try {
-      await themBuaAn({
-        ngay: todayKey(),
-        loai_bua: loaiBua,
-        ten_mon: mon.ten_mon,
-        khau_phan: khauPhan,
-        so_calo: Math.round(mon.so_calo * phanAn),
-        dam_g: lamTronMotSoLe(mon.dam_g * phanAn),
-        tinh_bot_g: lamTronMotSoLe(mon.tinh_bot_g * phanAn),
-        beo_g: lamTronMotSoLe(mon.beo_g * phanAn),
-        muoi_g: lamTronMotSoLe(mon.muoi_g * phanAn),
-        duong_g: null,
-        beo_no_g: null,
-        nguon_so_lieu: 'vien_dinh_duong',
-      });
-      onDaThem(`Đã thêm ${mon.ten_mon} vào ${TEN_BUA[loaiBua].toLowerCase()} hôm nay.`);
-    } catch (loiThem) {
-      setLoi((loiThem as Error).message);
-      setDangThem(false);
+      setThanhPhan(await layThanhPhanSuat(mon.ma_so));
+    } catch {
+      setThanhPhan([]);
     }
   }
+
+  // Cộng gam và kcal các dòng thành phần để ghi tổng
+  let tongGam = 0;
+  let tongCalo = 0;
+  if (thanhPhan !== null) {
+    for (const dong of thanhPhan) {
+      tongGam += dong.so_gam;
+      tongCalo += dong.so_calo;
+    }
+  }
+  const coBang = thanhPhan !== null && thanhPhan.length > 0;
 
   return (
     <Modal visible animationType="slide" onRequestClose={onDong}>
       {/* Màn nổi cần lề an toàn riêng, nếu không nội dung sẽ đè lên giờ và pin */}
       <SafeAreaProvider>
         <Screen>
-          <ScreenTitle title={mon.ten_mon} subtitle={`Viện Dinh dưỡng · mã ${mon.ma_so}`} onBack={onDong} />
+          <ScreenTitle title={mon.ten_mon} onBack={onDong} />
 
-          {loi ? <ErrorBox message={loi} /> : null}
-
-          {/* Ảnh suất của Viện có bảng nguyên liệu và số gam; bấm để mở ảnh gốc mà phóng to */}
+          {/* Ảnh suất của Viện; bấm để mở ảnh gốc mà phóng to */}
           <Pressable style={({ pressed }) => (pressed ? styles.dangBam : null)} onPress={() => Linking.openURL(mon.anh_url)}>
             <Image source={{ uri: mon.anh_url }} style={styles.anh} resizeMode="contain" />
-            <Text style={styles.chuLienKet}>Bấm ảnh để phóng to, xem nguyên liệu và số gam</Text>
+            <Text style={styles.chuLienKet}>Bấm ảnh để phóng to</Text>
           </Pressable>
 
-          {/* Chọn bữa để thêm vào */}
-          <SectionTitle title="Bữa" />
-          <View style={styles.hangChip}>
-            {THU_TU_BUA.map((bua) => (
-              <Chip key={bua} label={TEN_BUA[bua]} isSelected={loaiBua === bua} isDisabled={dangThem} onPress={() => setLoaiBua(bua)} />
-            ))}
-          </View>
-
-          {/* Chọn phần đã ăn so với 1 suất */}
-          <SectionTitle title="Bạn ăn bao nhiêu so với suất này?" />
-          <View style={styles.hangChip}>
-            {LUA_CHON_PHAN_AN.map((luaChon) => (
-              <Chip
-                key={luaChon.nhan}
-                label={luaChon.nhan}
-                isSelected={phanAn === luaChon.giaTri}
-                isDisabled={dangThem}
-                onPress={() => setPhanAn(luaChon.giaTri)}
-              />
-            ))}
-          </View>
-
-          {/* Số liệu đã nhân theo phần đang chọn */}
+          {/* 1 suất nặng bao nhiêu (khi có bảng) và số liệu của 1 suất */}
           <Card>
-            <Text style={styles.soCalo}>{Math.round(mon.so_calo * phanAn).toLocaleString('vi-VN')} kcal</Text>
-            <Text style={styles.chuPhu}>
-              Đạm {lamTronMotSoLe(mon.dam_g * phanAn).toLocaleString('vi-VN')} g · tinh bột{' '}
-              {lamTronMotSoLe(mon.tinh_bot_g * phanAn).toLocaleString('vi-VN')} g · béo{' '}
-              {lamTronMotSoLe(mon.beo_g * phanAn).toLocaleString('vi-VN')} g · muối{' '}
-              {lamTronMotSoLe(mon.muoi_g * phanAn).toLocaleString('vi-VN')} g
+            <Text style={styles.soTo}>
+              1 suất{coBang ? ` · ${Math.round(tongGam).toLocaleString('vi-VN')} g` : ''} · {Math.round(mon.so_calo).toLocaleString('vi-VN')} kcal
             </Text>
-            <Text style={styles.chuPhu}>Viện chưa có số đường và béo no cho món này.</Text>
+            <Text style={styles.chuPhu}>
+              Đạm {vietSo(mon.dam_g)} g · Tinh bột {vietSo(mon.tinh_bot_g)} g · Béo {vietSo(mon.beo_g)} g · Muối {vietSo(mon.muoi_g)} g
+            </Text>
           </Card>
 
-          <Button
-            title={`Thêm vào ${TEN_BUA[loaiBua].toLowerCase()}`}
-            loadingTitle="Đang thêm…"
-            isLoading={dangThem}
-            onPress={themVaoNhatKy}
-          />
+          {/* Bảng "Trong 1 suất có", chép từ bảng thành phần Viện in trong ảnh */}
+          {thanhPhan !== null && thanhPhan.length > 0 ? (
+            <Card>
+              <Text style={styles.tieuDeBang}>Trong 1 suất có</Text>
+              {thanhPhan.map((dong) => (
+                <View key={dong.thu_tu} style={styles.dongBang}>
+                  <Text style={styles.tenThanhPhan}>{dong.ten_thanh_phan}</Text>
+                  <Text style={styles.soThanhPhan}>
+                    {vietSo(dong.so_gam)} g · {vietSo(dong.so_calo)} kcal
+                  </Text>
+                </View>
+              ))}
+              <View style={styles.dongCong}>
+                <Text style={styles.chuCong}>Cộng</Text>
+                <Text style={styles.chuCong}>
+                  {vietSo(tongGam)} g · {vietSo(tongCalo)} kcal
+                </Text>
+              </View>
+            </Card>
+          ) : null}
+
+          {/* Mở màn thêm món đã điền sẵn 1 suất; ở đó chọn bữa, sửa lượng rồi mới lưu */}
+          <Button title="Thêm vào nhật ký" loadingTitle="" isLoading={false} onPress={onThem} iconName="add-circle-outline" />
+          <Text style={styles.chuGiua}>Nguồn: Viện Dinh dưỡng Quốc gia</Text>
         </Screen>
       </SafeAreaProvider>
     </Modal>
@@ -142,7 +109,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 2,
     borderRadius: radius.card,
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
   },
   dangBam: {
     opacity: pressedOpacity,
@@ -151,15 +118,10 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.secondary,
     color: colors.primary,
     marginTop: spacing.small,
-  },
-  hangChip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.small,
     marginBottom: spacing.medium,
   },
-  soCalo: {
-    fontSize: fontSizes.bigNumber,
+  soTo: {
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
@@ -167,5 +129,44 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginTop: 4,
+  },
+  tieuDeBang: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.small,
+  },
+  dongBang: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.medium,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tenThanhPhan: {
+    flex: 1,
+    fontSize: fontSizes.secondary,
+    color: colors.text,
+  },
+  soThanhPhan: {
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
+  },
+  dongCong: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: spacing.small,
+  },
+  chuCong: {
+    fontSize: fontSizes.secondary,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  chuGiua: {
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.small,
   },
 });

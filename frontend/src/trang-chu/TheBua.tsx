@@ -17,24 +17,25 @@ type TheBuaProps = {
 export function TheBua({ loaiBua, danhSachMon, onThem, onSuaMon }: TheBuaProps) {
   const mauBua = MAU_BUA[loaiBua];
 
-  // Cộng calo cả bữa; đạm, tinh bột, béo chỉ cộng món có đủ 3 số, món thiếu thì đếm riêng
+  // Cộng calo cả bữa; đạm, tinh bột, béo chỉ cộng món có đủ 3 số (món thiếu đã có nhãn "Chưa đủ số" trên dòng món)
   let tongCalo = 0;
   let tongDam = 0;
   let tongTinhBot = 0;
   let tongBeo = 0;
-  let soMonThieuSo = 0;
   for (const buaAn of danhSachMon) {
     tongCalo = tongCalo + buaAn.so_calo;
-    if (buaAn.dam_g === null || buaAn.tinh_bot_g === null || buaAn.beo_g === null) {
-      soMonThieuSo = soMonThieuSo + 1;
-    } else {
+    if (buaAn.dam_g !== null && buaAn.tinh_bot_g !== null && buaAn.beo_g !== null) {
       tongDam = tongDam + buaAn.dam_g;
       tongTinhBot = tongTinhBot + buaAn.tinh_bot_g;
       tongBeo = tongBeo + buaAn.beo_g;
     }
   }
-  const soMonCoSo = danhSachMon.length - soMonThieuSo;
-  const tongGam = tongDam + tongTinhBot + tongBeo;
+
+  // Làm tròn số gam một lần, thanh và chữ dùng chung số này để luôn khớp nhau (cà phê 0,2 g đạm thành 0, không hiện thanh)
+  const damLamTron = Math.round(tongDam);
+  const tinhBotLamTron = Math.round(tongTinhBot);
+  const beoLamTron = Math.round(tongBeo);
+  const tongGam = damLamTron + tinhBotLamTron + beoLamTron;
 
   return (
     <View style={styles.hop}>
@@ -53,8 +54,6 @@ export function TheBua({ loaiBua, danhSachMon, onThem, onSuaMon }: TheBuaProps) 
           style={({ pressed }) => [styles.nutThem, pressed ? styles.dangBam : null]}
           onPress={onThem}
           hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Thêm món vào ${TEN_BUA[loaiBua].toLowerCase()}`}
         >
           <Ionicons name="add" size={20} color={colors.primary} />
         </Pressable>
@@ -65,27 +64,21 @@ export function TheBua({ loaiBua, danhSachMon, onThem, onSuaMon }: TheBuaProps) 
         <TheBuaAn key={buaAn.id} buaAn={buaAn} onPress={() => onSuaMon(buaAn.id)} />
       ))}
 
-      {/* Thanh 3 màu dài theo số gam đạm / tinh bột / béo của các món có đủ số, số gam ghi ngay dưới */}
-      {soMonCoSo > 0 ? (
+      {/* Thanh 3 màu dài theo số gam đạm / tinh bột / béo, số gam ghi ngay dưới; làm tròn ra 0 cả ba (cà phê, trà) thì không hiện gì */}
+      {tongGam > 0 ? (
         <View style={styles.khoiChat}>
-          {tongGam > 0 ? (
-            <View style={styles.thanh}>
-              <View style={{ flex: tongDam, backgroundColor: colors.protein }} />
-              <View style={{ flex: tongTinhBot, backgroundColor: colors.carbs }} />
-              <View style={{ flex: tongBeo, backgroundColor: colors.fat }} />
-            </View>
-          ) : null}
-          <View style={styles.hangSoGam}>
-            <Text style={[styles.soGam, { color: colors.protein }]}>Đạm {Math.round(tongDam).toLocaleString('vi-VN')} g</Text>
-            <Text style={[styles.soGam, { color: colors.carbs }]}>Tinh bột {Math.round(tongTinhBot).toLocaleString('vi-VN')} g</Text>
-            <Text style={[styles.soGam, { color: colors.fat }]}>Béo {Math.round(tongBeo).toLocaleString('vi-VN')} g</Text>
+          <View style={styles.thanh}>
+            <View style={{ flex: damLamTron, backgroundColor: colors.protein }} />
+            <View style={{ flex: tinhBotLamTron, backgroundColor: colors.carbs }} />
+            <View style={{ flex: beoLamTron, backgroundColor: colors.fat }} />
           </View>
-          {soMonThieuSo > 0 ? <Text style={styles.chuThieu}>{soMonThieuSo} món chưa đủ số</Text> : null}
+          <View style={styles.hangSoGam}>
+            <Text style={[styles.soGam, { color: colors.protein }]}>Đạm {damLamTron.toLocaleString('vi-VN')} g</Text>
+            <Text style={[styles.soGam, { color: colors.carbs }]}>Tinh bột {tinhBotLamTron.toLocaleString('vi-VN')} g</Text>
+            <Text style={[styles.soGam, { color: colors.fat }]}>Béo {beoLamTron.toLocaleString('vi-VN')} g</Text>
+          </View>
         </View>
       ) : null}
-
-      {/* Có món nhưng không món nào có đủ 3 số */}
-      {danhSachMon.length > 0 && soMonCoSo === 0 ? <Text style={styles.chuThieu}>Chưa có số đạm, tinh bột, béo</Text> : null}
     </View>
   );
 }
@@ -155,9 +148,5 @@ const styles = StyleSheet.create({
   },
   soGam: {
     fontSize: fontSizes.label,
-  },
-  chuThieu: {
-    fontSize: fontSizes.label,
-    color: colors.textSecondary,
   },
 });

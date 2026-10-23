@@ -13,16 +13,19 @@ type VongChatProps = {
   chuMucTieu: string;
 };
 
-// Một ô nền nhạt cho đạm, tinh bột hoặc béo: vòng đầy khi ăn tới mucDay, dưới vòng ghi mục tiêu bằng chữ
+// Một ô nền nhạt cho đạm, tinh bột hoặc béo: số gam nằm giữa vòng, vòng đầy khi ăn tới mucDay, dưới vòng ghi tên chất và mục tiêu
 function VongChat({ ten, mau, mauNen, daAn, mucDay, chuMucTieu }: VongChatProps) {
+  // Làm tròn số gam một lần, vòng và chữ dùng chung số này (0,2 g thành 0, vòng không hiện chấm)
+  const daAnLamTron = Math.round(daAn);
   let phanTram = 0;
   if (mucDay > 0) {
-    phanTram = (daAn / mucDay) * 100;
+    phanTram = (daAnLamTron / mucDay) * 100;
   }
   return (
     <View style={[styles.oChat, { backgroundColor: mauNen }]}>
-      <VongTienDo kichThuoc={48} doDay={6} phanTram={phanTram} mau={mau} />
-      <Text style={[styles.soGam, { color: mau }]}>{daAn.toLocaleString('vi-VN')} g</Text>
+      <VongTienDo kichThuoc={56} doDay={6} phanTram={phanTram} mau={mau}>
+        <Text style={[styles.soGam, { color: mau }]}>{daAnLamTron.toLocaleString('vi-VN')} g</Text>
+      </VongTienDo>
       <Text style={styles.tenChat}>{ten}</Text>
       <Text style={styles.khoang}>{chuMucTieu}</Text>
     </View>
@@ -59,13 +62,16 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
         <View style={styles.cotSo}>
           <View style={styles.dongSo}>
             <Text style={styles.nhan}>Đã ăn</Text>
-            <Text style={styles.giaTri}>{tongHop.tong_calo.toLocaleString('vi-VN')}</Text>
+            <Text style={styles.giaTri}>
+              {tongHop.tong_calo.toLocaleString('vi-VN')} <Text style={styles.donVi}>kcal</Text>
+            </Text>
           </View>
           <View style={styles.dongSo}>
             <Text style={styles.nhan}>Mục tiêu</Text>
-            <Text style={styles.giaTri}>{mucTieu.toLocaleString('vi-VN')}</Text>
+            <Text style={styles.giaTri}>
+              {mucTieu.toLocaleString('vi-VN')} <Text style={styles.donVi}>kcal</Text>
+            </Text>
           </View>
-          <Text style={styles.nguon}>kcal mỗi ngày (ước tính)</Text>
         </View>
       </View>
 
@@ -144,8 +150,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textOnPrimary,
   },
-  nguon: {
+  donVi: {
     fontSize: fontSizes.label,
+    fontWeight: '400',
     color: colors.textOnPrimary,
   },
   hangChat: {
@@ -161,13 +168,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   soGam: {
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.secondary,
     fontWeight: '600',
-    marginTop: 6,
   },
   tenChat: {
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
+    marginTop: 6,
   },
   khoang: {
     fontSize: fontSizes.label,

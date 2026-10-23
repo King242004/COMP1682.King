@@ -33,19 +33,19 @@ export type SanPhamMaVach = {
   khoi_luong_1_phan_g: number | null;
 };
 
-// Nhờ AI ước tính theo tên món, khẩu phần, nguyên liệu (có thể rỗng) và calo đã biết (null là chưa biết)
-export async function uocTinhTheoTen(
-  tenMon: string,
-  khauPhan: string,
-  nguyenLieu: string,
-  soCaloDaBiet: number | null,
-): Promise<KetQuaNhanMon> {
+// Nhờ AI ước tính theo tên món, khẩu phần và calo đã biết (null là chưa biết)
+export async function uocTinhTheoTen(tenMon: string, khauPhan: string, soCaloDaBiet: number | null): Promise<KetQuaNhanMon> {
   const ketQua = await callApi('POST', '/quet-mon/ten', {
     ten_mon: tenMon,
     khau_phan: khauPhan,
-    nguyen_lieu: nguyenLieu,
     so_calo: soCaloDaBiet,
   });
+  return ketQua as KetQuaNhanMon;
+}
+
+// Nhờ AI ước tính từ một câu người dùng tả bữa vừa ăn, gộp thành một món
+export async function uocTinhTheoMoTa(moTa: string): Promise<KetQuaNhanMon> {
+  const ketQua = await callApi('POST', '/quet-mon/mo-ta', { mo_ta: moTa });
   return ketQua as KetQuaNhanMon;
 }
 

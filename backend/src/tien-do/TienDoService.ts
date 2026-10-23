@@ -1,13 +1,11 @@
 import { layTongCaloCacNgay } from '../bua-an/BuaAnQueries.ts';
+import type { CaloMotNgay } from '../bua-an/BuaAnQueries.ts';
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
 import { capNhatCanNangHoSo } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { layCanNangCacNgay, luuCanNang } from './TienDoQueries.ts';
-import { doiRaSoNgay, tinhXuHuongCanNang } from './TinhXuHuongCanNang.ts';
-import type { DiemCanNang } from './TinhXuHuongCanNang.ts';
-import { tomTatBonTuan } from './TomTatBonTuan.ts';
-import type { TomTatBonTuan } from './TomTatBonTuan.ts';
+import type { LanCan } from './TienDoQueries.ts';
 
 // Số ngày của biểu đồ, của đường xu hướng, của thẻ "4 tuần qua"; là lựa chọn giao diện, không phải luật dinh dưỡng
 const SO_NGAY_BIEU_DO = 30;
@@ -36,6 +34,124 @@ export type TienDo = {
   giam_can_kg_moi_thang_thap: number;
   giam_can_kg_moi_thang_cao: number;
 };
+
+// Một điểm trên biểu đồ: cân ngày đó và cân theo đường xu hướng
+export type DiemCanNang = {
+  ngay: string;
+  can_nang_kg: number;
+  xu_huong_kg: number;
+};
+
+// Số mili giây trong một ngày, để đổi ngày ra số
+const MILI_GIAY_MOT_NGAY = 24 * 60 * 60 * 1000;
+
+// Làm tròn 1 số lẻ
+function lamTronMotSoLe(so: number): number {
+  return Math.round(so * 10) / 10;
+}
+
+// Đổi ngày "2026-10-06" ra số thứ tự của ngày, để trừ hai ngày cho nhau ra số ngày cách nhau
+export function doiRaSoNgay(ngay: string): number {
+  const phan = ngay.split('-');
+  const nam = Number(phan[0]);
+  const thang = Number(phan[1]);
+  const ngayTrongThang = Number(phan[2]);
+  return Date.UTC(nam, thang - 1, ngayTrongThang) / MILI_GIAY_MOT_NGAY;
+}
+
+// Đường xu hướng: mỗi lần cân lấy trung bình các lần cân trong soNgayXuHuong ngày tính tới ngày đó (gồm cả ngày đó)
+export function tinhXuHuongCanNang(danhSachLanCan: LanCan[], soNgayXuHuong: number): DiemCanNang[] {
+  const danhSachDiem: DiemCanNang[] = [];
+  for (const lanCan of danhSachLanCan) {
+    const ngayNay = doiRaSoNgay(lanCan.ngay);
+
+    // Cộng các lần cân nằm trong cửa sổ ngày
+    let tongCan = 0;
+    let soLanCan = 0;
+    for (const lanKhac of danhSachLanCan) {
+      const ngayKhac = doiRaSoNgay(lanKhac.ngay);
+      if (ngayKhac <= ngayNay && ngayKhac > ngayNay - soNgayXuHuong) {
+        tongCan = tongCan + lanKhac.can_nang_kg;
+        soLanCan = soLanCan + 1;
+      }
+    }
+
+    danhSachDiem.push({
+      ngay: lanCan.ngay,
+      can_nang_kg: lanCan.can_nang_kg,
+      xu_huong_kg: lamTronMotSoLe(tongCan / soLanCan),
+    });
+  }
+  return danhSachDiem;
+}
+
+// Ba con số của thẻ "4 tuần qua", gửi thẳng về app
+export type TomTatBonTuan = {
+  so_ngay: number;
+  so_ngay_co_ghi: number;
+  calo_trung_binh: number | null;
+  thay_doi_kg_moi_thang: number | null;
+  danh_gia_toc_do: 'nhanh_qua' | 'trong_khoang' | 'cham_hon' | null;
+};
+
+// Đầu vào: số liệu của đúng khoảng ngày cần tóm tắt, cùng các con số lấy từ Service và bảng quy_dinh
+export type DauVaoTomTat = {
+  caloCacNgay: CaloMotNgay[];
+  diemCanNang: DiemCanNang[];
+  mucTieu: 'giam' | 'giu' | 'tang' | null;
+  soNgay: number;
+  soNgayToiThieu: number;
+  soNgayMotThang: number;
+  giamCanKgMoiThangThap: number;
+  giamCanKgMoiThangCao: number;
+};
+
+// Tóm tắt các ngày gần đây: calo trung bình, số ngày có ghi món, cân thay đổi mỗi tháng và so với QĐ 2892 khi đang giảm cân
+export function tomTatBonTuan(dauVao: DauVaoTomTat): TomTatBonTuan {
+  // Calo trung bình chỉ tính những ngày có ghi món
+  let tongCalo = 0;
+  for (const motNgay of dauVao.caloCacNgay) {
+    tongCalo = tongCalo + motNgay.tong_calo;
+  }
+  const soNgayCoGhi = dauVao.caloCacNgay.length;
+  let caloTrungBinh: number | null = null;
+  if (soNgayCoGhi > 0) {
+    caloTrungBinh = Math.round(tongCalo / soNgayCoGhi);
+  }
+
+  // Cân thay đổi mỗi tháng: so điểm xu hướng đầu và cuối; phải trải dài đủ soNgayToiThieu ngày mới tính
+  let thayDoiKgMoiThang: number | null = null;
+  const diem = dauVao.diemCanNang;
+  if (diem.length >= 2) {
+    const diemDau = diem[0];
+    const diemCuoi = diem[diem.length - 1];
+    const soNgayTraiDai = doiRaSoNgay(diemCuoi.ngay) - doiRaSoNgay(diemDau.ngay);
+    if (soNgayTraiDai >= dauVao.soNgayToiThieu) {
+      thayDoiKgMoiThang = lamTronMotSoLe(((diemCuoi.xu_huong_kg - diemDau.xu_huong_kg) / soNgayTraiDai) * dauVao.soNgayMotThang);
+    }
+  }
+
+  // Chỉ người đang giảm cân mới so với QĐ 2892; số kg giảm là số dương
+  let danhGiaTocDo: 'nhanh_qua' | 'trong_khoang' | 'cham_hon' | null = null;
+  if (dauVao.mucTieu === 'giam' && thayDoiKgMoiThang !== null) {
+    const soKgGiam = -thayDoiKgMoiThang;
+    if (soKgGiam > dauVao.giamCanKgMoiThangCao) {
+      danhGiaTocDo = 'nhanh_qua';
+    } else if (soKgGiam >= dauVao.giamCanKgMoiThangThap) {
+      danhGiaTocDo = 'trong_khoang';
+    } else {
+      danhGiaTocDo = 'cham_hon';
+    }
+  }
+
+  return {
+    so_ngay: dauVao.soNgay,
+    so_ngay_co_ghi: soNgayCoGhi,
+    calo_trung_binh: caloTrungBinh,
+    thay_doi_kg_moi_thang: thayDoiKgMoiThang,
+    danh_gia_toc_do: danhGiaTocDo,
+  };
+}
 
 // Lấy tiến độ tính tới một ngày: các điểm cân 30 ngày, cân theo xu hướng, tóm tắt 4 tuần
 export async function xemTienDo(nguoiDungId: number, ngay: string): Promise<TienDo> {

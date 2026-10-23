@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontSizes, radius, shadows, spacing } from '../shared/theme';
@@ -14,7 +15,7 @@ function vietSoGam(so: number): string {
   return (Math.round(so * 10) / 10).toLocaleString('vi-VN');
 }
 
-// Một ô muối, đường hoặc béo no: ghi còn bao nhiêu gam, hoặc vượt bao nhiêu gam (ô vượt nền vàng)
+// Một ô muối, đường hoặc béo no: số chính là đã ăn / giới hạn, cạnh tên ghi còn bao nhiêu gam, hoặc biểu tượng cảnh báo khi đã vượt (ô vượt nền vàng)
 function OHanChe({ ten, daAn, gioiHan }: OHanCheProps) {
   const daVuot = daAn > gioiHan;
   let phanTram = 0;
@@ -22,21 +23,23 @@ function OHanChe({ ten, daAn, gioiHan }: OHanCheProps) {
     phanTram = Math.min(100, (daAn / gioiHan) * 100);
   }
 
-  let chuChinh = `còn ${vietSoGam(gioiHan - daAn)} g`;
-  if (daVuot) {
-    chuChinh = `vượt ${vietSoGam(daAn - gioiHan)} g`;
-  }
-
   return (
     <View style={[styles.o, daVuot ? styles.oVuot : null]}>
-      <Text style={[styles.ten, daVuot ? styles.chuVuot : null]}>{ten}</Text>
-      <Text style={[styles.chuChinh, daVuot ? styles.chuVuot : null]}>{chuChinh}</Text>
+      {/* Hàng trên: tên chất bên trái; bên phải là còn bao nhiêu gam, hoặc tam giác cảnh báo khi đã vượt */}
+      <View style={styles.hangTren}>
+        <Text style={[styles.ten, daVuot ? styles.chuVuot : null]}>{ten}</Text>
+        {daVuot ? (
+          <Ionicons name="warning-outline" size={16} color={colors.warning} />
+        ) : (
+          <Text style={styles.chuNho}>còn {vietSoGam(gioiHan - daAn)} g</Text>
+        )}
+      </View>
+      <Text style={[styles.chuChinh, daVuot ? styles.chuVuot : null]}>
+        {vietSoGam(daAn)} / {vietSoGam(gioiHan)} g
+      </Text>
       <View style={[styles.thanhNen, daVuot ? styles.thanhNenVuot : null]}>
         <View style={[styles.thanhDay, { width: `${phanTram}%` }, daVuot ? styles.thanhDayVuot : null]} />
       </View>
-      <Text style={[styles.chuNho, daVuot ? styles.chuVuot : null]}>
-        {vietSoGam(daAn)} / {vietSoGam(gioiHan)} g
-      </Text>
     </View>
   );
 }
@@ -93,6 +96,13 @@ const styles = StyleSheet.create({
   },
   oVuot: {
     backgroundColor: colors.warningBackground,
+  },
+  hangTren: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 4,
   },
   ten: {
     fontSize: fontSizes.secondary,

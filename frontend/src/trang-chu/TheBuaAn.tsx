@@ -18,6 +18,10 @@ export function TheBuaAn({ buaAn, onPress }: TheBuaAnProps) {
           <Text style={styles.tenMon}>{buaAn.ten_mon}</Text>
           {/* Món có số liệu do AI ước tính thì gắn nhãn nhỏ */}
           {buaAn.nguon_so_lieu === 'ai' ? <Text style={styles.nhanAi}>AI</Text> : null}
+          {/* Món thiếu đạm, tinh bột hoặc béo thì gắn nhãn, để người dùng biết bấm vào bổ sung */}
+          {buaAn.dam_g === null || buaAn.tinh_bot_g === null || buaAn.beo_g === null ? (
+            <Text style={styles.nhanThieuSo}>Chưa đủ số</Text>
+          ) : null}
         </View>
         {buaAn.khau_phan ? <Text style={styles.khauPhan}>{buaAn.khau_phan}</Text> : null}
       </View>
@@ -59,6 +63,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textOnPrimaryLight,
     backgroundColor: colors.primaryLight,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    overflow: 'hidden',
+  },
+  nhanThieuSo: {
+    fontSize: fontSizes.label,
+    fontWeight: '600',
+    color: colors.warningText,
+    backgroundColor: colors.warningBackground,
     borderRadius: 4,
     paddingHorizontal: 5,
     paddingVertical: 1,

@@ -1,5 +1,21 @@
 import database from '../database/database.ts';
-import type { MonThucDon } from './DocThucDon.ts';
+
+// Một món trong thực đơn, đã kiểm; món ăn ngoài thì không có nguyên liệu và cách nấu
+export type MonThucDon = {
+  loai_bua: 'sang' | 'trua' | 'toi' | 'phu';
+  cach_an: 'an_ngoai' | 'tu_nau';
+  ten_mon: string;
+  khau_phan: string;
+  so_calo: number;
+  dam_g: number;
+  tinh_bot_g: number;
+  beo_g: number;
+  muoi_g: number | null;
+  duong_g: number | null;
+  beo_no_g: number | null;
+  nguyen_lieu: string[];
+  cach_nau: string[];
+};
 
 // Lấy danh sách món của thực đơn một ngày; chưa tạo thì null
 export async function layThucDon(nguoiDungId: number, ngay: string): Promise<MonThucDon[] | null> {

@@ -22,8 +22,6 @@ export function ScreenTitle({ title, subtitle, onBack, right }: ScreenTitleProps
           <Pressable
             onPress={onBack}
             hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Quay lại"
             style={({ pressed }) => (pressed ? styles.backPressed : null)}
           >
             <Ionicons name="chevron-back" size={28} color={colors.text} />

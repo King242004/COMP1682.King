@@ -8,7 +8,7 @@ import { colors } from '../../src/shared/theme';
 export default function TabsLayout() {
   const { user } = useAuth();
   if (!user) {
-    return <Redirect href="/auth/login" />;
+    return <Redirect href="/auth/Login" />;
   }
 
   return (
@@ -21,21 +21,21 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="kham-pha"
+        name="KhamPha"
         options={{
           title: 'Khám phá',
           tabBarIcon: ({ color, size }) => <Ionicons name="compass-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="tu-van"
+        name="TuVan"
         options={{
           title: 'Coach',
           tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="ho-so"
+        name="HoSo"
         options={{
           title: 'Hồ sơ',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} />,

@@ -26,7 +26,7 @@ Mở `http://localhost:3000/health`, thấy `{"server":"ok","database":"ok"}` l�
 ```bash
 cd frontend
 npm install
-cp .env.example .env      # rồi điền EXPO_PUBLIC_API_URL = địa chỉ IP laptop, ví dụ http://192.168.1.9:3000
+cp .env.example .env      # cổng backend để sẵn 3000; IP laptop app tự lấy từ Expo
 npx expo start
 ```
 

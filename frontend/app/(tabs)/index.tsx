@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,6 +7,8 @@ import { layNhatKyNgay } from '../../src/bua-an/BuaAnApi';
 import type { LoaiBua, NhatKyNgay } from '../../src/bua-an/BuaAnApi';
 import { DaiNgay } from '../../src/trang-chu/DaiNgay';
 import { NhomNenHanChe } from '../../src/trang-chu/NhomNenHanChe';
+import { NutThemMon } from '../../src/trang-chu/NutThemMon';
+import type { CachThem } from '../../src/trang-chu/NutThemMon';
 import { TheBua } from '../../src/trang-chu/TheBua';
 import { TheCalo } from '../../src/trang-chu/TheCalo';
 import { buaTheoGio, THU_TU_BUA } from '../../src/bua-an/TenBua';
@@ -25,6 +26,8 @@ export default function TrangChu() {
   const [ngay, setNgay] = useState(todayKey());
   const [nhatKy, setNhatKy] = useState<NhatKyNgay | null>(null);
   const [loi, setLoi] = useState('');
+  // Bữa đang chọn cách thêm (3 nút đang bung lên); null là đang đóng
+  const [buaDangThem, setBuaDangThem] = useState<LoaiBua | null>(null);
 
   // Nhớ ngày đang xem mới nhất, để bỏ kết quả của ngày cũ về trễ khi đổi ngày nhanh
   const ngayDangXem = useRef(ngay);
@@ -54,14 +57,15 @@ export default function TrangChu() {
     }
   }
 
-  // Mở màn thêm món với bữa và ngày đã chọn sẵn
-  function moThemMon(loaiBua: LoaiBua) {
-    router.push({ pathname: '/bua-an/sua', params: { ngay: ngay, loaiBua: loaiBua } });
+  // Đóng 3 nút rồi mở màn thêm món với ngày, bữa và cách thêm đã chọn
+  function moThemMon(loaiBua: LoaiBua, cach: CachThem) {
+    setBuaDangThem(null);
+    router.push({ pathname: '/bua-an/ThemSuaBuaAn', params: { ngay: ngay, loaiBua: loaiBua, cach: cach } });
   }
 
   // Mở màn sửa một món
   function moSuaMon(buaAnId: number) {
-    router.push({ pathname: '/bua-an/sua', params: { id: String(buaAnId) } });
+    router.push({ pathname: '/bua-an/ThemSuaBuaAn', params: { id: String(buaAnId) } });
   }
 
   if (!user) {
@@ -76,7 +80,7 @@ export default function TrangChu() {
           title={formatDateLabel(ngay)}
           subtitle={`Chào ${user.ten_hien_thi}`}
           right={
-            <Pressable style={({ pressed }) => [styles.vongTen, pressed ? styles.dangBam : null]} onPress={() => router.push('/(tabs)/ho-so')}>
+            <Pressable style={({ pressed }) => [styles.vongTen, pressed ? styles.dangBam : null]} onPress={() => router.push('/(tabs)/HoSo')}>
               <Text style={styles.chuVongTen}>{user.ten_hien_thi.trim().charAt(0).toUpperCase()}</Text>
             </Pressable>
           }
@@ -92,9 +96,7 @@ export default function TrangChu() {
             <TheCalo nhatKy={nhatKy} />
             <NhomNenHanChe nhatKy={nhatKy} />
             {nhatKy.tong_hop.so_mon_thieu_so_lieu > 0 ? (
-              <Text style={styles.chuNho}>
-                {nhatKy.tong_hop.so_mon_thieu_so_lieu} món chưa đủ số liệu nên các số có thể thấp hơn thực tế
-              </Text>
+              <Text style={styles.chuNho}>Một số món chưa đủ số liệu nên tổng có thể thấp hơn</Text>
             ) : null}
 
             {/* Bốn bữa, luôn hiện */}
@@ -104,7 +106,7 @@ export default function TrangChu() {
                 key={loaiBua}
                 loaiBua={loaiBua}
                 danhSachMon={nhatKy.bua_an.filter((buaAn) => buaAn.loai_bua === loaiBua)}
-                onThem={() => moThemMon(loaiBua)}
+                onThem={() => setBuaDangThem(loaiBua)}
                 onSuaMon={moSuaMon}
               />
             ))}
@@ -112,15 +114,13 @@ export default function TrangChu() {
         ) : null}
       </Screen>
 
-      {/* Nút + nổi: thêm món vào bữa đoán theo giờ hiện tại */}
-      <Pressable
-        style={({ pressed }) => [styles.nutNoi, pressed ? styles.dangBam : null]}
-        onPress={() => moThemMon(buaTheoGio(new Date().getHours()))}
-        accessibilityRole="button"
-        accessibilityLabel="Thêm món"
-      >
-        <Ionicons name="add" size={30} color={colors.textOnPrimary} />
-      </Pressable>
+      {/* Nút + nổi: bung 3 cách thêm món cho bữa đoán theo giờ hiện tại */}
+      <NutThemMon
+        buaDangThem={buaDangThem}
+        onMo={() => setBuaDangThem(buaTheoGio(new Date().getHours()))}
+        onDong={() => setBuaDangThem(null)}
+        onChonCach={moThemMon}
+      />
     </View>
   );
 }
@@ -146,17 +146,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginBottom: spacing.small,
-  },
-  nutNoi: {
-    position: 'absolute',
-    right: spacing.large,
-    bottom: spacing.large,
-    width: 60,
-    height: 60,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   dangBam: {
     opacity: pressedOpacity,

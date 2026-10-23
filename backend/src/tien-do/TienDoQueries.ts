@@ -1,5 +1,10 @@
 import database from '../database/database.ts';
-import type { LanCan } from './TinhXuHuongCanNang.ts';
+
+// Một lần cân, như lưu trong bảng can_nang
+export type LanCan = {
+  ngay: string;
+  can_nang_kg: number;
+};
 
 // Ghi cân của một ngày; ngày đó đã có thì đè số mới lên
 export async function luuCanNang(nguoiDungId: number, ngay: string, canNangKg: number): Promise<void> {
