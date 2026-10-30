@@ -343,7 +343,7 @@ export function TamCaiDatThucDon({ caiDatBanDau, laTaoLai, mucTieuCalo, onTao, o
                 placeholderTextColor={colors.textSecondary}
                 maxLength={GHI_CHU_DAI_NHAT}
               />
-              <Text style={[styles.chuNho, styles.khoangTren]}>AI sẽ tránh những món bạn dị ứng trong hồ sơ.</Text>
+              <Text style={[styles.chuNho, styles.khoangTren]}>Món có thứ bạn dị ứng (trong hồ sơ) sẽ được bỏ ra hoặc gắn ⚠.</Text>
             </View>
           </ScrollView>
 

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { ApiError, deleteToken, readToken, saveToken, setSessionExpiredHandler } from '../shared/apiClient';
-import { changePasswordRequest, deleteAccountRequest, getMeRequest, loginRequest, registerRequest } from './AuthApi';
+import { changeDisplayNameRequest, changePasswordRequest, deleteAccountRequest, getMeRequest, loginRequest, registerRequest } from './AuthApi';
 import type { User } from './AuthApi';
 
 // Những gì mọi màn hình lấy được từ useAuth()
@@ -14,6 +14,7 @@ type AuthState = {
   refreshUser: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (displayName: string, email: string, password: string) => Promise<void>;
+  changeDisplayName: (displayName: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   logout: () => Promise<void>;
@@ -75,6 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.user);
   }
 
+  // Đổi tên hiển thị: nhớ luôn thông tin server gửi về để mọi màn thấy tên mới
+  async function changeDisplayName(displayName: string) {
+    setUser(await changeDisplayNameRequest(displayName));
+  }
+
   // Đổi mật khẩu: token cũ hết dùng được nên lưu token mới server gửi về
   async function changePassword(currentPassword: string, newPassword: string) {
     const result = await changePasswordRequest(currentPassword, newPassword);
@@ -95,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, connectionError, loadSavedSession, refreshUser, login, register, changePassword, deleteAccount, logout }}
+      value={{ user, isLoading, connectionError, loadSavedSession, refreshUser, login, register, changeDisplayName, changePassword, deleteAccount, logout }}
     >
       {children}
     </AuthContext.Provider>

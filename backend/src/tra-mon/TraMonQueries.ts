@@ -64,6 +64,21 @@ export async function layTatCaThucPham(): Promise<ThucPham[]> {
   return ketQua.rows;
 }
 
+// Lấy tên các dòng thành phần của mọi món, theo thứ tự in trong ảnh: mã món → danh sách tên (để dò dị ứng)
+export async function layTenThanhPhanCuaTungMon(): Promise<Map<string, string[]>> {
+  const ketQua = await database.query<{ ma_so: string; ten_thanh_phan: string }>(
+    `SELECT ma_so, ten_thanh_phan FROM thanh_phan_suat ORDER BY ma_so, thu_tu`,
+  );
+  const tenCuaTungMon = new Map<string, string[]>();
+  for (const dong of ketQua.rows) {
+    if (!tenCuaTungMon.has(dong.ma_so)) {
+      tenCuaTungMon.set(dong.ma_so, []);
+    }
+    tenCuaTungMon.get(dong.ma_so)!.push(dong.ten_thanh_phan);
+  }
+  return tenCuaTungMon;
+}
+
 // Lấy bảng "Trong 1 suất có" của một món, theo thứ tự in trong ảnh; món chưa có bảng thì trả mảng rỗng
 export async function layThanhPhanSuat(maSo: string): Promise<ThanhPhanSuat[]> {
   const ketQua = await database.query<ThanhPhanSuat>(

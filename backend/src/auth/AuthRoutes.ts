@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { changePassword, deleteAccount, getMe, login, register } from './AuthService.ts';
+import { changeDisplayName, changePassword, deleteAccount, getMe, login, register } from './AuthService.ts';
 import { requireAuth } from './requireAuth.ts';
 
 const authRoutes = Router();
@@ -20,6 +20,12 @@ authRoutes.post('/login', async (request, response) => {
 // Lấy thông tin người đang đăng nhập (cần token)
 authRoutes.get('/me', requireAuth, async (request, response) => {
   const user = await getMe(response.locals.userId);
+  response.json(user);
+});
+
+// Đổi tên hiển thị (cần token)
+authRoutes.put('/me', requireAuth, async (request, response) => {
+  const user = await changeDisplayName(response.locals.userId, request.body.ten_hien_thi);
   response.json(user);
 });
 

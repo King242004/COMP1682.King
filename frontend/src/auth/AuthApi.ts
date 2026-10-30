@@ -32,6 +32,12 @@ export async function getMeRequest(): Promise<User> {
   return result as User;
 }
 
+// Gửi đổi tên hiển thị, nhận về thông tin người dùng sau khi đổi
+export async function changeDisplayNameRequest(displayName: string): Promise<User> {
+  const result = await callApi('PUT', '/auth/me', { ten_hien_thi: displayName });
+  return result as User;
+}
+
 // Gửi đổi mật khẩu, nhận về token mới
 export async function changePasswordRequest(currentPassword: string, newPassword: string): Promise<{ token: string }> {
   const result = await callApi('PUT', '/auth/password', { mat_khau_hien_tai: currentPassword, mat_khau_moi: newPassword });

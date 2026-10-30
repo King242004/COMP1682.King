@@ -2,6 +2,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { docCanNang, doiKgRaDonVi, vietGioiHan } from '../src/don-vi/DoiDonVi';
+import { useDonVi } from '../src/don-vi/DonViContext';
 import { Button } from '../src/shared/components/Button';
 import { Card } from '../src/shared/components/Card';
 import { ErrorBox } from '../src/shared/components/ErrorBox';
@@ -24,6 +26,9 @@ const SO_NGAY_BIEU_DO = 30;
 export default function TienDo() {
   const [tienDo, setTienDo] = useState<TienDo | null>(null);
   const [loi, setLoi] = useState('');
+  const { donVi, heSo } = useDonVi();
+  // Ô ghi cân và số xu hướng theo đơn vị người dùng chọn
+  const tenDonViCan = donVi === 'anh_my' && heSo !== null ? 'lb' : 'kg';
   const [canNang, setCanNang] = useState('');
   const [loiCanNang, setLoiCanNang] = useState('');
   const [dangGhi, setDangGhi] = useState(false);
@@ -46,9 +51,9 @@ export default function TienDo() {
 
   // Kiểm số cân rồi ghi cho hôm nay; server trả về tiến độ mới
   async function handleGhi() {
-    const canNangSo = Number(canNang.replace(',', '.'));
+    const canNangSo = docCanNang(canNang, donVi, heSo) ?? 0;
     if (!(canNangSo >= CAN_NANG_NHO_NHAT && canNangSo <= CAN_NANG_LON_NHAT)) {
-      setLoiCanNang(`Cân nặng từ ${CAN_NANG_NHO_NHAT} đến ${CAN_NANG_LON_NHAT} kg`);
+      setLoiCanNang(`Cân nặng ${vietGioiHan(CAN_NANG_NHO_NHAT, CAN_NANG_LON_NHAT, 'can_nang', donVi, heSo)}`);
       return;
     }
     setLoiCanNang('');
@@ -77,11 +82,11 @@ export default function TienDo() {
         <View style={styles.hangGhiCan}>
           <View style={styles.oCan}>
             <TextField
-              label="Cân hôm nay (kg)"
+              label={`Cân hôm nay (${tenDonViCan})`}
               value={canNang}
               onChangeText={setCanNang}
               error={loiCanNang}
-              placeholder={tienDo && tienDo.can_nang_xu_huong !== null ? String(tienDo.can_nang_xu_huong) : 'Ví dụ: 55'}
+              placeholder={tienDo && tienDo.can_nang_xu_huong !== null ? String(doiKgRaDonVi(tienDo.can_nang_xu_huong, donVi, heSo)) : 'Ví dụ: 55'}
               isNumber
               isDisabled={dangGhi}
             />
@@ -102,7 +107,8 @@ export default function TienDo() {
             <SectionTitle title="Cân nặng" />
             {tienDo.can_nang_xu_huong !== null ? (
               <Text style={styles.soCan}>
-                {tienDo.can_nang_xu_huong.toLocaleString('vi-VN')} <Text style={styles.chuPhu}>kg (xu hướng 7 ngày)</Text>
+                {(Math.round(doiKgRaDonVi(tienDo.can_nang_xu_huong, donVi, heSo) * 10) / 10).toLocaleString('vi-VN')}{' '}
+                <Text style={styles.chuPhu}>{tenDonViCan} (xu hướng 7 ngày)</Text>
               </Text>
             ) : null}
             <BieuDoCanNang diemCanNang={tienDo.can_nang} ngayCuoi={tienDo.ngay} soNgay={SO_NGAY_BIEU_DO} />

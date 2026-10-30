@@ -1,5 +1,7 @@
 import type { CaloMotNgay, MonHayAn } from '../bua-an/BuaAnQueries.ts';
 import type { NhatKyNgay } from '../bua-an/BuaAnService.ts';
+import { vietCanNang, vietChieuCao, vietLoiDanDonViChoAi, vietThayDoiCanNang } from '../don-vi/DonViService.ts';
+import type { DonVi, HeSoDonVi } from '../don-vi/DonViService.ts';
 import type { TienDo } from '../tien-do/TienDoService.ts';
 
 // Hồ sơ rút gọn để coach biết đang nói chuyện với ai
@@ -11,7 +13,13 @@ export type HoSoCoach = {
   bmi: number | null;
   phan_loai_bmi: string | null;
   muc_tieu: 'giam' | 'giu' | 'tang' | null;
+  // Các nhóm dị ứng đã chọn kèm từ khóa, ví dụ "Cá (cá, nước mắm)"; chưa chọn thì chuỗi rỗng
+  danh_sach_di_ung: string;
+  // Ô "Kiêng ăn khác" người dùng tự gõ
   di_ung_kieng_an: string;
+  // Đơn vị người dùng chọn và 4 số đổi, để viết cân nặng, chiều cao đúng đơn vị
+  don_vi: DonVi;
+  he_so_don_vi: HeSoDonVi;
 };
 
 // Một tin nhắn cũ gửi kèm để AI nhớ đang nói tới đâu
@@ -62,14 +70,18 @@ function vietSo(so: number | null): string {
   return String(so);
 }
 
-// Hai dòng hồ sơ: giới, tuổi, chiều cao, cân nặng, BMI, mục tiêu; dị ứng hoặc kiêng ăn
+// Ba dòng hồ sơ: giới, tuổi, chiều cao, cân nặng, BMI, mục tiêu; dị ứng; kiêng ăn khác
 function vietHoSo(hoSo: HoSoCoach): string[] {
   const gioiTinh = hoSo.gioi_tinh ? TEN_GIOI_TINH[hoSo.gioi_tinh] : 'chưa có';
   const mucTieu = hoSo.muc_tieu ? TEN_MUC_TIEU[hoSo.muc_tieu] : 'chưa có';
-  const diUngKiengAn = hoSo.di_ung_kieng_an === '' ? 'không có' : hoSo.di_ung_kieng_an;
+  const diUng = hoSo.danh_sach_di_ung === '' ? 'không có' : hoSo.danh_sach_di_ung;
+  const kiengAnKhac = hoSo.di_ung_kieng_an === '' ? 'không có' : hoSo.di_ung_kieng_an;
+  const chieuCao = hoSo.chieu_cao_cm === null ? 'chưa có' : vietChieuCao(hoSo.chieu_cao_cm, hoSo.don_vi, hoSo.he_so_don_vi);
+  const canNang = hoSo.can_nang_kg === null ? 'chưa có' : vietCanNang(hoSo.can_nang_kg, hoSo.don_vi, hoSo.he_so_don_vi);
   return [
-    `- Hồ sơ: ${gioiTinh}, ${vietSo(hoSo.tuoi)} tuổi, cao ${vietSo(hoSo.chieu_cao_cm)} cm, nặng ${vietSo(hoSo.can_nang_kg)} kg, BMI ${vietSo(hoSo.bmi)} (${hoSo.phan_loai_bmi ?? 'chưa có'}), mục tiêu ${mucTieu}`,
-    `- Dị ứng hoặc kiêng ăn: ${diUngKiengAn}`,
+    `- Hồ sơ: ${gioiTinh}, ${vietSo(hoSo.tuoi)} tuổi, cao ${chieuCao}, nặng ${canNang}, BMI ${vietSo(hoSo.bmi)} (${hoSo.phan_loai_bmi ?? 'chưa có'}), mục tiêu ${mucTieu}`,
+    `- Dị ứng (không gợi ý món có những thứ này): ${diUng}`,
+    `- Kiêng ăn khác: ${kiengAnKhac}`,
   ];
 }
 
@@ -106,19 +118,21 @@ function vietHomNay(nhatKy: NhatKyNgay): string[] {
   return dong;
 }
 
-// Các dòng tiến độ: cân theo xu hướng, tóm tắt 4 tuần, tốc độ giảm cân nên có (chỉ khi đang giảm cân)
-function vietTienDo(tienDo: TienDo): string[] {
+// Các dòng tiến độ: cân theo xu hướng, tóm tắt 4 tuần, tốc độ giảm cân nên có (chỉ khi đang giảm cân); số cân viết theo đơn vị người dùng
+function vietTienDo(tienDo: TienDo, hoSo: HoSoCoach): string[] {
   const tomTat = tienDo.tom_tat;
   const dong: string[] = [];
-  dong.push(`- Cân nặng theo đường xu hướng 7 ngày: ${tienDo.can_nang_xu_huong === null ? 'chưa ghi cân lần nào' : `${tienDo.can_nang_xu_huong} kg`}`);
+  dong.push(`- Cân nặng theo đường xu hướng 7 ngày: ${tienDo.can_nang_xu_huong === null ? 'chưa ghi cân lần nào' : vietCanNang(tienDo.can_nang_xu_huong, hoSo.don_vi, hoSo.he_so_don_vi)}`);
   dong.push(`- ${tomTat.so_ngay} ngày qua: ăn trung bình ${vietSo(tomTat.calo_trung_binh)} kcal mỗi ngày có ghi, ghi món ${tomTat.so_ngay_co_ghi}/${tomTat.so_ngay} ngày`);
   if (tomTat.thay_doi_kg_moi_thang === null) {
     dong.push('- Cân thay đổi mỗi tháng: chưa đủ dữ liệu cân (cần trải dài ít nhất 14 ngày)');
   } else {
-    dong.push(`- Cân thay đổi khoảng ${tomTat.thay_doi_kg_moi_thang} kg mỗi tháng (số âm là giảm)`);
+    dong.push(`- Cân thay đổi khoảng ${vietThayDoiCanNang(tomTat.thay_doi_kg_moi_thang, hoSo.don_vi, hoSo.he_so_don_vi)} mỗi tháng (số âm là giảm)`);
   }
   if (tienDo.muc_tieu === 'giam') {
-    dong.push(`- Tốc độ giảm cân nên có theo QĐ 2892 của Bộ Y tế: ${tienDo.giam_can_kg_moi_thang_thap}–${tienDo.giam_can_kg_moi_thang_cao} kg mỗi tháng`);
+    const thap = vietCanNang(tienDo.giam_can_kg_moi_thang_thap, hoSo.don_vi, hoSo.he_so_don_vi);
+    const cao = vietCanNang(tienDo.giam_can_kg_moi_thang_cao, hoSo.don_vi, hoSo.he_so_don_vi);
+    dong.push(`- Tốc độ giảm cân nên có theo QĐ 2892 của Bộ Y tế: ${thap}–${cao} mỗi tháng`);
   }
   return dong;
 }
@@ -127,6 +141,12 @@ function vietTienDo(tienDo: TienDo): string[] {
 export function taoLoiNhac(duLieu: DuLieuLoiNhac): string {
   const dong: string[] = [];
   dong.push(...LUAT);
+
+  // Người dùng chọn Anh-Mỹ thì dặn AI viết theo lb, ft-in, oz
+  const loiDanDonVi = vietLoiDanDonViChoAi(duLieu.hoSo.don_vi);
+  if (loiDanDonVi !== '') {
+    dong.push(loiDanDonVi);
+  }
 
   dong.push('');
   dong.push('Số liệu của người dùng:');
@@ -139,7 +159,7 @@ export function taoLoiNhac(duLieu: DuLieuLoiNhac): string {
     dong.push(`  ${motNgay.ngay}: ${motNgay.tong_calo} kcal`);
   }
 
-  dong.push(...vietTienDo(duLieu.tienDo));
+  dong.push(...vietTienDo(duLieu.tienDo, duLieu.hoSo));
 
   // Món hay ăn kèm số đã ghi
   dong.push('- Món hay ăn (số đã ghi):');

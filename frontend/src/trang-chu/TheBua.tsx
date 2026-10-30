@@ -86,6 +86,8 @@ export function TheBua({ loaiBua, danhSachMon, onThem, onSuaMon }: TheBuaProps) 
 const styles = StyleSheet.create({
   hop: {
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     borderRadius: radius.card,
     padding: spacing.medium,
     marginBottom: spacing.medium,

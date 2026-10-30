@@ -17,6 +17,8 @@ import { Chip } from '../../src/shared/components/Chip';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { Screen } from '../../src/shared/components/Screen';
 import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
+import { docKhoiLuong, vietGioiHan, vietKhoiLuong } from '../../src/don-vi/DoiDonVi';
+import { useDonVi } from '../../src/don-vi/DonViContext';
 import { TextField } from '../../src/shared/components/TextField';
 import { formatDateLabel, todayKey } from '../../src/shared/dateKey';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/shared/theme';
@@ -88,9 +90,14 @@ export default function ThemSuaBuaAn() {
 
   // Các ô nhập của thẻ Nhập số
   const [tenMon, setTenMon] = useState('');
+  // Câu cảnh báo dị ứng đi theo món chọn từ ảnh, mã vạch, thẻ Mô tả hoặc nút AI; rỗng là không có
+  const [canhBaoDiUng, setCanhBaoDiUng] = useState('');
   const [donViLuong, setDonViLuong] = useState<DonViLuong>('khau-phan');
   const [khauPhan, setKhauPhan] = useState('');
   const [soGam, setSoGam] = useState('');
+  // Ô lượng theo số: Mét gõ gam, Anh-Mỹ gõ oz
+  const { donVi, heSo } = useDonVi();
+  const laAnhMy = donVi === 'anh_my' && heSo !== null;
   const [soCalo, setSoCalo] = useState('');
   const [dam, setDam] = useState('');
   const [tinhBot, setTinhBot] = useState('');
@@ -168,28 +175,42 @@ export default function ThemSuaBuaAn() {
     setNguonSoLieu(mon.nguon_so_lieu);
   }
 
-  // Chọn được món ở màn chụp: tắt màn chụp rồi điền vào thẻ Nhập số
+  // Chọn được món ở màn chụp: tắt màn chụp rồi điền vào thẻ Nhập số, kèm câu cảnh báo dị ứng
   function chonTuManChup(mon: MonDaChon) {
     setDangMoChupAnh(false);
     dienSan(mon);
+    setCanhBaoDiUng(mon.canh_bao_di_ung);
   }
 
-  // Chọn được món ở màn quét mã: tắt màn quét rồi điền vào thẻ Nhập số
+  // Chọn được món ở màn quét mã: tắt màn quét rồi điền vào thẻ Nhập số, kèm câu cảnh báo dị ứng
   function chonTuManQuetMa(mon: MonDaChon) {
     setDangMoQuetMa(false);
     dienSan(mon);
+    setCanhBaoDiUng(mon.canh_bao_di_ung);
   }
 
   // Chọn được món ở màn tìm (kính lúp): tắt màn tìm rồi điền vào thẻ Nhập số
   function chonTuManTimMon(mon: MonDaChon) {
     setDangMoTimMon(false);
     dienSan(mon);
+    setCanhBaoDiUng(mon.canh_bao_di_ung);
   }
 
-  // Thẻ Mô tả trả về món (món hay ăn hoặc kết quả AI): điền vào thẻ Nhập số rồi chuyển sang đó để xem lại
+  // Thẻ Mô tả trả về món (món hay ăn hoặc kết quả AI): điền vào thẻ Nhập số rồi chuyển sang đó để xem lại; món hay ăn không có câu cảnh báo
   function chonTuTheMoTa(mon: MonHayAn | MonDaChon) {
     dienSan(mon);
+    if ('canh_bao_di_ung' in mon) {
+      setCanhBaoDiUng(mon.canh_bao_di_ung);
+    } else {
+      setCanhBaoDiUng('');
+    }
     setTheDangMo('nhap-so');
+  }
+
+  // Người dùng tự sửa tên món thì câu cảnh báo cũ không còn đúng nữa
+  function doiTenMon(chu: string) {
+    setTenMon(chu);
+    setCanhBaoDiUng('');
   }
 
   // Người dùng tự sửa calo thì số liệu thành của họ
@@ -203,16 +224,20 @@ export default function ThemSuaBuaAn() {
   const damSo = docSoGam(dam);
   const tinhBotSo = docSoGam(tinhBot);
   const beoSo = docSoGam(beo);
-  const soGamSo = docSoGam(soGam);
+  // Ô lượng đổi ra gam: trống là null, gõ sai là NaN
+  let soGamSo: number | null = null;
+  if (soGam.trim() !== '') {
+    soGamSo = docKhoiLuong(soGam, donVi, heSo) ?? NaN;
+  }
 
-  // Ô Gram có số mà không phải số nguyên từ 1 đến 5.000 thì sai
-  const soGamSai = soGamSo !== null && !(Number.isInteger(soGamSo) && soGamSo >= 1 && soGamSo <= SO_GAM_LON_NHAT);
-  const loiSoGam = `Số gam từ 1 đến ${SO_GAM_LON_NHAT.toLocaleString('vi-VN')}`;
+  // Ô lượng có số mà không nằm trong 1–5.000 g thì sai; Mét phải là số nguyên, Anh-Mỹ được 1 số lẻ
+  const soGamSai = soGamSo !== null && !((laAnhMy || Number.isInteger(soGamSo)) && soGamSo >= 1 && soGamSo <= SO_GAM_LON_NHAT);
+  const loiSoGam = `Số ${laAnhMy ? 'oz' : 'gam'} ${vietGioiHan(1, SO_GAM_LON_NHAT, 'khoi_luong', donVi, heSo)}`;
 
-  // Lượng đã ăn ghi thành chữ để lưu và gửi AI: chế độ Gram ghi kiểu "350 g"
+  // Lượng đã ăn ghi thành chữ để lưu và gửi AI: chế độ Gram ghi kiểu "350 g" (Anh-Mỹ: "12,3 oz")
   let khauPhanDeLuu = khauPhan.trim();
   if (donViLuong === 'gram') {
-    khauPhanDeLuu = soGamSo === null ? '' : `${soGamSo} g`;
+    khauPhanDeLuu = soGamSo === null ? '' : vietKhoiLuong(soGamSo, donVi, heSo);
   }
 
   // Nhờ AI ước tính theo tên món và lượng đã ăn; AI chỉ điền ô còn trống, ô người dùng đã gõ giữ nguyên
@@ -269,6 +294,7 @@ export default function ThemSuaBuaAn() {
           setBeoNo(monCuaAi.beo_no_g);
         }
         setNguonSoLieu('ai');
+        setCanhBaoDiUng(monCuaAi.canh_bao_di_ung);
       } else {
         setLoiServer('AI không nhận ra món này, hãy nhập tay');
       }
@@ -425,21 +451,22 @@ export default function ThemSuaBuaAn() {
           <TextField
             label="Tên món"
             value={tenMon}
-            onChangeText={setTenMon}
+            onChangeText={doiTenMon}
             error={loiNhap.tenMon ?? ''}
             placeholder="Gõ tên, hoặc bấm kính lúp để tìm"
             maxLength={TEN_MON_DAI_NHAT}
             isDisabled={dangChay}
             iconName="search-outline"
-            iconLabel="Tìm món trong kho Viện Dinh dưỡng"
             onPressIcon={() => setDangMoTimMon(true)}
           />
+          {/* Câu cảnh báo dị ứng của món vừa chọn (AI, mã vạch) */}
+          {canhBaoDiUng !== '' ? <Text style={styles.chuCanhBaoDiUng}>{canhBaoDiUng}</Text> : null}
 
           {/* Lượng đã ăn: chọn ghi bằng chữ (khẩu phần) hay bằng số gam */}
           <Text style={styles.nhanO}>Lượng đã ăn</Text>
           <View style={styles.hangChipNho}>
             <Chip label="Khẩu phần" isSelected={donViLuong === 'khau-phan'} isDisabled={dangChay} onPress={() => setDonViLuong('khau-phan')} />
-            <Chip label="Gram" isSelected={donViLuong === 'gram'} isDisabled={dangChay} onPress={() => setDonViLuong('gram')} />
+            <Chip label={laAnhMy ? 'Ounce' : 'Gram'} isSelected={donViLuong === 'gram'} isDisabled={dangChay} onPress={() => setDonViLuong('gram')} />
           </View>
           {donViLuong === 'khau-phan' ? (
             <TextField
@@ -453,11 +480,11 @@ export default function ThemSuaBuaAn() {
             />
           ) : (
             <TextField
-              label="Số gam (g)"
+              label={laAnhMy ? 'Số oz (oz)' : 'Số gam (g)'}
               value={soGam}
               onChangeText={setSoGam}
               error={loiNhap.luong ?? ''}
-              placeholder="Ví dụ: 350"
+              placeholder={laAnhMy ? 'Ví dụ: 12,3' : 'Ví dụ: 350'}
               isNumber
               isDisabled={dangChay}
             />
@@ -531,6 +558,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.small,
     marginBottom: spacing.large,
+  },
+  chuCanhBaoDiUng: {
+    fontSize: fontSizes.secondary,
+    color: colors.warningText,
+    marginTop: 4,
   },
   chuPhu: {
     fontSize: fontSizes.secondary,

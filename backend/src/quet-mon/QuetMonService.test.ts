@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { docKetQuaNhanMon, docSanPhamMaVach } from './QuetMonService.ts';
+import { docKetQuaNhanMon, docSanPhamMaVach, vietCanhBaoMaVach, vietCanhBaoTheoTenMon } from './QuetMonService.ts';
 
 test('ảnh không phải đồ ăn thì không có khả năng nào', () => {
   const ketQua = docKetQuaNhanMon({ la_mon_an: false, kha_nang: [] }, 3);
@@ -98,6 +98,7 @@ test('đọc đủ tên, nhãn hiệu, số liệu và khối lượng 1 phần 
     duong_100g: 14,
     beo_no_100g: 1.6,
     khoi_luong_1_phan_g: 100,
+    ma_di_ung: [],
   });
 });
 
@@ -107,4 +108,37 @@ test('thiếu tên, thiếu chất và thiếu khối lượng 1 phần thì đ�
   assert.equal(sanPham?.dam_100g, null);
   assert.equal(sanPham?.muoi_100g, null);
   assert.equal(sanPham?.khoi_luong_1_phan_g, null);
+});
+
+test('mã vạch: đọc mã dị ứng trên nhãn, chỉ giữ mã "en:"', () => {
+  const sanPham = docSanPhamMaVach({
+    status: 1,
+    product: { nutriments: { 'energy-kcal_100g': 60 }, allergens_tags: ['en:milk', 'fr:lait'] },
+  });
+  assert.deepEqual(sanPham?.ma_di_ung, ['en:milk']);
+});
+
+test('mã vạch: không có hoặc sai dạng allergens_tags thì danh sách mã dị ứng rỗng', () => {
+  assert.deepEqual(docSanPhamMaVach({ status: 1, product: { nutriments: { 'energy-kcal_100g': 60 } } })?.ma_di_ung, []);
+  assert.deepEqual(docSanPhamMaVach({ status: 1, product: { nutriments: { 'energy-kcal_100g': 60 }, allergens_tags: 'en:milk' } })?.ma_di_ung, []);
+});
+
+test('câu cảnh báo theo tên món: chưa chọn nhóm thì rỗng; trùng thì nêu nhóm; không trùng thì chỉ nhắc', () => {
+  assert.equal(vietCanhBaoTheoTenMon([], false), '');
+  assert.equal(
+    vietCanhBaoTheoTenMon(['Tôm, cua'], true),
+    '⚠ Tên món có: Tôm, cua. App chỉ kiểm theo tên món, không biết thành phần thật. Hãy tự kiểm.',
+  );
+  assert.equal(vietCanhBaoTheoTenMon([], true), 'App chỉ kiểm dị ứng theo tên món, không biết thành phần thật. Hãy tự kiểm.');
+});
+
+test('câu cảnh báo mã vạch: đủ 5 trường hợp', () => {
+  assert.equal(vietCanhBaoMaVach(['Sữa'], true, false), '');
+  assert.equal(vietCanhBaoMaVach(['Sữa'], true, true), '⚠ Có: Sữa.');
+  assert.equal(
+    vietCanhBaoMaVach(['Sữa'], false, true),
+    '⚠ Có: Sữa. Sản phẩm chưa có dữ liệu dị ứng trên Open Food Facts, hãy xem bao bì.',
+  );
+  assert.equal(vietCanhBaoMaVach([], false, true), 'Sản phẩm chưa có dữ liệu dị ứng trên Open Food Facts, hãy xem bao bì.');
+  assert.equal(vietCanhBaoMaVach([], true, true), 'Nhãn không ghi nhóm bạn đã chọn.');
 });

@@ -18,6 +18,8 @@ export type MonTraCuu = {
   hien_o_kham_pha: boolean;
   // Nhóm để lọc ở Khám phá, xếp theo chữ đầu tên món
   nhom_mon: NhomMon;
+  // Tên các nhóm dị ứng bị trùng (chỉ nhóm người dùng đã chọn ở hồ sơ); rỗng là không trùng
+  nhom_di_ung: string[];
 };
 
 export type NhomMon = 'bun_pho' | 'com_chao_xoi' | 'che_do_uong' | 'banh' | 'mon_khac';
@@ -28,6 +30,14 @@ export type ThanhPhanSuat = {
   ten_thanh_phan: string;
   so_gam: number | null;
   so_calo: number | null;
+  // Tên các nhóm dị ứng bị trùng ở dòng này
+  nhom_di_ung: string[];
+};
+
+// Bảng "Trong 1 suất có" kèm việc người dùng có chọn nhóm dị ứng nào không
+export type BangThanhPhan = {
+  thanh_phan: ThanhPhanSuat[];
+  co_chon_nhom_di_ung: boolean;
 };
 
 // Lấy tất cả món Viện Dinh dưỡng đã cân
@@ -48,6 +58,8 @@ export type ThucPham = {
   muoi_100g: number | null;
   duong_100g: number | null;
   beo_no_100g: number | null;
+  // Tên các nhóm dị ứng bị trùng (chỉ nhóm người dùng đã chọn ở hồ sơ)
+  nhom_di_ung: string[];
 };
 
 // Lấy cả kho thực phẩm Viện Dinh dưỡng 2025
@@ -56,8 +68,8 @@ export async function layTatCaThucPham(): Promise<ThucPham[]> {
   return ketQua as ThucPham[];
 }
 
-// Lấy bảng "Trong 1 suất có" của một món; món chưa có bảng thì trả mảng rỗng
-export async function layThanhPhanSuat(maSo: string): Promise<ThanhPhanSuat[]> {
+// Lấy bảng "Trong 1 suất có" của một món; món chưa có bảng thì danh sách thành phần rỗng
+export async function layThanhPhanSuat(maSo: string): Promise<BangThanhPhan> {
   const ketQua = await callApi('GET', `/tra-mon/${maSo}/thanh-phan`);
-  return ketQua as ThanhPhanSuat[];
+  return ketQua as BangThanhPhan;
 }

@@ -2,6 +2,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { docKhoiLuong, doiGamRaDonVi, vietGioiHan, vietKhoiLuong } from '../don-vi/DoiDonVi';
+import { useDonVi } from '../don-vi/DonViContext';
 import { Button } from '../shared/components/Button';
 import { ErrorBox } from '../shared/components/ErrorBox';
 import { Screen } from '../shared/components/Screen';
@@ -36,6 +38,9 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
   const [sanPham, setSanPham] = useState<SanPhamMaVach | null>(null);
   const [soGam, setSoGam] = useState('');
   const [loiSoGam, setLoiSoGam] = useState('');
+  // Ô lượng theo đơn vị: Mét gõ gam, Anh-Mỹ gõ oz
+  const { donVi, heSo } = useDonVi();
+  const laAnhMy = donVi === 'anh_my' && heSo !== null;
   // Camera đọc mã nhiều lần mỗi giây; cờ này giữ cho chỉ tra một lần
   const daNhanMa = useRef(false);
 
@@ -49,8 +54,9 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
     try {
       const sanPhamTimDuoc = await traMaVach(maVach);
       setSanPham(sanPhamTimDuoc);
+      // Điền sẵn 1 phần theo nhãn, đổi ra oz nếu người dùng chọn Anh-Mỹ
       if (sanPhamTimDuoc.khoi_luong_1_phan_g !== null) {
-        setSoGam(String(sanPhamTimDuoc.khoi_luong_1_phan_g));
+        setSoGam(String(doiGamRaDonVi(sanPhamTimDuoc.khoi_luong_1_phan_g, donVi, heSo)));
       }
     } catch (loiTra) {
       setLoi((loiTra as Error).message);
@@ -71,14 +77,14 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
     if (!sanPham) {
       return;
     }
-    const soGamSo = Number(soGam.replace(',', '.'));
+    const soGamSo = docKhoiLuong(soGam, donVi, heSo) ?? 0;
     if (!(soGamSo > 0 && soGamSo <= SO_GAM_LON_NHAT)) {
-      setLoiSoGam(`Số gam từ 1 đến ${SO_GAM_LON_NHAT.toLocaleString('vi-VN')}`);
+      setLoiSoGam(`Số ${laAnhMy ? 'oz' : 'gam'} ${vietGioiHan(1, SO_GAM_LON_NHAT, 'khoi_luong', donVi, heSo)}`);
       return;
     }
     onChon({
       ten_mon: sanPham.ten_san_pham,
-      khau_phan: `${soGamSo.toLocaleString('vi-VN')} g`,
+      khau_phan: vietKhoiLuong(soGamSo, donVi, heSo),
       so_calo: Math.round((sanPham.kcal_100g * soGamSo) / 100),
       dam_g: nhanTheoGam(sanPham.dam_100g, soGamSo),
       tinh_bot_g: nhanTheoGam(sanPham.tinh_bot_100g, soGamSo),
@@ -87,11 +93,12 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
       duong_g: nhanTheoGam(sanPham.duong_100g, soGamSo),
       beo_no_g: nhanTheoGam(sanPham.beo_no_100g, soGamSo),
       nguon_so_lieu: 'ma_vach',
+      canh_bao_di_ung: sanPham.canh_bao_di_ung,
     });
   }
 
   // Tổng calo xem trước khi đã nhập số gam
-  const soGamXemTruoc = Number(soGam.replace(',', '.'));
+  const soGamXemTruoc = docKhoiLuong(soGam, donVi, heSo) ?? 0;
   let tongCaloXemTruoc: number | null = null;
   if (sanPham && soGamXemTruoc > 0) {
     tongCaloXemTruoc = Math.round((sanPham.kcal_100g * soGamXemTruoc) / 100);
@@ -135,14 +142,25 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
       {sanPham ? (
         <View>
           <Text style={styles.tenSanPham}>{sanPham.ten_san_pham}</Text>
+          {/* Câu cảnh báo dị ứng theo nhãn và tên sản phẩm (chỉ khi người dùng có chọn nhóm dị ứng) */}
+          {sanPham.canh_bao_di_ung !== '' ? <Text style={styles.chuCanhBaoDiUng}>{sanPham.canh_bao_di_ung}</Text> : null}
           <Text style={styles.chuPhu}>Nguồn: Open Food Facts</Text>
           <View style={styles.theSoLieu}>
-            <Text style={styles.chuThuong}>Trên 100 g: {sanPham.kcal_100g.toLocaleString('vi-VN')} kcal</Text>
+            <Text style={styles.chuThuong}>
+              Trên 100 g{laAnhMy ? ` (${vietKhoiLuong(100, donVi, heSo)})` : ''}: {sanPham.kcal_100g.toLocaleString('vi-VN')} kcal
+            </Text>
             {sanPham.khoi_luong_1_phan_g !== null ? (
-              <Text style={styles.chuPhu}>1 phần = {sanPham.khoi_luong_1_phan_g.toLocaleString('vi-VN')} g (theo nhãn)</Text>
+              <Text style={styles.chuPhu}>1 phần = {vietKhoiLuong(sanPham.khoi_luong_1_phan_g, donVi, heSo)} (theo nhãn)</Text>
             ) : null}
           </View>
-          <TextField label="Số gam đã ăn" value={soGam} onChangeText={setSoGam} error={loiSoGam} placeholder="Ví dụ: 100" isNumber />
+          <TextField
+            label={laAnhMy ? 'Số oz đã ăn' : 'Số gam đã ăn'}
+            value={soGam}
+            onChangeText={setSoGam}
+            error={loiSoGam}
+            placeholder={laAnhMy ? 'Ví dụ: 3,5' : 'Ví dụ: 100'}
+            isNumber
+          />
           {tongCaloXemTruoc !== null ? (
             <Text style={styles.tong}>Tổng: {tongCaloXemTruoc.toLocaleString('vi-VN')} kcal</Text>
           ) : null}
@@ -170,6 +188,8 @@ const styles = StyleSheet.create({
   },
   theSoLieu: {
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     ...shadows.card,
     borderRadius: radius.card,
     padding: spacing.medium,
@@ -178,6 +198,11 @@ const styles = StyleSheet.create({
   chuThuong: {
     fontSize: fontSizes.body,
     color: colors.text,
+  },
+  chuCanhBaoDiUng: {
+    fontSize: fontSizes.secondary,
+    color: colors.warningText,
+    marginTop: 4,
   },
   chuPhu: {
     fontSize: fontSizes.secondary,

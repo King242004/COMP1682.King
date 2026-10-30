@@ -155,6 +155,7 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
       duong_g: nhanTheoPhanAn(khaNang.duong_g, phanAn),
       beo_no_g: nhanTheoPhanAn(khaNang.beo_no_g, phanAn),
       nguon_so_lieu: 'ai',
+      canh_bao_di_ung: khaNang.canh_bao_di_ung,
     });
   }
 
@@ -236,6 +237,8 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
                   <View style={styles.cotTen}>
                     <Text style={styles.tenMon}>{khaNang.ten_mon}</Text>
                     <Text style={styles.chuPhu}>{khaNang.khau_phan}</Text>
+                    {/* Câu cảnh báo dị ứng theo tên món (chỉ khi người dùng có chọn nhóm dị ứng) */}
+                    {khaNang.canh_bao_di_ung !== '' ? <Text style={styles.chuCanhBaoDiUng}>{khaNang.canh_bao_di_ung}</Text> : null}
                   </View>
                   <Text style={styles.soCalo}>{khaNang.so_calo.toLocaleString('vi-VN')} kcal</Text>
                 </Pressable>
@@ -358,6 +361,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.small,
     marginBottom: spacing.small,
+  },
+  chuCanhBaoDiUng: {
+    fontSize: fontSizes.secondary,
+    color: colors.warningText,
+    marginTop: 4,
   },
   chuPhu: {
     fontSize: fontSizes.secondary,

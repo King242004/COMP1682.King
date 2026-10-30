@@ -6,6 +6,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, Text
 import type { ViewInstance } from 'react-native';
 
 import { buaTheoGio } from '../bua-an/TenBua';
+import { NhanDiUng } from '../di-ung/NhanDiUng';
 import type { MonDaChon } from '../quet-mon/MonDaChon';
 import { Chip } from '../shared/components/Chip';
 import { ErrorBox } from '../shared/components/ErrorBox';
@@ -109,6 +110,7 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
       duong_g: null,
       beo_no_g: null,
       nguon_so_lieu: 'vien_dinh_duong',
+      canh_bao_di_ung: '',
     };
     setMonDangXem(null);
     router.push({
@@ -187,7 +189,7 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
   );
 
   return (
-    <Screen header={phanDau}>
+    <Screen header={phanDau} compactBottom>
       {loi ? <ErrorBox message={loi} onRetry={taiMon} /> : null}
       {!tatCaMon && !loi ? <ActivityIndicator color={colors.primary} /> : null}
       {tatCaMon && monPhuHop.length === 0 ? (
@@ -225,6 +227,8 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
                 <Text style={[styles.chuSoLieu, styles.soDangXep]}>tinh bột {mon.tinh_bot_g.toLocaleString('vi-VN')} g</Text>
               ) : null}
               {mon.ghi_chu_suat ? <Text style={styles.chuSoLieu}>1 suất ({mon.ghi_chu_suat})</Text> : null}
+              {/* Món có thứ người dùng dị ứng thì có nhãn ⚠ */}
+              <NhanDiUng danhSachNhom={mon.nhom_di_ung} />
             </View>
           </Pressable>
         ))}
@@ -331,6 +335,8 @@ const styles = StyleSheet.create({
   oMon: {
     width: '48%',
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     ...shadows.card,
     borderRadius: radius.card,
     marginBottom: spacing.medium,

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { NhanDiUng } from '../di-ung/NhanDiUng';
 import { colors, fontSizes, pressedOpacity, radius, shadows, spacing } from '../shared/theme';
 import type { MonThucDon } from '../thuc-don/ThucDonApi';
 
@@ -21,7 +22,7 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucD
   return (
     <View style={[styles.the, daGhi ? styles.theDaGhi : null]}>
       <View style={styles.hangNgang}>
-        {/* Tên (gạch ngang khi đã ghi) và nhãn "AI ước tính"; các món trong mâm; calo, đạm, tinh bột, béo ước tính */}
+        {/* Tên (gạch ngang khi đã ghi) và nhãn "AI ước tính"; các món trong mâm; calo, đạm, tinh bột, béo ước tính; nhãn ⚠ nếu có thứ người dùng dị ứng */}
         <View style={styles.cotGiua}>
           <View style={styles.hangTen}>
             <Text style={[styles.tenMon, daGhi ? styles.tenMonDaGhi : null]}>{mon.ten_mon}</Text>
@@ -32,6 +33,7 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucD
             khoảng {mon.so_calo.toLocaleString('vi-VN')} kcal · đạm {mon.dam_g.toLocaleString('vi-VN')} g · tinh bột{' '}
             {mon.tinh_bot_g.toLocaleString('vi-VN')} g · béo {mon.beo_g.toLocaleString('vi-VN')} g
           </Text>
+          <NhanDiUng danhSachNhom={mon.nhom_di_ung} chiTiet={mon.thu_bi_bat.join(', ')} />
         </View>
 
         {/* Có cách nấu thì có nút 📖 mở hoặc gập nguyên liệu và cách nấu */}
@@ -83,6 +85,8 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucD
 const styles = StyleSheet.create({
   the: {
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     ...shadows.card,
     borderRadius: radius.card,
     padding: spacing.medium,

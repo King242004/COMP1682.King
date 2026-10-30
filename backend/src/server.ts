@@ -3,6 +3,7 @@ import express from 'express';
 import authRoutes from './auth/AuthRoutes.ts';
 import { requireAuth } from './auth/requireAuth.ts';
 import buaAnRoutes from './bua-an/BuaAnRoutes.ts';
+import donViRoutes from './don-vi/DonViRoutes.ts';
 import database from './database/database.ts';
 import environment from './environment.ts';
 import hoSoRoutes from './ho-so/HoSoRoutes.ts';
@@ -33,6 +34,9 @@ app.use('/auth', authRoutes);
 
 // Hồ sơ và mục tiêu calo (cần đăng nhập)
 app.use('/ho-so', requireAuth, hoSoRoutes);
+
+// Đơn vị Mét / Anh-Mỹ (cần đăng nhập)
+app.use('/don-vi', requireAuth, donViRoutes);
 
 // Nhật ký bữa ăn (cần đăng nhập)
 app.use('/bua-an', requireAuth, buaAnRoutes);

@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 import environment from '../environment.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { deleteUser, findUserByEmail, findUserById, findUserWithLoginById, insertUser, updatePassword } from './AuthQueries.ts';
+import { deleteUser, findUserByEmail, findUserById, findUserWithLoginById, insertUser, updateDisplayName, updatePassword } from './AuthQueries.ts';
 import type { User } from './AuthQueries.ts';
 
 // Mật khẩu ngắn nhất được chấp nhận
@@ -94,6 +94,18 @@ export async function changePassword(userId: number, currentPassword: unknown, n
   const newPasswordHash = await argon2.hash(newPassword);
   const newTokenVersion = await updatePassword(userId, newPasswordHash);
   return { token: createToken(userId, newTokenVersion) };
+}
+
+// Đổi tên hiển thị: kiểm giống lúc đăng ký (không để trống), bỏ khoảng trắng hai đầu
+export async function changeDisplayName(userId: number, displayName: unknown): Promise<User> {
+  if (typeof displayName !== 'string' || displayName.trim() === '') {
+    throw new HttpError(400, 'Hãy nhập tên hiển thị');
+  }
+  const user = await updateDisplayName(userId, displayName.trim());
+  if (!user) {
+    throw new HttpError(404, 'Không tìm thấy tài khoản');
+  }
+  return user;
 }
 
 // Xóa tài khoản của người đang đăng nhập

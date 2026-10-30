@@ -1,6 +1,10 @@
 import { layMonHayAn, layTongCaloCacNgay } from '../bua-an/BuaAnQueries.ts';
 import { xemNhatKyNgay } from '../bua-an/BuaAnService.ts';
-import { xemHoSo } from '../ho-so/HoSoService.ts';
+import { layTuKhoaDiUng } from '../di-ung/DiUngQueries.ts';
+import { layDonVi } from '../don-vi/DonViQueries.ts';
+import { layHeSoDonVi } from '../don-vi/DonViService.ts';
+import { vietDanhSachDiUngChoAi } from '../di-ung/DiUngService.ts';
+import { tinhTuoi, xemHoSo } from '../ho-so/HoSoService.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { xemTienDo } from '../tien-do/TienDoService.ts';
 import { askGeminiForJson } from '../shared/geminiClient.ts';
@@ -57,10 +61,10 @@ export async function hoiCoach(nguoiDungId: number, duLieu: Record<string, unkno
   const tienDo = await xemTienDo(nguoiDungId, ngay);
   const lichSu = await layTinNhanGanNhat(nguoiDungId, SO_TIN_GUI_AI);
 
-  // Tuổi tính theo năm của ngày đang hỏi
+  // Tuổi tính từ ngày sinh tới ngày đang hỏi
   let tuoi: number | null = null;
-  if (hoSo.nam_sinh !== null) {
-    tuoi = Number(ngay.slice(0, 4)) - hoSo.nam_sinh;
+  if (hoSo.ngay_sinh !== null) {
+    tuoi = tinhTuoi(hoSo.ngay_sinh, ngay);
   }
 
   // Bước 3. Ghép lời nhắc và hỏi AI đúng một lần
@@ -73,7 +77,10 @@ export async function hoiCoach(nguoiDungId: number, duLieu: Record<string, unkno
       bmi: hoSo.bmi,
       phan_loai_bmi: hoSo.phan_loai_bmi,
       muc_tieu: hoSo.muc_tieu,
+      danh_sach_di_ung: vietDanhSachDiUngChoAi(hoSo.nhom_di_ung_da_chon, await layTuKhoaDiUng()),
       di_ung_kieng_an: hoSo.di_ung_kieng_an,
+      don_vi: await layDonVi(nguoiDungId),
+      he_so_don_vi: await layHeSoDonVi(),
     },
     nhatKy: nhatKy,
     bayNgay: bayNgay,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { doiRaSoNgay, tinhXuHuongCanNang, tomTatBonTuan } from './TienDoService.ts';
+import { doiRaSoNgay, lamTronCanNang, tinhXuHuongCanNang, tomTatBonTuan } from './TienDoService.ts';
 import type { DauVaoTomTat } from './TienDoService.ts';
 
 test('hai ngày liền nhau cách nhau 1, qua tháng vẫn đúng', () => {
@@ -98,4 +98,9 @@ test('chưa trải dài đủ 14 ngày thì chưa tính; giữ cân thì không 
   assert.equal(giuCan.thay_doi_kg_moi_thang, -2);
   assert.equal(giuCan.danh_gia_toc_do, null);
   assert.equal(giuCan.calo_trung_binh, null);
+});
+
+test('làm tròn cân 2 số lẻ: gõ 150 lb (68,0388 kg) lưu 68,04 để hiện lại đúng 150 lb', () => {
+  assert.equal(lamTronCanNang(68.0388555), 68.04);
+  assert.equal(lamTronCanNang(50), 50);
 });

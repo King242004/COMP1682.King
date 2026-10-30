@@ -49,6 +49,7 @@ export function ChonSoSuat({ mon, onChon, onChonKhac }: ChonSoSuatProps) {
       duong_g: null,
       beo_no_g: null,
       nguon_so_lieu: 'vien_dinh_duong',
+      canh_bao_di_ung: '',
     });
   }
 

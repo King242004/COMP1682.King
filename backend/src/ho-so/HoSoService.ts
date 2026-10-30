@@ -1,3 +1,5 @@
+import { layNhomDiUng, layNhomDiUngCuaNguoiDung } from '../di-ung/DiUngQueries.ts';
+import type { NhomDiUng } from '../di-ung/DiUngQueries.ts';
 import { layHeSoVanDong, layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { layHoSo, luuHoSo } from './HoSoQueries.ts';
@@ -13,22 +15,29 @@ const CHIEU_CAO_LON_NHAT = 250;
 const CAN_NANG_NHO_NHAT = 30;
 const CAN_NANG_LON_NHAT = 300;
 
-// Ô dị ứng hoặc kiêng ăn tối đa bao nhiêu ký tự (giống CHECK trong 009_di_ung_kieng_an.sql)
+// Dạng ngày năm-tháng-ngày, ví dụ 2004-11-24
+const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
+
+// Ô kiêng ăn khác tối đa bao nhiêu ký tự (giống CHECK trong 009_di_ung_kieng_an.sql)
 const DI_UNG_KIENG_AN_DAI_NHAT = 200;
 
-// Hồ sơ gửi về app: các cột đã lưu, kèm BMI
+// Hồ sơ gửi về app: các cột đã lưu, kèm nhóm dị ứng đã chọn, BMI, BMR (chuyển hóa cơ bản) và TDEE (năng lượng giữ cân)
 type HoSoHienThi = HoSo & {
+  nhom_di_ung_da_chon: NhomDiUng[];
   bmi: number | null;
   phan_loai_bmi: string | null;
+  chuyen_hoa_co_ban: number | null;
+  nang_luong_giu_can: number | null;
 };
 
-// Những con số màn hồ sơ cần để làm mờ lựa chọn: ngưỡng BMI và ngưỡng tuổi
+// Những thứ màn hồ sơ cần: ngưỡng BMI và ngưỡng tuổi để làm mờ lựa chọn, 9 nhóm dị ứng để chọn
 type LuaChonHoSo = {
   bmi_thieu_can: number;
   bmi_ly_tuong: number;
   tuoi_cao_tuoi: number;
   bmi_thieu_can_cao_tuoi: number;
   tuoi_khong_co_muc_nang: number;
+  danh_sach_nhom_di_ung: NhomDiUng[];
 };
 
 // Các ngưỡng BMI, lấy từ bảng quy_dinh
@@ -73,6 +82,15 @@ export type ThongTinTinhCalo = {
   mucTieu: MucTieu;
 };
 
+// Các con số của công thức Ganpule, lấy từ database; hằng số đã chọn đúng theo giới
+export type HeSoGanpule = {
+  ganpuleHeSoCan: number;
+  ganpuleHeSoChieuCao: number;
+  ganpuleHeSoTuoi: number;
+  ganpuleHangSo: number;
+  kjMoiKcal: number;
+};
+
 // Các con số lấy từ database, đã chọn đúng theo giới, tuổi và mức vận động của người này
 export type HeSoTinhCalo = {
   ganpuleHeSoCan: number;
@@ -87,7 +105,7 @@ export type HeSoTinhCalo = {
 };
 
 // Chuyển hóa cơ bản theo công thức Ganpule (kcal/ngày); công thức ra MJ nên nhân 1000 ra kJ rồi đổi sang kcal
-function tinhChuyenHoaCoBan(canNangKg: number, chieuCaoCm: number, tuoi: number, heSo: HeSoTinhCalo): number {
+export function tinhChuyenHoaCoBan(canNangKg: number, chieuCaoCm: number, tuoi: number, heSo: HeSoGanpule): number {
   const megajoule =
     heSo.ganpuleHeSoCan * canNangKg + heSo.ganpuleHeSoChieuCao * chieuCaoCm - heSo.ganpuleHeSoTuoi * tuoi - heSo.ganpuleHangSo;
   return (megajoule * 1000) / heSo.kjMoiKcal;
@@ -119,12 +137,80 @@ export function tinhMucTieuCalo(thongTin: ThongTinTinhCalo, heSo: HeSoTinhCalo):
   return Math.round(chuyenHoaCoBanLyTuong * heSo.heSoVanDong);
 }
 
-// Lấy hồ sơ kèm BMI và phân loại; chưa thiết lập thì BMI là null
+export type MucVanDong = 'nhe' | 'trung_binh' | 'nang';
+
+// Số năm tròn từ ngày sinh tới một ngày (cả hai dạng năm-tháng-ngày); chưa tới sinh nhật năm đó thì trừ 1
+export function tinhTuoi(ngaySinh: string, ngay: string): number {
+  const [namSinh, thangSinh, ngayTrongThangSinh] = ngaySinh.split('-').map(Number);
+  const [nam, thang, ngayTrongThang] = ngay.split('-').map(Number);
+  let tuoi = nam - namSinh;
+  if (thang < thangSinh || (thang === thangSinh && ngayTrongThang < ngayTrongThangSinh)) {
+    tuoi = tuoi - 1;
+  }
+  return tuoi;
+}
+
+// Đọc ngày sinh app gửi lên: phải đúng dạng năm-tháng-ngày và là ngày có thật (không có 30/2); sai thì trả null
+export function docNgaySinh(giaTri: unknown): string | null {
+  if (typeof giaTri !== 'string' || !DANG_NGAY.test(giaTri)) {
+    return null;
+  }
+  const [nam, thang, ngay] = giaTri.split('-').map(Number);
+  const ngayThat = new Date(Date.UTC(nam, thang - 1, ngay));
+  if (ngayThat.getUTCMonth() !== thang - 1 || ngayThat.getUTCDate() !== ngay) {
+    return null;
+  }
+  return giaTri;
+}
+
+// Ngày hôm nay của server dạng năm-tháng-ngày (giờ UTC)
+function layNgayHomNay(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Đã tới tuổi không còn mức vận động nặng thì tính như trung bình; mức khác giữ nguyên
+export function chonMucVanDongTheoTuoi(mucVanDong: MucVanDong, tuoi: number, tuoiKhongCoMucNang: number): MucVanDong {
+  if (mucVanDong === 'nang' && tuoi >= tuoiKhongCoMucNang) {
+    return 'trung_binh';
+  }
+  return mucVanDong;
+}
+
+// Đọc các mã nhóm dị ứng app gửi lên: không gửi là chưa chọn nhóm nào; sai dạng, mã lạ hoặc trùng thì trả null
+export function docMaNhomDiUng(giaTri: unknown, maHopLe: string[]): string[] | null {
+  if (giaTri === undefined || giaTri === null) {
+    return [];
+  }
+  if (!Array.isArray(giaTri)) {
+    return null;
+  }
+  const maDaDoc: string[] = [];
+  for (const ma of giaTri) {
+    if (typeof ma !== 'string' || !maHopLe.includes(ma) || maDaDoc.includes(ma)) {
+      return null;
+    }
+    maDaDoc.push(ma);
+  }
+  return maDaDoc;
+}
+
+// Lấy hồ sơ kèm BMI, phân loại, BMR, TDEE và các nhóm dị ứng đã chọn; chưa thiết lập thì các số này là null
 export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
   const hoSo = await layHoSo(nguoiDungId);
+  const nhomDiUngDaChon = await layNhomDiUngCuaNguoiDung(nguoiDungId);
 
-  if (hoSo.chieu_cao_cm === null || hoSo.can_nang_kg === null) {
-    return { ...hoSo, bmi: null, phan_loai_bmi: null };
+  if (
+    hoSo.gioi_tinh === null || hoSo.ngay_sinh === null || hoSo.chieu_cao_cm === null ||
+    hoSo.can_nang_kg === null || hoSo.muc_van_dong === null
+  ) {
+    return {
+      ...hoSo,
+      nhom_di_ung_da_chon: nhomDiUngDaChon,
+      bmi: null,
+      phan_loai_bmi: null,
+      chuyen_hoa_co_ban: null,
+      nang_luong_giu_can: null,
+    };
   }
 
   const bmi = tinhBmi(hoSo.can_nang_kg, hoSo.chieu_cao_cm);
@@ -134,7 +220,29 @@ export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
     beoPhiDo1: await layQuyDinh('bmi_beo_phi_do_1'),
     beoPhiDo2: await layQuyDinh('bmi_beo_phi_do_2'),
   };
-  return { ...hoSo, bmi: bmi, phan_loai_bmi: phanLoaiBmi(bmi, nguong) };
+
+  // BMR theo Ganpule, cùng công thức với mục tiêu calo
+  const tuoi = tinhTuoi(hoSo.ngay_sinh, layNgayHomNay());
+  const chuyenHoaCoBan = tinhChuyenHoaCoBan(hoSo.can_nang_kg, hoSo.chieu_cao_cm, tuoi, {
+    ganpuleHeSoCan: await layQuyDinh('ganpule_he_so_can'),
+    ganpuleHeSoChieuCao: await layQuyDinh('ganpule_he_so_chieu_cao'),
+    ganpuleHeSoTuoi: await layQuyDinh('ganpule_he_so_tuoi'),
+    ganpuleHangSo: await layQuyDinh(`ganpule_hang_so_${hoSo.gioi_tinh}`),
+    kjMoiKcal: await layQuyDinh('kj_moi_kcal'),
+  });
+
+  // TDEE = BMR x hệ số vận động; đã tới tuổi không còn mức nặng thì tính như trung bình (giống lúc ghi cân)
+  const mucVanDong = chonMucVanDongTheoTuoi(hoSo.muc_van_dong, tuoi, await layQuyDinh('tuoi_khong_co_muc_nang'));
+  const nangLuongGiuCan = chuyenHoaCoBan * (await layHeSoVanDong(mucVanDong, tuoi));
+
+  return {
+    ...hoSo,
+    nhom_di_ung_da_chon: nhomDiUngDaChon,
+    bmi: bmi,
+    phan_loai_bmi: phanLoaiBmi(bmi, nguong),
+    chuyen_hoa_co_ban: Math.round(chuyenHoaCoBan),
+    nang_luong_giu_can: Math.round(nangLuongGiuCan),
+  };
 }
 
 // Lấy các lựa chọn cho màn thiết lập / sửa hồ sơ
@@ -145,6 +253,7 @@ export async function xemLuaChonHoSo(): Promise<LuaChonHoSo> {
     tuoi_cao_tuoi: await layQuyDinh('tuoi_cao_tuoi'),
     bmi_thieu_can_cao_tuoi: await layQuyDinh('bmi_thieu_can_cao_tuoi'),
     tuoi_khong_co_muc_nang: await layQuyDinh('tuoi_khong_co_muc_nang'),
+    danh_sach_nhom_di_ung: await layNhomDiUng(),
   };
 }
 
@@ -164,15 +273,14 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     throw new HttpError(400, 'Giới tính không hợp lệ');
   }
 
-  const namSinh = duLieu.nam_sinh;
-  const namHienTai = new Date().getFullYear();
-  if (
-    typeof namSinh !== 'number' || !Number.isInteger(namSinh) ||
-    namHienTai - namSinh < TUOI_TOI_THIEU || namHienTai - namSinh > TUOI_TOI_DA
-  ) {
-    throw new HttpError(400, 'Năm sinh không hợp lệ');
+  const ngaySinh = docNgaySinh(duLieu.ngay_sinh);
+  if (ngaySinh === null) {
+    throw new HttpError(400, 'Ngày sinh không hợp lệ');
   }
-  const tuoi = namHienTai - namSinh;
+  const tuoi = tinhTuoi(ngaySinh, layNgayHomNay());
+  if (tuoi < TUOI_TOI_THIEU || tuoi > TUOI_TOI_DA) {
+    throw new HttpError(400, `Chỉ dành cho người từ ${TUOI_TOI_THIEU} đến ${TUOI_TOI_DA} tuổi`);
+  }
 
   const chieuCaoCm = duLieu.chieu_cao_cm;
   if (typeof chieuCaoCm !== 'number' || chieuCaoCm < CHIEU_CAO_NHO_NHAT || chieuCaoCm > CHIEU_CAO_LON_NHAT) {
@@ -194,13 +302,20 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     throw new HttpError(400, 'Mục tiêu không hợp lệ');
   }
 
-  // Dị ứng hoặc kiêng ăn không bắt buộc: không gửi là để trống
+  // Kiêng ăn khác (ô chữ) không bắt buộc: không gửi là để trống
   let diUngKiengAn = '';
   if (duLieu.di_ung_kieng_an !== undefined && duLieu.di_ung_kieng_an !== null) {
     if (typeof duLieu.di_ung_kieng_an !== 'string' || duLieu.di_ung_kieng_an.trim().length > DI_UNG_KIENG_AN_DAI_NHAT) {
-      throw new HttpError(400, `Dị ứng hoặc kiêng ăn tối đa ${DI_UNG_KIENG_AN_DAI_NHAT} ký tự`);
+      throw new HttpError(400, `Kiêng ăn khác tối đa ${DI_UNG_KIENG_AN_DAI_NHAT} ký tự`);
     }
     diUngKiengAn = duLieu.di_ung_kieng_an.trim();
+  }
+
+  // Nhóm dị ứng không bắt buộc: chỉ nhận mã có trong bảng nhom_di_ung, không trùng
+  const maHopLe = (await layNhomDiUng()).map((nhom) => nhom.ma);
+  const maNhomDiUng = docMaNhomDiUng(duLieu.ma_nhom_di_ung, maHopLe);
+  if (maNhomDiUng === null) {
+    throw new HttpError(400, 'Nhóm dị ứng không hợp lệ');
   }
 
   // Bước 2. Rào an toàn theo BMI và tuổi, giống lựa chọn bị làm mờ ở app
@@ -237,13 +352,15 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
   // Bước 4. Lưu rồi trả về hồ sơ mới
   const hoSoDeLuu: HoSoDeLuu = {
     gioi_tinh: gioiTinh,
-    nam_sinh: namSinh,
+    ngay_sinh: ngaySinh,
     chieu_cao_cm: chieuCaoCm,
     can_nang_kg: canNangKg,
     muc_van_dong: mucVanDong,
     muc_tieu: mucTieu,
     muc_tieu_calo: mucTieuCalo,
+    tuoi_tinh_muc_tieu: tuoi,
     di_ung_kieng_an: diUngKiengAn,
+    ma_nhom_di_ung: maNhomDiUng,
   };
   await luuHoSo(nguoiDungId, hoSoDeLuu);
   return xemHoSo(nguoiDungId);
@@ -255,12 +372,12 @@ export async function capNhatCanNangHoSo(nguoiDungId: number, canNangKg: number)
 
   // Chưa thiết lập hồ sơ thì chưa có gì để tính lại
   if (
-    hoSo.gioi_tinh === null || hoSo.nam_sinh === null || hoSo.chieu_cao_cm === null ||
+    hoSo.gioi_tinh === null || hoSo.ngay_sinh === null || hoSo.chieu_cao_cm === null ||
     hoSo.muc_van_dong === null || hoSo.muc_tieu === null
   ) {
     return;
   }
-  const tuoi = new Date().getFullYear() - hoSo.nam_sinh;
+  const tuoi = tinhTuoi(hoSo.ngay_sinh, layNgayHomNay());
 
   // Giống lựa chọn bị làm mờ ở màn hồ sơ: cân mới làm mục tiêu không còn hợp thì về giữ cân
   const bmi = tinhBmi(canNangKg, hoSo.chieu_cao_cm);
@@ -273,19 +390,29 @@ export async function capNhatCanNangHoSo(nguoiDungId: number, canNangKg: number)
   }
 
   // Đã tới tuổi không còn mức vận động nặng thì về trung bình
-  let mucVanDong = hoSo.muc_van_dong;
-  if (mucVanDong === 'nang' && tuoi >= (await layQuyDinh('tuoi_khong_co_muc_nang'))) {
-    mucVanDong = 'trung_binh';
-  }
+  const mucVanDong = chonMucVanDongTheoTuoi(hoSo.muc_van_dong, tuoi, await layQuyDinh('tuoi_khong_co_muc_nang'));
 
-  // Lưu lại bằng đúng đường lưu hồ sơ, nên mục tiêu calo được tính lại theo cân mới
+  // Lưu lại bằng đúng đường lưu hồ sơ, nên mục tiêu calo được tính lại theo cân mới; gửi kèm nhóm dị ứng để không bị xóa
+  const nhomDiUngDaChon = await layNhomDiUngCuaNguoiDung(nguoiDungId);
   await capNhatHoSo(nguoiDungId, {
     gioi_tinh: hoSo.gioi_tinh,
-    nam_sinh: hoSo.nam_sinh,
+    ngay_sinh: hoSo.ngay_sinh,
     chieu_cao_cm: hoSo.chieu_cao_cm,
     can_nang_kg: canNangKg,
     muc_van_dong: mucVanDong,
     muc_tieu: mucTieu,
     di_ung_kieng_an: hoSo.di_ung_kieng_an,
+    ma_nhom_di_ung: nhomDiUngDaChon.map((nhom) => nhom.ma),
   });
+}
+
+// Qua sinh nhật (tuổi hôm nay khác tuổi đã dùng để tính mục tiêu) thì tính lại mục tiêu calo bằng đúng đường lưu như lúc ghi cân
+export async function lamMoiMucTieuNeuQuaSinhNhat(nguoiDungId: number): Promise<void> {
+  const hoSo = await layHoSo(nguoiDungId);
+  if (hoSo.muc_tieu_calo === null || hoSo.ngay_sinh === null || hoSo.can_nang_kg === null) {
+    return;
+  }
+  if (tinhTuoi(hoSo.ngay_sinh, layNgayHomNay()) !== hoSo.tuoi_tinh_muc_tieu) {
+    await capNhatCanNangHoSo(nguoiDungId, hoSo.can_nang_kg);
+  }
 }

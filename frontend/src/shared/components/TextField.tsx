@@ -18,9 +18,8 @@ type TextFieldProps = {
   isDisabled?: boolean;
   // Ô cao nhiều dòng để viết cả câu
   isMultiline?: boolean;
-  // Nút tròn nhỏ bên phải trong ô (ví dụ kính lúp); iconLabel để trình đọc màn hình đọc lên
+  // Nút tròn nhỏ bên phải trong ô (ví dụ kính lúp)
   iconName?: ComponentProps<typeof Ionicons>['name'];
-  iconLabel?: string;
   onPressIcon?: () => void;
 };
 
@@ -60,12 +59,11 @@ export function TextField({
   isDisabled,
   isMultiline,
   iconName,
-  iconLabel,
   onPressIcon,
 }: TextFieldProps) {
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+      {label !== '' ? <Text style={styles.label}>{label}</Text> : null}
       <View>
         <TextInput
           style={[
@@ -94,8 +92,6 @@ export function TextField({
             onPress={onPressIcon}
             disabled={isDisabled}
             hitSlop={4}
-            accessibilityRole="button"
-            accessibilityLabel={iconLabel}
           >
             <Ionicons name={iconName} size={20} color={colors.textOnPrimaryLight} />
           </Pressable>

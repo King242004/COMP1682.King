@@ -1,7 +1,7 @@
 import { layTongCaloCacNgay } from '../bua-an/BuaAnQueries.ts';
 import type { CaloMotNgay } from '../bua-an/BuaAnQueries.ts';
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
-import { capNhatCanNangHoSo } from '../ho-so/HoSoService.ts';
+import { capNhatCanNangHoSo, lamMoiMucTieuNeuQuaSinhNhat } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { layCanNangCacNgay, luuCanNang } from './TienDoQueries.ts';
@@ -158,6 +158,8 @@ export async function xemTienDo(nguoiDungId: number, ngay: string): Promise<Tien
   if (!DANG_NGAY.test(ngay)) {
     throw new HttpError(400, 'Ngày không hợp lệ');
   }
+  // Qua sinh nhật thì tính lại mục tiêu calo trước khi đọc
+  await lamMoiMucTieuNeuQuaSinhNhat(nguoiDungId);
 
   // Lấy thêm 6 ngày trước biểu đồ để điểm đầu tiên cũng đủ 7 ngày tính trung bình
   const danhSachLanCan = await layCanNangCacNgay(nguoiDungId, ngay, SO_NGAY_BIEU_DO + SO_NGAY_XU_HUONG - 1);
@@ -200,6 +202,11 @@ export async function xemTienDo(nguoiDungId: number, ngay: string): Promise<Tien
   };
 }
 
+// Làm tròn cân 2 số lẻ cho khớp cột NUMERIC(5, 2) (gõ lb đổi ra kg cần 2 số lẻ để hiện lại không lệch)
+export function lamTronCanNang(kg: number): number {
+  return Math.round(kg * 100) / 100;
+}
+
 // Ghi cân của một ngày, cập nhật hồ sơ và mục tiêu calo, rồi trả về tiến độ mới
 export async function ghiCanNang(nguoiDungId: number, duLieu: Record<string, unknown>): Promise<TienDo> {
   const ngay = duLieu.ngay;
@@ -211,8 +218,7 @@ export async function ghiCanNang(nguoiDungId: number, duLieu: Record<string, unk
     throw new HttpError(400, `Cân nặng từ ${CAN_NANG_NHO_NHAT} đến ${CAN_NANG_LON_NHAT} kg`);
   }
 
-  // Làm tròn 1 số lẻ cho khớp cột NUMERIC(4, 1)
-  const canNangLamTron = Math.round(canNangKg * 10) / 10;
+  const canNangLamTron = lamTronCanNang(canNangKg);
   await luuCanNang(nguoiDungId, ngay, canNangLamTron);
   await capNhatCanNangHoSo(nguoiDungId, canNangLamTron);
   return xemTienDo(nguoiDungId, ngay);

@@ -89,6 +89,8 @@ const styles = StyleSheet.create({
   o: {
     flex: 1,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     ...shadows.card,
     borderRadius: radius.input,
     padding: spacing.small,

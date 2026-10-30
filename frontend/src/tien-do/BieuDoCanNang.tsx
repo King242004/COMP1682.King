@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
+import { doiKgRaDonVi } from '../don-vi/DoiDonVi';
+import { useDonVi } from '../don-vi/DonViContext';
 import { daysBetween, formatShortDate, shiftDateKey } from '../shared/dateKey';
 import { colors, fontSizes, spacing } from '../shared/theme';
 import type { DiemCanNang } from './TienDoApi';
@@ -22,13 +24,14 @@ const LE_DUOI = 22;
 // Trục cân nặng rộng thêm 0,5 kg ở trên và dưới cho chấm không dính mép
 const KG_DU_THEM = 0.5;
 
-// Làm tròn 1 số lẻ rồi viết kiểu Việt Nam
+// Làm tròn 1 số lẻ rồi viết kiểu Việt Nam (số đã đổi theo đơn vị người dùng chọn)
 function vietKg(so: number): string {
   return (Math.round(so * 10) / 10).toLocaleString('vi-VN');
 }
 
 // Biểu đồ cân nặng: chấm xám là cân từng ngày, đường màu chính là trung bình 7 ngày; trục ngang là soNgay ngày tính tới ngayCuoi
 export function BieuDoCanNang({ diemCanNang, ngayCuoi, soNgay }: BieuDoCanNangProps) {
+  const { donVi, heSo } = useDonVi();
   // Chiều rộng đo được sau khi màn hình vẽ xong
   const [chieuRong, setChieuRong] = useState(0);
 
@@ -67,8 +70,8 @@ export function BieuDoCanNang({ diemCanNang, ngayCuoi, soNgay }: BieuDoCanNangPr
         <Svg width={chieuRong} height={CHIEU_CAO}>
           {/* Đường đáy và hai số kg ở trục dọc */}
           <Line x1={LE_TRAI} y1={dayCuaTruc} x2={chieuRong - LE_PHAI} y2={dayCuaTruc} stroke={colors.border} strokeWidth={1} />
-          <SvgText x={0} y={LE_TREN + 4} fontSize={11} fill={colors.textSecondary}>{vietKg(kgLonNhat)}</SvgText>
-          <SvgText x={0} y={dayCuaTruc} fontSize={11} fill={colors.textSecondary}>{vietKg(kgNhoNhat)}</SvgText>
+          <SvgText x={0} y={LE_TREN + 4} fontSize={11} fill={colors.textSecondary}>{vietKg(doiKgRaDonVi(kgLonNhat, donVi, heSo))}</SvgText>
+          <SvgText x={0} y={dayCuaTruc} fontSize={11} fill={colors.textSecondary}>{vietKg(doiKgRaDonVi(kgNhoNhat, donVi, heSo))}</SvgText>
 
           {/* Ngày đầu và ngày cuối ở trục ngang */}
           <SvgText x={LE_TRAI} y={CHIEU_CAO - 4} fontSize={11} fill={colors.textSecondary}>

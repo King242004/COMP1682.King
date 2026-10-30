@@ -12,6 +12,8 @@ export type KhaNang = {
   duong_g: number | null;
   beo_no_g: number | null;
   do_tin_cay: number;
+  // Câu cảnh báo dị ứng do server viết theo tên món; rỗng khi người dùng chưa chọn nhóm dị ứng
+  canh_bao_di_ung: string;
 };
 
 // Kết quả nhận món; la_mon_an = false là AI thấy không phải đồ ăn
@@ -31,6 +33,8 @@ export type SanPhamMaVach = {
   duong_100g: number | null;
   beo_no_100g: number | null;
   khoi_luong_1_phan_g: number | null;
+  // Câu cảnh báo dị ứng do server viết theo nhãn và tên sản phẩm; rỗng khi người dùng chưa chọn nhóm dị ứng
+  canh_bao_di_ung: string;
 };
 
 // Nhờ AI ước tính theo tên món, khẩu phần và calo đã biết (null là chưa biết)

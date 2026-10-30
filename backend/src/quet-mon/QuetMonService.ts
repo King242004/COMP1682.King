@@ -1,3 +1,7 @@
+import { layNhomDiUngCuaNguoiDung, layTuKhoaDiUng } from '../di-ung/DiUngQueries.ts';
+import { timNhomDiUng } from '../di-ung/DiUngService.ts';
+import { layDonVi } from '../don-vi/DonViQueries.ts';
+import { vietLoiDanDonViChoAi } from '../don-vi/DonViService.ts';
 import environment from '../environment.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { askGeminiForJson } from '../shared/geminiClient.ts';
@@ -155,6 +159,19 @@ export type SanPhamMaVach = {
   beo_no_100g: number | null;
   // Khối lượng 1 phần theo nhãn (ví dụ 1 hộp = 100 g); nhãn không ghi thì null
   khoi_luong_1_phan_g: number | null;
+  // Mã dị ứng ghi trên nhãn theo Open Food Facts, ví dụ "en:milk"; rỗng là không có dữ liệu
+  ma_di_ung: string[];
+};
+
+// Kết quả AI gửi về app: mỗi khả năng kèm câu cảnh báo dị ứng do server viết sẵn (rỗng khi người dùng chưa chọn nhóm)
+type KetQuaNhanMonCoCanhBao = {
+  la_mon_an: boolean;
+  kha_nang: (KhaNang & { canh_bao_di_ung: string })[];
+};
+
+// Sản phẩm mã vạch gửi về app kèm câu cảnh báo dị ứng
+type SanPhamMaVachCoCanhBao = SanPhamMaVach & {
+  canh_bao_di_ung: string;
 };
 
 // Lấy một số không âm, sai hoặc thiếu thì trả về null
@@ -198,6 +215,16 @@ export function docSanPhamMaVach(duLieu: unknown): SanPhamMaVach | null {
     khoiLuong1Phan = null;
   }
 
+  // Mã dị ứng trên nhãn: chỉ giữ mã tiếng Anh "en:..." vì bảng nhom_di_ung đổi mã theo dạng này
+  const maDiUng: string[] = [];
+  if (Array.isArray(sanPham.allergens_tags)) {
+    for (const ma of sanPham.allergens_tags) {
+      if (typeof ma === 'string' && ma.startsWith('en:')) {
+        maDiUng.push(ma);
+      }
+    }
+  }
+
   return {
     ten_san_pham: tenSanPham,
     kcal_100g: kcal100g,
@@ -208,11 +235,63 @@ export function docSanPhamMaVach(duLieu: unknown): SanPhamMaVach | null {
     duong_100g: docSo(chatDinhDuong.sugars_100g),
     beo_no_100g: docSo(chatDinhDuong['saturated-fat_100g']),
     khoi_luong_1_phan_g: khoiLuong1Phan,
+    ma_di_ung: maDiUng,
+  };
+}
+
+// Câu cảnh báo cho món AI nhận (ảnh, tên, mô tả): chỉ kiểm được theo tên món nên luôn nhắc tự kiểm; chưa chọn nhóm thì rỗng
+export function vietCanhBaoTheoTenMon(nhomTrung: string[], coChonNhom: boolean): string {
+  if (!coChonNhom) {
+    return '';
+  }
+  if (nhomTrung.length > 0) {
+    return `⚠ Tên món có: ${nhomTrung.join(' · ')}. App chỉ kiểm theo tên món, không biết thành phần thật. Hãy tự kiểm.`;
+  }
+  return 'App chỉ kiểm dị ứng theo tên món, không biết thành phần thật. Hãy tự kiểm.';
+}
+
+// Câu cảnh báo cho sản phẩm mã vạch: trùng thì nêu nhóm; không có dữ liệu dị ứng thì nhắc xem bao bì; chưa chọn nhóm thì rỗng
+export function vietCanhBaoMaVach(nhomTrung: string[], coDuLieu: boolean, coChonNhom: boolean): string {
+  if (!coChonNhom) {
+    return '';
+  }
+  const cacCau: string[] = [];
+  if (nhomTrung.length > 0) {
+    cacCau.push(`⚠ Có: ${nhomTrung.join(' · ')}.`);
+  }
+  if (!coDuLieu) {
+    cacCau.push('Sản phẩm chưa có dữ liệu dị ứng trên Open Food Facts, hãy xem bao bì.');
+  }
+  if (coDuLieu && nhomTrung.length === 0) {
+    cacCau.push('Nhãn không ghi nhóm bạn đã chọn.');
+  }
+  return cacCau.join(' ');
+}
+
+// Người dùng chọn Anh-Mỹ thì thêm câu dặn AI ghi khẩu phần bằng oz; Mét thì giữ nguyên lời nhắc
+async function themLoiDanDonVi(loiNhac: string, nguoiDungId: number): Promise<string> {
+  const loiDanDonVi = vietLoiDanDonViChoAi(await layDonVi(nguoiDungId));
+  if (loiDanDonVi === '') {
+    return loiNhac;
+  }
+  return `${loiNhac}\n${loiDanDonVi}`;
+}
+
+// Gắn câu cảnh báo dị ứng cho từng khả năng AI trả về, dò theo tên món
+async function ganCanhBaoDiUng(ketQua: KetQuaNhanMon, nguoiDungId: number): Promise<KetQuaNhanMonCoCanhBao> {
+  const nhomDaChon = await layNhomDiUngCuaNguoiDung(nguoiDungId);
+  const danhSachTuKhoa = await layTuKhoaDiUng();
+  return {
+    la_mon_an: ketQua.la_mon_an,
+    kha_nang: ketQua.kha_nang.map((khaNang) => ({
+      ...khaNang,
+      canh_bao_di_ung: vietCanhBaoTheoTenMon(timNhomDiUng([khaNang.ten_mon], danhSachTuKhoa, nhomDaChon), nhomDaChon.length > 0),
+    })),
   };
 }
 
 // Ước tính số liệu theo tên món và khẩu phần người dùng gõ
-export async function uocTinhTheoTen(duLieu: Record<string, unknown>): Promise<KetQuaNhanMon> {
+export async function uocTinhTheoTen(duLieu: Record<string, unknown>, nguoiDungId: number): Promise<KetQuaNhanMonCoCanhBao> {
   const tenMon = duLieu.ten_mon;
   if (typeof tenMon !== 'string' || tenMon.trim() === '' || tenMon.trim().length > TEN_MON_DAI_NHAT) {
     throw new HttpError(400, 'Hãy nhập tên món');
@@ -250,7 +329,7 @@ Trả về la_mon_an = true và đúng 1 khả năng trong kha_nang:
 - do_tin_cay: từ 0 đến 1, mức bạn chắc chắn về con số
 Nếu tên không phải đồ ăn hoặc đồ uống, trả về la_mon_an = false và kha_nang rỗng.`;
 
-  const traLoi = await askGeminiForJson(loiNhac, KHUON_KET_QUA);
+  const traLoi = await askGeminiForJson(await themLoiDanDonVi(loiNhac, nguoiDungId), KHUON_KET_QUA);
   const ketQua = docKetQuaNhanMon(traLoi, SO_KHA_NANG_TEN);
 
   // Người dùng đã biết calo thì giữ đúng số của họ, không tin số AI trả về
@@ -259,11 +338,11 @@ Nếu tên không phải đồ ăn hoặc đồ uống, trả về la_mon_an = f
       khaNang.so_calo = soCaloDaBiet;
     }
   }
-  return ketQua;
+  return ganCanhBaoDiUng(ketQua, nguoiDungId);
 }
 
 // Ước tính số liệu từ một câu người dùng tả bữa vừa ăn, gộp thành một món
-export async function uocTinhTheoMoTa(duLieu: Record<string, unknown>): Promise<KetQuaNhanMon> {
+export async function uocTinhTheoMoTa(duLieu: Record<string, unknown>, nguoiDungId: number): Promise<KetQuaNhanMonCoCanhBao> {
   const moTa = duLieu.mo_ta;
   if (typeof moTa !== 'string' || moTa.trim() === '') {
     throw new HttpError(400, 'Hãy ghi bạn đã ăn gì');
@@ -283,12 +362,12 @@ Trả về la_mon_an = true và đúng 1 khả năng trong kha_nang:
 - do_tin_cay: từ 0 đến 1, mức bạn chắc chắn về con số
 Nếu câu không nói về đồ ăn hoặc đồ uống, trả về la_mon_an = false và kha_nang rỗng.`;
 
-  const traLoi = await askGeminiForJson(loiNhac, KHUON_KET_QUA);
-  return docKetQuaNhanMon(traLoi, SO_KHA_NANG_TEN);
+  const traLoi = await askGeminiForJson(await themLoiDanDonVi(loiNhac, nguoiDungId), KHUON_KET_QUA);
+  return ganCanhBaoDiUng(docKetQuaNhanMon(traLoi, SO_KHA_NANG_TEN), nguoiDungId);
 }
 
 // Nhận món từ ảnh chụp, trả tối đa 3 khả năng
-export async function nhanMonTuAnh(duLieu: Record<string, unknown>): Promise<KetQuaNhanMon> {
+export async function nhanMonTuAnh(duLieu: Record<string, unknown>, nguoiDungId: number): Promise<KetQuaNhanMonCoCanhBao> {
   const anhBase64 = duLieu.anh_base64;
   if (typeof anhBase64 !== 'string' || anhBase64 === '') {
     throw new HttpError(400, 'Thiếu ảnh');
@@ -317,18 +396,18 @@ Mỗi khả năng là CẢ phần ăn nhìn thấy trong ảnh (đĩa có nhiề
 Ước lượng khẩu phần theo vật quen thuộc trong ảnh như đũa, thìa, chén; đừng đoán thấp khẩu phần lớn.
 Nếu ảnh không có đồ ăn hoặc đồ uống, trả về la_mon_an = false và kha_nang rỗng.`;
 
-  const traLoi = await askGeminiForJson(loiNhac, KHUON_KET_QUA, { base64Data: anhBase64, mimeType: kieuAnh });
-  return docKetQuaNhanMon(traLoi, SO_KHA_NANG_ANH);
+  const traLoi = await askGeminiForJson(await themLoiDanDonVi(loiNhac, nguoiDungId), KHUON_KET_QUA, { base64Data: anhBase64, mimeType: kieuAnh });
+  return ganCanhBaoDiUng(docKetQuaNhanMon(traLoi, SO_KHA_NANG_ANH), nguoiDungId);
 }
 
-// Tra mã vạch trên Open Food Facts
-export async function traMaVach(maVach: string): Promise<SanPhamMaVach> {
+// Tra mã vạch trên Open Food Facts, kèm câu cảnh báo dị ứng (theo nhãn và theo tên sản phẩm)
+export async function traMaVach(maVach: string, nguoiDungId: number): Promise<SanPhamMaVachCoCanhBao> {
   if (!DANG_MA_VACH.test(maVach)) {
     throw new HttpError(400, 'Mã vạch không hợp lệ');
   }
 
   // Chỉ lấy những trường cần dùng; User-Agent theo yêu cầu của Open Food Facts
-  const duongDan = `${environment.openFoodFactsUrl}/api/v2/product/${maVach}.json?fields=product_name,brands,nutriments,serving_quantity`;
+  const duongDan = `${environment.openFoodFactsUrl}/api/v2/product/${maVach}.json?fields=product_name,brands,nutriments,serving_quantity,allergens_tags`;
   let traLoi: unknown;
   try {
     const phanHoi = await fetch(duongDan, {
@@ -345,5 +424,16 @@ export async function traMaVach(maVach: string): Promise<SanPhamMaVach> {
   if (!sanPham) {
     throw new HttpError(404, 'Chưa có sản phẩm này hoặc thiếu số calo, hãy gõ tên món');
   }
-  return sanPham;
+
+  // Nhóm trùng = nhóm dò được theo tên sản phẩm, cộng nhóm có mã ghi trên nhãn
+  const nhomDaChon = await layNhomDiUngCuaNguoiDung(nguoiDungId);
+  const danhSachTuKhoa = await layTuKhoaDiUng();
+  const nhomTrung = timNhomDiUng([sanPham.ten_san_pham], danhSachTuKhoa, nhomDaChon);
+  for (const nhom of nhomDaChon) {
+    if (sanPham.ma_di_ung.includes(nhom.ma_open_food_facts) && !nhomTrung.includes(nhom.ten)) {
+      nhomTrung.push(nhom.ten);
+    }
+  }
+  const coDuLieu = sanPham.ma_di_ung.length > 0;
+  return { ...sanPham, canh_bao_di_ung: vietCanhBaoMaVach(nhomTrung, coDuLieu, nhomDaChon.length > 0) };
 }

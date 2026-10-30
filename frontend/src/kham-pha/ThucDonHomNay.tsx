@@ -161,7 +161,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
   }
 
   return (
-    <Screen header={dauMan}>
+    <Screen header={dauMan} compactBottom>
       {loi ? <ErrorBox message={loi} onRetry={taiDuLieu} /> : null}
       {!thucDon && !loi ? <ActivityIndicator color={colors.primary} /> : null}
 
@@ -229,7 +229,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
             </View>
           </Card>
           <Text style={styles.chuPhu}>
-            Món quán là suất Viện Dinh dưỡng đã cân; cơm nhà là AI ước tính. Có dị ứng thì hãy tự kiểm thành phần.
+            Món quán là suất Viện Dinh dưỡng đã cân; cơm nhà là AI ước tính. App kiểm dị ứng theo tên thành phần; nước dùng, nước chấm chưa kiểm được.
           </Text>
 
           {/* Món chia theo bữa: tiêu đề bữa (biểu tượng màu và tên bữa), món nằm dưới; bữa không có món thì không hiện */}

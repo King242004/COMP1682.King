@@ -10,4 +10,6 @@ export type MonDaChon = {
   duong_g: number | null;
   beo_no_g: number | null;
   nguon_so_lieu: 'ai' | 'ma_vach' | 'vien_dinh_duong' | 'thuc_pham';
+  // Câu cảnh báo dị ứng do server viết (món AI nhận, sản phẩm mã vạch); món Viện và thực phẩm là chuỗi rỗng vì đã có nhãn ⚠ lúc chọn
+  canh_bao_di_ung: string;
 };

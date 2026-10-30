@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import type { MonTraCuu } from '../tra-mon/TraMonQueries.ts';
-import { docCaiDat, docThucDon } from './ThucDonService.ts';
+import type { MonThucDon } from './ThucDonQueries.ts';
+import { docCaiDat, docThucDon, layTenDeKiemDiUng } from './ThucDonService.ts';
 import type { CaiDatThucDon } from './ThucDonService.ts';
 
 // Cài đặt hợp lệ như app gửi lên: ăn cơm gia đình bữa tối, mâm 3 món có cá, rau, canh
@@ -85,6 +86,22 @@ test('docThucDon: món Viện lấy tên, ảnh, số từ database; mâm cơm n
   ]);
 });
 
+test('docThucDon: AI ghi thêm cơm vào danh sách món thì bỏ cơm ra, mâm vẫn được giữ (cơm không tính là món)', () => {
+  const caiDat = docCaiDat(caiDatDung) as CaiDatThucDon;
+  const duLieu = { mon_vien: [], com_nha: [{ ...mamDung, cac_mon: ['Cơm trắng', 'Cá rô phi kho', 'Rau muống luộc', 'Canh chua'] }] };
+  const danhSachMon = docThucDon(duLieu, taoBoiCanh(caiDat));
+  assert.equal(danhSachMon.length, 1);
+  assert.equal(danhSachMon[0].khau_phan, 'Cá rô phi kho, Rau muống luộc, Canh chua');
+});
+
+test('docThucDon: mâm thiếu món so với số người dùng chọn vẫn được giữ (AI tính cơm là một món)', () => {
+  const caiDat = docCaiDat(caiDatDung) as CaiDatThucDon;
+  const duLieu = { mon_vien: [], com_nha: [{ ...mamDung, cac_mon: ['Đậu phụ sốt cà', 'Bắp cải luộc', 'Cơm trắng'] }] };
+  const danhSachMon = docThucDon(duLieu, taoBoiCanh(caiDat));
+  assert.equal(danhSachMon.length, 1);
+  assert.equal(danhSachMon[0].khau_phan, 'Đậu phụ sốt cà, Bắp cải luộc');
+});
+
 test('docThucDon: bỏ món Viện ngoài danh sách, sai loại bữa, trùng bữa, rơi vào bữa cơm gia đình; bỏ bữa phụ khi không có bữa phụ', () => {
   const caiDat = docCaiDat({ ...caiDatDung, co_bua_phu: false }) as CaiDatThucDon;
   const duLieu = {
@@ -105,13 +122,13 @@ test('docThucDon: bỏ món Viện ngoài danh sách, sai loại bữa, trùng b
   );
 });
 
-test('docThucDon: bỏ mâm cơm nhà sai bữa, sai số món, thiếu nguyên liệu, thiếu cách nấu, calo âm, khẩu phần quá dài', () => {
+test('docThucDon: bỏ mâm cơm nhà sai bữa, không còn món nào ngoài cơm, thiếu nguyên liệu, thiếu cách nấu, calo âm, khẩu phần quá dài', () => {
   const caiDat = docCaiDat(caiDatDung) as CaiDatThucDon;
   const duLieu = {
     mon_vien: [],
     com_nha: [
       { ...mamDung, loai_bua: 'trua' },
-      { ...mamDung, cac_mon: ['Cá kho', 'Canh chua'] },
+      { ...mamDung, cac_mon: ['Cơm trắng'] },
       { ...mamDung, nguyen_lieu: [] },
       { ...mamDung, cach_nau: [' '] },
       { ...mamDung, so_calo: -5 },
@@ -125,4 +142,30 @@ test('docThucDon: dữ liệu không đúng dạng thì trả về danh sách r�
   const caiDat = docCaiDat(caiDatDung) as CaiDatThucDon;
   assert.deepEqual(docThucDon(null, taoBoiCanh(caiDat)), []);
   assert.deepEqual(docThucDon({ mon_vien: 'không phải danh sách' }, taoBoiCanh(caiDat)), []);
+});
+
+// Một món thực đơn mẫu; từng ca chỉ đổi những trường cần thử
+const monMau: MonThucDon = {
+  loai_bua: 'trua', kieu: 'mon_vien', ma_so: 'HAN-1', anh_url: null, ten_mon: 'Bún riêu', khau_phan: '1 suất',
+  so_calo: 400, dam_g: 20, tinh_bot_g: 50, beo_g: 10, muoi_g: null, duong_g: null, beo_no_g: null, nguyen_lieu: [], cach_nau: [],
+};
+
+// Tên các dòng thành phần của món Viện mẫu
+const tenThanhPhanCuaTungMon = new Map([['HAN-1', ['Bún tươi', 'Riêu cua']]]);
+
+test('layTenDeKiemDiUng: món Viện lấy tên món và các dòng thành phần', () => {
+  assert.deepEqual(layTenDeKiemDiUng(monMau, tenThanhPhanCuaTungMon), ['Bún riêu', 'Bún tươi', 'Riêu cua']);
+});
+
+test('layTenDeKiemDiUng: cơm nhà lấy tên, từng món trong mâm và từng nguyên liệu', () => {
+  const comNha: MonThucDon = {
+    ...monMau, kieu: 'com_nha', ma_so: null, ten_mon: 'Cơm nhà', khau_phan: 'Cá kho, Rau muống luộc',
+    nguyen_lieu: ['Cá rô phi 150 g', 'Nước mắm 10 ml'],
+  };
+  assert.deepEqual(layTenDeKiemDiUng(comNha, tenThanhPhanCuaTungMon), ['Cơm nhà', 'Cá kho', 'Rau muống luộc', 'Cá rô phi 150 g', 'Nước mắm 10 ml']);
+});
+
+test('layTenDeKiemDiUng: món tạo trước 24/10/2026 (không có kieu, ma_so) dò như cơm nhà, không lỗi', () => {
+  const monCu = { ten_mon: 'Canh chua cá', khau_phan: '1 bát', nguyen_lieu: ['Cá lóc 100 g'] } as unknown as MonThucDon;
+  assert.deepEqual(layTenDeKiemDiUng(monCu, tenThanhPhanCuaTungMon), ['Canh chua cá', '1 bát', 'Cá lóc 100 g']);
 });

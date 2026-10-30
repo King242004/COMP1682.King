@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { vietCanNang, vietThayDoiCanNang } from '../don-vi/DoiDonVi';
+import { useDonVi } from '../don-vi/DonViContext';
 import { Card } from '../shared/components/Card';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { TienDo } from './TienDoApi';
@@ -9,23 +11,9 @@ type TheBonTuanProps = {
   onHoiCoach: () => void;
 };
 
-// Số kg thay đổi có dấu, ví dụ "−1 kg", "+0,4 kg"; chưa đủ dữ liệu thì "—"
-function vietThayDoi(soKg: number | null): string {
-  if (soKg === null) {
-    return '—';
-  }
-  const soDuong = Math.abs(soKg).toLocaleString('vi-VN');
-  if (soKg < 0) {
-    return `−${soDuong} kg`;
-  }
-  if (soKg > 0) {
-    return `+${soDuong} kg`;
-  }
-  return '0 kg';
-}
-
 // Thẻ "4 tuần qua": calo trung bình, số ngày có ghi, cân thay đổi mỗi tháng (giảm nhanh hơn QĐ 2892 thì ô vàng)
 export function TheBonTuan({ tienDo, onHoiCoach }: TheBonTuanProps) {
+  const { donVi, heSo } = useDonVi();
   const tomTat = tienDo.tom_tat;
   const giamNhanhQua = tomTat.danh_gia_toc_do === 'nhanh_qua';
 
@@ -38,7 +26,7 @@ export function TheBonTuan({ tienDo, onHoiCoach }: TheBonTuanProps) {
   // Dòng phụ của ô cân: đang giảm cân thì nhắc mức nên có
   let chuPhuCan = 'mỗi tháng';
   if (tienDo.muc_tieu === 'giam') {
-    chuPhuCan = `mỗi tháng\nnên ${tienDo.giam_can_kg_moi_thang_thap}–${tienDo.giam_can_kg_moi_thang_cao} kg`;
+    chuPhuCan = `mỗi tháng\nnên ${vietCanNang(tienDo.giam_can_kg_moi_thang_thap, donVi, heSo)}–${vietCanNang(tienDo.giam_can_kg_moi_thang_cao, donVi, heSo)}`;
   }
 
   return (
@@ -61,7 +49,7 @@ export function TheBonTuan({ tienDo, onHoiCoach }: TheBonTuanProps) {
           <Text style={styles.chuPhu}>{'ngày\ncó ghi'}</Text>
         </View>
         <View style={[styles.o, giamNhanhQua ? styles.oCanhBao : null]}>
-          <Text style={[styles.so, giamNhanhQua ? styles.chuCanhBao : null]}>{vietThayDoi(tomTat.thay_doi_kg_moi_thang)}</Text>
+          <Text style={[styles.so, giamNhanhQua ? styles.chuCanhBao : null]}>{tomTat.thay_doi_kg_moi_thang === null ? '—' : vietThayDoiCanNang(tomTat.thay_doi_kg_moi_thang, donVi, heSo)}</Text>
           <Text style={[styles.chuPhu, giamNhanhQua ? styles.chuCanhBao : null]}>{chuPhuCan}</Text>
         </View>
       </View>

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontSizes, radius, spacing } from '../shared/theme';
@@ -8,11 +9,16 @@ type BongTinNhanProps = {
   noiDung: string;
 };
 
-// Một bong bóng tin nhắn: của người dùng thì xanh, nằm bên phải; của coach thì nền xám, nằm bên trái
+// Một bong bóng tin nhắn: của người dùng thì xanh, nằm bên phải; của coach thì nền trắng, nằm bên trái, có vòng biểu tượng coach
 export function BongTinNhan({ vaiTro, noiDung }: BongTinNhanProps) {
   const laNguoiDung = vaiTro === 'nguoi_dung';
   return (
     <View style={[styles.hang, laNguoiDung ? styles.hangPhai : styles.hangTrai]}>
+      {laNguoiDung ? null : (
+        <View style={styles.vongCoach}>
+          <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.primary} />
+        </View>
+      )}
       <View style={[styles.bong, laNguoiDung ? styles.bongNguoiDung : styles.bongCoach]}>
         <Text style={[styles.chu, laNguoiDung ? styles.chuNguoiDung : null]}>{noiDung}</Text>
       </View>
@@ -23,6 +29,8 @@ export function BongTinNhan({ vaiTro, noiDung }: BongTinNhanProps) {
 const styles = StyleSheet.create({
   hang: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.small,
     marginBottom: spacing.small,
   },
   hangPhai: {
@@ -31,8 +39,16 @@ const styles = StyleSheet.create({
   hangTrai: {
     justifyContent: 'flex-start',
   },
+  vongCoach: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bong: {
-    maxWidth: '85%',
+    maxWidth: '80%',
     paddingVertical: spacing.small,
     paddingHorizontal: spacing.medium,
   },

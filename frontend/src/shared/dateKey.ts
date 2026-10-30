@@ -8,12 +8,12 @@ function twoDigits(value: number): string {
 }
 
 // Đổi một Date thành chuỗi ngày "2026-10-04" theo giờ trên điện thoại
-function toDateKey(date: Date): string {
+export function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${twoDigits(date.getMonth() + 1)}-${twoDigits(date.getDate())}`;
 }
 
 // Đổi chuỗi "2026-10-04" thành Date lúc 0 giờ theo giờ trên điện thoại
-function fromDateKey(dateKey: string): Date {
+export function fromDateKey(dateKey: string): Date {
   const parts = dateKey.split('-');
   const year = Number(parts[0]);
   const month = Number(parts[1]);
@@ -81,4 +81,23 @@ export function daysBetween(fromKey: string, toKey: string): number {
 export function formatShortDate(dateKey: string): string {
   const date = fromDateKey(dateKey);
   return `${date.getDate()}/${date.getMonth() + 1}`;
+}
+
+// Ngày viết đủ kiểu "24/11/2004" (ngày sinh)
+export function formatFullDate(dateKey: string): string {
+  const date = fromDateKey(dateKey);
+  return `${twoDigits(date.getDate())}/${twoDigits(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
+
+// Số tuổi tròn từ ngày sinh tới một ngày; chưa tới sinh nhật năm đó thì trừ 1 (giống tinhTuoi ở backend)
+export function ageOnDate(birthDateKey: string, dateKey: string): number {
+  const birth = fromDateKey(birthDateKey);
+  const date = fromDateKey(dateKey);
+  let age = date.getFullYear() - birth.getFullYear();
+  const beforeBirthday =
+    date.getMonth() < birth.getMonth() || (date.getMonth() === birth.getMonth() && date.getDate() < birth.getDate());
+  if (beforeBirthday) {
+    age = age - 1;
+  }
+  return age;
 }

@@ -20,6 +20,9 @@ export type MonThucDon = {
   beo_no_g: number | null;
   nguyen_lieu: string[];
   cach_nau: string[];
+  // Tên các nhóm dị ứng bị trùng (chỉ nhóm người dùng đã chọn) và những thứ bị bắt, server dò lúc xem thực đơn
+  nhom_di_ung: string[];
+  thu_bi_bat: string[];
 };
 
 // Thực đơn một ngày; chưa tạo thì danh sách món là null

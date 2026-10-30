@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import type { NhatKyNgay } from '../bua-an/BuaAnService.ts';
 import type { TienDo } from '../tien-do/TienDoService.ts';
+import { vietLoiDanDonViChoAi } from '../don-vi/DonViService.ts';
 import { taoLoiNhac } from './TaoLoiNhac.ts';
 import type { DuLieuLoiNhac } from './TaoLoiNhac.ts';
 
@@ -36,8 +37,11 @@ const tienDoMau: TienDo = {
   giam_can_kg_moi_thang_cao: 3,
 };
 
+// Số đổi giống bảng quy_dinh (NIST Handbook 44, Phụ lục C)
+const HE_SO = { kgMoiPound: 0.45359237, cmMoiInch: 2.54, inchMoiFoot: 12, gamMoiOunce: 28.349523125 };
+
 const duLieuMau: DuLieuLoiNhac = {
-  hoSo: { gioi_tinh: 'nu', tuoi: 26, chieu_cao_cm: 158, can_nang_kg: 52, bmi: 20.8, phan_loai_bmi: 'Bình thường', muc_tieu: 'giu', di_ung_kieng_an: 'tôm, cua' },
+  hoSo: { gioi_tinh: 'nu', tuoi: 26, chieu_cao_cm: 158, can_nang_kg: 52, bmi: 20.8, phan_loai_bmi: 'Bình thường', muc_tieu: 'giu', danh_sach_di_ung: 'Cá (cá, nước mắm)', di_ung_kieng_an: 'thịt bò', don_vi: 'met', he_so_don_vi: HE_SO },
   nhatKy: nhatKyMau,
   bayNgay: [{ ngay: '2026-10-05', tong_calo: 1800 }, { ngay: '2026-10-06', tong_calo: 550 }],
   tienDo: tienDoMau,
@@ -57,10 +61,24 @@ test('lời nhắc có đủ số liệu thật của người dùng', () => {
   assert.ok(loiNhac.includes('muối 4.5 / dưới 5 g'));
   assert.ok(loiNhac.includes('Bữa sáng: Phở bò (1 tô lớn) 550 kcal'));
   assert.ok(loiNhac.includes('2026-10-05: 1800 kcal'));
-  assert.ok(loiNhac.includes('- Dị ứng hoặc kiêng ăn: tôm, cua'));
-  assert.ok(loiNhac.includes('Cân nặng theo đường xu hướng 7 ngày: 51.9 kg'));
+  assert.ok(loiNhac.includes('- Dị ứng (không gợi ý món có những thứ này): Cá (cá, nước mắm)'));
+  assert.ok(loiNhac.includes('- Kiêng ăn khác: thịt bò'));
+  assert.ok(loiNhac.includes('Cân nặng theo đường xu hướng 7 ngày: 51,9 kg'));
+  assert.ok(loiNhac.includes('Cân thay đổi khoảng −1 kg mỗi tháng'));
   assert.ok(loiNhac.includes('ăn trung bình 1650 kcal mỗi ngày có ghi, ghi món 24/28 ngày'));
-  assert.ok(loiNhac.includes('theo QĐ 2892 của Bộ Y tế: 2–3 kg mỗi tháng'));
+  assert.ok(loiNhac.includes('theo QĐ 2892 của Bộ Y tế: 2 kg–3 kg mỗi tháng'));
+  assert.ok(!loiNhac.includes('Người dùng dùng đơn vị Anh-Mỹ'));
+});
+
+test('người dùng chọn Anh-Mỹ: cân nặng, chiều cao viết bằng lb, ft-in và có câu dặn đơn vị', () => {
+  const loiNhac = taoLoiNhac({
+    ...duLieuMau,
+    hoSo: { ...duLieuMau.hoSo, chieu_cao_cm: 170, can_nang_kg: 50, don_vi: 'anh_my' },
+  });
+  assert.ok(loiNhac.includes('cao 5 ft 7 in, nặng 110,2 lb'));
+  assert.ok(loiNhac.includes('Cân nặng theo đường xu hướng 7 ngày: 114,4 lb'));
+  assert.ok(loiNhac.includes('Cân thay đổi khoảng −2,2 lb mỗi tháng'));
+  assert.ok(loiNhac.includes(vietLoiDanDonViChoAi('anh_my')));
 });
 
 test('cuộc trò chuyện giữ đúng thứ tự cũ trước mới sau, câu hỏi mới nằm cuối', () => {
@@ -73,11 +91,12 @@ test('chưa có mục tiêu, chưa ăn gì, chưa trò chuyện thì ghi rõ tha
   const loiNhac = taoLoiNhac({
     ...duLieuMau,
     nhatKy: { ...nhatKyMau, muc_tieu_calo: null, muc_tieu_chat: null, gioi_han_nen_han_che: null, bua_an: [] },
-    hoSo: { ...duLieuMau.hoSo, di_ung_kieng_an: '' },
+    hoSo: { ...duLieuMau.hoSo, danh_sach_di_ung: '', di_ung_kieng_an: '' },
     lichSu: [],
   });
   assert.ok(loiNhac.includes('chưa thiết lập mục tiêu'));
   assert.ok(loiNhac.includes('Hôm nay chưa ghi món nào'));
   assert.ok(loiNhac.includes('(chưa có)'));
-  assert.ok(loiNhac.includes('- Dị ứng hoặc kiêng ăn: không có'));
+  assert.ok(loiNhac.includes('- Dị ứng (không gợi ý món có những thứ này): không có'));
+  assert.ok(loiNhac.includes('- Kiêng ăn khác: không có'));
 });

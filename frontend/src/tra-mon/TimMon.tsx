@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { NhanDiUng } from '../di-ung/NhanDiUng';
+import { vietKhoiLuong } from '../don-vi/DoiDonVi';
+import { useDonVi } from '../don-vi/DonViContext';
 import type { MonDaChon } from '../quet-mon/MonDaChon';
 import { ErrorBox } from '../shared/components/ErrorBox';
 import { Screen } from '../shared/components/Screen';
@@ -29,6 +32,7 @@ function chuDeSo(chu: string): string {
 
 // Màn tìm mở từ kính lúp ở ô Tên món: 2 nhóm món của Viện (theo suất) và thực phẩm (trên 100 g)
 export function TimMon({ tuKhoaBanDau, onChon, onDong }: TimMonProps) {
+  const { donVi, heSo } = useDonVi();
   // Cả 2 kho tải một lần; null là đang tải
   const [tatCaMon, setTatCaMon] = useState<MonTraCuu[] | null>(null);
   const [tatCaThucPham, setTatCaThucPham] = useState<ThucPham[] | null>(null);
@@ -111,7 +115,11 @@ export function TimMon({ tuKhoaBanDau, onChon, onDong }: TimMonProps) {
                   style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
                   onPress={() => setMonDangChon(mon)}
                 >
-                  <Text style={styles.tenDong}>{mon.ten_mon}</Text>
+                  {/* Tên món, dưới là nhãn ⚠ nếu món có thứ người dùng dị ứng */}
+                  <View style={styles.cotTen}>
+                    <Text style={styles.tenDong}>{mon.ten_mon}</Text>
+                    <NhanDiUng danhSachNhom={mon.nhom_di_ung} />
+                  </View>
                   <Text style={styles.chuPhu}>{Math.round(mon.so_calo).toLocaleString('vi-VN')} kcal</Text>
                 </Pressable>
               ))}
@@ -124,7 +132,7 @@ export function TimMon({ tuKhoaBanDau, onChon, onDong }: TimMonProps) {
             <View style={styles.nhom}>
               <View style={styles.hangTieuDe}>
                 <Text style={styles.tieuDe}>Thực phẩm</Text>
-                <Text style={styles.chuPhu}>tính trên 100 g</Text>
+                <Text style={styles.chuPhu}>tính trên 100 g{donVi === 'anh_my' && heSo !== null ? ` (${vietKhoiLuong(100, donVi, heSo)})` : ''}</Text>
               </View>
               {thucPhamPhuHop.length === 0 ? <Text style={styles.chuPhu}>Không thấy</Text> : null}
               {thucPhamPhuHop.slice(0, SO_DONG_MOI_NHOM).map((thucPham) => (
@@ -133,7 +141,11 @@ export function TimMon({ tuKhoaBanDau, onChon, onDong }: TimMonProps) {
                   style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
                   onPress={() => setThucPhamDangChon(thucPham)}
                 >
-                  <Text style={styles.tenDong}>{thucPham.ten_thuc_pham}</Text>
+                  {/* Tên thực phẩm, dưới là nhãn ⚠ nếu có thứ người dùng dị ứng */}
+                  <View style={styles.cotTen}>
+                    <Text style={styles.tenDong}>{thucPham.ten_thuc_pham}</Text>
+                    <NhanDiUng danhSachNhom={thucPham.nhom_di_ung} />
+                  </View>
                   <Text style={styles.chuPhu}>{Math.round(thucPham.kcal_100g).toLocaleString('vi-VN')} kcal</Text>
                 </Pressable>
               ))}
@@ -173,8 +185,10 @@ const styles = StyleSheet.create({
   dangBam: {
     opacity: pressedOpacity,
   },
-  tenDong: {
+  cotTen: {
     flex: 1,
+  },
+  tenDong: {
     fontSize: fontSizes.body,
     color: colors.text,
   },

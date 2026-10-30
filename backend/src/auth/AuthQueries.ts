@@ -80,6 +80,17 @@ export async function updatePassword(userId: number, passwordHash: string): Prom
   return result.rows[0].phien_ban_token;
 }
 
+// Đổi tên hiển thị, trả về thông tin người dùng sau khi đổi
+export async function updateDisplayName(userId: number, displayName: string): Promise<User | undefined> {
+  const result = await database.query<User>(
+    `UPDATE nguoi_dung SET ten_hien_thi = $2
+     WHERE id = $1
+     RETURNING ${USER_COLUMNS}`,
+    [userId, displayName],
+  );
+  return result.rows[0];
+}
+
 // Xóa tài khoản; dữ liệu liên quan tự xóa theo nhờ ON DELETE CASCADE
 export async function deleteUser(userId: number): Promise<void> {
   await database.query('DELETE FROM nguoi_dung WHERE id = $1', [userId]);
