@@ -1,5 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Card } from '../../shared/components/Card';
 import { colors, fontSizes, radius, spacing } from '../../shared/theme';
 import type { NhatKyNgay } from '../BuaAnApi';
 
@@ -43,7 +45,7 @@ function gomMotChat(ten: string, soCuaMon: number | null, soCuaMonCu: number | n
   return { ten: ten, soCuaMon: soCuaMon, caNgay: caNgay, gioiHan: gioiHan, vuot: caNgay > gioiHan };
 }
 
-// Ba ô muối, đường, béo no của món (ô vàng nếu làm cả ngày vượt giới hạn) và một dòng liệt kê chất bị vượt
+// Thẻ "Nên hạn chế": ba ô muối, đường, béo no của món (ô vàng nếu làm cả ngày vượt giới hạn) và khung liệt kê chất bị vượt
 export function CanhBaoNenHanChe({ monNay, monCu, nhatKy }: CanhBaoNenHanCheProps) {
   // Món chưa có số nào (thường là nhập tay) thì không hiện gì
   if (monNay.muoi_g === null && monNay.duong_g === null && monNay.beo_no_g === null) {
@@ -81,7 +83,8 @@ export function CanhBaoNenHanChe({ monNay, monCu, nhatKy }: CanhBaoNenHanCheProp
   }
 
   return (
-    <View style={styles.khoi}>
+    <Card>
+      <Text style={styles.tieuDeThe}>Nên hạn chế</Text>
       <View style={styles.hangO}>
         {cacChat.map((chat) => (
           <View key={chat.ten} style={[styles.o, chat.vuot ? styles.oVuot : null]}>
@@ -92,16 +95,23 @@ export function CanhBaoNenHanChe({ monNay, monCu, nhatKy }: CanhBaoNenHanCheProp
           </View>
         ))}
       </View>
+      {/* Cả ngày vượt giới hạn: khung vàng có biểu tượng cảnh báo */}
       {cacPhanVuot.length > 0 ? (
-        <Text style={styles.dongCanhBao}>Thêm món này, cả ngày sẽ quá mức: {cacPhanVuot.join(' · ')}</Text>
+        <View style={styles.khungCanhBao}>
+          <Ionicons name="warning-outline" size={16} color={colors.warningText} />
+          <Text style={styles.dongCanhBao}>Thêm món này, cả ngày sẽ quá mức: {cacPhanVuot.join(' · ')}</Text>
+        </View>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  khoi: {
-    marginTop: spacing.small,
+  tieuDeThe: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.small,
   },
   hangO: {
     flexDirection: 'row',
@@ -109,6 +119,7 @@ const styles = StyleSheet.create({
   },
   o: {
     flex: 1,
+    alignItems: 'center',
     borderRadius: radius.input,
     padding: spacing.small,
     backgroundColor: colors.card,
@@ -128,9 +139,18 @@ const styles = StyleSheet.create({
   chuVuot: {
     color: colors.warningText,
   },
+  khungCanhBao: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.small,
+    marginTop: spacing.small,
+    padding: spacing.small,
+    borderRadius: radius.input,
+    backgroundColor: colors.warningBackground,
+  },
   dongCanhBao: {
+    flex: 1,
     fontSize: fontSizes.secondary,
     color: colors.warningText,
-    marginTop: spacing.small,
   },
 });

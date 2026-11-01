@@ -8,7 +8,6 @@ import type { LoaiBua, NhatKyNgay } from '../../src/bua-an/BuaAnApi';
 import { DaiNgay } from '../../src/trang-chu/DaiNgay';
 import { NhomNenHanChe } from '../../src/trang-chu/NhomNenHanChe';
 import { NutThemMon } from '../../src/trang-chu/NutThemMon';
-import type { CachThem } from '../../src/trang-chu/NutThemMon';
 import { TheBua } from '../../src/trang-chu/TheBua';
 import { TheCalo } from '../../src/trang-chu/TheCalo';
 import { buaTheoGio, THU_TU_BUA } from '../../src/bua-an/TenBua';
@@ -26,9 +25,6 @@ export default function TrangChu() {
   const [ngay, setNgay] = useState(todayKey());
   const [nhatKy, setNhatKy] = useState<NhatKyNgay | null>(null);
   const [loi, setLoi] = useState('');
-  // Bữa đang chọn cách thêm (3 nút đang bung lên); null là đang đóng
-  const [buaDangThem, setBuaDangThem] = useState<LoaiBua | null>(null);
-
   // Nhớ ngày đang xem mới nhất, để bỏ kết quả của ngày cũ về trễ khi đổi ngày nhanh
   const ngayDangXem = useRef(ngay);
   useEffect(() => {
@@ -57,10 +53,9 @@ export default function TrangChu() {
     }
   }
 
-  // Đóng 3 nút rồi mở màn thêm món với ngày, bữa và cách thêm đã chọn
-  function moThemMon(loaiBua: LoaiBua, cach: CachThem) {
-    setBuaDangThem(null);
-    router.push({ pathname: '/bua-an/ThemSuaBuaAn', params: { ngay: ngay, loaiBua: loaiBua, cach: cach } });
+  // Mở màn thêm món với ngày đang xem và bữa đã chọn
+  function moThemMon(loaiBua: LoaiBua) {
+    router.push({ pathname: '/bua-an/ThemSuaBuaAn', params: { ngay: ngay, loaiBua: loaiBua } });
   }
 
   // Mở màn sửa một món
@@ -106,7 +101,7 @@ export default function TrangChu() {
                 key={loaiBua}
                 loaiBua={loaiBua}
                 danhSachMon={nhatKy.bua_an.filter((buaAn) => buaAn.loai_bua === loaiBua)}
-                onThem={() => setBuaDangThem(loaiBua)}
+                onThem={() => moThemMon(loaiBua)}
                 onSuaMon={moSuaMon}
               />
             ))}
@@ -114,13 +109,8 @@ export default function TrangChu() {
         ) : null}
       </Screen>
 
-      {/* Nút + nổi: bung 3 cách thêm món cho bữa đoán theo giờ hiện tại */}
-      <NutThemMon
-        buaDangThem={buaDangThem}
-        onMo={() => setBuaDangThem(buaTheoGio(new Date().getHours()))}
-        onDong={() => setBuaDangThem(null)}
-        onChonCach={moThemMon}
-      />
+      {/* Nút + nổi: mở màn thêm món cho bữa đoán theo giờ hiện tại */}
+      <NutThemMon onPress={() => moThemMon(buaTheoGio(new Date().getHours()))} />
     </View>
   );
 }

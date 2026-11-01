@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { MonDaChon } from '../../quet-mon/MonDaChon';
-import { Button } from '../../shared/components/Button';
-import { Chip } from '../../shared/components/Chip';
-import { SectionTitle } from '../../shared/components/SectionTitle';
-import { colors, fontSizes, radius, spacing } from '../../shared/theme';
-import type { MonTraCuu } from '../TraMonApi';
+import type { MonDaChon } from '../../../quet-mon/MonDaChon';
+import { Button } from '../../../shared/components/Button';
+import { Chip } from '../../../shared/components/Chip';
+import { SectionTitle } from '../../../shared/components/SectionTitle';
+import { colors, fontSizes, radius, spacing } from '../../../shared/theme';
+import type { MonTraCuu } from '../../../tra-mon/TraMonApi';
 
 // Người dùng ăn bao nhiêu so với 1 suất của Viện; là lựa chọn giao diện, giống màn chi tiết món ở Khám phá
 const LUA_CHON_PHAN_AN = [
@@ -18,6 +18,8 @@ const LUA_CHON_PHAN_AN = [
 
 type ChonSoSuatProps = {
   mon: MonTraCuu;
+  // Màn đang chạy việc khác (ví dụ AI ở ô "Bạn đã ăn gì?") thì khóa chip và nút
+  isDisabled: boolean;
   onChon: (mon: MonDaChon) => void;
   onChonKhac: () => void;
 };
@@ -27,8 +29,8 @@ function lamTronMotSoLe(so: number): number {
   return Math.round(so * 10) / 10;
 }
 
-// Đã bấm một món của Viện ở màn tìm: chọn ăn bao nhiêu suất rồi trả món về thẻ Nhập số
-export function ChonSoSuat({ mon, onChon, onChonKhac }: ChonSoSuatProps) {
+// Đã bấm một món của Viện ở thẻ Tìm món: chọn ăn bao nhiêu suất rồi trả món về để sang bước xem lại
+export function ChonSoSuat({ mon, isDisabled, onChon, onChonKhac }: ChonSoSuatProps) {
   const [phanAn, setPhanAn] = useState(1);
 
   // Nhân số liệu 1 suất theo phần đã ăn rồi trả món về; Viện không có số đường, béo no nên để trống
@@ -62,16 +64,16 @@ export function ChonSoSuat({ mon, onChon, onChonKhac }: ChonSoSuatProps) {
       <SectionTitle title="Bạn ăn bao nhiêu suất?" />
       <View style={styles.hangChip}>
         {LUA_CHON_PHAN_AN.map((luaChon) => (
-          <Chip key={luaChon.nhan} label={luaChon.nhan} isSelected={phanAn === luaChon.giaTri} onPress={() => setPhanAn(luaChon.giaTri)} />
+          <Chip key={luaChon.nhan} label={luaChon.nhan} isSelected={phanAn === luaChon.giaTri} isDisabled={isDisabled} onPress={() => setPhanAn(luaChon.giaTri)} />
         ))}
       </View>
       <Text style={styles.tong}>Tổng: {Math.round(mon.so_calo * phanAn).toLocaleString('vi-VN')} kcal</Text>
 
       <View style={styles.khoangNut}>
-        <Button title="Chọn món này" loadingTitle="" isLoading={false} onPress={chonMon} />
+        <Button title="Chọn món này" loadingTitle="" isLoading={false} isDisabled={isDisabled} onPress={chonMon} />
       </View>
       <View style={styles.khoangNut}>
-        <Button title="Chọn món khác" loadingTitle="" isLoading={false} onPress={onChonKhac} isSecondary />
+        <Button title="Chọn món khác" loadingTitle="" isLoading={false} isDisabled={isDisabled} onPress={onChonKhac} isSecondary />
       </View>
     </View>
   );

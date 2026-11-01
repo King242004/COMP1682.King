@@ -1,28 +1,25 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { NhanDiUng } from '../di-ung/NhanDiUng';
-import { vietKhoiLuong } from '../don-vi/DoiDonVi';
-import { useDonVi } from '../don-vi/DonViContext';
-import type { MonDaChon } from '../quet-mon/MonDaChon';
-import { ErrorBox } from '../shared/components/ErrorBox';
-import { Screen } from '../shared/components/Screen';
-import { ScreenTitle } from '../shared/components/ScreenTitle';
-import { TextField } from '../shared/components/TextField';
-import { colors, fontSizes, pressedOpacity, spacing } from '../shared/theme';
-import { layTatCaMon, layTatCaThucPham } from './TraMonApi';
-import type { MonTraCuu, ThucPham } from './TraMonApi';
+import { NhanDiUng } from '../../di-ung/NhanDiUng';
+import { vietKhoiLuong } from '../../don-vi/DoiDonVi';
+import { useDonVi } from '../../don-vi/DonViContext';
+import type { MonDaChon } from '../../quet-mon/MonDaChon';
+import { Card } from '../../shared/components/Card';
+import { ErrorBox } from '../../shared/components/ErrorBox';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../shared/theme';
+import { layTatCaMon, layTatCaThucPham } from '../../tra-mon/TraMonApi';
+import type { MonTraCuu, ThucPham } from '../../tra-mon/TraMonApi';
 import { ChonSoGam } from './tim-mon/ChonSoGam';
 import { ChonSoSuat } from './tim-mon/ChonSoSuat';
 
-// Mỗi nhóm hiện tối đa 20 dòng để danh sách không quá dài; là lựa chọn giao diện
-const SO_DONG_MOI_NHOM = 20;
+// Mỗi nhóm hiện tối đa 5 dòng vì danh sách nằm ngay trong màn thêm món; là lựa chọn giao diện
+const SO_DONG_MOI_NHOM = 5;
 
 type TimMonProps = {
-  // Chữ đang có ở ô Tên món, điền sẵn vào ô tìm
-  tuKhoaBanDau: string;
+  isDisabled: boolean;
   onChon: (mon: MonDaChon) => void;
-  onDong: () => void;
 };
 
 // Đưa chữ về dạng để so: chữ thường, bỏ dấu phẩy (gõ "khoai lang luộc" vẫn ra "Khoai lang, luộc")
@@ -30,13 +27,13 @@ function chuDeSo(chu: string): string {
   return chu.trim().toLowerCase().replaceAll(',', '');
 }
 
-// Màn tìm mở từ kính lúp ở ô Tên món: 2 nhóm món của Viện (theo suất) và thực phẩm (trên 100 g)
-export function TimMon({ tuKhoaBanDau, onChon, onDong }: TimMonProps) {
+// Thẻ "Tìm món" ở bước 1 của màn thêm món: 2 nhóm món của Viện (theo suất) và thực phẩm (trên 100 g)
+export function TimMon({ isDisabled, onChon }: TimMonProps) {
   const { donVi, heSo } = useDonVi();
   // Cả 2 kho tải một lần; null là đang tải
   const [tatCaMon, setTatCaMon] = useState<MonTraCuu[] | null>(null);
   const [tatCaThucPham, setTatCaThucPham] = useState<ThucPham[] | null>(null);
-  const [tuKhoa, setTuKhoa] = useState(tuKhoaBanDau);
+  const [tuKhoa, setTuKhoa] = useState('');
   // Dòng đang chọn: một món hoặc một thực phẩm; cả hai null là đang xem danh sách
   const [monDangChon, setMonDangChon] = useState<MonTraCuu | null>(null);
   const [thucPhamDangChon, setThucPhamDangChon] = useState<ThucPham | null>(null);
@@ -78,41 +75,54 @@ export function TimMon({ tuKhoaBanDau, onChon, onDong }: TimMonProps) {
     );
   }
   const daTaiXong = tatCaMon !== null && tatCaThucPham !== null;
+  // Ô tìm còn trống thì chưa hiện danh sách, để bước 1 không dài
+  const dangTim = tuKhoaDeSo !== '';
 
   return (
-    <Screen>
-      <ScreenTitle title="Tìm món" onBack={onDong} />
+    <Card>
+      <Text style={styles.tieuDeThe}>Tìm món</Text>
       {loi ? <ErrorBox message={loi} onRetry={taiHaiKho} /> : null}
 
       {/* Đã bấm một món: chọn số suất */}
-      {monDangChon ? <ChonSoSuat mon={monDangChon} onChon={onChon} onChonKhac={chonMonKhac} /> : null}
+      {monDangChon ? <ChonSoSuat mon={monDangChon} isDisabled={isDisabled} onChon={onChon} onChonKhac={chonMonKhac} /> : null}
 
       {/* Đã bấm một thực phẩm: gõ số gam */}
-      {thucPhamDangChon ? <ChonSoGam thucPham={thucPhamDangChon} onChon={onChon} onChonKhac={chonMonKhac} /> : null}
+      {thucPhamDangChon ? <ChonSoGam thucPham={thucPhamDangChon} isDisabled={isDisabled} onChon={onChon} onChonKhac={chonMonKhac} /> : null}
 
-      {/* Chưa bấm dòng nào: ô tìm và 2 nhóm */}
+      {/* Chưa bấm dòng nào: ô tìm, dòng nguồn và 2 nhóm */}
       {!monDangChon && !thucPhamDangChon ? (
         <View>
-          <TextField label="Tìm món hoặc thực phẩm" value={tuKhoa} onChangeText={setTuKhoa} error="" placeholder="Ví dụ: phở bò, khoai lang" />
-          {!daTaiXong && !loi ? <ActivityIndicator color={colors.primary} /> : null}
+          <View style={styles.thanhTim}>
+            <Ionicons name="search-outline" size={20} color={colors.textSecondary} />
+            <TextInput
+              style={styles.oTim}
+              value={tuKhoa}
+              onChangeText={setTuKhoa}
+              placeholder="Ví dụ: phở bò, khoai lang"
+              placeholderTextColor={colors.textSecondary}
+              editable={!isDisabled}
+            />
+          </View>
+          <Text style={styles.chuNguon}>Dữ liệu Viện Dinh dưỡng Quốc gia</Text>
+          {dangTim && !daTaiXong && !loi ? <ActivityIndicator color={colors.primary} /> : null}
 
           {/* Cả 2 nhóm đều không có gì */}
-          {daTaiXong && monPhuHop.length === 0 && thucPhamPhuHop.length === 0 ? (
-            <Text style={styles.chuPhu}>Không thấy món này. Quay lại và dùng thẻ Mô tả để AI ước tính.</Text>
+          {dangTim && daTaiXong && monPhuHop.length === 0 && thucPhamPhuHop.length === 0 ? (
+            <Text style={styles.chuPhu}>Không tìm thấy</Text>
           ) : null}
 
-          {/* Nhóm món của Viện, calo là của 1 suất */}
-          {daTaiXong ? (
+          {/* Nhóm món của Viện, calo là của 1 suất; không có món khớp thì ẩn cả nhóm */}
+          {dangTim && daTaiXong && monPhuHop.length > 0 ? (
             <View style={styles.nhom}>
               <View style={styles.hangTieuDe}>
-                <Text style={styles.tieuDe}>Món của Viện</Text>
+                <Text style={styles.tieuDeNhom}>Món của Viện</Text>
                 <Text style={styles.chuPhu}>tính theo 1 suất</Text>
               </View>
-              {monPhuHop.length === 0 ? <Text style={styles.chuPhu}>Không thấy</Text> : null}
               {monPhuHop.slice(0, SO_DONG_MOI_NHOM).map((mon) => (
                 <Pressable
                   key={mon.ma_so}
                   style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
+                  disabled={isDisabled}
                   onPress={() => setMonDangChon(mon)}
                 >
                   {/* Tên món, dưới là nhãn ⚠ nếu món có thứ người dùng dị ứng */}
@@ -127,18 +137,18 @@ export function TimMon({ tuKhoaBanDau, onChon, onDong }: TimMonProps) {
             </View>
           ) : null}
 
-          {/* Nhóm thực phẩm, calo là của 100 g */}
-          {daTaiXong ? (
+          {/* Nhóm thực phẩm, calo là của 100 g; không có thực phẩm khớp thì ẩn cả nhóm */}
+          {dangTim && daTaiXong && thucPhamPhuHop.length > 0 ? (
             <View style={styles.nhom}>
               <View style={styles.hangTieuDe}>
-                <Text style={styles.tieuDe}>Thực phẩm</Text>
+                <Text style={styles.tieuDeNhom}>Thực phẩm</Text>
                 <Text style={styles.chuPhu}>tính trên 100 g{donVi === 'anh_my' && heSo !== null ? ` (${vietKhoiLuong(100, donVi, heSo)})` : ''}</Text>
               </View>
-              {thucPhamPhuHop.length === 0 ? <Text style={styles.chuPhu}>Không thấy</Text> : null}
               {thucPhamPhuHop.slice(0, SO_DONG_MOI_NHOM).map((thucPham) => (
                 <Pressable
                   key={thucPham.ma_so}
                   style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
+                  disabled={isDisabled}
                   onPress={() => setThucPhamDangChon(thucPham)}
                 >
                   {/* Tên thực phẩm, dưới là nhãn ⚠ nếu có thứ người dùng dị ứng */}
@@ -154,33 +164,64 @@ export function TimMon({ tuKhoaBanDau, onChon, onDong }: TimMonProps) {
           ) : null}
         </View>
       ) : null}
-    </Screen>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  tieuDeThe: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.small,
+  },
+  thanhTim: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.small,
+    height: 48,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.medium,
+  },
+  oTim: {
+    flex: 1,
+    height: '100%',
+    fontSize: fontSizes.body,
+    color: colors.text,
+  },
+  chuNguon: {
+    fontSize: fontSizes.label,
+    color: colors.textSecondary,
+    marginTop: 4,
+    marginBottom: spacing.small,
+  },
   nhom: {
-    marginBottom: spacing.large,
+    marginTop: spacing.small,
   },
   hangTieuDe: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'baseline',
+    gap: spacing.small,
     marginBottom: spacing.small,
   },
-  tieuDe: {
-    fontSize: fontSizes.sectionTitle,
+  tieuDeNhom: {
+    fontSize: fontSizes.secondary,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.primary,
   },
   dong: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: spacing.medium,
-    paddingVertical: spacing.medium,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    minHeight: 44,
+    padding: spacing.medium,
+    borderRadius: radius.input,
+    backgroundColor: colors.card,
+    marginBottom: spacing.small,
   },
   dangBam: {
     opacity: pressedOpacity,

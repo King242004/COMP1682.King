@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { docKhoiLuong, vietGioiHan, vietKhoiLuong } from '../../don-vi/DoiDonVi';
-import { useDonVi } from '../../don-vi/DonViContext';
-import type { MonDaChon } from '../../quet-mon/MonDaChon';
-import { Button } from '../../shared/components/Button';
-import { TextField } from '../../shared/components/TextField';
-import { colors, fontSizes, radius, spacing } from '../../shared/theme';
-import type { ThucPham } from '../TraMonApi';
+import { docKhoiLuong, vietGioiHan, vietKhoiLuong } from '../../../don-vi/DoiDonVi';
+import { useDonVi } from '../../../don-vi/DonViContext';
+import type { MonDaChon } from '../../../quet-mon/MonDaChon';
+import { Button } from '../../../shared/components/Button';
+import { TextField } from '../../../shared/components/TextField';
+import { colors, fontSizes, radius, spacing } from '../../../shared/theme';
+import type { ThucPham } from '../../../tra-mon/TraMonApi';
 
 // Số gam lớn nhất cho một lần ăn, để chặn gõ nhầm; là lựa chọn giao diện, giống ô Gram ở thẻ Nhập số
 const SO_GAM_LON_NHAT = 5000;
 
 type ChonSoGamProps = {
   thucPham: ThucPham;
+  // Màn đang chạy việc khác (ví dụ AI ở ô "Bạn đã ăn gì?") thì khóa ô và nút
+  isDisabled: boolean;
   onChon: (mon: MonDaChon) => void;
   onChonKhac: () => void;
 };
@@ -26,8 +28,8 @@ function nhanTheoGam(soLieu100g: number | null, soGam: number): number | null {
   return Math.round(((soLieu100g * soGam) / 100) * 10) / 10;
 }
 
-// Đã bấm một thực phẩm ở màn tìm: gõ số gam đã ăn rồi trả món về thẻ Nhập số
-export function ChonSoGam({ thucPham, onChon, onChonKhac }: ChonSoGamProps) {
+// Đã bấm một thực phẩm ở thẻ Tìm món: gõ số gam đã ăn rồi trả món về để sang bước xem lại
+export function ChonSoGam({ thucPham, isDisabled, onChon, onChonKhac }: ChonSoGamProps) {
   const { donVi, heSo } = useDonVi();
   const laAnhMy = donVi === 'anh_my' && heSo !== null;
   const [soGam, setSoGam] = useState('');
@@ -70,16 +72,17 @@ export function ChonSoGam({ thucPham, onChon, onChonKhac }: ChonSoGamProps) {
         error={loiSoGam}
         placeholder={laAnhMy ? 'Ví dụ: 5,3' : 'Ví dụ: 150'}
         isNumber
+        isDisabled={isDisabled}
       />
       {soGamDung ? (
         <Text style={styles.tong}>Tổng: {Math.round((thucPham.kcal_100g * soGamSo) / 100).toLocaleString('vi-VN')} kcal</Text>
       ) : null}
 
       <View style={styles.khoangNut}>
-        <Button title="Chọn món này" loadingTitle="" isLoading={false} onPress={chonMon} />
+        <Button title="Chọn món này" loadingTitle="" isLoading={false} isDisabled={isDisabled} onPress={chonMon} />
       </View>
       <View style={styles.khoangNut}>
-        <Button title="Chọn món khác" loadingTitle="" isLoading={false} onPress={onChonKhac} isSecondary />
+        <Button title="Chọn món khác" loadingTitle="" isLoading={false} isDisabled={isDisabled} onPress={onChonKhac} isSecondary />
       </View>
     </View>
   );

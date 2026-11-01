@@ -1,28 +1,27 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { MonDaChon } from '../../quet-mon/MonDaChon';
 import { uocTinhTheoMoTa } from '../../quet-mon/QuetMonApi';
-import { Button } from '../../shared/components/Button';
+import { Card } from '../../shared/components/Card';
 import { ErrorBox } from '../../shared/components/ErrorBox';
-import { TextField } from '../../shared/components/TextField';
-import { colors, fontSizes, spacing } from '../../shared/theme';
-import type { MonHayAn } from '../BuaAnApi';
-import { MonBanHayAn } from './MonBanHayAn';
+import { colors, fontSizes, radius, spacing } from '../../shared/theme';
+import { NutAi } from './NutAi';
 
 // Câu mô tả dài nhất, giống backend (QuetMonService.ts)
 const MO_TA_DAI_NHAT = 200;
 
 type MoTaProps = {
-  monHayAn: MonHayAn[];
-  // Có món (món hay ăn, hoặc kết quả AI) thì trả về màn để điền thẻ Nhập số
-  onChon: (mon: MonHayAn | MonDaChon) => void;
-  // Báo màn biết AI đang chạy, để màn khóa chip bữa và chip thẻ
+  // Màn đang chạy việc khác (AI, lưu, xóa) thì khóa ô và nút
+  isDisabled: boolean;
+  // AI nhận ra món thì trả món về màn để sang bước xem lại
+  onChon: (mon: MonDaChon) => void;
+  // Báo màn biết AI đang chạy, để màn khóa các chỗ bấm khác
   onDangChay: (dangChay: boolean) => void;
 };
 
-// Thẻ Mô tả: bấm một món hay ăn, hoặc viết một câu bữa vừa ăn rồi nhờ AI ước tính thành một món
-export function MoTa({ monHayAn, onChon, onDangChay }: MoTaProps) {
+// Thẻ "Bạn đã ăn gì?": viết một câu bữa vừa ăn rồi nhờ AI ước tính thành một món
+export function MoTa({ isDisabled, onChon, onDangChay }: MoTaProps) {
   const [moTa, setMoTa] = useState('');
   const [dangUocTinh, setDangUocTinh] = useState(false);
   const [loiNhap, setLoiNhap] = useState('');
@@ -53,34 +52,65 @@ export function MoTa({ monHayAn, onChon, onDangChay }: MoTaProps) {
   }
 
   return (
-    <View>
+    <Card>
       {loiServer ? <ErrorBox message={loiServer} /> : null}
+      <Text style={styles.tieuDeThe}>Bạn đã ăn gì?</Text>
 
-      {/* Bấm một món hay ăn là điền sẵn thẻ Nhập số */}
-      <MonBanHayAn monHayAn={monHayAn} isDisabled={dangUocTinh} onChon={onChon} />
-
-      {/* Ô viết bữa vừa ăn, dưới là dòng nhắc ghi cả lượng */}
-      <TextField
-        label="Bạn đã ăn gì?"
-        value={moTa}
-        onChangeText={setMoTa}
-        error={loiNhap}
-        placeholder="Ví dụ: 1 tô phở bò lớn, thêm trứng"
-        maxLength={MO_TA_DAI_NHAT}
-        isDisabled={dangUocTinh}
-        isMultiline
-      />
+      {/* Ô một dòng để viết bữa vừa ăn, nút AI cùng hàng bên phải */}
+      <View style={styles.hang}>
+        <TextInput
+          style={[styles.oGo, loiNhap ? styles.oLoi : null, isDisabled ? styles.oKhoa : null]}
+          value={moTa}
+          onChangeText={setMoTa}
+          placeholder="Ví dụ: 1 tô phở bò lớn"
+          placeholderTextColor={colors.textSecondary}
+          maxLength={MO_TA_DAI_NHAT}
+          editable={!isDisabled}
+        />
+        <NutAi isLoading={dangUocTinh} isDisabled={isDisabled} onPress={uocTinhBangAi} />
+      </View>
+      {loiNhap ? <Text style={styles.chuLoi}>{loiNhap}</Text> : null}
       <Text style={styles.chuNhac}>Ghi cả lượng ăn (tô, chén, gram…) để AI đoán sát hơn</Text>
-
-      <Button title="AI ước tính" loadingTitle="Đang ước tính…" isLoading={dangUocTinh} onPress={uocTinhBangAi} />
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  tieuDeThe: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.small,
+  },
+  hang: {
+    flexDirection: 'row',
+    gap: spacing.small,
+  },
+  oGo: {
+    flex: 1,
+    height: 48,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.medium,
+    fontSize: fontSizes.body,
+    color: colors.text,
+  },
+  oLoi: {
+    borderColor: colors.error,
+  },
+  oKhoa: {
+    opacity: 0.5,
+  },
+  chuLoi: {
+    fontSize: fontSizes.secondary,
+    color: colors.error,
+    marginTop: 4,
+  },
   chuNhac: {
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
-    marginBottom: spacing.large,
+    marginTop: spacing.small,
   },
 });

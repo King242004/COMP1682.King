@@ -1,19 +1,25 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { layMonHayAn, layMotBuaAn, layNhatKyNgay, suaBuaAn, themBuaAn, xoaBuaAn } from '../../src/bua-an/BuaAnApi';
 import type { LoaiBua, MonHayAn, NguonSoLieu, NhatKyNgay } from '../../src/bua-an/BuaAnApi';
 import { CanhBaoNenHanChe } from '../../src/bua-an/them-sua-bua-an/CanhBaoNenHanChe';
 import type { SoNenHanChe } from '../../src/bua-an/them-sua-bua-an/CanhBaoNenHanChe';
+import { BaCachThem } from '../../src/bua-an/them-sua-bua-an/BaCachThem';
+import { DaiNutLien } from '../../src/bua-an/them-sua-bua-an/DaiNutLien';
+import { MonBanHayAn } from '../../src/bua-an/them-sua-bua-an/MonBanHayAn';
 import { MoTa } from '../../src/bua-an/them-sua-bua-an/MoTa';
+import { NutAi } from '../../src/bua-an/them-sua-bua-an/NutAi';
+import { TimMon } from '../../src/bua-an/them-sua-bua-an/TimMon';
 import { TEN_BUA, THU_TU_BUA } from '../../src/bua-an/TenBua';
 import { ChupAnhNhanMon } from '../../src/quet-mon/ChupAnhNhanMon';
 import { QuetMaVach } from '../../src/quet-mon/QuetMaVach';
 import type { MonDaChon } from '../../src/quet-mon/MonDaChon';
 import { uocTinhTheoTen } from '../../src/quet-mon/QuetMonApi';
 import { Button } from '../../src/shared/components/Button';
-import { Chip } from '../../src/shared/components/Chip';
+import { Card } from '../../src/shared/components/Card';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { Screen } from '../../src/shared/components/Screen';
 import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
@@ -22,8 +28,6 @@ import { useDonVi } from '../../src/don-vi/DonViContext';
 import { TextField } from '../../src/shared/components/TextField';
 import { formatDateLabel, todayKey } from '../../src/shared/dateKey';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/shared/theme';
-import { TimMon } from '../../src/tra-mon/TimMon';
-import type { CachThem } from '../../src/trang-chu/NutThemMon';
 
 // Giới hạn chặn gõ nhầm, giống backend (BuaAnService.ts) và màn mã vạch (QuetMaVach.tsx)
 const TEN_MON_DAI_NHAT = 100;
@@ -31,8 +35,8 @@ const KHAU_PHAN_DAI_NHAT = 100;
 const CALO_LON_NHAT = 10000;
 const SO_GAM_LON_NHAT = 5000;
 
-// Hai thẻ của màn bút: viết một câu cho AI, hoặc tự nhập số
-type TheNhap = 'mo-ta' | 'nhap-so';
+// Hai bước của màn: chọn cách lấy món, rồi xem lại số liệu và lưu
+type BuocThem = 'chon' | 'kiem-tra';
 
 // Lượng đã ăn ghi bằng chữ (khẩu phần) hay bằng số gam
 type DonViLuong = 'khau-phan' | 'gram';
@@ -45,44 +49,48 @@ function docSoGam(chu: string): number | null {
   return Number(chu.replace(',', '.'));
 }
 
-type DongChatProps = {
+type OChatNhapProps = {
   ten: string;
   mau: string;
+  mauNen: string;
   giaTri: string;
   onDoi: (chu: string) => void;
   isDisabled: boolean;
 };
 
-// Một dòng đạm, tinh bột hoặc béo: chấm màu và tên bên trái (cùng màu Trang chủ), ô số gam bên phải
-function DongChat({ ten, mau, giaTri, onDoi, isDisabled }: DongChatProps) {
+// Một ô đạm, tinh bột hoặc béo: nền nhạt của chất, chấm màu và tên ở trên, ô gõ số gam ở dưới (cùng màu Trang chủ và màn chi tiết món)
+function OChatNhap({ ten, mau, mauNen, giaTri, onDoi, isDisabled }: OChatNhapProps) {
   return (
-    <View style={styles.dongChat}>
-      <View style={[styles.chamMau, { backgroundColor: mau }]} />
-      <Text style={styles.tenChat}>{ten}</Text>
-      <TextInput
-        style={[styles.oSoGam, isDisabled ? styles.oKhoa : null]}
-        value={giaTri}
-        onChangeText={onDoi}
-        keyboardType="decimal-pad"
-        placeholder="—"
-        placeholderTextColor={colors.textSecondary}
-        editable={!isDisabled}
-      />
-      <Text style={styles.donViGam}>g</Text>
+    <View style={[styles.oChat, { backgroundColor: mauNen }, isDisabled ? styles.oKhoa : null]}>
+      <View style={styles.hangTenChat}>
+        <View style={[styles.chamMau, { backgroundColor: mau }]} />
+        <Text style={[styles.tenChat, { color: mau }]}>{ten}</Text>
+      </View>
+      <View style={styles.hangSoChat}>
+        <TextInput
+          style={[styles.oSoChat, { color: mau }]}
+          value={giaTri}
+          onChangeText={onDoi}
+          keyboardType="decimal-pad"
+          placeholder="—"
+          placeholderTextColor={colors.textSecondary}
+          editable={!isDisabled}
+        />
+        <Text style={[styles.donViGam, { color: mau }]}>g</Text>
+      </View>
     </View>
   );
 }
 
 export default function ThemSuaBuaAn() {
-  // Có id là sửa món đã có; không có id là thêm món mới, với ngày, bữa và cách thêm đã chọn ở trang chủ
-  // monSan: món mở từ Khám phá, gửi sang dạng JSON để điền sẵn thẻ Nhập số
-  const thamSo = useLocalSearchParams<{ id?: string; ngay?: string; loaiBua?: LoaiBua; cach?: CachThem; monSan?: string }>();
+  // Có id là sửa món đã có; không có id là thêm món mới, với ngày và bữa đã chọn ở trang chủ
+  // monSan: món mở từ Khám phá, gửi sang dạng JSON để điền sẵn form
+  const thamSo = useLocalSearchParams<{ id?: string; ngay?: string; loaiBua?: LoaiBua; monSan?: string }>();
   const buaAnId = thamSo.id;
   const dangSua = buaAnId !== undefined;
 
-  // Chỉ vào từ nút bút mới có 2 thẻ Mô tả / Nhập số, mở đầu ở Mô tả; sửa món, ảnh, mã vạch chỉ có Nhập số
-  const coHaiThe = thamSo.cach === 'go-ten';
-  const [theDangMo, setTheDangMo] = useState<TheNhap>(coHaiThe ? 'mo-ta' : 'nhap-so');
+  // Sửa món hoặc mở từ Khám phá thì đã có món, vào thẳng bước xem lại; thêm mới thì bắt đầu ở bước chọn
+  const [buoc, setBuoc] = useState<BuocThem>(dangSua || thamSo.monSan ? 'kiem-tra' : 'chon');
 
   // Ngày và bữa của món
   const [ngay, setNgay] = useState(thamSo.ngay ?? todayKey());
@@ -98,6 +106,8 @@ export default function ThemSuaBuaAn() {
   // Ô lượng theo số: Mét gõ gam, Anh-Mỹ gõ oz
   const { donVi, heSo } = useDonVi();
   const laAnhMy = donVi === 'anh_my' && heSo !== null;
+  // Chiều cao thanh home của iPhone, để thanh nút Lưu ở đáy không bị che
+  const insets = useSafeAreaInsets();
   const [soCalo, setSoCalo] = useState('');
   const [dam, setDam] = useState('');
   const [tinhBot, setTinhBot] = useState('');
@@ -113,10 +123,9 @@ export default function ThemSuaBuaAn() {
   const [nhatKy, setNhatKy] = useState<NhatKyNgay | null>(null);
   const [monCu, setMonCu] = useState<SoNenHanChe | null>(null);
 
-  // Màn chụp và màn quét mã vạch (mở sẵn theo cách đã chọn ở trang chủ), màn tìm mở từ kính lúp, và trạng thái đang nhờ AI ở từng thẻ
-  const [dangMoChupAnh, setDangMoChupAnh] = useState(thamSo.cach === 'chup-anh');
-  const [dangMoQuetMa, setDangMoQuetMa] = useState(thamSo.cach === 'ma-vach');
-  const [dangMoTimMon, setDangMoTimMon] = useState(false);
+  // Màn chụp và màn quét mã vạch (mở từ 2 thẻ ở bước chọn), và trạng thái đang nhờ AI ở từng chỗ
+  const [dangMoChupAnh, setDangMoChupAnh] = useState(false);
+  const [dangMoQuetMa, setDangMoQuetMa] = useState(false);
   const [dangUocTinh, setDangUocTinh] = useState(false);
   const [dangUocTinhMoTa, setDangUocTinhMoTa] = useState(false);
 
@@ -160,7 +169,7 @@ export default function ThemSuaBuaAn() {
     }
   }
 
-  // Điền các ô của thẻ Nhập số từ một món có sẵn (món cũ đang sửa, món hay ăn, món từ ảnh / mã vạch / thẻ Mô tả)
+  // Điền các ô của form từ một món có sẵn (món cũ đang sửa, món hay ăn, món từ ảnh / mã vạch / tìm món / AI)
   function dienSan(mon: MonHayAn | MonDaChon) {
     setTenMon(mon.ten_mon);
     setDonViLuong('khau-phan');
@@ -173,38 +182,47 @@ export default function ThemSuaBuaAn() {
     setDuong(mon.duong_g);
     setBeoNo(mon.beo_no_g);
     setNguonSoLieu(mon.nguon_so_lieu);
+    setSoGam('');
   }
 
-  // Chọn được món ở màn chụp: tắt màn chụp rồi điền vào thẻ Nhập số, kèm câu cảnh báo dị ứng
-  function chonTuManChup(mon: MonDaChon) {
+  // Có món từ một trong các cách ở bước chọn: tắt màn chụp / quét nếu đang mở, điền form rồi sang bước xem lại; món hay ăn không có câu cảnh báo
+  function chonMon(mon: MonHayAn | MonDaChon) {
     setDangMoChupAnh(false);
-    dienSan(mon);
-    setCanhBaoDiUng(mon.canh_bao_di_ung);
-  }
-
-  // Chọn được món ở màn quét mã: tắt màn quét rồi điền vào thẻ Nhập số, kèm câu cảnh báo dị ứng
-  function chonTuManQuetMa(mon: MonDaChon) {
     setDangMoQuetMa(false);
-    dienSan(mon);
-    setCanhBaoDiUng(mon.canh_bao_di_ung);
-  }
-
-  // Chọn được món ở màn tìm (kính lúp): tắt màn tìm rồi điền vào thẻ Nhập số
-  function chonTuManTimMon(mon: MonDaChon) {
-    setDangMoTimMon(false);
-    dienSan(mon);
-    setCanhBaoDiUng(mon.canh_bao_di_ung);
-  }
-
-  // Thẻ Mô tả trả về món (món hay ăn hoặc kết quả AI): điền vào thẻ Nhập số rồi chuyển sang đó để xem lại; món hay ăn không có câu cảnh báo
-  function chonTuTheMoTa(mon: MonHayAn | MonDaChon) {
     dienSan(mon);
     if ('canh_bao_di_ung' in mon) {
       setCanhBaoDiUng(mon.canh_bao_di_ung);
     } else {
       setCanhBaoDiUng('');
     }
-    setTheDangMo('nhap-so');
+    setLoiNhap({});
+    setLoiServer('');
+    setBuoc('kiem-tra');
+  }
+
+  // Xóa hết các ô của form về trống, như chưa chọn món nào
+  function xoaForm() {
+    setTenMon('');
+    setDonViLuong('khau-phan');
+    setKhauPhan('');
+    setSoGam('');
+    setSoCalo('');
+    setDam('');
+    setTinhBot('');
+    setBeo('');
+    setMuoi(null);
+    setDuong(null);
+    setBeoNo(null);
+    setNguonSoLieu('nhap_tay');
+    setCanhBaoDiUng('');
+    setLoiNhap({});
+    setLoiServer('');
+  }
+
+  // Bấm thẻ "Nhập tay": form trống rồi sang bước xem lại
+  function tuNhapTay() {
+    xoaForm();
+    setBuoc('kiem-tra');
   }
 
   // Người dùng tự sửa tên món thì câu cảnh báo cũ không còn đúng nữa
@@ -384,6 +402,16 @@ export default function ThemSuaBuaAn() {
     ]);
   }
 
+  // Bấm ‹: đang xem lại món thêm mới thì về bước chọn (bỏ lỗi của bước xem lại); sửa món, mở từ Khám phá, hoặc đang ở bước chọn thì về màn trước
+  function quayLai() {
+    if (buoc === 'kiem-tra' && !dangSua && !thamSo.monSan) {
+      setLoiServer('');
+      setBuoc('chon');
+      return;
+    }
+    router.back();
+  }
+
   // Đang tải món cũ, hoặc tải lỗi
   if (dangTai) {
     return (
@@ -393,141 +421,170 @@ export default function ThemSuaBuaAn() {
     );
   }
 
-  // Vào từ nút Chụp ảnh: cả trang là màn chụp; bấm ‹ khi chưa chọn món thì về trang chủ
-  if (dangMoChupAnh) {
-    return <ChupAnhNhanMon onChon={chonTuManChup} onDong={() => router.back()} />;
-  }
-
-  // Vào từ nút Mã vạch: cả trang là màn quét mã; bấm ‹ khi chưa chọn món thì về trang chủ
-  if (dangMoQuetMa) {
-    return <QuetMaVach onChon={chonTuManQuetMa} onDong={() => router.back()} />;
-  }
-
-  // Bấm kính lúp ở ô Tên món: cả trang là màn tìm; bấm ‹ thì về lại thẻ Nhập số, các ô vẫn giữ chữ
-  if (dangMoTimMon) {
-    return <TimMon tuKhoaBanDau={tenMon} onChon={chonTuManTimMon} onDong={() => setDangMoTimMon(false)} />;
-  }
-
   return (
-    <Screen>
-      <ScreenTitle
-        title={dangSua ? 'Sửa món' : `Thêm vào ${TEN_BUA[loaiBua].toLowerCase()}`}
-        subtitle={formatDateLabel(ngay)}
-        onBack={() => router.back()}
-      />
+    <View style={styles.khung}>
+      {/* Bấm thẻ Chụp ảnh / Quét mã vạch: màn đó hiện cả trang; bấm ‹ khi chưa chọn món thì về bước chọn */}
+      {dangMoChupAnh ? <ChupAnhNhanMon onChon={chonMon} onDong={() => setDangMoChupAnh(false)} /> : null}
+      {dangMoQuetMa ? <QuetMaVach onChon={chonMon} onDong={() => setDangMoQuetMa(false)} /> : null}
 
-      {loiServer ? <ErrorBox message={loiServer} /> : null}
-
-      {/* Chọn bữa; trang chủ đã chọn sẵn, người dùng đổi được */}
-      <View style={styles.hangChip}>
-        {THU_TU_BUA.map((bua) => (
-          <Chip key={bua} label={TEN_BUA[bua]} isSelected={loaiBua === bua} isDisabled={dangChay} onPress={() => setLoaiBua(bua)} />
-        ))}
-      </View>
-
-      {/* Hai thẻ Mô tả / Nhập số, chỉ khi vào từ nút bút */}
-      {coHaiThe ? (
-        <View style={styles.hangChip}>
-          <Chip label="Mô tả" isSelected={theDangMo === 'mo-ta'} isDisabled={dangChay} onPress={() => setTheDangMo('mo-ta')} />
-          <Chip label="Nhập số" isSelected={theDangMo === 'nhap-so'} isDisabled={dangChay} onPress={() => setTheDangMo('nhap-so')} />
-        </View>
-      ) : null}
-
-      {/* Thẻ Mô tả: món hay ăn và ô viết câu cho AI */}
-      {theDangMo === 'mo-ta' ? <MoTa monHayAn={monHayAn} onChon={chonTuTheMoTa} onDangChay={setDangUocTinhMoTa} /> : null}
-
-      {/* Thẻ Nhập số: nguồn số liệu, tên, lượng, calo kèm nút AI, ba chất, muối / đường / béo no, Lưu, Xóa */}
-      {theDangMo === 'nhap-so' ? (
-        <View>
-          {/* Nói rõ số liệu từ đâu ra khi không phải tự nhập */}
-          {nguonSoLieu === 'ai' ? (
-            <Text style={styles.chuPhu}>Kết quả do AI ước tính, không chính xác 100%. Bạn kiểm tra và sửa lại nếu cần.</Text>
-          ) : null}
-          {nguonSoLieu === 'ma_vach' ? <Text style={styles.chuPhu}>Số liệu theo nhãn sản phẩm (Open Food Facts).</Text> : null}
-          {nguonSoLieu === 'vien_dinh_duong' ? <Text style={styles.chuPhu}>Số liệu theo suất Viện Dinh dưỡng đã cân.</Text> : null}
-          {nguonSoLieu === 'thuc_pham' ? <Text style={styles.chuPhu}>Số liệu theo kho thực phẩm Viện Dinh dưỡng, tính theo số gam.</Text> : null}
-
-          {/* Tên món, kính lúp bên phải mở màn tìm trong kho món và kho thực phẩm của Viện */}
-          <TextField
-            label="Tên món"
-            value={tenMon}
-            onChangeText={doiTenMon}
-            error={loiNhap.tenMon ?? ''}
-            placeholder="Gõ tên, hoặc bấm kính lúp để tìm"
-            maxLength={TEN_MON_DAI_NHAT}
-            isDisabled={dangChay}
-            iconName="search-outline"
-            onPressIcon={() => setDangMoTimMon(true)}
+      {/* Màn thêm món; lúc đang chụp / quét thì chỉ ẩn đi chứ không bỏ, để quay lại vẫn còn chữ đang gõ */}
+      <View style={dangMoChupAnh || dangMoQuetMa ? styles.an : styles.khung}>
+        <Screen compactBottom={buoc === 'kiem-tra'}>
+          {/* Tiêu đề; món không thuộc hôm nay (ghi bù, sửa món ngày cũ) thì có thêm dòng ngày để khỏi ghi nhầm ngày */}
+          <ScreenTitle
+            title={dangSua ? 'Sửa món' : `Thêm vào ${TEN_BUA[loaiBua].toLowerCase()}`}
+            subtitle={ngay !== todayKey() ? formatDateLabel(ngay) : undefined}
+            onBack={quayLai}
           />
-          {/* Câu cảnh báo dị ứng của món vừa chọn (AI, mã vạch) */}
-          {canhBaoDiUng !== '' ? <Text style={styles.chuCanhBaoDiUng}>{canhBaoDiUng}</Text> : null}
 
-          {/* Lượng đã ăn: chọn ghi bằng chữ (khẩu phần) hay bằng số gam */}
-          <Text style={styles.nhanO}>Lượng đã ăn</Text>
-          <View style={styles.hangChipNho}>
-            <Chip label="Khẩu phần" isSelected={donViLuong === 'khau-phan'} isDisabled={dangChay} onPress={() => setDonViLuong('khau-phan')} />
-            <Chip label={laAnhMy ? 'Ounce' : 'Gram'} isSelected={donViLuong === 'gram'} isDisabled={dangChay} onPress={() => setDonViLuong('gram')} />
+          {loiServer ? <ErrorBox message={loiServer} /> : null}
+
+          {/* Chọn bữa; trang chủ đã chọn sẵn, người dùng đổi được */}
+          <View style={styles.khoiDai}>
+            <DaiNutLien
+              luaChon={THU_TU_BUA.map((bua) => ({ giaTri: bua, nhan: TEN_BUA[bua] }))}
+              giaTriDangChon={loaiBua}
+              kieu="dam"
+              isDisabled={dangChay}
+              onChon={(giaTri) => setLoaiBua(giaTri as LoaiBua)}
+            />
           </View>
-          {donViLuong === 'khau-phan' ? (
-            <TextField
-              label="Khẩu phần"
-              value={khauPhan}
-              onChangeText={setKhauPhan}
-              error={loiNhap.luong ?? ''}
-              placeholder="Ví dụ: 2 chén, 1 tô nhỏ"
-              maxLength={KHAU_PHAN_DAI_NHAT}
-              isDisabled={dangChay}
-            />
-          ) : (
-            <TextField
-              label={laAnhMy ? 'Số oz (oz)' : 'Số gam (g)'}
-              value={soGam}
-              onChangeText={setSoGam}
-              error={loiNhap.luong ?? ''}
-              placeholder={laAnhMy ? 'Ví dụ: 12,3' : 'Ví dụ: 350'}
-              isNumber
-              isDisabled={dangChay}
-            />
-          )}
 
-          {/* Ô calo và nút AI cùng hàng: AI chỉ điền ô còn trống */}
-          <View style={styles.hangCalo}>
-            <View style={styles.oCalo}>
-              <TextField
-                label="Calo (kcal)"
-                value={soCalo}
-                onChangeText={doiSoCalo}
-                error={loiNhap.soCalo ?? ''}
-                placeholder="Chưa biết thì bấm AI"
-                isNumber
+          {/* Bước chọn: chụp ảnh, mã vạch, viết câu cho AI, tìm món của Viện, món hay ăn, hoặc tự nhập tay; sang bước xem lại thì chỉ ẩn đi để quay lại vẫn còn chữ đang tìm */}
+          {!dangSua && !thamSo.monSan ? (
+            <View style={buoc === 'chon' ? null : styles.an}>
+              <BaCachThem
                 isDisabled={dangChay}
+                onChupAnh={() => setDangMoChupAnh(true)}
+                onQuetMa={() => setDangMoQuetMa(true)}
+                onNhapTay={tuNhapTay}
               />
+              <MoTa isDisabled={dangChay} onChon={chonMon} onDangChay={setDangUocTinhMoTa} />
+              <TimMon isDisabled={dangChay} onChon={chonMon} />
+              <MonBanHayAn monHayAn={monHayAn} isDisabled={dangChay} onChon={chonMon} />
             </View>
-            <View style={styles.nutAi}>
-              <Button
-                title="AI ước tính"
-                loadingTitle="Đang ước tính…"
-                isLoading={dangUocTinh}
-                isDisabled={dangLuu || dangXoa}
-                onPress={uocTinhBangAi}
-                isSecondary
-              />
+          ) : null}
+
+          {/* Bước xem lại: cảnh báo dị ứng, nguồn số liệu, thẻ tên / lượng / calo / ba chất, thẻ "Nên hạn chế", Xóa món */}
+          {buoc === 'kiem-tra' ? (
+            <View>
+              {/* Câu cảnh báo dị ứng của món vừa chọn (AI, mã vạch), đặt trên cùng cho dễ thấy */}
+              {canhBaoDiUng !== '' ? (
+                <View style={styles.khungDiUng}>
+                  <Text style={styles.chuDiUng}>{canhBaoDiUng}</Text>
+                </View>
+              ) : null}
+
+              {/* Nói rõ số liệu từ đâu ra khi không phải tự nhập */}
+              {nguonSoLieu === 'ai' ? (
+                <Text style={styles.chuNguon}>Kết quả do AI ước tính, không chính xác 100%. Bạn kiểm tra và sửa lại nếu cần.</Text>
+              ) : null}
+              {nguonSoLieu === 'ma_vach' ? <Text style={styles.chuNguon}>Số liệu theo nhãn sản phẩm (Open Food Facts).</Text> : null}
+              {nguonSoLieu === 'vien_dinh_duong' ? <Text style={styles.chuNguon}>Số liệu theo suất Viện Dinh dưỡng đã cân.</Text> : null}
+              {nguonSoLieu === 'thuc_pham' ? <Text style={styles.chuNguon}>Số liệu theo kho thực phẩm Viện Dinh dưỡng, tính theo số gam.</Text> : null}
+
+              {/* Thẻ thông tin chính: tên, lượng, calo, ba chất */}
+              <Card>
+                {/* Tên món */}
+                <Text style={styles.tieuDeMuc}>Tên món</Text>
+                <TextField
+                  label=""
+                  value={tenMon}
+                  onChangeText={doiTenMon}
+                  error={loiNhap.tenMon ?? ''}
+                  placeholder="Ví dụ: Phở bò tái chín"
+                  maxLength={TEN_MON_DAI_NHAT}
+                  isDisabled={dangChay}
+                />
+
+                {/* Lượng đã ăn: ghi bằng chữ (khẩu phần) hay bằng số gam */}
+                <Text style={styles.tieuDeMuc}>Lượng đã ăn</Text>
+                <View style={styles.khoiDaiLuong}>
+                  <DaiNutLien
+                    luaChon={[
+                      { giaTri: 'khau-phan', nhan: 'Khẩu phần' },
+                      { giaTri: 'gram', nhan: laAnhMy ? 'Ounce' : 'Gram' },
+                    ]}
+                    giaTriDangChon={donViLuong}
+                    kieu="nhat"
+                    isDisabled={dangChay}
+                    onChon={(giaTri) => setDonViLuong(giaTri as DonViLuong)}
+                  />
+                </View>
+                {donViLuong === 'khau-phan' ? (
+                  <TextField
+                    label=""
+                    value={khauPhan}
+                    onChangeText={setKhauPhan}
+                    error={loiNhap.luong ?? ''}
+                    placeholder="Ví dụ: 2 chén, 1 tô nhỏ"
+                    maxLength={KHAU_PHAN_DAI_NHAT}
+                    isDisabled={dangChay}
+                  />
+                ) : (
+                  <TextField
+                    label=""
+                    value={soGam}
+                    onChangeText={setSoGam}
+                    error={loiNhap.luong ?? ''}
+                    placeholder={laAnhMy ? 'Số oz, ví dụ: 12,3' : 'Số gam, ví dụ: 350'}
+                    isNumber
+                    isDisabled={dangChay}
+                  />
+                )}
+
+                {/* Calo, ngăn với phần trên bằng đường kẻ: ô số và nút AI cùng hàng; AI chỉ điền ô còn trống */}
+                <View style={styles.phanMoi}>
+                  <Text style={styles.tieuDeMuc}>Calo (kcal)</Text>
+                  <View style={styles.hangCalo}>
+                    <View style={styles.oCalo}>
+                      <TextField
+                        label=""
+                        value={soCalo}
+                        onChangeText={doiSoCalo}
+                        error={loiNhap.soCalo ?? ''}
+                        placeholder="Ví dụ: 450"
+                        isNumber
+                        isDisabled={dangChay}
+                      />
+                    </View>
+                    <NutAi isLoading={dangUocTinh} isDisabled={dangLuu || dangXoa} onPress={uocTinhBangAi} />
+                  </View>
+                  <Text style={styles.chuPhu}>AI chỉ điền ô còn trống. Muốn AI đoán lại thì xóa số ô đó.</Text>
+                </View>
+
+                {/* Chỉ số macro (đạm, tinh bột, béo), ngăn với phần trên bằng đường kẻ: 3 ô cạnh nhau, không bắt buộc */}
+                <View style={styles.phanMoi}>
+                  <Text style={styles.tieuDeMuc}>Chỉ số macro</Text>
+                  <View style={styles.hangChat}>
+                    <OChatNhap ten="Đạm" mau={colors.protein} mauNen={colors.proteinLight} giaTri={dam} onDoi={setDam} isDisabled={dangChay} />
+                    <OChatNhap ten="Tinh bột" mau={colors.carbs} mauNen={colors.carbsLight} giaTri={tinhBot} onDoi={setTinhBot} isDisabled={dangChay} />
+                    <OChatNhap ten="Béo" mau={colors.fat} mauNen={colors.fatLight} giaTri={beo} onDoi={setBeo} isDisabled={dangChay} />
+                  </View>
+                  {loiNhap.chiTiet ? <Text style={styles.chuLoi}>{loiNhap.chiTiet}</Text> : null}
+                </View>
+              </Card>
+
+              {/* Muối, đường, béo no của món và cảnh báo khi cả ngày vượt giới hạn */}
+              <CanhBaoNenHanChe monNay={{ muoi_g: muoi, duong_g: duong, beo_no_g: beoNo }} monCu={monCu} nhatKy={nhatKy} />
+
+              {/* Sửa món thì có thêm nút xóa ở cuối */}
+              {dangSua ? (
+                <Pressable
+                  style={({ pressed }) => [styles.nutXoa, dangChay ? styles.nutKhoa : null, pressed ? styles.nutDangBam : null]}
+                  disabled={dangChay}
+                  onPress={xacNhanXoa}
+                >
+                  <Text style={styles.chuXoa}>{dangXoa ? 'Đang xóa…' : 'Xóa món'}</Text>
+                </Pressable>
+              ) : null}
             </View>
-          </View>
-          <Text style={styles.chuPhu}>AI chỉ điền ô còn trống. Muốn AI đoán lại thì xóa số ô đó.</Text>
+          ) : null}
+        </Screen>
 
-          {/* Đạm, tinh bột, béo xếp dọc, không bắt buộc */}
-          <View style={styles.khoiChat}>
-            <DongChat ten="Đạm" mau={colors.protein} giaTri={dam} onDoi={setDam} isDisabled={dangChay} />
-            <DongChat ten="Tinh bột" mau={colors.carbs} giaTri={tinhBot} onDoi={setTinhBot} isDisabled={dangChay} />
-            <DongChat ten="Béo" mau={colors.fat} giaTri={beo} onDoi={setBeo} isDisabled={dangChay} />
-          </View>
-          {loiNhap.chiTiet ? <Text style={styles.chuLoi}>{loiNhap.chiTiet}</Text> : null}
-
-          {/* Muối, đường, béo no của món và cảnh báo khi cả ngày vượt giới hạn */}
-          <CanhBaoNenHanChe monNay={{ muoi_g: muoi, duong_g: duong, beo_no_g: beoNo }} monCu={monCu} nhatKy={nhatKy} />
-
-          <View style={styles.khoangNut}>
+        {/* Bước xem lại: nút Lưu ghim ở đáy màn */}
+        {buoc === 'kiem-tra' ? (
+          <View style={[styles.thanhDuoi, { paddingBottom: insets.bottom + spacing.small }]}>
             <Button
               title={`Lưu vào ${TEN_BUA[loaiBua].toLowerCase()}`}
               loadingTitle="Đang lưu…"
@@ -536,47 +593,53 @@ export default function ThemSuaBuaAn() {
               onPress={handleLuu}
             />
           </View>
-
-          {dangSua ? (
-            <Pressable
-              style={({ pressed }) => [styles.nutXoa, dangChay ? styles.nutKhoa : null, pressed ? styles.nutDangBam : null]}
-              disabled={dangChay}
-              onPress={xacNhanXoa}
-            >
-              <Text style={styles.chuXoa}>{dangXoa ? 'Đang xóa…' : 'Xóa món'}</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-    </Screen>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  hangChip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.small,
+  khung: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  khoiDai: {
     marginBottom: spacing.large,
   },
-  chuCanhBaoDiUng: {
+  an: {
+    display: 'none',
+  },
+  khungDiUng: {
+    padding: spacing.medium,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningBackground,
+    marginBottom: spacing.medium,
+  },
+  chuDiUng: {
     fontSize: fontSizes.secondary,
+    fontWeight: '600',
     color: colors.warningText,
-    marginTop: 4,
+  },
+  chuNguon: {
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
+    marginBottom: spacing.medium,
   },
   chuPhu: {
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
     marginBottom: spacing.medium,
   },
-  nhanO: {
-    fontSize: fontSizes.secondary,
-    color: colors.textSecondary,
-    marginBottom: 4,
+  tieuDeMuc: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.small,
   },
-  hangChipNho: {
-    flexDirection: 'row',
-    gap: spacing.small,
+  khoiDaiLuong: {
     marginBottom: spacing.small,
   },
   hangCalo: {
@@ -587,57 +650,63 @@ const styles = StyleSheet.create({
   oCalo: {
     flex: 1,
   },
-  nutAi: {
-    marginTop: spacing.xlarge,
+  phanMoi: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.medium,
   },
-  khoiChat: {
-    gap: spacing.small,
-    marginBottom: spacing.medium,
-  },
-  dongChat: {
+  hangChat: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.small,
   },
-  chamMau: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  tenChat: {
+  oChat: {
     flex: 1,
-    fontSize: fontSizes.body,
-    color: colors.text,
-  },
-  oSoGam: {
-    width: 88,
-    height: 44,
+    alignItems: 'center',
     borderRadius: radius.input,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.medium,
-    fontSize: fontSizes.body,
-    color: colors.text,
-    textAlign: 'right',
+    paddingVertical: spacing.small,
+    paddingHorizontal: 4,
   },
   oKhoa: {
     opacity: 0.5,
   },
+  hangTenChat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chamMau: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  tenChat: {
+    fontSize: fontSizes.secondary,
+    fontWeight: '600',
+  },
+  hangSoChat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  oSoChat: {
+    minWidth: 28,
+    minHeight: 44,
+    fontSize: fontSizes.sectionTitle,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
   donViGam: {
-    fontSize: fontSizes.body,
-    color: colors.textSecondary,
+    fontSize: fontSizes.sectionTitle,
+    fontWeight: '700',
+    marginLeft: 2,
   },
   chuLoi: {
     fontSize: fontSizes.secondary,
     color: colors.error,
-    marginBottom: spacing.medium,
-  },
-  khoangNut: {
-    marginTop: spacing.large,
+    marginTop: spacing.small,
   },
   nutXoa: {
-    marginTop: spacing.large,
+    marginTop: spacing.small,
     alignItems: 'center',
     paddingVertical: spacing.medium,
   },
@@ -650,5 +719,12 @@ const styles = StyleSheet.create({
   chuXoa: {
     fontSize: fontSizes.body,
     color: colors.error,
+  },
+  thanhDuoi: {
+    paddingHorizontal: spacing.large,
+    paddingTop: spacing.small,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
   },
 });
