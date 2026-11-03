@@ -2,6 +2,7 @@ import express from 'express';
 
 import authRoutes from './auth/AuthRoutes.ts';
 import { requireAuth } from './auth/requireAuth.ts';
+import baoCaoRoutes from './bao-cao/BaoCaoRoutes.ts';
 import buaAnRoutes from './bua-an/BuaAnRoutes.ts';
 import donViRoutes from './don-vi/DonViRoutes.ts';
 import database from './database/database.ts';
@@ -13,6 +14,7 @@ import tienDoRoutes from './tien-do/TienDoRoutes.ts';
 import thucDonRoutes from './thuc-don/ThucDonRoutes.ts';
 import traMonRoutes from './tra-mon/TraMonRoutes.ts';
 import tuVanRoutes from './tu-van/TuVanRoutes.ts';
+import uongNuocRoutes from './uong-nuoc/UongNuocRoutes.ts';
 
 // Ảnh chụp món gửi lên dạng base64 nên cần cho phép dữ liệu lớn hơn mặc định (100 KB)
 const JSON_BODY_LIMIT = '10mb';
@@ -52,6 +54,12 @@ app.use('/tu-van', requireAuth, tuVanRoutes);
 
 // Cân nặng và tiến độ (cần đăng nhập)
 app.use('/tien-do', requireAuth, tienDoRoutes);
+
+// Báo cáo dinh dưỡng theo tuần hoặc tháng (cần đăng nhập)
+app.use('/bao-cao', requireAuth, baoCaoRoutes);
+
+// Uống nước: ghi, mục tiêu, nhắc giờ (cần đăng nhập)
+app.use('/uong-nuoc', requireAuth, uongNuocRoutes);
 
 // Thực đơn hôm nay do AI lập (cần đăng nhập)
 app.use('/thuc-don', requireAuth, thucDonRoutes);

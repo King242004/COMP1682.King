@@ -8,6 +8,7 @@ import { Button } from '../../../shared/components/Button';
 import { TextField } from '../../../shared/components/TextField';
 import { colors, fontSizes, radius, spacing } from '../../../shared/theme';
 import type { ThucPham } from '../../../tra-mon/TraMonApi';
+import { XemDuChat } from './XemDuChat';
 
 // Số gam lớn nhất cho một lần ăn, để chặn gõ nhầm; là lựa chọn giao diện, giống ô Gram ở thẻ Nhập số
 const SO_GAM_LON_NHAT = 5000;
@@ -64,6 +65,7 @@ export function ChonSoGam({ thucPham, isDisabled, onChon, onChonKhac }: ChonSoGa
     <View>
       <Text style={styles.ten}>{thucPham.ten_thuc_pham}</Text>
       <Text style={styles.chuPhu}>Kho thực phẩm Viện Dinh dưỡng · 100 g{laAnhMy ? ` (${vietKhoiLuong(100, donVi, heSo)})` : ''} {Math.round(thucPham.kcal_100g).toLocaleString('vi-VN')} kcal</Text>
+      <XemDuChat thucPham={thucPham} />
 
       <TextField
         label={laAnhMy ? 'Số oz đã ăn' : 'Số gam đã ăn'}

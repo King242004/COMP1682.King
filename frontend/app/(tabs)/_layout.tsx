@@ -1,12 +1,36 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
+import { useEffect } from 'react';
 
 import { useAuth } from '../../src/auth/AuthContext';
+import { todayKey } from '../../src/shared/dateKey';
 import { colors } from '../../src/shared/theme';
+import { henLaiNhacUongNuoc, huyHetNhacUongNuoc } from '../../src/uong-nuoc/NhacUongNuoc';
+import { layUongNuocNgay } from '../../src/uong-nuoc/UongNuocApi';
 
 // Thanh tab dưới cùng; chưa đăng nhập (hoặc vừa đăng xuất) thì về màn đăng nhập
 export default function TabsLayout() {
   const { user } = useAuth();
+
+  // Đăng nhập (hoặc mở app khi đã đăng nhập) thì hẹn lại lời nhắc uống nước theo cài đặt trên server; đăng xuất thì hủy hết
+  useEffect(() => {
+    if (user) {
+      henLaiTheoServer();
+    } else {
+      huyHetNhacUongNuoc();
+    }
+  }, [user]);
+
+  // Đọc cài đặt nhắc trên server rồi hẹn lại; không tải được (chưa có hồ sơ, mất mạng) thì thôi, lần mở app sau hẹn lại
+  async function henLaiTheoServer() {
+    try {
+      const uongNuoc = await layUongNuocNgay(todayKey());
+      await henLaiNhacUongNuoc(uongNuoc.nhac_uong_nuoc, uongNuoc.gio_nhac);
+    } catch {
+      return;
+    }
+  }
+
   if (!user) {
     return <Redirect href="/auth/Login" />;
   }

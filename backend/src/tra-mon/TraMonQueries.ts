@@ -52,12 +52,25 @@ export type ThucPham = {
   muoi_100g: number | null;
   duong_100g: number | null;
   beo_no_100g: number | null;
+  // 10 chất chỉ để xem ở "Xem đủ chất"
+  nuoc_100g: number | null;
+  chat_xo_100g: number | null;
+  canxi_mg_100g: number | null;
+  kali_mg_100g: number | null;
+  magie_mg_100g: number | null;
+  sat_mg_100g: number | null;
+  vitamin_a_mcg_100g: number | null;
+  vitamin_c_mg_100g: number | null;
+  vitamin_d_mcg_100g: number | null;
+  vitamin_e_mg_100g: number | null;
 };
 
 // Lấy cả kho thực phẩm, xếp theo tên không dấu
 export async function layTatCaThucPham(): Promise<ThucPham[]> {
   const ketQua = await database.query<ThucPham>(
-    `SELECT ma_so, ten_thuc_pham, ten_khong_dau, kcal_100g, dam_100g, tinh_bot_100g, beo_100g, muoi_100g, duong_100g, beo_no_100g
+    `SELECT ma_so, ten_thuc_pham, ten_khong_dau, kcal_100g, dam_100g, tinh_bot_100g, beo_100g, muoi_100g, duong_100g, beo_no_100g,
+            nuoc_100g, chat_xo_100g, canxi_mg_100g, kali_mg_100g, magie_mg_100g, sat_mg_100g,
+            vitamin_a_mcg_100g, vitamin_c_mg_100g, vitamin_d_mcg_100g, vitamin_e_mg_100g
      FROM thuc_pham
      ORDER BY ten_khong_dau`,
   );

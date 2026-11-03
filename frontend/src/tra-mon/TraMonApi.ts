@@ -58,6 +58,17 @@ export type ThucPham = {
   muoi_100g: number | null;
   duong_100g: number | null;
   beo_no_100g: number | null;
+  // 10 chất chỉ để xem ở "Xem đủ chất"
+  nuoc_100g: number | null;
+  chat_xo_100g: number | null;
+  canxi_mg_100g: number | null;
+  kali_mg_100g: number | null;
+  magie_mg_100g: number | null;
+  sat_mg_100g: number | null;
+  vitamin_a_mcg_100g: number | null;
+  vitamin_c_mg_100g: number | null;
+  vitamin_d_mcg_100g: number | null;
+  vitamin_e_mg_100g: number | null;
   // Tên các nhóm dị ứng bị trùng (chỉ nhóm người dùng đã chọn ở hồ sơ)
   nhom_di_ung: string[];
 };

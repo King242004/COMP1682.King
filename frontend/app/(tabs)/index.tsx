@@ -10,6 +10,7 @@ import { NhomNenHanChe } from '../../src/trang-chu/NhomNenHanChe';
 import { NutThemMon } from '../../src/trang-chu/NutThemMon';
 import { TheBua } from '../../src/trang-chu/TheBua';
 import { TheCalo } from '../../src/trang-chu/TheCalo';
+import { TheUongNuoc } from '../../src/trang-chu/TheUongNuoc';
 import { buaTheoGio, THU_TU_BUA } from '../../src/bua-an/TenBua';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { Screen } from '../../src/shared/components/Screen';
@@ -17,6 +18,8 @@ import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { SectionTitle } from '../../src/shared/components/SectionTitle';
 import { formatDateLabel, todayKey } from '../../src/shared/dateKey';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/shared/theme';
+import { layUongNuocNgay } from '../../src/uong-nuoc/UongNuocApi';
+import type { UongNuocNgay } from '../../src/uong-nuoc/UongNuocApi';
 
 export default function TrangChu() {
   const { user } = useAuth();
@@ -24,6 +27,7 @@ export default function TrangChu() {
   // Ngày đang xem, mặc định là hôm nay
   const [ngay, setNgay] = useState(todayKey());
   const [nhatKy, setNhatKy] = useState<NhatKyNgay | null>(null);
+  const [uongNuoc, setUongNuoc] = useState<UongNuocNgay | null>(null);
   const [loi, setLoi] = useState('');
   // Nhớ ngày đang xem mới nhất, để bỏ kết quả của ngày cũ về trễ khi đổi ngày nhanh
   const ngayDangXem = useRef(ngay);
@@ -45,6 +49,14 @@ export default function TrangChu() {
       // Trong lúc chờ mà người dùng đã đổi sang ngày khác thì bỏ kết quả này, tránh hiện nhầm ngày
       if (ngay === ngayDangXem.current) {
         setNhatKy(ketQua);
+      }
+
+      // Lượng nước của ngày đó; chưa có mục tiêu (chưa thiết lập hồ sơ) thì chưa có mục tiêu nước để so
+      if (ketQua.muc_tieu_calo !== null) {
+        const nuocCuaNgay = await layUongNuocNgay(ngay);
+        if (ngay === ngayDangXem.current) {
+          setUongNuoc(nuocCuaNgay);
+        }
       }
     } catch (loiTai) {
       if (ngay === ngayDangXem.current) {
@@ -93,6 +105,9 @@ export default function TrangChu() {
             {nhatKy.tong_hop.so_mon_thieu_so_lieu > 0 ? (
               <Text style={styles.chuNho}>Một số món chưa đủ số liệu nên tổng có thể thấp hơn</Text>
             ) : null}
+
+            {/* Uống nước của ngày đang xem, bấm vào mở màn Uống nước để ghi */}
+            {uongNuoc ? <TheUongNuoc uongNuoc={uongNuoc} onPress={() => router.push('/UongNuoc')} /> : null}
 
             {/* Bốn bữa, luôn hiện */}
             <SectionTitle title="Bữa ăn" />

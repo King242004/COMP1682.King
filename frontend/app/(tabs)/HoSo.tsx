@@ -5,10 +5,9 @@ import type { ComponentProps } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
-import { vietCanNang } from '../../src/don-vi/DoiDonVi';
-import { useDonVi } from '../../src/don-vi/DonViContext';
 import { layHoSo } from '../../src/ho-so/HoSoApi';
 import type { HoSo } from '../../src/ho-so/HoSoApi';
+import { Button } from '../../src/shared/components/Button';
 import { Card } from '../../src/shared/components/Card';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { Screen } from '../../src/shared/components/Screen';
@@ -23,7 +22,6 @@ const TEN_MUC_TIEU = { giam: 'Giảm cân', giu: 'Giữ cân', tang: 'Tăng cân
 
 export default function HoSo() {
   const { user, logout } = useAuth();
-  const { donVi, heSo } = useDonVi();
   const [hoSo, setHoSo] = useState<HoSo | null>(null);
   const [loi, setLoi] = useState('');
 
@@ -67,7 +65,7 @@ export default function HoSo() {
 
       {hoSo && hoSo.muc_tieu_calo !== null ? (
         <View>
-          {/* Mục tiêu calo, 3 ô BMI · BMR · TDEE, lối vào màn Tiến độ */}
+          {/* Mục tiêu calo, 3 ô BMI · BMR · TDEE, mức vận động và mục tiêu, nút "Sửa mục tiêu" */}
           <Card>
             <Text style={styles.chuPhu}>Mục tiêu mỗi ngày</Text>
             <Text style={styles.soCalo}>
@@ -80,26 +78,28 @@ export default function HoSo() {
               <OChiSo nhan="BMR" giaTri={`${hoSo.chuyen_hoa_co_ban?.toLocaleString('vi-VN')} kcal`} chuNho="Đốt khi nghỉ" />
               <OChiSo nhan="TDEE" giaTri={`${hoSo.nang_luong_giu_can?.toLocaleString('vi-VN')} kcal`} chuNho="Để giữ cân" />
             </View>
-            <Pressable style={({ pressed }) => [styles.dongTienDo, pressed ? styles.dangBam : null]} onPress={() => router.push('/TienDo')}>
-              <View style={[styles.oBieuTuong, styles.oBieuTuongTrang]}>
-                <MaterialCommunityIcons name="scale-bathroom" size={18} color={colors.primary} />
-              </View>
-              <View style={styles.cotChu}>
-                <Text style={styles.chuTienDo}>Tiến độ cân nặng</Text>
-                <Text style={styles.chuPhu}>
-                  Hiện tại: <Text style={styles.chuDam}>{hoSo.can_nang_kg === null ? '' : vietCanNang(hoSo.can_nang_kg, donVi, heSo)}</Text>
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-            </Pressable>
+
+            {/* Mức vận động và mục tiêu; "Sửa mục tiêu" chỉ sửa 2 thứ này */}
+            <View style={styles.dongThongTin}>
+              <Text style={styles.chuPhu}>Mức vận động:</Text>
+              <Text style={styles.giaTriDong}>{hoSo.muc_van_dong ? TEN_MUC_VAN_DONG[hoSo.muc_van_dong] : ''}</Text>
+            </View>
+            <View style={styles.dongThongTin}>
+              <Text style={styles.chuPhu}>Mục tiêu:</Text>
+              <Text style={[styles.giaTriDong, styles.chuXanh]}>{hoSo.muc_tieu ? TEN_MUC_TIEU[hoSo.muc_tieu] : ''}</Text>
+            </View>
+            <View style={styles.nutSuaMucTieu}>
+              <Button title="Sửa mục tiêu" loadingTitle="" isLoading={false} onPress={() => router.push('/ho-so/SuaHoSo?phan=muc-tieu')} isSecondary />
+            </View>
           </Card>
 
-          {/* Mục tiêu: mức vận động và giảm / giữ / tăng; "Sửa" chỉ sửa 2 thứ này */}
+          {/* Xem báo cáo: Dinh dưỡng mở Báo cáo dinh dưỡng, Cân nặng mở màn Tiến độ, Uống nước mở Báo cáo uống nước */}
           <Card>
-            <TieuDeThe bieuTuong="target" tieuDe="Mục tiêu" phanSua="muc-tieu" />
-            <View style={styles.luoi}>
-              <OThongTin nhan="Mức vận động" giaTri={hoSo.muc_van_dong ? TEN_MUC_VAN_DONG[hoSo.muc_van_dong] : ''} />
-              <OThongTin nhan="Mục tiêu" giaTri={hoSo.muc_tieu ? TEN_MUC_TIEU[hoSo.muc_tieu] : ''} laMauXanh />
+            <Text style={styles.tieuDeXemBaoCao}>Xem báo cáo</Text>
+            <View style={styles.hangNutBaoCao}>
+              <NutBaoCao bieuTuong="food-apple-outline" nhan="Dinh dưỡng" onPress={() => router.push('/bao-cao/DinhDuong')} />
+              <NutBaoCao bieuTuong="scale-bathroom" nhan="Cân nặng" onPress={() => router.push('/TienDo')} />
+              <NutBaoCao bieuTuong="water-outline" nhan="Uống nước" onPress={() => router.push('/bao-cao/UongNuoc')} />
             </View>
           </Card>
 
@@ -165,6 +165,18 @@ function OChiSo({ nhan, giaTri, chuNho }: { nhan: string; giaTri: string; chuNho
   );
 }
 
+// Một nút trong thẻ "Xem báo cáo": biểu tượng trong vòng tròn xanh nhạt, chữ nhỏ ở dưới; mỗi nút rộng một phần tư thẻ
+function NutBaoCao({ bieuTuong, nhan, onPress }: { bieuTuong: TenBieuTuongMaterial; nhan: string; onPress: () => void }) {
+  return (
+    <Pressable style={({ pressed }) => [styles.nutBaoCao, pressed ? styles.dangBam : null]} onPress={onPress}>
+      <View style={styles.vongBieuTuong}>
+        <MaterialCommunityIcons name={bieuTuong} size={24} color={colors.primary} />
+      </View>
+      <Text style={styles.chuNutBaoCao}>{nhan}</Text>
+    </Pressable>
+  );
+}
+
 // Tiêu đề trong thẻ: biểu tượng nhỏ màu xanh, chữ đậm, bên phải chữ "Sửa" mở màn sửa đúng phần của thẻ
 function TieuDeThe({ bieuTuong, tieuDe, phanSua }: { bieuTuong: TenBieuTuongMaterial; tieuDe: string; phanSua: 'muc-tieu' | 'di-ung' }) {
   return (
@@ -175,16 +187,6 @@ function TieuDeThe({ bieuTuong, tieuDe, phanSua }: { bieuTuong: TenBieuTuongMate
         <Ionicons name="pencil-outline" size={15} color={colors.primary} />
         <Text style={styles.chuSua}>Sửa</Text>
       </Pressable>
-    </View>
-  );
-}
-
-// Một ô trong thẻ Mục tiêu: nhãn nhỏ xám, giá trị đậm, căn giữa ô (mục tiêu thì chữ xanh)
-function OThongTin({ nhan, giaTri, laMauXanh }: { nhan: string; giaTri: string; laMauXanh?: boolean }) {
-  return (
-    <View style={styles.oThongTin}>
-      <Text style={styles.nhanNhoGiua}>{nhan}</Text>
-      <Text style={[styles.giaTriThongTin, laMauXanh ? styles.chuXanh : null]}>{giaTri}</Text>
     </View>
   );
 }
@@ -250,10 +252,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
-  chuDam: {
-    fontWeight: '700',
-    color: colors.text,
-  },
   soCalo: {
     fontSize: fontSizes.bigNumber,
     fontWeight: '700',
@@ -287,22 +285,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 2,
   },
-  dongTienDo: {
+  dongThongTin: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.medium,
-    minHeight: 48,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    padding: spacing.medium,
-    marginTop: spacing.medium,
+    marginTop: spacing.small,
   },
-  chuTienDo: {
-    fontSize: fontSizes.secondary,
+  giaTriDong: {
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
+  },
+  nutSuaMucTieu: {
+    marginTop: spacing.medium,
+  },
+  tieuDeXemBaoCao: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.medium,
+  },
+  hangNutBaoCao: {
+    flexDirection: 'row',
+  },
+  nutBaoCao: {
+    width: '25%',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vongBieuTuong: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chuNutBaoCao: {
+    fontSize: fontSizes.label,
+    color: colors.text,
+    textAlign: 'center',
   },
   oBieuTuong: {
     width: 36,
@@ -310,9 +332,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  oBieuTuongTrang: {
-    backgroundColor: colors.surface,
   },
   hangTieuDe: {
     flexDirection: 'row',
@@ -337,27 +356,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.secondary,
     fontWeight: '600',
     color: colors.primary,
-  },
-  luoi: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  oThongTin: {
-    width: '47%',
-    flexGrow: 1,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    padding: 10,
-  },
-  giaTriThongTin: {
-    fontSize: fontSizes.body,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
-    marginTop: 2,
   },
   chuXanh: {
     color: colors.primary,

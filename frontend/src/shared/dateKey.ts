@@ -61,6 +61,20 @@ export function weekDateKeys(dateKey: string): string[] {
   return keys;
 }
 
+// Mọi ngày của tháng chứa ngày này, ngày 1 đứng đầu
+export function monthDateKeys(dateKey: string): string[] {
+  const date = fromDateKey(dateKey);
+  const month = date.getMonth();
+  let currentKey = toDateKey(new Date(date.getFullYear(), month, 1));
+  const keys: string[] = [];
+  // Cộng từng ngày cho tới khi sang tháng sau
+  while (fromDateKey(currentKey).getMonth() === month) {
+    keys.push(currentKey);
+    currentKey = shiftDateKey(currentKey, 1);
+  }
+  return keys;
+}
+
 // Thứ viết ngắn, ví dụ "T3" hoặc "CN"
 export function shortWeekdayName(dateKey: string): string {
   return SHORT_WEEKDAY_NAMES[fromDateKey(dateKey).getDay()];
