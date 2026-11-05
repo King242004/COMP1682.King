@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
 import { Button } from '../../src/shared/components/Button';
@@ -8,7 +9,7 @@ import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { Screen } from '../../src/shared/components/Screen';
 import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { TextField } from '../../src/shared/components/TextField';
-import { colors, fontSizes, spacing } from '../../src/shared/theme';
+import { colors, fontSizes, radius, spacing } from '../../src/shared/theme';
 
 export default function Login() {
   const { login } = useAuth();
@@ -53,6 +54,13 @@ export default function Login() {
 
   return (
     <Screen>
+      {/* Dòng logo nhỏ: ô vuông có biểu tượng món ăn, bên cạnh chữ MealMate */}
+      <View style={styles.logoRow}>
+        <View style={styles.logoBox}>
+          <Ionicons name="restaurant-outline" size={20} color={colors.primary} />
+        </View>
+        <Text style={styles.logoText}>MealMate</Text>
+      </View>
       <ScreenTitle title="Đăng nhập" subtitle="Theo dõi bữa ăn mỗi ngày" />
 
       {serverError ? <ErrorBox message={serverError} /> : null}
@@ -85,6 +93,25 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.small,
+    marginBottom: spacing.medium,
+  },
+  logoBox: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.input,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoText: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.primary,
+  },
   link: {
     marginTop: spacing.large,
     textAlign: 'center',

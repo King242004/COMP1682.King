@@ -15,48 +15,48 @@ type TheMonVienProps = {
   onXemChiTiet: () => void;
 };
 
-// Thẻ một món Viện Dinh dưỡng đã cân trong thực đơn: ảnh suất nhỏ, tên, số của 1 suất, nút "Đã ăn"; bấm thẻ mở chi tiết món. Món đã ghi thì cả thẻ mờ
+// Thẻ một món Viện Dinh dưỡng đã cân trong thực đơn: ảnh suất to ở trên, dưới là tên, số của 1 suất, nút "Đã ăn"; bấm thẻ mở chi tiết món. Món đã ghi thì cả thẻ mờ
 export function TheMonVien({ mon, daGhi, dangGhi, khoa, onDaAn, onXemChiTiet }: TheMonVienProps) {
   return (
     <Pressable style={({ pressed }) => [styles.the, daGhi ? styles.theDaGhi : null, pressed ? styles.dangBam : null]} onPress={onXemChiTiet}>
-      {/* Ảnh suất của Viện, hiện trọn cả ảnh */}
+      {/* Ảnh suất của Viện rộng hết thẻ, hiện trọn cả ảnh */}
       {mon.anh_url !== null ? <Image source={{ uri: mon.anh_url }} style={styles.anh} resizeMode="contain" /> : null}
 
-      {/* Tên món (gạch ngang khi đã ghi); calo, đạm, tinh bột, béo của 1 suất; nhãn ⚠ nếu có thứ người dùng dị ứng */}
-      <View style={styles.cotGiua}>
-        <Text style={[styles.tenMon, daGhi ? styles.tenMonDaGhi : null]}>{mon.ten_mon}</Text>
-        <Text style={styles.chuPhu}>
-          {mon.so_calo.toLocaleString('vi-VN')} kcal · đạm {mon.dam_g.toLocaleString('vi-VN')} g · tinh bột{' '}
-          {mon.tinh_bot_g.toLocaleString('vi-VN')} g · béo {mon.beo_g.toLocaleString('vi-VN')} g
-        </Text>
-        <NhanDiUng danhSachNhom={mon.nhom_di_ung} chiTiet={mon.thu_bi_bat.join(', ')} />
-      </View>
-
-      {/* Đã ghi thì hiện dấu tick tròn; chưa ghi thì nút "✓ Đã ăn" ghi 1 suất vào nhật ký hôm nay */}
-      {daGhi ? (
-        <View style={styles.daGhi}>
-          <Ionicons name="checkmark-circle" size={18} color={colors.protein} />
-          <Text style={styles.chuDaGhi}>Đã ghi</Text>
+      {/* Dưới ảnh: chữ bên trái, nút bên phải */}
+      <View style={styles.hangDuoiAnh}>
+        {/* Tên món (gạch ngang khi đã ghi); calo, đạm, tinh bột, béo của 1 suất; nhãn ⚠ nếu có thứ người dùng dị ứng */}
+        <View style={styles.cotGiua}>
+          <Text style={[styles.tenMon, daGhi ? styles.tenMonDaGhi : null]}>{mon.ten_mon}</Text>
+          <Text style={styles.chuPhu}>
+            {mon.so_calo.toLocaleString('vi-VN')} kcal · đạm {mon.dam_g.toLocaleString('vi-VN')} g · tinh bột{' '}
+            {mon.tinh_bot_g.toLocaleString('vi-VN')} g · béo {mon.beo_g.toLocaleString('vi-VN')} g
+          </Text>
+          <NhanDiUng danhSachNhom={mon.nhom_di_ung} chiTiet={mon.thu_bi_bat.join(', ')} />
         </View>
-      ) : (
-        <Pressable
-          style={({ pressed }) => [styles.nut, khoa ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
-          disabled={dangGhi || khoa}
-          onPress={onDaAn}
-        >
-          {!dangGhi ? <Ionicons name="checkmark" size={16} color={colors.protein} /> : null}
-          <Text style={styles.chuNut}>{dangGhi ? 'Đang ghi…' : 'Đã ăn'}</Text>
-        </Pressable>
-      )}
+
+        {/* Đã ghi thì hiện dấu tick tròn; chưa ghi thì nút "✓ Đã ăn" ghi 1 suất vào nhật ký hôm nay */}
+        {daGhi ? (
+          <View style={styles.daGhi}>
+            <Ionicons name="checkmark-circle" size={18} color={colors.protein} />
+            <Text style={styles.chuDaGhi}>Đã ghi</Text>
+          </View>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [styles.nut, khoa ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
+            disabled={dangGhi || khoa}
+            onPress={onDaAn}
+          >
+            {!dangGhi ? <Ionicons name="checkmark" size={16} color={colors.protein} /> : null}
+            <Text style={styles.chuNut}>{dangGhi ? 'Đang ghi…' : 'Đã ăn'}</Text>
+          </Pressable>
+        )}
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   the: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.small,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -72,10 +72,16 @@ const styles = StyleSheet.create({
     opacity: pressedOpacity,
   },
   anh: {
-    width: 72,
-    height: 48,
+    width: '100%',
+    aspectRatio: 2,
     borderRadius: radius.input,
     backgroundColor: colors.surface,
+    marginBottom: spacing.small,
+  },
+  hangDuoiAnh: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.small,
   },
   cotGiua: {
     flex: 1,

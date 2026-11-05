@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  canNangLamTronLen,
+  canNangLamTronXuong,
   docCanNang,
   docChieuCaoFeetInch,
   docKhoiLuong,
+  docVongEo,
+  doiCmRaDonVi,
   doiCmRaFeetInch,
   doiGamRaDonVi,
   doiKgRaDonVi,
@@ -13,6 +17,7 @@ import {
   vietGioiHan,
   vietKhoiLuong,
   vietThayDoiCanNang,
+  vietVongEo,
 } from './DoiDonVi.ts';
 
 // Giống bảng quy_dinh (NIST Handbook 44, Phụ lục C)
@@ -98,4 +103,26 @@ test('giới hạn theo đơn vị: cận dưới làm tròn lên, cận trên l
   assert.equal(vietGioiHan(100, 250, 'chieu_cao', 'met', HE_SO), 'từ 100 đến 250 cm');
   assert.equal(vietGioiHan(1, 5000, 'khoi_luong', 'anh_my', HE_SO), 'từ 0,1 đến 176,3 oz');
   assert.equal(vietGioiHan(1, 5000, 'khoi_luong', 'met', HE_SO), 'từ 1 đến 5.000 g');
+});
+
+test('vòng eo: đọc ra cm 1 số lẻ, đổi và viết theo đơn vị', () => {
+  assert.equal(docVongEo('92', 'met', HE_SO), 92);
+  assert.equal(docVongEo('36', 'anh_my', HE_SO), 91.4);
+  assert.equal(docVongEo('', 'met', HE_SO), null);
+  assert.equal(doiCmRaDonVi(85, 'anh_my', HE_SO), 33.5);
+  assert.equal(doiCmRaDonVi(85, 'met', HE_SO), 85);
+  assert.equal(vietVongEo(85, 'met', HE_SO), '85 cm');
+  assert.equal(vietVongEo(85, 'anh_my', HE_SO), '33,5 in');
+});
+
+test('giới hạn vòng eo theo đơn vị', () => {
+  assert.equal(vietGioiHan(40, 200, 'vong_eo', 'met', HE_SO), 'từ 40 đến 200 cm');
+  assert.equal(vietGioiHan(40, 200, 'vong_eo', 'anh_my', HE_SO), 'từ 15,8 đến 78,7 in');
+});
+
+test('làm tròn cân cho lời lỗi: sàn làm tròn lên, trần làm tròn xuống', () => {
+  assert.equal(canNangLamTronLen(53.465, 'met', HE_SO), 53.5);
+  assert.equal(canNangLamTronLen(53.465, 'anh_my', HE_SO), 117.9);
+  assert.equal(canNangLamTronXuong(67.375, 'met', HE_SO), 67.3);
+  assert.equal(canNangLamTronXuong(67.375, 'anh_my', HE_SO), 148.5);
 });

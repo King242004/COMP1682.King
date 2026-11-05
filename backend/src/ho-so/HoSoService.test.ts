@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { chonMucVanDongTheoTuoi, docMaNhomDiUng, docNgaySinh, phanLoaiBmi, tinhBmi, tinhChuyenHoaCoBan, tinhMucTieuCalo, tinhTuoi } from './HoSoService.ts';
+import { chonCanBatDau, chonMucVanDongTheoTuoi, docMaNhomDiUng, docNgaySinh, kiemTraCanMucTieu, phanLoaiBmi, tinhBmi, tinhChuyenHoaCoBan, tinhMucTieuCalo, tinhTuoi } from './HoSoService.ts';
 
 // Ngưỡng giống bảng quy_dinh (QĐ 2892, Bảng 4.1)
 const nguong = { thieuCan: 18.5, thuaCan: 23, beoPhiDo1: 25, beoPhiDo2: 30 };
@@ -107,4 +107,58 @@ test('đọc ngày sinh app gửi lên: đúng dạng năm-tháng-ngày và là 
   assert.equal(docNgaySinh('2005-02-29'), null);
   assert.equal(docNgaySinh('24/11/2004'), null);
   assert.equal(docNgaySinh(2004), null);
+});
+
+// Ngưỡng cân mục tiêu giống bảng quy_dinh: sàn giảm cân BMI 18,5 (QĐ 2892), cân lý tưởng BMI 22
+const nguongCanMucTieu = { bmiSanGiamCan: 18.5, bmiLyTuong: 22 };
+
+test('cân mục tiêu giảm cân: nhỏ hơn cân hiện tại và không dưới sàn BMI', () => {
+  assert.equal(kiemTraCanMucTieu(65, 'giam', 72, 170, nguongCanMucTieu), null);
+  assert.equal(kiemTraCanMucTieu(72, 'giam', 72, 170, nguongCanMucTieu), 'Cân mục tiêu phải nhỏ hơn cân hiện tại');
+  assert.equal(kiemTraCanMucTieu(53.4, 'giam', 72, 170, nguongCanMucTieu), 'Cân mục tiêu thấp nhất là 53,5 kg');
+  // 117,9 lb (số thấp nhất app báo cho người dùng Anh-Mỹ) đổi ra kg vẫn qua
+  assert.equal(kiemTraCanMucTieu(53.4785, 'giam', 72, 170, nguongCanMucTieu), null);
+});
+
+test('cân mục tiêu giảm cân từ 65 tuổi dùng sàn BMI 21,5', () => {
+  assert.equal(
+    kiemTraCanMucTieu(60, 'giam', 72, 170, { bmiSanGiamCan: 21.5, bmiLyTuong: 22 }),
+    'Cân mục tiêu thấp nhất là 62,2 kg',
+  );
+});
+
+test('cân mục tiêu tăng cân: lớn hơn cân hiện tại và không quá cân lý tưởng', () => {
+  assert.equal(kiemTraCanMucTieu(62, 'tang', 55, 175, nguongCanMucTieu), null);
+  assert.equal(kiemTraCanMucTieu(55, 'tang', 55, 175, nguongCanMucTieu), 'Cân mục tiêu phải lớn hơn cân hiện tại');
+  assert.equal(kiemTraCanMucTieu(67.4, 'tang', 55, 175, nguongCanMucTieu), 'Cân mục tiêu cao nhất là 67,3 kg');
+  assert.equal(kiemTraCanMucTieu(67.375, 'tang', 55, 175, nguongCanMucTieu), null);
+});
+
+test('cân mục tiêu ngoài 30–300 kg', () => {
+  assert.equal(kiemTraCanMucTieu(29, 'giam', 40, 100, nguongCanMucTieu), 'Cân mục tiêu từ 30 đến 300 kg');
+});
+
+// Hồ sơ cũ đang giảm cân về 65 kg, bắt đầu từ 72 kg
+const hoSoDangGiam = {
+  gioi_tinh: 'nam' as const,
+  ngay_sinh: '1996-01-01',
+  chieu_cao_cm: 170,
+  can_nang_kg: 70,
+  muc_van_dong: 'trung_binh' as const,
+  muc_tieu: 'giam' as const,
+  muc_tieu_calo: 1900,
+  tuoi_tinh_muc_tieu: 30,
+  di_ung_kieng_an: '',
+  vong_eo_cm: 92,
+  can_muc_tieu_kg: 65,
+  can_bat_dau_kg: 72,
+};
+
+test('chọn cân lúc bắt đầu: giữ số cũ khi không đổi mục tiêu, tính lại khi đổi', () => {
+  assert.equal(chonCanBatDau(hoSoDangGiam, 'giu', null, 70), null);
+  assert.equal(chonCanBatDau(hoSoDangGiam, 'giam', null, 70), null);
+  assert.equal(chonCanBatDau(hoSoDangGiam, 'giam', 65, 70), 72);
+  assert.equal(chonCanBatDau(hoSoDangGiam, 'giam', 63, 70), 70);
+  assert.equal(chonCanBatDau(hoSoDangGiam, 'tang', 62, 55), 55);
+  assert.equal(chonCanBatDau({ ...hoSoDangGiam, can_muc_tieu_kg: null, can_bat_dau_kg: null }, 'giam', 65, 72), 72);
 });

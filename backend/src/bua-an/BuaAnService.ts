@@ -163,6 +163,36 @@ export function tinhGioiHanNenHanChe(mucTieuCalo: number, quyDinh: QuyDinhNenHan
   };
 }
 
+// Mục tiêu 3 chất và giới hạn 3 chất nên hạn chế của một người, Trang chủ và Báo cáo cùng dùng
+export type MucTieuVaGioiHan = {
+  muc_tieu_chat: MucTieuChat;
+  gioi_han_nen_han_che: GioiHanNenHanChe;
+};
+
+// Lấy các con số trong bảng quy_dinh rồi tính mục tiêu 3 chất và giới hạn 3 chất nên hạn chế từ mục tiêu calo và cân nặng
+export async function layMucTieuVaGioiHan(mucTieuCalo: number, canNangKg: number): Promise<MucTieuVaGioiHan> {
+  const kcalMoiGTinhBot = await layQuyDinh('kcal_moi_g_tinh_bot');
+  const kcalMoiGBeo = await layQuyDinh('kcal_moi_g_beo');
+  const mucTieuChat = tinhMucTieuChat(mucTieuCalo, canNangKg, {
+    damGMoiKg: await layQuyDinh('dam_g_moi_kg'),
+    tyLeTinhBotThap: await layQuyDinh('ty_le_nang_luong_tinh_bot_thap'),
+    tyLeTinhBotCao: await layQuyDinh('ty_le_nang_luong_tinh_bot_cao'),
+    tyLeBeoThap: await layQuyDinh('ty_le_nang_luong_beo_thap'),
+    tyLeBeoCao: await layQuyDinh('ty_le_nang_luong_beo_cao'),
+    kcalMoiGTinhBot: kcalMoiGTinhBot,
+    kcalMoiGBeo: kcalMoiGBeo,
+  });
+  // Đường là một loại chất bột đường nên dùng chung hệ số kcal mỗi gam với tinh bột
+  const gioiHanNenHanChe = tinhGioiHanNenHanChe(mucTieuCalo, {
+    muoiToiDaG: await layQuyDinh('muoi_toi_da_g'),
+    tyLeDuongToiDa: await layQuyDinh('ty_le_nang_luong_duong_toi_da'),
+    tyLeBeoNoToiDa: await layQuyDinh('ty_le_nang_luong_beo_no_toi_da'),
+    kcalMoiGDuong: kcalMoiGTinhBot,
+    kcalMoiGBeo: kcalMoiGBeo,
+  });
+  return { muc_tieu_chat: mucTieuChat, gioi_han_nen_han_che: gioiHanNenHanChe };
+}
+
 // Số liệu của một món cần để cộng tổng; các chất có thể chưa có (null)
 export type SoLieuMon = {
   so_calo: number;
@@ -265,25 +295,9 @@ export async function xemNhatKyNgay(nguoiDungId: number, ngay: string): Promise<
   let mucTieuChat: MucTieuChat | null = null;
   let gioiHanNenHanChe: GioiHanNenHanChe | null = null;
   if (hoSo.muc_tieu_calo !== null && hoSo.can_nang_kg !== null) {
-    const kcalMoiGTinhBot = await layQuyDinh('kcal_moi_g_tinh_bot');
-    const kcalMoiGBeo = await layQuyDinh('kcal_moi_g_beo');
-    mucTieuChat = tinhMucTieuChat(hoSo.muc_tieu_calo, hoSo.can_nang_kg, {
-      damGMoiKg: await layQuyDinh('dam_g_moi_kg'),
-      tyLeTinhBotThap: await layQuyDinh('ty_le_nang_luong_tinh_bot_thap'),
-      tyLeTinhBotCao: await layQuyDinh('ty_le_nang_luong_tinh_bot_cao'),
-      tyLeBeoThap: await layQuyDinh('ty_le_nang_luong_beo_thap'),
-      tyLeBeoCao: await layQuyDinh('ty_le_nang_luong_beo_cao'),
-      kcalMoiGTinhBot: kcalMoiGTinhBot,
-      kcalMoiGBeo: kcalMoiGBeo,
-    });
-    // Đường là một loại chất bột đường nên dùng chung hệ số kcal mỗi gam với tinh bột
-    gioiHanNenHanChe = tinhGioiHanNenHanChe(hoSo.muc_tieu_calo, {
-      muoiToiDaG: await layQuyDinh('muoi_toi_da_g'),
-      tyLeDuongToiDa: await layQuyDinh('ty_le_nang_luong_duong_toi_da'),
-      tyLeBeoNoToiDa: await layQuyDinh('ty_le_nang_luong_beo_no_toi_da'),
-      kcalMoiGDuong: kcalMoiGTinhBot,
-      kcalMoiGBeo: kcalMoiGBeo,
-    });
+    const mucTieuVaGioiHan = await layMucTieuVaGioiHan(hoSo.muc_tieu_calo, hoSo.can_nang_kg);
+    mucTieuChat = mucTieuVaGioiHan.muc_tieu_chat;
+    gioiHanNenHanChe = mucTieuVaGioiHan.gioi_han_nen_han_che;
   }
 
   return {

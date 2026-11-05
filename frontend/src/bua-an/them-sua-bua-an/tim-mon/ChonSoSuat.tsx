@@ -8,11 +8,10 @@ import { SectionTitle } from '../../../shared/components/SectionTitle';
 import { colors, fontSizes, radius, spacing } from '../../../shared/theme';
 import type { MonTraCuu } from '../../../tra-mon/TraMonApi';
 
-// Người dùng ăn bao nhiêu so với 1 suất của Viện; là lựa chọn giao diện, giống màn chi tiết món ở Khám phá
+// Người dùng ăn bao nhiêu so với 1 suất của Viện; là lựa chọn giao diện
 const LUA_CHON_PHAN_AN = [
   { giaTri: 0.5, nhan: '½' },
   { giaTri: 1, nhan: '1' },
-  { giaTri: 1.5, nhan: '1½' },
   { giaTri: 2, nhan: '2' },
 ];
 

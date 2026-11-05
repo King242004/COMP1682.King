@@ -6,12 +6,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../src/auth/AuthContext';
-import { docCanNang, docChieuCaoFeetInch, doiCmRaFeetInch, doiKgRaDonVi, vietGioiHan } from '../../src/don-vi/DoiDonVi';
+import { canNangLamTronLen, canNangLamTronXuong, docCanNang, docChieuCaoFeetInch, docVongEo, doiCmRaDonVi, doiCmRaFeetInch, doiKgRaDonVi, vietGioiHan } from '../../src/don-vi/DoiDonVi';
 import type { DonVi } from '../../src/don-vi/DoiDonVi';
 import { useDonVi } from '../../src/don-vi/DonViContext';
 import { ChonNgaySinh } from '../../src/ho-so/sua-ho-so/ChonNgaySinh';
 import { layHoSo, layLuaChonHoSo, luuHoSo } from '../../src/ho-so/HoSoApi';
-import type { GioiTinh, LuaChonHoSo, MucTieu, MucVanDong } from '../../src/ho-so/HoSoApi';
+import type { GioiTinh, HoSoGuiLen, LuaChonHoSo, MucTieu, MucVanDong } from '../../src/ho-so/HoSoApi';
 import { Button } from '../../src/shared/components/Button';
 import { Card } from '../../src/shared/components/Card';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
@@ -36,6 +36,10 @@ const CHIEU_CAO_NHO_NHAT = 100;
 const CHIEU_CAO_LON_NHAT = 250;
 const CAN_NANG_NHO_NHAT = 30;
 const CAN_NANG_LON_NHAT = 300;
+
+// Giới hạn vòng eo để chặn gõ nhầm (giống backend)
+const VONG_EO_NHO_NHAT = 40;
+const VONG_EO_LON_NHAT = 200;
 
 // Ô kiêng ăn khác tối đa bao nhiêu ký tự (giống backend)
 const DI_UNG_KIENG_AN_DAI_NHAT = 200;
@@ -88,6 +92,10 @@ export default function SuaHoSo() {
   const [mucTieu, setMucTieu] = useState<MucTieu>('giu');
   const [maNhomDiUng, setMaNhomDiUng] = useState<string[]>([]);
   const [diUngKiengAn, setDiUngKiengAn] = useState('');
+  // Cân mục tiêu và vòng eo gõ theo đơn vị đang dùng; số đã lưu (kg, cm) chờ có số đổi rồi mới điền vào ô
+  const [canMucTieu, setCanMucTieu] = useState('');
+  const [vongEo, setVongEo] = useState('');
+  const [soDaLuu, setSoDaLuu] = useState<{ canMucTieuKg: number | null; vongEoCm: number | null } | null>(null);
 
   // Lỗi dưới từng ô (theo tên ô), lỗi từ server, trạng thái đang lưu
   const [loiNhap, setLoiNhap] = useState<Record<string, string>>({});
@@ -113,6 +121,7 @@ export default function SuaHoSo() {
         setMucTieu(hoSo.muc_tieu ?? 'giu');
         setMaNhomDiUng(hoSo.nhom_di_ung_da_chon.map((nhom) => nhom.ma));
         setDiUngKiengAn(hoSo.di_ung_kieng_an);
+        setSoDaLuu({ canMucTieuKg: hoSo.can_muc_tieu_kg, vongEoCm: hoSo.vong_eo_cm });
       }
     } catch (loi) {
       setLoiTai((loi as Error).message);
@@ -129,7 +138,21 @@ export default function SuaHoSo() {
     }
   }, [heSo, chieuCao]);
 
-  // Đổi đơn vị trong form lần đầu thì đổi luôn số đang gõ ở ô cân nặng và chiều cao sang đơn vị mới
+  // Điền ô cân mục tiêu và vòng eo theo đơn vị khi đã tải hồ sơ và có số đổi (Mét không cần chờ); điền một lần rồi thôi
+  useEffect(() => {
+    if (soDaLuu === null || (donViDangDung === 'anh_my' && heSo === null)) {
+      return;
+    }
+    if (soDaLuu.canMucTieuKg !== null) {
+      setCanMucTieu(String(doiKgRaDonVi(soDaLuu.canMucTieuKg, donViDangDung, heSo)));
+    }
+    if (soDaLuu.vongEoCm !== null) {
+      setVongEo(String(doiCmRaDonVi(soDaLuu.vongEoCm, donViDangDung, heSo)));
+    }
+    setSoDaLuu(null);
+  }, [soDaLuu, heSo]);
+
+  // Đổi đơn vị trong form lần đầu thì đổi luôn số đang gõ ở ô cân nặng, chiều cao, cân mục tiêu và vòng eo sang đơn vị mới
   function doiDonViLanDau(donViMoi: DonVi) {
     if (donViMoi !== donViLanDau && heSo !== null) {
       const canNangKg = docCanNang(canNang, donViLanDau, heSo);
@@ -145,6 +168,14 @@ export default function SuaHoSo() {
       const chieuCaoTuFeetInch = docChieuCaoFeetInch(chieuCaoFeet, chieuCaoInch, heSo);
       if (donViMoi === 'met' && chieuCaoTuFeetInch !== null) {
         setChieuCao(String(chieuCaoTuFeetInch));
+      }
+      const canMucTieuKg = docCanNang(canMucTieu, donViLanDau, heSo);
+      if (canMucTieuKg !== null) {
+        setCanMucTieu(String(doiKgRaDonVi(canMucTieuKg, donViMoi, heSo)));
+      }
+      const vongEoCm = docVongEo(vongEo, donViLanDau, heSo);
+      if (vongEoCm !== null) {
+        setVongEo(String(doiCmRaDonVi(vongEoCm, donViMoi, heSo)));
       }
     }
     setDonViLanDau(donViMoi);
@@ -188,6 +219,15 @@ export default function SuaHoSo() {
     }
   }
 
+  // Cân ứng với BMI sàn giảm cân và cân lý tưởng theo chiều cao đang nhập, để kiểm và điền sẵn ô cân mục tiêu
+  const chieuCaoMet = chieuCaoSo / 100;
+  const canSanKg = nguongGiamCan * chieuCaoMet * chieuCaoMet;
+  let canLyTuongKg = 0;
+  if (luaChon !== null) {
+    canLyTuongKg = luaChon.bmi_ly_tuong * chieuCaoMet * chieuCaoMet;
+  }
+  const tenDonViCan = laAnhMy ? 'lb' : 'kg';
+
   // Lựa chọn nào không hợp với BMI hoặc tuổi thì làm mờ
   let choPhepGiam = true;
   let choPhepTang = true;
@@ -213,6 +253,17 @@ export default function SuaHoSo() {
       setMucVanDong('trung_binh');
     }
   }, [choPhepNang]);
+
+  // Bấm một mục tiêu; giảm / tăng mà ô cân mục tiêu còn trống thì điền sẵn cân lý tưởng (làm tròn xuống để luôn hợp lệ)
+  function chonMucTieu(mucTieuMoi: MucTieu) {
+    setMucTieu(mucTieuMoi);
+    if (canMucTieu.trim() !== '' || chieuCaoSo <= 0) {
+      return;
+    }
+    if (mucTieuMoi === 'tang' || (mucTieuMoi === 'giam' && canLyTuongKg < canNangSo)) {
+      setCanMucTieu(String(canNangLamTronXuong(canLyTuongKg, donViDangDung, heSo)));
+    }
+  }
 
   // Kiểm các ô, đúng thì gửi lên server
   async function handleLuu() {
@@ -243,6 +294,30 @@ export default function SuaHoSo() {
     if (mucVanDong === null) {
       loiMoi.mucVanDong = 'Hãy chọn mức vận động';
     }
+
+    // Vòng eo không bắt buộc: trống là không có; gõ thì phải trong giới hạn
+    const vongEoCm = docVongEo(vongEo, donViDangDung, heSo);
+    if (hienMucTieu && vongEo.trim() !== '' && !(vongEoCm !== null && vongEoCm >= VONG_EO_NHO_NHAT && vongEoCm <= VONG_EO_LON_NHAT)) {
+      loiMoi.vongEo = `Vòng eo ${vietGioiHan(VONG_EO_NHO_NHAT, VONG_EO_LON_NHAT, 'vong_eo', donViDangDung, heSo)}`;
+    }
+
+    // Cân mục tiêu (giảm / tăng): cùng thứ tự và cùng lời lỗi với server; số trong lời lỗi theo đơn vị đang dùng
+    const canMucTieuKg = docCanNang(canMucTieu, donViDangDung, heSo);
+    if (hienMucTieu && mucTieu !== 'giu') {
+      if (canMucTieuKg === null) {
+        loiMoi.canMucTieu = 'Hãy nhập cân mục tiêu';
+      } else if (!(canMucTieuKg >= CAN_NANG_NHO_NHAT && canMucTieuKg <= CAN_NANG_LON_NHAT)) {
+        loiMoi.canMucTieu = `Cân mục tiêu ${vietGioiHan(CAN_NANG_NHO_NHAT, CAN_NANG_LON_NHAT, 'can_nang', donViDangDung, heSo)}`;
+      } else if (mucTieu === 'giam' && canMucTieuKg >= canNangSo) {
+        loiMoi.canMucTieu = 'Cân mục tiêu phải nhỏ hơn cân hiện tại';
+      } else if (mucTieu === 'giam' && canMucTieuKg < canSanKg) {
+        loiMoi.canMucTieu = `Cân mục tiêu thấp nhất là ${canNangLamTronLen(canSanKg, donViDangDung, heSo).toLocaleString('vi-VN')} ${tenDonViCan}`;
+      } else if (mucTieu === 'tang' && canMucTieuKg <= canNangSo) {
+        loiMoi.canMucTieu = 'Cân mục tiêu phải lớn hơn cân hiện tại';
+      } else if (mucTieu === 'tang' && canMucTieuKg > canLyTuongKg) {
+        loiMoi.canMucTieu = `Cân mục tiêu cao nhất là ${canNangLamTronXuong(canLyTuongKg, donViDangDung, heSo).toLocaleString('vi-VN')} ${tenDonViCan}`;
+      }
+    }
     setLoiNhap(loiMoi);
     if (Object.keys(loiMoi).length > 0 || gioiTinh === null || ngaySinh === null || mucVanDong === null) {
       return;
@@ -256,7 +331,7 @@ export default function SuaHoSo() {
       if (laLanDau && donViLanDau !== donVi) {
         await doiDonVi(donViLanDau);
       }
-      await luuHoSo({
+      const hoSoGuiLen: HoSoGuiLen = {
         gioi_tinh: gioiTinh,
         ngay_sinh: ngaySinh,
         chieu_cao_cm: chieuCaoSo,
@@ -265,7 +340,16 @@ export default function SuaHoSo() {
         muc_tieu: mucTieu,
         ma_nhom_di_ung: maNhomDiUng,
         di_ung_kieng_an: diUngKiengAn.trim(),
-      });
+      };
+      // Vòng eo và cân mục tiêu chỉ gửi khi đang sửa phần "Mục tiêu"; phần khác không gửi để server giữ số cũ
+      if (hienMucTieu) {
+        hoSoGuiLen.vong_eo_cm = vongEoCm;
+        hoSoGuiLen.can_muc_tieu_kg = null;
+        if (mucTieu !== 'giu') {
+          hoSoGuiLen.can_muc_tieu_kg = canMucTieuKg;
+        }
+      }
+      await luuHoSo(hoSoGuiLen);
       if (hienOTen && user && tenHienThi.trim() !== user.ten_hien_thi) {
         await changeDisplayName(tenHienThi.trim());
       }
@@ -387,13 +471,36 @@ export default function SuaHoSo() {
           <Card>
             <TieuDeThe bieuTuong={<MaterialCommunityIcons name="target" size={18} color={colors.primary} />} tieuDe="Mục tiêu" />
             <View style={styles.hangBaNut}>
-              <NutMucTieu ten="Giảm cân" laDangChon={mucTieu === 'giam'} biKhoa={!choPhepGiam || dangLuu} onPress={() => setMucTieu('giam')} />
-              <NutMucTieu ten="Giữ cân" laDangChon={mucTieu === 'giu'} biKhoa={dangLuu} onPress={() => setMucTieu('giu')} />
-              <NutMucTieu ten="Tăng cân" laDangChon={mucTieu === 'tang'} biKhoa={!choPhepTang || dangLuu} onPress={() => setMucTieu('tang')} />
+              <NutMucTieu ten="Giảm cân" laDangChon={mucTieu === 'giam'} biKhoa={!choPhepGiam || dangLuu} onPress={() => chonMucTieu('giam')} />
+              <NutMucTieu ten="Giữ cân" laDangChon={mucTieu === 'giu'} biKhoa={dangLuu} onPress={() => chonMucTieu('giu')} />
+              <NutMucTieu ten="Tăng cân" laDangChon={mucTieu === 'tang'} biKhoa={!choPhepTang || dangLuu} onPress={() => chonMucTieu('tang')} />
             </View>
             <Text style={styles.chuPhu}>• Giảm cân: dành cho BMI từ {nguongGiamCan.toLocaleString('vi-VN')} trở lên</Text>
             <Text style={styles.chuPhu}>• Giữ cân: dành cho mọi người</Text>
             <Text style={styles.chuPhu}>• Tăng cân: dành cho BMI dưới {luaChon.bmi_ly_tuong.toLocaleString('vi-VN')}</Text>
+
+            {/* Cân mục tiêu: chỉ khi giảm / tăng */}
+            {mucTieu !== 'giu' ? (
+              <TextField
+                label={`Cân mục tiêu (${tenDonViCan})`}
+                value={canMucTieu}
+                onChangeText={setCanMucTieu}
+                error={loiNhap.canMucTieu ?? ''}
+                isNumber
+                isDisabled={dangLuu}
+              />
+            ) : null}
+
+            {/* Vòng eo không bắt buộc, kèm cách đo theo NICE */}
+            <TextField
+              label={laAnhMy ? 'Vòng eo (in, không bắt buộc)' : 'Vòng eo (cm, không bắt buộc)'}
+              value={vongEo}
+              onChangeText={setVongEo}
+              error={loiNhap.vongEo ?? ''}
+              isNumber
+              isDisabled={dangLuu}
+            />
+            <Text style={styles.chuPhu}>Đo ngang giữa xương sườn dưới cùng và đỉnh hông (ngay trên rốn), thở ra tự nhiên rồi đo.</Text>
           </Card>
         ) : null}
 

@@ -63,14 +63,6 @@ export function vietChieuCao(cm: number, donVi: DonVi, heSo: HeSoDonVi | null): 
   return `${vietMotSoLe(cm)} cm`;
 }
 
-// Lượng thức ăn theo đơn vị: "150 g" hoặc "5,3 oz"
-export function vietKhoiLuong(gam: number, donVi: DonVi, heSo: HeSoDonVi | null): string {
-  if (donVi === 'anh_my' && heSo !== null) {
-    return `${vietMotSoLe(gam / heSo.gamMoiOunce)} oz`;
-  }
-  return `${vietMotSoLe(gam)} g`;
-}
-
 // Câu dặn AI viết theo đơn vị Anh-Mỹ; Mét thì không cần dặn
 export function vietLoiDanDonViChoAi(donVi: DonVi): string {
   if (donVi === 'anh_my') {

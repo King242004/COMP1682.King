@@ -21,6 +21,10 @@ export type HoSo = {
   // BMR (chuyển hóa cơ bản) và TDEE (năng lượng để giữ cân), kcal mỗi ngày
   chuyen_hoa_co_ban: number | null;
   nang_luong_giu_can: number | null;
+  // Vòng eo (không bắt buộc), cân mục tiêu và cân lúc bắt đầu lộ trình; giữ cân thì 2 số cân là null
+  vong_eo_cm: number | null;
+  can_muc_tieu_kg: number | null;
+  can_bat_dau_kg: number | null;
 };
 
 // Một nhóm dị ứng chọn được ở hồ sơ
@@ -39,6 +43,9 @@ export type HoSoGuiLen = {
   muc_tieu: MucTieu;
   ma_nhom_di_ung: string[];
   di_ung_kieng_an: string;
+  // Chỉ gửi từ phần "Mục tiêu"; không gửi thì server giữ số cũ
+  vong_eo_cm?: number | null;
+  can_muc_tieu_kg?: number | null;
 };
 
 // Những thứ màn hồ sơ cần: ngưỡng BMI và ngưỡng tuổi để làm mờ lựa chọn, 9 nhóm dị ứng để chọn

@@ -15,6 +15,10 @@ const CHIEU_CAO_LON_NHAT = 250;
 const CAN_NANG_NHO_NHAT = 30;
 const CAN_NANG_LON_NHAT = 300;
 
+// Giới hạn vòng eo để chặn gõ nhầm (giống CHECK trong 036_lo_trinh.sql)
+const VONG_EO_NHO_NHAT = 40;
+const VONG_EO_LON_NHAT = 200;
+
 // Dạng ngày năm-tháng-ngày, ví dụ 2004-11-24
 const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -194,6 +198,66 @@ export function docMaNhomDiUng(giaTri: unknown, maHopLe: string[]): string[] | n
   return maDaDoc;
 }
 
+// Ngưỡng BMI để kiểm cân mục tiêu: sàn khi giảm cân (người cao tuổi cao hơn) và BMI lý tưởng (trần khi tăng cân)
+export type NguongCanMucTieu = {
+  bmiSanGiamCan: number;
+  bmiLyTuong: number;
+};
+
+// Kiểm cân mục tiêu theo hướng giảm / tăng; sai thì trả lời lỗi, đúng thì trả null
+export function kiemTraCanMucTieu(
+  canMucTieuKg: number,
+  mucTieu: 'giam' | 'tang',
+  canNangKg: number,
+  chieuCaoCm: number,
+  nguong: NguongCanMucTieu,
+): string | null {
+  if (canMucTieuKg < CAN_NANG_NHO_NHAT || canMucTieuKg > CAN_NANG_LON_NHAT) {
+    return `Cân mục tiêu từ ${CAN_NANG_NHO_NHAT} đến ${CAN_NANG_LON_NHAT} kg`;
+  }
+  const chieuCaoMet = chieuCaoCm / 100;
+
+  // Giảm cân: nhỏ hơn cân hiện tại, không dưới cân ứng với BMI sàn (số trong lời lỗi làm tròn lên để luôn hợp lệ)
+  if (mucTieu === 'giam') {
+    if (canMucTieuKg >= canNangKg) {
+      return 'Cân mục tiêu phải nhỏ hơn cân hiện tại';
+    }
+    const canSanKg = nguong.bmiSanGiamCan * chieuCaoMet * chieuCaoMet;
+    if (canMucTieuKg < canSanKg) {
+      const canSanLamTron = Math.ceil(canSanKg * 10) / 10;
+      return `Cân mục tiêu thấp nhất là ${canSanLamTron.toLocaleString('vi-VN')} kg`;
+    }
+    return null;
+  }
+
+  // Tăng cân: lớn hơn cân hiện tại, không quá cân lý tưởng (số trong lời lỗi làm tròn xuống để luôn hợp lệ)
+  if (canMucTieuKg <= canNangKg) {
+    return 'Cân mục tiêu phải lớn hơn cân hiện tại';
+  }
+  const canLyTuongKg = nguong.bmiLyTuong * chieuCaoMet * chieuCaoMet;
+  if (canMucTieuKg > canLyTuongKg) {
+    const canLyTuongLamTron = Math.floor(canLyTuongKg * 10) / 10;
+    return `Cân mục tiêu cao nhất là ${canLyTuongLamTron.toLocaleString('vi-VN')} kg`;
+  }
+  return null;
+}
+
+// Cân lúc bắt đầu lộ trình: giữ số cũ khi vẫn cùng mục tiêu và cùng cân mục tiêu, đổi thì tính lại từ cân hiện tại
+export function chonCanBatDau(
+  hoSoCu: HoSo,
+  mucTieuMoi: MucTieu,
+  canMucTieuMoiKg: number | null,
+  canNangHienTaiKg: number,
+): number | null {
+  if (mucTieuMoi === 'giu' || canMucTieuMoiKg === null) {
+    return null;
+  }
+  if (hoSoCu.muc_tieu === mucTieuMoi && hoSoCu.can_muc_tieu_kg === canMucTieuMoiKg && hoSoCu.can_bat_dau_kg !== null) {
+    return hoSoCu.can_bat_dau_kg;
+  }
+  return canNangHienTaiKg;
+}
+
 // Lấy hồ sơ kèm BMI, phân loại, BMR, TDEE và các nhóm dị ứng đã chọn; chưa thiết lập thì các số này là null
 export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
   const hoSo = await layHoSo(nguoiDungId);
@@ -333,9 +397,52 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     throw new HttpError(400, `Từ ${tuoiKhongCoMucNang} tuổi chỉ chọn mức vận động nhẹ hoặc trung bình`);
   }
 
+  // Bước 2b. Vòng eo và cân mục tiêu chỉ gửi từ phần "Mục tiêu"; không gửi thì giữ số cũ
+  const hoSoCu = await layHoSo(nguoiDungId);
+  const nguongCanMucTieu = { bmiSanGiamCan: nguongGiamCan, bmiLyTuong: bmiLyTuong };
+  let mucTieuLuu: MucTieu = mucTieu;
+
+  // Vòng eo không bắt buộc: gửi null là xóa
+  let vongEoCm = hoSoCu.vong_eo_cm;
+  if (duLieu.vong_eo_cm !== undefined) {
+    vongEoCm = null;
+    if (duLieu.vong_eo_cm !== null) {
+      if (typeof duLieu.vong_eo_cm !== 'number' || duLieu.vong_eo_cm < VONG_EO_NHO_NHAT || duLieu.vong_eo_cm > VONG_EO_LON_NHAT) {
+        throw new HttpError(400, `Vòng eo từ ${VONG_EO_NHO_NHAT} đến ${VONG_EO_LON_NHAT} cm`);
+      }
+      vongEoCm = duLieu.vong_eo_cm;
+    }
+  }
+
+  // Cân mục tiêu có gửi: giảm / tăng thì bắt buộc; làm tròn 2 số lẻ như cột trong database rồi mới kiểm hướng
+  let canMucTieuKg = hoSoCu.can_muc_tieu_kg;
+  if (duLieu.can_muc_tieu_kg !== undefined && mucTieu !== 'giu') {
+    if (typeof duLieu.can_muc_tieu_kg !== 'number') {
+      throw new HttpError(400, 'Hãy nhập cân mục tiêu');
+    }
+    canMucTieuKg = Math.round(duLieu.can_muc_tieu_kg * 100) / 100;
+    const loiCanMucTieu = kiemTraCanMucTieu(canMucTieuKg, mucTieu, canNangKg, chieuCaoCm, nguongCanMucTieu);
+    if (loiCanMucTieu !== null) {
+      throw new HttpError(400, loiCanMucTieu);
+    }
+  }
+
+  // Cân mục tiêu cũ (không gửi) không còn hợp: chạm đích, đổi chiều cao, qua 65 tuổi; thì về giữ cân như lúc ghi cân
+  if (duLieu.can_muc_tieu_kg === undefined && mucTieu !== 'giu' && canMucTieuKg !== null) {
+    if (kiemTraCanMucTieu(canMucTieuKg, mucTieu, canNangKg, chieuCaoCm, nguongCanMucTieu) !== null) {
+      mucTieuLuu = 'giu';
+    }
+  }
+
+  // Giữ cân thì không có cân mục tiêu; cân lúc bắt đầu giữ nguyên hay tính lại
+  if (mucTieuLuu === 'giu') {
+    canMucTieuKg = null;
+  }
+  const canBatDauKg = chonCanBatDau(hoSoCu, mucTieuLuu, canMucTieuKg, canNangKg);
+
   // Bước 3. Tính mục tiêu calo bằng các con số đúng giới, tuổi, mức vận động (ThuatToan.md bước 6-10)
   const mucTieuCalo = tinhMucTieuCalo(
-    { tuoi: tuoi, chieuCaoCm: chieuCaoCm, canNangKg: canNangKg, mucTieu: mucTieu },
+    { tuoi: tuoi, chieuCaoCm: chieuCaoCm, canNangKg: canNangKg, mucTieu: mucTieuLuu },
     {
       ganpuleHeSoCan: await layQuyDinh('ganpule_he_so_can'),
       ganpuleHeSoChieuCao: await layQuyDinh('ganpule_he_so_chieu_cao'),
@@ -356,10 +463,13 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     chieu_cao_cm: chieuCaoCm,
     can_nang_kg: canNangKg,
     muc_van_dong: mucVanDong,
-    muc_tieu: mucTieu,
+    muc_tieu: mucTieuLuu,
     muc_tieu_calo: mucTieuCalo,
     tuoi_tinh_muc_tieu: tuoi,
     di_ung_kieng_an: diUngKiengAn,
+    vong_eo_cm: vongEoCm,
+    can_muc_tieu_kg: canMucTieuKg,
+    can_bat_dau_kg: canBatDauKg,
     ma_nhom_di_ung: maNhomDiUng,
   };
   await luuHoSo(nguoiDungId, hoSoDeLuu);

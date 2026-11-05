@@ -37,18 +37,21 @@ export function TheBonTuan({ tienDo, onHoiCoach }: TheBonTuanProps) {
           <Text style={styles.chuHoiCoach}>Hỏi coach ›</Text>
         </Pressable>
       </View>
+      {/* Mỗi ô: nhãn nhỏ ở trên, số to ở giữa, dòng phụ ở dưới */}
       <View style={styles.hangO}>
         <View style={styles.o}>
+          <Text style={styles.nhan}>Nạp trung bình</Text>
           <Text style={styles.so}>{tomTat.calo_trung_binh === null ? '—' : tomTat.calo_trung_binh.toLocaleString('vi-VN')}</Text>
           <Text style={styles.chuPhu}>{chuPhuCalo}</Text>
         </View>
         <View style={styles.o}>
+          <Text style={styles.nhan}>Số ngày ghi</Text>
           <Text style={styles.so}>
             {tomTat.so_ngay_co_ghi}/{tomTat.so_ngay}
           </Text>
-          <Text style={styles.chuPhu}>{'ngày\ncó ghi'}</Text>
         </View>
         <View style={[styles.o, giamNhanhQua ? styles.oCanhBao : null]}>
+          <Text style={[styles.nhan, giamNhanhQua ? styles.chuCanhBao : null]}>Cân thay đổi</Text>
           <Text style={[styles.so, giamNhanhQua ? styles.chuCanhBao : null]}>{tomTat.thay_doi_kg_moi_thang === null ? '—' : vietThayDoiCanNang(tomTat.thay_doi_kg_moi_thang, donVi, heSo)}</Text>
           <Text style={[styles.chuPhu, giamNhanhQua ? styles.chuCanhBao : null]}>{chuPhuCan}</Text>
         </View>
@@ -90,6 +93,10 @@ const styles = StyleSheet.create({
   },
   oCanhBao: {
     backgroundColor: colors.warningBackground,
+  },
+  nhan: {
+    fontSize: fontSizes.label,
+    color: colors.textSecondary,
   },
   so: {
     fontSize: fontSizes.sectionTitle,

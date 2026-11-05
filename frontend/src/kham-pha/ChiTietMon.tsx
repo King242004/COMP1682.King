@@ -121,6 +121,7 @@ export function ChiTietMon({ mon, onDong, tenNut, bieuTuongNut, onBamNut }: ChiT
           {thanhPhan !== null && thanhPhan.length > 0 ? (
             <Card>
               <Text style={styles.tieuDeBang}>Trong 1 suất có</Text>
+              {/* Mỗi thành phần một hàng: tên bên trái, số gam và kcal bên phải */}
               {thanhPhan.map((dong) => (
                 <View key={dong.thu_tu} style={styles.dongBang}>
                   {/* Dòng có thứ người dùng dị ứng thì thêm ⚠ và đổi màu */}
@@ -143,9 +144,9 @@ export function ChiTietMon({ mon, onDong, tenNut, bieuTuongNut, onBamNut }: ChiT
                   {vietKhoiLuong(tongGam, donVi, heSo)} · {vietSo(tongCalo)} kcal
                 </Text>
               </View>
-              {coDongTrong ? <Text style={styles.chuPhu}>Dòng để trống: Viện không cân, chưa tính vào tổng.</Text> : null}
+              {coDongTrong ? <Text style={styles.chuGhiChu}>Dòng để trống: Viện không cân, chưa tính vào tổng.</Text> : null}
               {coChonNhomDiUng ? (
-                <Text style={styles.chuPhu}>
+                <Text style={styles.chuGhiChu}>
                   App kiểm theo tên thành phần Viện ghi. Nước dùng, nước chấm, nước sốt không ghi nấu từ gì nên chưa kiểm được.
                 </Text>
               ) : null}
@@ -214,18 +215,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing.medium,
   },
   tieuDeBang: {
-    fontSize: fontSizes.secondary,
-    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 4,
   },
   dongBang: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.small,
     paddingVertical: spacing.small,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   tenThanhPhan: {
+    flex: 1,
     fontSize: fontSizes.body,
-    fontWeight: '600',
     color: colors.text,
   },
   tenThanhPhanDiUng: {
@@ -241,7 +247,6 @@ const styles = StyleSheet.create({
   soThanhPhan: {
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
-    marginTop: 2,
   },
   dongCong: {
     flexDirection: 'row',
@@ -249,8 +254,13 @@ const styles = StyleSheet.create({
     paddingTop: spacing.small,
   },
   chuCong: {
-    fontSize: fontSizes.secondary,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
+  },
+  chuGhiChu: {
+    fontSize: fontSizes.label,
+    color: colors.textSecondary,
+    marginTop: spacing.small,
   },
 });

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { docDonVi, vietCanNang, vietChieuCao, vietKhoiLuong, vietLoiDanDonViChoAi, vietThayDoiCanNang } from './DonViService.ts';
+import { docDonVi, vietCanNang, vietChieuCao, vietLoiDanDonViChoAi, vietThayDoiCanNang } from './DonViService.ts';
 
 // Giống bảng quy_dinh (NIST Handbook 44, Phụ lục C)
 const HE_SO = { kgMoiPound: 0.45359237, cmMoiInch: 2.54, inchMoiFoot: 12, gamMoiOunce: 28.349523125 };
@@ -35,11 +35,6 @@ test('chiều cao: Anh-Mỹ ra ft và in, làm tròn inch trước nên không b
   assert.equal(vietChieuCao(170, 'anh_my', HE_SO), '5 ft 7 in');
   assert.equal(vietChieuCao(182.5, 'anh_my', HE_SO), '6 ft 0 in');
   assert.equal(vietChieuCao(170, 'met', HE_SO), '170 cm');
-});
-
-test('lượng thức ăn: Anh-Mỹ ra oz 1 số lẻ', () => {
-  assert.equal(vietKhoiLuong(150, 'anh_my', HE_SO), '5,3 oz');
-  assert.equal(vietKhoiLuong(150, 'met', HE_SO), '150 g');
 });
 
 test('lời dặn AI: Mét không dặn gì, Anh-Mỹ dặn dùng lb và oz', () => {

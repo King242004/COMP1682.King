@@ -9,11 +9,11 @@ export type HeSoDonVi = {
   gamMoiOunce: number;
 };
 
-// Ba loại số có giới hạn nhập: cân nặng, chiều cao, lượng thức ăn
-type LoaiGioiHan = 'can_nang' | 'chieu_cao' | 'khoi_luong';
+// Bốn loại số có giới hạn nhập: cân nặng, chiều cao, lượng thức ăn, vòng eo
+type LoaiGioiHan = 'can_nang' | 'chieu_cao' | 'khoi_luong' | 'vong_eo';
 
 // Tên đơn vị gốc (Mét) của từng loại
-const TEN_DON_VI_MET: Record<LoaiGioiHan, string> = { can_nang: 'kg', chieu_cao: 'cm', khoi_luong: 'g' };
+const TEN_DON_VI_MET: Record<LoaiGioiHan, string> = { can_nang: 'kg', chieu_cao: 'cm', khoi_luong: 'g', vong_eo: 'cm' };
 
 // Làm tròn 1 số lẻ rồi viết kiểu Việt Nam, ví dụ 110,2
 function vietMotSoLe(so: number): string {
@@ -78,6 +78,14 @@ export function vietChieuCao(cm: number, donVi: DonVi, heSo: HeSoDonVi | null): 
   return `${vietMotSoLe(cm)} cm`;
 }
 
+// Vòng eo theo đơn vị: "85 cm" hoặc "33,5 in"
+export function vietVongEo(cm: number, donVi: DonVi, heSo: HeSoDonVi | null): string {
+  if (donVi === 'anh_my' && heSo !== null) {
+    return `${vietMotSoLe(cm / heSo.cmMoiInch)} in`;
+  }
+  return `${vietMotSoLe(cm)} cm`;
+}
+
 // Lượng thức ăn theo đơn vị: "150 g" hoặc "5,3 oz"
 export function vietKhoiLuong(gam: number, donVi: DonVi, heSo: HeSoDonVi | null): string {
   if (donVi === 'anh_my' && heSo !== null) {
@@ -94,9 +102,33 @@ export function doiKgRaDonVi(kg: number, donVi: DonVi, heSo: HeSoDonVi | null): 
   return Math.round(kg * 10) / 10;
 }
 
+// Cân theo đơn vị làm tròn lên 1 số lẻ, để viết cân thấp nhất trong lời lỗi (số hiện ra luôn hợp lệ)
+export function canNangLamTronLen(kg: number, donVi: DonVi, heSo: HeSoDonVi | null): number {
+  if (donVi === 'anh_my' && heSo !== null) {
+    return Math.ceil((kg / heSo.kgMoiPound) * 10) / 10;
+  }
+  return Math.ceil(kg * 10) / 10;
+}
+
+// Cân theo đơn vị làm tròn xuống 1 số lẻ, để viết cân cao nhất trong lời lỗi và điền sẵn ô (số hiện ra luôn hợp lệ)
+export function canNangLamTronXuong(kg: number, donVi: DonVi, heSo: HeSoDonVi | null): number {
+  if (donVi === 'anh_my' && heSo !== null) {
+    return Math.floor((kg / heSo.kgMoiPound) * 10) / 10;
+  }
+  return Math.floor(kg * 10) / 10;
+}
+
 // Đổi cm ra số ft và số in để điền 2 ô chiều cao; làm tròn tổng số inch trước rồi mới tách ft
 export function doiCmRaFeetInch(cm: number, heSo: HeSoDonVi): { feet: number; inch: number } {
   return tachFeetInch(Math.round(cm / heSo.cmMoiInch), heSo);
+}
+
+// Vòng eo theo đơn vị (in hoặc cm, làm tròn 1 số lẻ), để điền sẵn ô
+export function doiCmRaDonVi(cm: number, donVi: DonVi, heSo: HeSoDonVi | null): number {
+  if (donVi === 'anh_my' && heSo !== null) {
+    return Math.round((cm / heSo.cmMoiInch) * 10) / 10;
+  }
+  return Math.round(cm * 10) / 10;
 }
 
 // Số lượng thức ăn theo đơn vị (oz làm tròn 1 số lẻ), để điền sẵn ô
@@ -135,6 +167,18 @@ export function docChieuCaoFeetInch(feet: string, inch: string, heSo: HeSoDonVi)
   return Math.round((feetSo * heSo.inchMoiFoot + inchSo) * heSo.cmMoiInch * 10) / 10;
 }
 
+// Đọc vòng eo người dùng gõ (cm hoặc in) ra cm, làm tròn 1 số lẻ như cột trong database
+export function docVongEo(chu: string, donVi: DonVi, heSo: HeSoDonVi | null): number | null {
+  const so = docSo(chu);
+  if (so === null) {
+    return null;
+  }
+  if (donVi === 'anh_my' && heSo !== null) {
+    return Math.round(so * heSo.cmMoiInch * 10) / 10;
+  }
+  return Math.round(so * 10) / 10;
+}
+
 // Đọc lượng thức ăn người dùng gõ (g hoặc oz) ra g; oz đổi ra g làm tròn 1 số lẻ
 export function docKhoiLuong(chu: string, donVi: DonVi, heSo: HeSoDonVi | null): number | null {
   const so = docSo(chu);
@@ -160,12 +204,16 @@ export function vietGioiHan(nhoNhatGoc: number, lonNhatGoc: number, loai: LoaiGi
     return `từ ${vietFeetInch(inchNhoNhat, heSo)} đến ${vietFeetInch(inchLonNhat, heSo)}`;
   }
 
-  // Cân nặng ra lb, lượng thức ăn ra oz, 1 số lẻ
+  // Cân nặng ra lb, vòng eo ra in, lượng thức ăn ra oz, 1 số lẻ
   let heSoDoi = heSo.gamMoiOunce;
   let tenDonVi = 'oz';
   if (loai === 'can_nang') {
     heSoDoi = heSo.kgMoiPound;
     tenDonVi = 'lb';
+  }
+  if (loai === 'vong_eo') {
+    heSoDoi = heSo.cmMoiInch;
+    tenDonVi = 'in';
   }
   const nhoNhat = Math.ceil((nhoNhatGoc / heSoDoi) * 10) / 10;
   const lonNhat = Math.floor((lonNhatGoc / heSoDoi) * 10) / 10;

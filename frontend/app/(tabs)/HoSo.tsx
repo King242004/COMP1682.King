@@ -7,6 +7,9 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useAuth } from '../../src/auth/AuthContext';
 import { layHoSo } from '../../src/ho-so/HoSoApi';
 import type { HoSo } from '../../src/ho-so/HoSoApi';
+import { TheLoTrinh } from '../../src/ho-so/TheLoTrinh';
+import { layLoTrinh } from '../../src/lo-trinh/LoTrinhApi';
+import type { LoTrinh } from '../../src/lo-trinh/LoTrinhApi';
 import { Button } from '../../src/shared/components/Button';
 import { Card } from '../../src/shared/components/Card';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
@@ -23,6 +26,7 @@ const TEN_MUC_TIEU = { giam: 'Giảm cân', giu: 'Giữ cân', tang: 'Tăng cân
 export default function HoSo() {
   const { user, logout } = useAuth();
   const [hoSo, setHoSo] = useState<HoSo | null>(null);
+  const [loTrinh, setLoTrinh] = useState<LoTrinh | null>(null);
   const [loi, setLoi] = useState('');
 
   // Mỗi lần quay lại màn này (ví dụ sau khi sửa hồ sơ) thì tải lại
@@ -35,7 +39,12 @@ export default function HoSo() {
   async function taiHoSo() {
     setLoi('');
     try {
-      setHoSo(await layHoSo());
+      const hoSoMoi = await layHoSo();
+      setHoSo(hoSoMoi);
+      // Đã thiết lập hồ sơ thì tải thêm lộ trình cho thẻ "Lộ trình"
+      if (hoSoMoi.muc_tieu_calo !== null) {
+        setLoTrinh(await layLoTrinh());
+      }
     } catch (loiTai) {
       setLoi((loiTai as Error).message);
     }
@@ -65,6 +74,9 @@ export default function HoSo() {
 
       {hoSo && hoSo.muc_tieu_calo !== null ? (
         <View>
+          {/* Lộ trình: câu nhận xét, đích, thanh tiến độ; bấm mở màn Lộ trình */}
+          {loTrinh ? <TheLoTrinh loTrinh={loTrinh} onPress={() => router.push('/LoTrinh')} /> : null}
+
           {/* Mục tiêu calo, 3 ô BMI · BMR · TDEE, mức vận động và mục tiêu, nút "Sửa mục tiêu" */}
           <Card>
             <Text style={styles.chuPhu}>Mục tiêu mỗi ngày</Text>

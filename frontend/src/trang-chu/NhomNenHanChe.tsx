@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fontSizes, radius, shadows, spacing } from '../shared/theme';
+import { Card } from '../shared/components/Card';
+import { colors, fontSizes, radius, spacing } from '../shared/theme';
 import type { NhatKyNgay } from '../bua-an/BuaAnApi';
 
 type OHanCheProps = {
@@ -44,7 +45,7 @@ function OHanChe({ ten, daAn, gioiHan }: OHanCheProps) {
   );
 }
 
-// Nhóm "Nên hạn chế" trên trang chủ: ba ô muối, đường, béo no so với giới hạn mỗi ngày
+// Thẻ "Nên hạn chế" trên trang chủ: ba ô muối, đường, béo no so với giới hạn mỗi ngày
 export function NhomNenHanChe({ nhatKy }: { nhatKy: NhatKyNgay }) {
   const gioiHan = nhatKy.gioi_han_nen_han_che;
   if (!gioiHan) {
@@ -53,7 +54,7 @@ export function NhomNenHanChe({ nhatKy }: { nhatKy: NhatKyNgay }) {
   const tongHop = nhatKy.tong_hop;
 
   return (
-    <View style={styles.nhom}>
+    <Card>
       <View style={styles.hangTieuDe}>
         <Text style={styles.tieuDe}>Nên hạn chế</Text>
         <Text style={styles.chuNho}>giới hạn mỗi ngày</Text>
@@ -63,14 +64,11 @@ export function NhomNenHanChe({ nhatKy }: { nhatKy: NhatKyNgay }) {
         <OHanChe ten="Đường" daAn={tongHop.tong_duong_g} gioiHan={gioiHan.duong_g_toi_da} />
         <OHanChe ten="Béo no" daAn={tongHop.tong_beo_no_g} gioiHan={gioiHan.beo_no_g_toi_da} />
       </View>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  nhom: {
-    marginBottom: spacing.small,
-  },
   hangTieuDe: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -88,10 +86,7 @@ const styles = StyleSheet.create({
   },
   o: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    ...shadows.card,
+    backgroundColor: colors.card,
     borderRadius: radius.input,
     padding: spacing.small,
     gap: 4,

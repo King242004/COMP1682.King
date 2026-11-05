@@ -1,4 +1,4 @@
-import { tinhGioiHanNenHanChe, tinhMucTieuChat, tongHopNgay } from '../bua-an/BuaAnService.ts';
+import { layMucTieuVaGioiHan, tongHopNgay } from '../bua-an/BuaAnService.ts';
 import type { GioiHanNenHanChe, TongHop } from '../bua-an/BuaAnService.ts';
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
 import { lamMoiMucTieuNeuQuaSinhNhat } from '../ho-so/HoSoService.ts';
@@ -207,30 +207,13 @@ export async function xemBaoCaoDinhDuong(nguoiDungId: number, tuNgay: string, de
   const tyLeBeoThap = await layQuyDinh('ty_le_nang_luong_beo_thap');
   const tyLeBeoCao = await layQuyDinh('ty_le_nang_luong_beo_cao');
 
-  // Mức đạm tối thiểu, tính như trang chủ
-  const mucTieuChat = tinhMucTieuChat(hoSo.muc_tieu_calo, hoSo.can_nang_kg, {
-    damGMoiKg: await layQuyDinh('dam_g_moi_kg'),
-    tyLeTinhBotThap: tyLeTinhBotThap,
-    tyLeTinhBotCao: tyLeTinhBotCao,
-    tyLeBeoThap: tyLeBeoThap,
-    tyLeBeoCao: tyLeBeoCao,
-    kcalMoiGTinhBot: kcalMoiGTinhBot,
-    kcalMoiGBeo: kcalMoiGBeo,
-  });
-
-  // Giới hạn muối, đường, béo no mỗi ngày; đường dùng chung hệ số kcal mỗi gam với tinh bột như trang chủ
-  const gioiHan = tinhGioiHanNenHanChe(hoSo.muc_tieu_calo, {
-    muoiToiDaG: await layQuyDinh('muoi_toi_da_g'),
-    tyLeDuongToiDa: await layQuyDinh('ty_le_nang_luong_duong_toi_da'),
-    tyLeBeoNoToiDa: await layQuyDinh('ty_le_nang_luong_beo_no_toi_da'),
-    kcalMoiGDuong: kcalMoiGTinhBot,
-    kcalMoiGBeo: kcalMoiGBeo,
-  });
+  // Mức đạm tối thiểu và giới hạn muối, đường, béo no mỗi ngày, lấy bằng đúng hàm của trang chủ
+  const mucTieuVaGioiHan = await layMucTieuVaGioiHan(hoSo.muc_tieu_calo, hoSo.can_nang_kg);
 
   // Cộng từng ngày rồi tóm tắt cả khoảng
   const danhSachMon = await layMonTrongKhoang(nguoiDungId, tuNgay, denNgay);
-  const cacNgay = tongHopCacNgay(danhSachMon, hoSo.muc_tieu_calo, gioiHan);
-  const tomTat = tomTatBaoCao(cacNgay, mucTieuChat.dam_g_toi_thieu, {
+  const cacNgay = tongHopCacNgay(danhSachMon, hoSo.muc_tieu_calo, mucTieuVaGioiHan.gioi_han_nen_han_che);
+  const tomTat = tomTatBaoCao(cacNgay, mucTieuVaGioiHan.muc_tieu_chat.dam_g_toi_thieu, {
     kcalMoiGDam: kcalMoiGDam,
     kcalMoiGTinhBot: kcalMoiGTinhBot,
     kcalMoiGBeo: kcalMoiGBeo,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Line, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { doiKgRaDonVi } from '../don-vi/DoiDonVi';
 import { useDonVi } from '../don-vi/DonViContext';
@@ -64,10 +64,18 @@ export function BieuDoCanNang({ diemCanNang, ngayCuoi, soNgay }: BieuDoCanNangPr
   const diemDuongXuHuong = diemCanNang.map((diem) => `${toaDoNgang(diem.ngay)},${toaDoDoc(diem.xu_huong_kg)}`).join(' ');
   const dayCuaTruc = CHIEU_CAO - LE_DUOI;
 
+  // Vùng tô nhạt dưới đường xu hướng: đi theo đường, rồi khép xuống đường đáy ở ngày cuối và ngày đầu
+  const diemDau = diemCanNang[0];
+  const diemCuoi = diemCanNang[diemCanNang.length - 1];
+  const diemVungTo = `${diemDuongXuHuong} ${toaDoNgang(diemCuoi.ngay)},${dayCuaTruc} ${toaDoNgang(diemDau.ngay)},${dayCuaTruc}`;
+
   return (
     <View onLayout={(suKien) => setChieuRong(suKien.nativeEvent.layout.width)}>
       {chieuRong > 0 ? (
         <Svg width={chieuRong} height={CHIEU_CAO}>
+          {/* Vùng tô nhạt vẽ trước tiên, để đường đáy, chấm và đường xu hướng đè lên; chỉ có một lần cân thì chưa có vùng */}
+          {diemCanNang.length >= 2 ? <Polygon points={diemVungTo} fill={colors.primaryLight} /> : null}
+
           {/* Đường đáy và hai số kg ở trục dọc */}
           <Line x1={LE_TRAI} y1={dayCuaTruc} x2={chieuRong - LE_PHAI} y2={dayCuaTruc} stroke={colors.border} strokeWidth={1} />
           <SvgText x={0} y={LE_TREN + 4} fontSize={11} fill={colors.textSecondary}>{vietKg(doiKgRaDonVi(kgLonNhat, donVi, heSo))}</SvgText>
@@ -86,9 +94,12 @@ export function BieuDoCanNang({ diemCanNang, ngayCuoi, soNgay }: BieuDoCanNangPr
             <Circle key={diem.ngay} cx={toaDoNgang(diem.ngay)} cy={toaDoDoc(diem.can_nang_kg)} r={3} fill={colors.textSecondary} opacity={0.5} />
           ))}
 
-          {/* Đường xu hướng; chỉ có một lần cân thì chưa có đường */}
+          {/* Đường xu hướng và vòng tròn ở điểm cuối; chỉ có một lần cân thì chưa có đường */}
           {diemCanNang.length >= 2 ? (
-            <Polyline points={diemDuongXuHuong} fill="none" stroke={colors.primary} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+            <>
+              <Polyline points={diemDuongXuHuong} fill="none" stroke={colors.primary} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+              <Circle cx={toaDoNgang(diemCuoi.ngay)} cy={toaDoDoc(diemCuoi.xu_huong_kg)} r={5} fill={colors.surface} stroke={colors.primary} strokeWidth={2.5} />
+            </>
           ) : null}
         </Svg>
       ) : (

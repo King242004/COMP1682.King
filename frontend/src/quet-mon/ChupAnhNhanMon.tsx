@@ -29,7 +29,6 @@ const CHAT_LUONG_ANH = 0.5;
 const LUA_CHON_PHAN_AN = [
   { giaTri: 0.5, nhan: '½' },
   { giaTri: 1, nhan: '1' },
-  { giaTri: 1.5, nhan: '1½' },
   { giaTri: 2, nhan: '2' },
 ];
 
@@ -168,7 +167,13 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
       {/* Chưa có ảnh: mẹo chụp, camera, hàng nút Thư viện và nút chụp */}
       {!anh ? (
         <View>
-          <Text style={styles.chuPhu}>Mẹo: chụp phần bạn ăn, từ trên xuống, đặt đũa hoặc thìa bên cạnh.</Text>
+          {/* Mẹo chụp trong khung viền mảnh, có biểu tượng bóng đèn */}
+          <View style={styles.khungMeo}>
+            <Ionicons name="bulb-outline" size={18} color={colors.primary} />
+            <Text style={styles.chuMeo}>
+              <Text style={styles.chuMeoDam}>Mẹo:</Text> chụp phần bạn ăn, từ trên xuống, đặt đũa hoặc thìa bên cạnh.
+            </Text>
+          </View>
 
           {/* Chưa có quyền camera thì xin quyền; vẫn chọn được ảnh từ thư viện */}
           {quyenCamera && !quyenCamera.granted ? (
@@ -178,7 +183,16 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
             </View>
           ) : null}
 
-          {coQuyenCamera ? <CameraView ref={camera} style={styles.camera} /> : null}
+          {/* Camera, trên có 4 góc ngắm màu trắng */}
+          {coQuyenCamera ? (
+            <View style={styles.khungCamera}>
+              <CameraView ref={camera} style={styles.camera} />
+              <View style={[styles.gocNgam, styles.gocTrenTrai]} />
+              <View style={[styles.gocNgam, styles.gocTrenPhai]} />
+              <View style={[styles.gocNgam, styles.gocDuoiTrai]} />
+              <View style={[styles.gocNgam, styles.gocDuoiPhai]} />
+            </View>
+          ) : null}
 
           {/* Thư viện bên trái, nút chụp ở giữa; ô trống bên phải rộng bằng nút Thư viện để nút chụp nằm đúng giữa */}
           <View style={styles.hangNut}>
@@ -228,31 +242,38 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
           {ketQua && ketQua.la_mon_an ? (
             <View>
               <Text style={styles.nhanNhom}>AI đoán là</Text>
-              {ketQua.kha_nang.map((khaNang, viTri) => (
-                <Pressable
-                  key={`${khaNang.ten_mon}-${viTri}`}
-                  style={({ pressed }) => [styles.theKhaNang, viTri === viTriDangChon ? styles.theDangChon : null, pressed ? styles.dangBam : null]}
-                  onPress={() => setViTriDangChon(viTri)}
-                >
-                  <View style={styles.cotTen}>
-                    <Text style={styles.tenMon}>{khaNang.ten_mon}</Text>
-                    <Text style={styles.chuPhu}>{khaNang.khau_phan}</Text>
-                    {/* Câu cảnh báo dị ứng theo tên món (chỉ khi người dùng có chọn nhóm dị ứng) */}
-                    {khaNang.canh_bao_di_ung !== '' ? <Text style={styles.chuCanhBaoDiUng}>{khaNang.canh_bao_di_ung}</Text> : null}
-                  </View>
-                  <Text style={styles.soCalo}>{khaNang.so_calo.toLocaleString('vi-VN')} kcal</Text>
-                </Pressable>
-              ))}
+              {ketQua.kha_nang.map((khaNang, viTri) => {
+                const dangChon = viTri === viTriDangChon;
+                return (
+                  <Pressable
+                    key={`${khaNang.ten_mon}-${viTri}`}
+                    style={({ pressed }) => [styles.theKhaNang, dangChon ? styles.theDangChon : null, pressed ? styles.dangBam : null]}
+                    onPress={() => setViTriDangChon(viTri)}
+                  >
+                    {/* Vòng chọn: đang chọn là dấu tích tròn màu chính, chưa chọn là vòng rỗng */}
+                    <Ionicons
+                      name={dangChon ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={22}
+                      color={dangChon ? colors.primary : colors.textSecondary}
+                    />
+                    <View style={styles.cotTen}>
+                      <Text style={styles.tenMon}>{khaNang.ten_mon}</Text>
+                      <Text style={styles.chuPhu}>{khaNang.khau_phan}</Text>
+                      {/* Câu cảnh báo dị ứng theo tên món (chỉ khi người dùng có chọn nhóm dị ứng) */}
+                      {khaNang.canh_bao_di_ung !== '' ? <Text style={styles.chuCanhBaoDiUng}>{khaNang.canh_bao_di_ung}</Text> : null}
+                    </View>
+                    <Text style={[styles.soCalo, dangChon ? styles.soCaloDangChon : null]}>{khaNang.so_calo.toLocaleString('vi-VN')} kcal</Text>
+                  </Pressable>
+                );
+              })}
 
+              {/* Câu hỏi phần đã ăn, dưới là 3 chip chia đều cả hàng */}
               <Text style={styles.nhanNhom}>Bạn ăn bao nhiêu so với phần trong ảnh?</Text>
               <View style={styles.hangChip}>
                 {LUA_CHON_PHAN_AN.map((luaChon) => (
-                  <Chip
-                    key={luaChon.nhan}
-                    label={luaChon.nhan}
-                    isSelected={phanAn === luaChon.giaTri}
-                    onPress={() => setPhanAn(luaChon.giaTri)}
-                  />
+                  <View key={luaChon.nhan} style={styles.oChip}>
+                    <Chip label={luaChon.nhan} isSelected={phanAn === luaChon.giaTri} onPress={() => setPhanAn(luaChon.giaTri)} />
+                  </View>
                 ))}
               </View>
               <Text style={styles.chuPhu}>Kết quả do AI ước tính, không chính xác 100%. Bạn kiểm tra và sửa lại được ở bước sau.</Text>
@@ -274,15 +295,70 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
 }
 
 const styles = StyleSheet.create({
+  khungMeo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.small,
+    padding: spacing.medium,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.input,
+  },
+  chuMeo: {
+    flex: 1,
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
+  },
+  chuMeoDam: {
+    fontWeight: '600',
+    color: colors.text,
+  },
   khungXinQuyen: {
     marginVertical: spacing.medium,
+  },
+  khungCamera: {
+    marginTop: spacing.medium,
   },
   camera: {
     width: '100%',
     aspectRatio: 3 / 4,
     borderRadius: radius.card,
     overflow: 'hidden',
-    marginTop: spacing.small,
+  },
+  gocNgam: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderColor: colors.surface,
+  },
+  gocTrenTrai: {
+    top: spacing.large,
+    left: spacing.large,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderTopLeftRadius: 8,
+  },
+  gocTrenPhai: {
+    top: spacing.large,
+    right: spacing.large,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderTopRightRadius: 8,
+  },
+  gocDuoiTrai: {
+    bottom: spacing.large,
+    left: spacing.large,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderBottomLeftRadius: 8,
+  },
+  gocDuoiPhai: {
+    bottom: spacing.large,
+    right: spacing.large,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderBottomRightRadius: 8,
   },
   hangNut: {
     flexDirection: 'row',
@@ -343,8 +419,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.small,
   },
   theDangChon: {
-    borderWidth: 2,
     borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
   },
   cotTen: {
     flex: 1,
@@ -357,10 +433,17 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     color: colors.text,
   },
+  soCaloDangChon: {
+    fontWeight: '600',
+    color: colors.textOnPrimaryLight,
+  },
   hangChip: {
     flexDirection: 'row',
     gap: spacing.small,
     marginBottom: spacing.small,
+  },
+  oChip: {
+    flex: 1,
   },
   chuCanhBaoDiUng: {
     fontSize: fontSizes.secondary,

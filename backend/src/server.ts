@@ -8,6 +8,7 @@ import donViRoutes from './don-vi/DonViRoutes.ts';
 import database from './database/database.ts';
 import environment from './environment.ts';
 import hoSoRoutes from './ho-so/HoSoRoutes.ts';
+import loTrinhRoutes from './lo-trinh/LoTrinhRoutes.ts';
 import quetMonRoutes from './quet-mon/QuetMonRoutes.ts';
 import { errorHandler } from './shared/errorHandler.ts';
 import tienDoRoutes from './tien-do/TienDoRoutes.ts';
@@ -60,6 +61,9 @@ app.use('/bao-cao', requireAuth, baoCaoRoutes);
 
 // Uống nước: ghi, mục tiêu, nhắc giờ (cần đăng nhập)
 app.use('/uong-nuoc', requireAuth, uongNuocRoutes);
+
+// Lộ trình: thể trạng, đích, các mốc theo tháng (cần đăng nhập)
+app.use('/lo-trinh', requireAuth, loTrinhRoutes);
 
 // Thực đơn hôm nay do AI lập (cần đăng nhập)
 app.use('/thuc-don', requireAuth, thucDonRoutes);

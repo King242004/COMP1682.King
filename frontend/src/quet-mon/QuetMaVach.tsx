@@ -5,11 +5,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { docKhoiLuong, doiGamRaDonVi, vietGioiHan, vietKhoiLuong } from '../don-vi/DoiDonVi';
 import { useDonVi } from '../don-vi/DonViContext';
 import { Button } from '../shared/components/Button';
+import { Card } from '../shared/components/Card';
 import { ErrorBox } from '../shared/components/ErrorBox';
 import { Screen } from '../shared/components/Screen';
 import { ScreenTitle } from '../shared/components/ScreenTitle';
 import { TextField } from '../shared/components/TextField';
-import { colors, fontSizes, radius, shadows, spacing } from '../shared/theme';
+import { colors, fontSizes, radius, spacing } from '../shared/theme';
 import type { MonDaChon } from './MonDaChon';
 import { traMaVach } from './QuetMonApi';
 import type { SanPhamMaVach } from './QuetMonApi';
@@ -70,6 +71,7 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
     setLoi('');
     setSanPham(null);
     setSoGam('');
+    setLoiSoGam('');
   }
 
   // Kiểm số gam rồi đưa món về form
@@ -138,34 +140,55 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
         </View>
       ) : null}
 
-      {/* Đã có sản phẩm: nhập số gam đã ăn */}
+      {/* Đã có sản phẩm: thẻ sản phẩm, thẻ nhập số gam, nút chọn và nút quét lại */}
       {sanPham ? (
         <View>
-          <Text style={styles.tenSanPham}>{sanPham.ten_san_pham}</Text>
-          {/* Câu cảnh báo dị ứng theo nhãn và tên sản phẩm (chỉ khi người dùng có chọn nhóm dị ứng) */}
-          {sanPham.canh_bao_di_ung !== '' ? <Text style={styles.chuCanhBaoDiUng}>{sanPham.canh_bao_di_ung}</Text> : null}
-          <Text style={styles.chuPhu}>Nguồn: Open Food Facts</Text>
-          <View style={styles.theSoLieu}>
-            <Text style={styles.chuThuong}>
-              Trên 100 g{laAnhMy ? ` (${vietKhoiLuong(100, donVi, heSo)})` : ''}: {sanPham.kcal_100g.toLocaleString('vi-VN')} kcal
-            </Text>
+          {/* Thẻ sản phẩm: tên, cảnh báo dị ứng, nguồn, năng lượng trên 100 g, 1 phần theo nhãn */}
+          <Card>
+            <Text style={styles.tenSanPham}>{sanPham.ten_san_pham}</Text>
+            {/* Câu cảnh báo dị ứng theo nhãn và tên sản phẩm (chỉ khi người dùng có chọn nhóm dị ứng) */}
+            {sanPham.canh_bao_di_ung !== '' ? <Text style={styles.chuCanhBaoDiUng}>{sanPham.canh_bao_di_ung}</Text> : null}
+            <Text style={styles.chuPhu}>Nguồn: Open Food Facts</Text>
+            <View style={styles.hangNangLuong}>
+              <Text style={styles.chuThuong}>Năng lượng</Text>
+              <Text style={styles.nhanNangLuong}>
+                {sanPham.kcal_100g.toLocaleString('vi-VN')} kcal / 100 g{laAnhMy ? ` (${vietKhoiLuong(100, donVi, heSo)})` : ''}
+              </Text>
+            </View>
             {sanPham.khoi_luong_1_phan_g !== null ? (
               <Text style={styles.chuPhu}>1 phần = {vietKhoiLuong(sanPham.khoi_luong_1_phan_g, donVi, heSo)} (theo nhãn)</Text>
             ) : null}
-          </View>
-          <TextField
-            label={laAnhMy ? 'Số oz đã ăn' : 'Số gam đã ăn'}
-            value={soGam}
-            onChangeText={setSoGam}
-            error={loiSoGam}
-            placeholder={laAnhMy ? 'Ví dụ: 3,5' : 'Ví dụ: 100'}
-            isNumber
-          />
-          {tongCaloXemTruoc !== null ? (
-            <Text style={styles.tong}>Tổng: {tongCaloXemTruoc.toLocaleString('vi-VN')} kcal</Text>
-          ) : null}
-          <View style={styles.khoangNut}>
-            <Button title="Chọn món này" loadingTitle="" isLoading={false} onPress={chonMon} />
+          </Card>
+
+          {/* Thẻ nhập số gam; đã có số gam thì hiện ô tổng calo kèm phép tính */}
+          <Card>
+            <TextField
+              label={laAnhMy ? 'Số oz đã ăn' : 'Số gam đã ăn'}
+              value={soGam}
+              onChangeText={setSoGam}
+              error={loiSoGam}
+              placeholder={laAnhMy ? 'Ví dụ: 3,5' : 'Ví dụ: 100'}
+              isNumber
+            />
+            {tongCaloXemTruoc !== null ? (
+              <View style={styles.oTong}>
+                <Text style={styles.nhanTong}>Tổng calo</Text>
+                <View style={styles.hangSoTong}>
+                  <Text style={styles.soTong}>{tongCaloXemTruoc.toLocaleString('vi-VN')}</Text>
+                  <Text style={styles.chuThuong}>kcal</Text>
+                </View>
+                <Text style={styles.chuPhu}>
+                  {vietKhoiLuong(soGamXemTruoc, donVi, heSo)} × {sanPham.kcal_100g.toLocaleString('vi-VN')} kcal / {vietKhoiLuong(100, donVi, heSo)} ≈{' '}
+                  {tongCaloXemTruoc.toLocaleString('vi-VN')} kcal
+                </Text>
+              </View>
+            ) : null}
+          </Card>
+
+          {/* Chọn món, hoặc quét nhầm thì quét lại */}
+          <Button title="Chọn món này" loadingTitle="" isLoading={false} onPress={chonMon} />
+          <View style={styles.khoangNutPhu}>
+            <Button title="Quét lại" loadingTitle="" isLoading={false} onPress={quetLai} isSecondary />
           </View>
         </View>
       ) : null}
@@ -186,14 +209,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
-  theSoLieu: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    ...shadows.card,
-    borderRadius: radius.card,
-    padding: spacing.medium,
-    marginVertical: spacing.medium,
+  hangNangLuong: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.small,
+    marginTop: spacing.medium,
+    marginBottom: 4,
+  },
+  nhanNangLuong: {
+    fontSize: fontSizes.secondary,
+    fontWeight: '600',
+    color: colors.textOnPrimaryLight,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.medium,
+    paddingVertical: 4,
+    overflow: 'hidden',
   },
   chuThuong: {
     fontSize: fontSizes.body,
@@ -209,15 +241,29 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-  tong: {
-    fontSize: fontSizes.body,
-    color: colors.textOnPrimaryLight,
-    backgroundColor: colors.primaryLight,
+  oTong: {
+    backgroundColor: colors.card,
     borderRadius: radius.input,
     padding: spacing.medium,
-    overflow: 'hidden',
+  },
+  nhanTong: {
+    fontSize: fontSizes.label,
+    color: colors.textSecondary,
+  },
+  hangSoTong: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
+  soTong: {
+    fontSize: fontSizes.bigNumber,
+    fontWeight: '700',
+    color: colors.primary,
   },
   khoangNut: {
     marginTop: spacing.large,
+  },
+  khoangNutPhu: {
+    marginTop: spacing.small,
   },
 });

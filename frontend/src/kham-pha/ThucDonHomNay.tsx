@@ -160,6 +160,15 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
     }
   }
 
+  // Thanh ở thẻ tổng dài theo % calo cả thực đơn so với mục tiêu, đầy thì thôi
+  let phanTramCalo = 0;
+  if (thucDon !== null && thucDon.muc_tieu_calo !== null) {
+    phanTramCalo = (thucDon.tong_calo / thucDon.muc_tieu_calo) * 100;
+    if (phanTramCalo > 100) {
+      phanTramCalo = 100;
+    }
+  }
+
   return (
     <Screen header={dauMan} compactBottom>
       {loi ? <ErrorBox message={loi} onRetry={taiDuLieu} /> : null}
@@ -201,7 +210,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
       {/* Có thực đơn: thẻ tổng, lời nhắc, các món, đi chợ */}
       {thucDon && danhSachMon !== null ? (
         <>
-          {/* Thẻ tổng: ngày, calo cả thực đơn so với mục tiêu, ba chất, nút tạo lại ở góc */}
+          {/* Thẻ tổng: ngày, calo cả thực đơn so với mục tiêu, thanh calo, ba ô chất, nút tạo lại ở góc */}
           <Card>
             <View style={styles.hangDauThe}>
               <View>
@@ -222,10 +231,26 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
                 <Text style={styles.chuTaoLai}>{dangTao ? 'Đang tạo…' : 'Tạo lại'}</Text>
               </Pressable>
             </View>
+            {/* Thanh calo so với mục tiêu; không có mục tiêu thì không có thanh */}
+            {thucDon.muc_tieu_calo !== null ? (
+              <View style={styles.thanhNen}>
+                <View style={[styles.thanhDay, { width: `${phanTramCalo}%` }]} />
+              </View>
+            ) : null}
+            {/* Ba ô đạm, tinh bột, béo nền nhạt theo màu từng chất: tên chất ở trên, số gam ở dưới */}
             <View style={styles.hangBaChat}>
-              <Text style={[styles.chuChat, { color: colors.protein }]}>Đạm {Math.round(tongDam)} g</Text>
-              <Text style={[styles.chuChat, { color: colors.carbs }]}>Tinh bột {Math.round(tongTinhBot)} g</Text>
-              <Text style={[styles.chuChat, { color: colors.fat }]}>Béo {Math.round(tongBeo)} g</Text>
+              <View style={[styles.oChat, { backgroundColor: colors.proteinLight }]}>
+                <Text style={[styles.tenChat, { color: colors.protein }]}>Đạm</Text>
+                <Text style={[styles.soChat, { color: colors.protein }]}>{Math.round(tongDam)} g</Text>
+              </View>
+              <View style={[styles.oChat, { backgroundColor: colors.carbsLight }]}>
+                <Text style={[styles.tenChat, { color: colors.carbs }]}>Tinh bột</Text>
+                <Text style={[styles.soChat, { color: colors.carbs }]}>{Math.round(tongTinhBot)} g</Text>
+              </View>
+              <View style={[styles.oChat, { backgroundColor: colors.fatLight }]}>
+                <Text style={[styles.tenChat, { color: colors.fat }]}>Béo</Text>
+                <Text style={[styles.soChat, { color: colors.fat }]}>{Math.round(tongBeo)} g</Text>
+              </View>
             </View>
           </Card>
           <Text style={styles.chuPhu}>
@@ -387,14 +412,33 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.secondary,
     color: colors.textOnPrimaryLight,
   },
+  thanhNen: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+    marginTop: spacing.medium,
+  },
+  thanhDay: {
+    height: '100%',
+    backgroundColor: colors.primary,
+  },
   hangBaChat: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.medium,
-    marginTop: spacing.small,
+    gap: spacing.small,
+    marginTop: spacing.medium,
   },
-  chuChat: {
-    fontSize: fontSizes.secondary,
+  oChat: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: radius.input,
+    paddingVertical: spacing.small,
+  },
+  tenChat: {
+    fontSize: fontSizes.label,
+  },
+  soChat: {
+    fontSize: fontSizes.body,
     fontWeight: '600',
   },
   chuPhu: {

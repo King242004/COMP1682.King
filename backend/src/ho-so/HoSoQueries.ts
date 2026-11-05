@@ -13,6 +13,10 @@ export type HoSo = {
   // Tuổi đã dùng để tính muc_tieu_calo; khác tuổi hôm nay (vừa qua sinh nhật) thì phải tính lại
   tuoi_tinh_muc_tieu: number | null;
   di_ung_kieng_an: string;
+  // Vòng eo (không bắt buộc), cân mục tiêu và cân lúc bắt đầu lộ trình; giữ cân thì 2 cột cân là null
+  vong_eo_cm: number | null;
+  can_muc_tieu_kg: number | null;
+  can_bat_dau_kg: number | null;
 };
 
 // Hồ sơ cần lưu, đã kiểm tra và đã tính xong
@@ -26,6 +30,9 @@ export type HoSoDeLuu = {
   muc_tieu_calo: number;
   tuoi_tinh_muc_tieu: number;
   di_ung_kieng_an: string;
+  vong_eo_cm: number | null;
+  can_muc_tieu_kg: number | null;
+  can_bat_dau_kg: number | null;
   // Mã các nhóm dị ứng đã chọn, lưu ở bảng nguoi_dung_nhom_di_ung
   ma_nhom_di_ung: string[];
 };
@@ -33,7 +40,8 @@ export type HoSoDeLuu = {
 // Lấy hồ sơ của một người
 export async function layHoSo(nguoiDungId: number): Promise<HoSo> {
   const ketQua = await database.query<HoSo>(
-    `SELECT gioi_tinh, ngay_sinh, chieu_cao_cm, can_nang_kg, muc_van_dong, muc_tieu, muc_tieu_calo, tuoi_tinh_muc_tieu, di_ung_kieng_an
+    `SELECT gioi_tinh, ngay_sinh, chieu_cao_cm, can_nang_kg, muc_van_dong, muc_tieu, muc_tieu_calo, tuoi_tinh_muc_tieu, di_ung_kieng_an,
+            vong_eo_cm, can_muc_tieu_kg, can_bat_dau_kg
      FROM nguoi_dung WHERE id = $1`,
     [nguoiDungId],
   );
@@ -48,11 +56,13 @@ export async function luuHoSo(nguoiDungId: number, hoSo: HoSoDeLuu): Promise<voi
     await ketNoi.query(
       `UPDATE nguoi_dung SET
          gioi_tinh = $2, ngay_sinh = $3, chieu_cao_cm = $4, can_nang_kg = $5,
-         muc_van_dong = $6, muc_tieu = $7, muc_tieu_calo = $8, tuoi_tinh_muc_tieu = $9, di_ung_kieng_an = $10
+         muc_van_dong = $6, muc_tieu = $7, muc_tieu_calo = $8, tuoi_tinh_muc_tieu = $9, di_ung_kieng_an = $10,
+         vong_eo_cm = $11, can_muc_tieu_kg = $12, can_bat_dau_kg = $13
        WHERE id = $1`,
       [
         nguoiDungId, hoSo.gioi_tinh, hoSo.ngay_sinh, hoSo.chieu_cao_cm, hoSo.can_nang_kg,
         hoSo.muc_van_dong, hoSo.muc_tieu, hoSo.muc_tieu_calo, hoSo.tuoi_tinh_muc_tieu, hoSo.di_ung_kieng_an,
+        hoSo.vong_eo_cm, hoSo.can_muc_tieu_kg, hoSo.can_bat_dau_kg,
       ],
     );
 
