@@ -76,6 +76,7 @@ export function ChonNgaySinh({ ngaySinh, onChon, loi, isDisabled }: ChonNgaySinh
               </Pressable>
             </View>
             <DateTimePicker
+              style={styles.banhXe}
               value={ngayDangQuay}
               mode="date"
               display="spinner"
@@ -164,6 +165,9 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.primary,
+  },
+  banhXe: {
+    alignSelf: 'center',
   },
   dangBam: {
     opacity: pressedOpacity,

@@ -1,9 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { TextStyle, ViewStyle } from 'react-native';
 
 import { Card } from '../shared/components/Card';
-import { colors, fontSizes, radius, spacing } from '../shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { LoTrinh, MucEo } from './LoTrinhApi';
 
 // Chữ trên viên phân loại của ô vòng eo
@@ -21,11 +21,13 @@ type OChiSoProps = {
   so: string;
   chuDuoi: string;
   kieuChuDuoi: KieuChuDuoi;
+  // Có onPress thì ô bấm được, không có thì chỉ để xem
+  onPress?: () => void;
 };
 
 // Một ô chỉ số: nhãn nhỏ, số to, phân loại ở dưới
-function OChiSo({ nhan, so, chuDuoi, kieuChuDuoi }: OChiSoProps) {
-  let kieuVien: ViewStyle | null = null;
+function OChiSo({ nhan, so, chuDuoi, kieuChuDuoi, onPress }: OChiSoProps) {
+  let kieuVien: ViewStyle = styles.vienXam;
   let kieuChu: TextStyle = styles.chuXam;
   if (kieuChuDuoi === 'binh_thuong') {
     kieuVien = styles.vienBinhThuong;
@@ -37,13 +39,17 @@ function OChiSo({ nhan, so, chuDuoi, kieuChuDuoi }: OChiSoProps) {
   }
 
   return (
-    <View style={styles.oChiSo}>
+    <Pressable
+      style={({ pressed }) => [styles.oChiSo, pressed ? styles.dangBam : null]}
+      disabled={onPress === undefined}
+      onPress={onPress}
+    >
       <Text style={styles.nhanO}>{nhan}</Text>
       <Text style={styles.soTo}>{so}</Text>
       <View style={[styles.vien, kieuVien]}>
         <Text style={[styles.chuVien, kieuChu]}>{chuDuoi}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -51,11 +57,11 @@ type BanDangODauProps = {
   loTrinh: LoTrinh;
 };
 
-// Thẻ "Bạn đang ở đâu": ô BMI, ô vòng eo / chiều cao, câu nhận xét và dòng nguồn
+// Thẻ "Bạn đang ở đâu": ô BMI, ô vòng eo / chiều cao và dòng nguồn
 export function BanDangODau({ loTrinh }: BanDangODauProps) {
   // Ô vòng eo: có tỉ lệ thì hiện số và mức; không có thì nói vì sao
   let soEo = '—';
-  let chuDuoiEo = 'Chưa nhập vòng eo';
+  let chuDuoiEo = 'Bấm để nhập vòng eo';
   let kieuChuDuoiEo: KieuChuDuoi = 'xam';
   if (loTrinh.ti_le_eo !== null && loTrinh.muc_eo !== null) {
     soEo = loTrinh.ti_le_eo.toLocaleString('vi-VN', { minimumFractionDigits: 2 });
@@ -69,7 +75,7 @@ export function BanDangODau({ loTrinh }: BanDangODauProps) {
     <Card>
       <Text style={styles.tieuDe}>Bạn đang ở đâu</Text>
 
-      {/* Hai ô chỉ số cạnh nhau */}
+      {/* Hai ô chỉ số cạnh nhau; bấm ô vòng eo mở màn Thông tin cá nhân để nhập hoặc sửa vòng eo */}
       <View style={styles.hangO}>
         <OChiSo
           nhan="BMI"
@@ -77,13 +83,13 @@ export function BanDangODau({ loTrinh }: BanDangODauProps) {
           chuDuoi={loTrinh.phan_loai_bmi}
           kieuChuDuoi={loTrinh.bmi_binh_thuong ? 'binh_thuong' : 'canh_bao'}
         />
-        <OChiSo nhan="Eo / chiều cao" so={soEo} chuDuoi={chuDuoiEo} kieuChuDuoi={kieuChuDuoiEo} />
-      </View>
-
-      {/* Câu nhận xét: vàng khi cần chú ý, xanh khi trong khuyến nghị */}
-      <View style={[styles.khungNhanXet, loTrinh.can_canh_bao ? styles.khungCanhBao : styles.khungBinhThuong]}>
-        <Ionicons name="information-circle-outline" size={18} color={loTrinh.can_canh_bao ? colors.warningText : colors.textOnPrimaryLight} />
-        <Text style={[styles.chuNhanXet, loTrinh.can_canh_bao ? styles.chuCanhBao : styles.chuBinhThuong]}>{loTrinh.cau_nhan_xet}</Text>
+        <OChiSo
+          nhan="Eo / chiều cao"
+          so={soEo}
+          chuDuoi={chuDuoiEo}
+          kieuChuDuoi={kieuChuDuoiEo}
+          onPress={() => router.push('/ho-so/SuaHoSo?phan=ca-nhan')}
+        />
       </View>
 
       {/* Dòng nguồn */}
@@ -96,7 +102,7 @@ export function BanDangODau({ loTrinh }: BanDangODauProps) {
 
 const styles = StyleSheet.create({
   tieuDe: {
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.medium,
@@ -108,7 +114,7 @@ const styles = StyleSheet.create({
   },
   oChiSo: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: colors.card,
     borderRadius: radius.input,
     paddingVertical: spacing.medium,
@@ -135,6 +141,9 @@ const styles = StyleSheet.create({
   vienCanhBao: {
     backgroundColor: colors.warningBackground,
   },
+  vienXam: {
+    paddingHorizontal: 0,
+  },
   chuVien: {
     fontSize: fontSizes.label,
     textAlign: 'center',
@@ -148,26 +157,11 @@ const styles = StyleSheet.create({
   chuXam: {
     color: colors.textSecondary,
   },
-  khungNhanXet: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.small,
-    borderRadius: radius.input,
-    padding: spacing.medium,
-    marginBottom: spacing.small,
-  },
-  khungBinhThuong: {
-    backgroundColor: colors.primaryLight,
-  },
-  khungCanhBao: {
-    backgroundColor: colors.warningBackground,
-  },
-  chuNhanXet: {
-    flex: 1,
-    fontSize: fontSizes.secondary,
-  },
   chuNguon: {
     fontSize: fontSizes.label,
     color: colors.textSecondary,
+  },
+  dangBam: {
+    opacity: pressedOpacity,
   },
 });

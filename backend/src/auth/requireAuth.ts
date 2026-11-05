@@ -28,7 +28,7 @@ export async function requireAuth(request: Request, response: Response, next: Ne
     throw new HttpError(401, 'Phiên đăng nhập đã hết hạn');
   }
 
-  // Đổi mật khẩu hoặc xóa tài khoản thì phiên bản trong database không còn khớp với token
+  // Đổi mật khẩu thì phiên bản trong database không còn khớp với token
   const currentTokenVersion = await findTokenVersion(tokenContent.userId);
   if (currentTokenVersion !== tokenContent.tokenVersion) {
     throw new HttpError(401, 'Phiên đăng nhập đã hết hạn');

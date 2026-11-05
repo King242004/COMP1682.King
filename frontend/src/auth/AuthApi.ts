@@ -43,8 +43,3 @@ export async function changePasswordRequest(currentPassword: string, newPassword
   const result = await callApi('PUT', '/auth/password', { mat_khau_hien_tai: currentPassword, mat_khau_moi: newPassword });
   return result as { token: string };
 }
-
-// Gửi xóa tài khoản
-export async function deleteAccountRequest(): Promise<void> {
-  await callApi('DELETE', '/auth/me');
-}

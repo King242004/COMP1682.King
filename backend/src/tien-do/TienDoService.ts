@@ -4,12 +4,11 @@ import { layHoSo } from '../ho-so/HoSoQueries.ts';
 import { capNhatCanNangHoSo, lamMoiMucTieuNeuQuaSinhNhat } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { layCanNangCacNgay, luuCanNang } from './TienDoQueries.ts';
+import { layCanNangCacNgay, luuCanNang, SO_NGAY_XU_HUONG } from './TienDoQueries.ts';
 import type { LanCan } from './TienDoQueries.ts';
 
-// Số ngày của biểu đồ, của đường xu hướng, của thẻ "4 tuần qua"; là lựa chọn giao diện, không phải luật dinh dưỡng
+// Số ngày của biểu đồ, của thẻ "4 tuần qua" (số ngày của đường xu hướng ở TienDoQueries.ts); là lựa chọn giao diện, không phải luật dinh dưỡng
 const SO_NGAY_BIEU_DO = 30;
-const SO_NGAY_XU_HUONG = 7;
 const SO_NGAY_TOM_TAT = 28;
 
 // Cân phải trải dài ít nhất 14 ngày mới tính tốc độ; quy ước 1 tháng = 30 ngày

@@ -10,21 +10,23 @@ type ScreenProps = {
   header?: ReactNode;
   // Màn trong thanh tab mà không có nút + nổi (ví dụ Hồ sơ): đáy chỉ chừa 16, vì thanh tab đã chừa phần thanh home
   compactBottom?: boolean;
+  // Màn có ô gõ chữ trong phần cuộn: bật để bàn phím mở thì tự chừa chỗ; màn không có ô gõ để tắt
+  avoidKeyboard?: boolean;
 };
 
 // Khung chung của mọi màn: chừa đúng phần tai thỏ ở trên, nền kem, cuộn được, lề 16
-export function Screen({ children, header, compactBottom }: ScreenProps) {
+export function Screen({ children, header, compactBottom, avoidKeyboard }: ScreenProps) {
   // Chiều cao vùng tai thỏ và thanh trạng thái; phần đáy không chừa vì thanh tab đã chừa sẵn
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       {header ? <View style={styles.header}>{header}</View> : null}
-      {/* Bàn phím mở thì tự chừa chỗ để ô đang gõ không bị che */}
+      {/* Màn có ô gõ thì bàn phím mở tự chừa chỗ để ô đang gõ không bị che */}
       <ScrollView
         contentContainerStyle={[styles.content, header ? styles.contentUnderHeader : null, compactBottom ? styles.contentCompactBottom : null]}
         keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
+        automaticallyAdjustKeyboardInsets={avoidKeyboard === true}
       >
         {children}
       </ScrollView>

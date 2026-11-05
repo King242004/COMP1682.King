@@ -19,7 +19,7 @@ export function UuTien({ loTrinh }: UuTienProps) {
   const { donVi, heSo } = useDonVi();
   const cacDong: { bieuTuong: TenBieuTuong; chu: string }[] = [];
 
-  // Dòng theo mục tiêu: tốc độ giảm cân, ăn đủ calo khi tăng cân, hoặc giữ cân
+  // Dòng theo mục tiêu: tốc độ giảm cân, ăn đủ calo khi tăng cân, ăn quanh mức calo giữ cân
   if (loTrinh.muc_tieu === 'giam') {
     const kgThap = doiKgRaDonVi(loTrinh.kg_moi_thang_thap, donVi, heSo).toLocaleString('vi-VN');
     cacDong.push({
@@ -31,7 +31,7 @@ export function UuTien({ loTrinh }: UuTienProps) {
     cacDong.push({ bieuTuong: 'scale-bathroom', chu: `Ăn đủ ${loTrinh.muc_tieu_calo.toLocaleString('vi-VN')} kcal mỗi ngày` });
   }
   if (loTrinh.muc_tieu === 'giu') {
-    cacDong.push({ bieuTuong: 'scale-bathroom', chu: `Giữ cân quanh ${vietCanNang(loTrinh.can_nang_kg, donVi, heSo)}` });
+    cacDong.push({ bieuTuong: 'scale-bathroom', chu: `Ăn khoảng ${loTrinh.muc_tieu_calo.toLocaleString('vi-VN')} kcal mỗi ngày` });
   }
 
   // Dòng vòng eo: chỉ khi mỡ bụng cao hơn khuyến nghị
@@ -62,7 +62,7 @@ export function UuTien({ loTrinh }: UuTienProps) {
 
 const styles = StyleSheet.create({
   tieuDe: {
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.small,

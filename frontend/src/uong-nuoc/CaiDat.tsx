@@ -77,7 +77,7 @@ export function CaiDat({ uongNuoc, dangLuu, loiQuyen, onLuu }: CaiDatProps) {
         disabled={dangLuu}
         onPress={() => setTamDangMo('moi-lan')}
       >
-        <Text style={styles.nhan}>Mỗi lần ghi</Text>
+        <Text style={[styles.nhan, styles.cotNhan]}>Mỗi lần ghi</Text>
         <Text style={styles.giaTri}>{uongNuoc.nuoc_ml_moi_lan.toLocaleString('vi-VN')} ml</Text>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
@@ -100,7 +100,7 @@ export function CaiDat({ uongNuoc, dangLuu, loiQuyen, onLuu }: CaiDatProps) {
 
       {/* Công tắc nhắc uống nước; iPhone không cho gửi thông báo thì hiện chữ đỏ */}
       <View style={styles.dong}>
-        <Text style={[styles.nhan, styles.nhanCongTac]}>Nhắc uống nước</Text>
+        <Text style={[styles.nhan, styles.cotNhan]}>Nhắc uống nước</Text>
         <Switch
           value={uongNuoc.nhac_uong_nuoc}
           disabled={dangLuu}
@@ -110,32 +110,34 @@ export function CaiDat({ uongNuoc, dangLuu, loiQuyen, onLuu }: CaiDatProps) {
       </View>
       {loiQuyen ? <Text style={styles.chuLoi}>{loiQuyen}</Text> : null}
 
-      {/* Các giờ nhắc: bấm × để bỏ; đủ số giờ tối đa thì không còn nút thêm */}
-      <View style={styles.hangGio}>
-        {uongNuoc.gio_nhac.map((gio) => (
-          <Pressable
-            key={gio}
-            style={({ pressed }) => [styles.vienGio, pressed ? styles.dangBam : null]}
-            hitSlop={4}
-            disabled={dangLuu}
-            onPress={() => boGio(gio)}
-          >
-            <Text style={styles.chuGio}>{gio}</Text>
-            <Ionicons name="close" size={14} color={colors.textOnPrimaryLight} />
-          </Pressable>
-        ))}
-        {uongNuoc.gio_nhac.length < SO_GIO_NHAC_TOI_DA ? (
-          <Pressable
-            style={({ pressed }) => [styles.vienThem, pressed ? styles.dangBam : null]}
-            hitSlop={4}
-            disabled={dangLuu}
-            onPress={() => setTamDangMo('gio')}
-          >
-            <Ionicons name="add" size={14} color={colors.primary} />
-            <Text style={styles.chuThem}>Thêm giờ</Text>
-          </Pressable>
-        ) : null}
-      </View>
+      {/* Các giờ nhắc, chỉ hiện khi bật nhắc: bấm × để bỏ; đủ số giờ tối đa thì không còn nút thêm */}
+      {uongNuoc.nhac_uong_nuoc ? (
+        <View style={styles.hangGio}>
+          {uongNuoc.gio_nhac.map((gio) => (
+            <Pressable
+              key={gio}
+              style={({ pressed }) => [styles.vienGio, pressed ? styles.dangBam : null]}
+              hitSlop={4}
+              disabled={dangLuu}
+              onPress={() => boGio(gio)}
+            >
+              <Text style={styles.chuGio}>{gio}</Text>
+              <Ionicons name="close" size={14} color={colors.textOnPrimaryLight} />
+            </Pressable>
+          ))}
+          {uongNuoc.gio_nhac.length < SO_GIO_NHAC_TOI_DA ? (
+            <Pressable
+              style={({ pressed }) => [styles.vienThem, pressed ? styles.dangBam : null]}
+              hitSlop={4}
+              disabled={dangLuu}
+              onPress={() => setTamDangMo('gio')}
+            >
+              <Ionicons name="add" size={14} color={colors.primary} />
+              <Text style={styles.chuThem}>Thêm giờ</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {/* Tấm nổi đang mở */}
       {tamDangMo === 'moi-lan' ? (
@@ -177,17 +179,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.small,
     minHeight: 48,
+    paddingVertical: spacing.small,
   },
   cotNhan: {
     flex: 1,
   },
   nhan: {
-    flex: 1,
     fontSize: fontSizes.body,
     color: colors.text,
-  },
-  nhanCongTac: {
-    flex: 1,
   },
   giaTri: {
     fontSize: fontSizes.body,

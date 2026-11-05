@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { changeDisplayName, changePassword, deleteAccount, getMe, login, register } from './AuthService.ts';
+import { changeDisplayName, changePassword, getMe, login, register } from './AuthService.ts';
 import { requireAuth } from './requireAuth.ts';
 
 const authRoutes = Router();
@@ -33,12 +33,6 @@ authRoutes.put('/me', requireAuth, async (request, response) => {
 authRoutes.put('/password', requireAuth, async (request, response) => {
   const result = await changePassword(response.locals.userId, request.body.mat_khau_hien_tai, request.body.mat_khau_moi);
   response.json(result);
-});
-
-// Xóa tài khoản (cần token)
-authRoutes.delete('/me', requireAuth, async (request, response) => {
-  await deleteAccount(response.locals.userId);
-  response.status(204).end();
 });
 
 export default authRoutes;

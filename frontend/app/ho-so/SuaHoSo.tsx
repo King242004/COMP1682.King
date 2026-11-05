@@ -20,6 +20,7 @@ import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { TextField } from '../../src/shared/components/TextField';
 import { ageOnDate, todayKey } from '../../src/shared/dateKey';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/shared/theme';
+import { ghiCanNang } from '../../src/tien-do/TienDoApi';
 
 // Phần nào của hồ sơ đang sửa: mở từ thẻ nào thì chỉ hiện phần đó
 type PhanSua = 'ca-nhan' | 'muc-tieu' | 'di-ung';
@@ -66,9 +67,8 @@ export default function SuaHoSo() {
   const hienCaNhan = laLanDau || thamSo.phan === 'ca-nhan';
   const hienMucTieu = laLanDau || thamSo.phan === 'muc-tieu';
   const hienDiUng = laLanDau || thamSo.phan === 'di-ung';
-  // Ô tên chỉ có ở màn Thông tin cá nhân (lần đầu đã nhập tên lúc đăng ký); ô cân nặng chỉ có lần đầu (sau đó ghi ở màn Tiến độ)
+  // Ô tên chỉ có ở màn Thông tin cá nhân (lần đầu đã nhập tên lúc đăng ký)
   const hienOTen = !laLanDau && thamSo.phan === 'ca-nhan';
-  const hienOCanNang = laLanDau;
 
   // Lần đầu chọn đơn vị ngay trong form (lưu khi bấm Lưu); sửa sau thì dùng đơn vị đã chọn ở Tài khoản
   const [donViLanDau, setDonViLanDau] = useState<DonVi>(donVi);
@@ -92,10 +92,12 @@ export default function SuaHoSo() {
   const [mucTieu, setMucTieu] = useState<MucTieu>('giu');
   const [maNhomDiUng, setMaNhomDiUng] = useState<string[]>([]);
   const [diUngKiengAn, setDiUngKiengAn] = useState('');
-  // Cân mục tiêu và vòng eo gõ theo đơn vị đang dùng; số đã lưu (kg, cm) chờ có số đổi rồi mới điền vào ô
+  // Cân nặng, cân mục tiêu và vòng eo gõ theo đơn vị đang dùng; số đã lưu (kg, cm) chờ có số đổi rồi mới điền vào ô
   const [canMucTieu, setCanMucTieu] = useState('');
   const [vongEo, setVongEo] = useState('');
-  const [soDaLuu, setSoDaLuu] = useState<{ canMucTieuKg: number | null; vongEoCm: number | null } | null>(null);
+  const [soDaLuu, setSoDaLuu] = useState<{ canNangKg: number | null; canMucTieuKg: number | null; vongEoCm: number | null } | null>(null);
+  // Cân nặng đã lưu (kg), để biết người dùng có đổi cân nặng không
+  const [canNangDaLuuKg, setCanNangDaLuuKg] = useState<number | null>(null);
 
   // Lỗi dưới từng ô (theo tên ô), lỗi từ server, trạng thái đang lưu
   const [loiNhap, setLoiNhap] = useState<Record<string, string>>({});
@@ -116,12 +118,12 @@ export default function SuaHoSo() {
         setGioiTinh(hoSo.gioi_tinh);
         setNgaySinh(hoSo.ngay_sinh);
         setChieuCao(String(hoSo.chieu_cao_cm));
-        setCanNang(String(hoSo.can_nang_kg));
+        setCanNangDaLuuKg(hoSo.can_nang_kg);
         setMucVanDong(hoSo.muc_van_dong);
         setMucTieu(hoSo.muc_tieu ?? 'giu');
         setMaNhomDiUng(hoSo.nhom_di_ung_da_chon.map((nhom) => nhom.ma));
         setDiUngKiengAn(hoSo.di_ung_kieng_an);
-        setSoDaLuu({ canMucTieuKg: hoSo.can_muc_tieu_kg, vongEoCm: hoSo.vong_eo_cm });
+        setSoDaLuu({ canNangKg: hoSo.can_nang_kg, canMucTieuKg: hoSo.can_muc_tieu_kg, vongEoCm: hoSo.vong_eo_cm });
       }
     } catch (loi) {
       setLoiTai((loi as Error).message);
@@ -138,10 +140,13 @@ export default function SuaHoSo() {
     }
   }, [heSo, chieuCao]);
 
-  // Điền ô cân mục tiêu và vòng eo theo đơn vị khi đã tải hồ sơ và có số đổi (Mét không cần chờ); điền một lần rồi thôi
+  // Điền ô cân nặng, cân mục tiêu và vòng eo theo đơn vị khi đã tải hồ sơ và có số đổi (Mét không cần chờ); điền một lần rồi thôi
   useEffect(() => {
     if (soDaLuu === null || (donViDangDung === 'anh_my' && heSo === null)) {
       return;
+    }
+    if (soDaLuu.canNangKg !== null) {
+      setCanNang(String(doiKgRaDonVi(soDaLuu.canNangKg, donViDangDung, heSo)));
     }
     if (soDaLuu.canMucTieuKg !== null) {
       setCanMucTieu(String(doiKgRaDonVi(soDaLuu.canMucTieuKg, donViDangDung, heSo)));
@@ -190,14 +195,20 @@ export default function SuaHoSo() {
     }
   }
 
-  // Đổi số người dùng gõ ra cm, kg (database lưu cm, kg); màn không có ô chiều cao, cân nặng thì giữ số đã lưu
+  // Đổi chiều cao người dùng gõ ra cm (database lưu cm); màn không có ô chiều cao thì giữ số đã lưu
   let chieuCaoSo = Number(chieuCao.replace(',', '.'));
   if (laAnhMy && heSo !== null && hienCaNhan) {
     chieuCaoSo = docChieuCaoFeetInch(chieuCaoFeet, chieuCaoInch, heSo) ?? 0;
   }
-  let canNangSo = Number(canNang.replace(',', '.'));
-  if (laLanDau) {
-    canNangSo = docCanNang(canNang, donViDangDung, heSo) ?? 0;
+
+  // Đổi cân nặng người dùng gõ ra kg (database lưu kg)
+  let canNangSo = docCanNang(canNang, donViDangDung, heSo) ?? 0;
+  // Màn không có ô cân nặng, hoặc ô vẫn đúng số đã điền sẵn (ô chỉ hiện 1 số lẻ), thì giữ nguyên số đã lưu
+  if (canNangDaLuuKg !== null) {
+    const chuCanNangDienSan = String(doiKgRaDonVi(canNangDaLuuKg, donViDangDung, heSo));
+    if (!hienCaNhan || canNang === chuCanNangDienSan) {
+      canNangSo = canNangDaLuuKg;
+    }
   }
 
   // BMI tính ngay khi đã nhập đủ chiều cao và cân nặng, làm tròn 1 số lẻ giống server, để làm mờ mục tiêu không phù hợp
@@ -297,7 +308,7 @@ export default function SuaHoSo() {
 
     // Vòng eo không bắt buộc: trống là không có; gõ thì phải trong giới hạn
     const vongEoCm = docVongEo(vongEo, donViDangDung, heSo);
-    if (hienMucTieu && vongEo.trim() !== '' && !(vongEoCm !== null && vongEoCm >= VONG_EO_NHO_NHAT && vongEoCm <= VONG_EO_LON_NHAT)) {
+    if (hienCaNhan && vongEo.trim() !== '' && !(vongEoCm !== null && vongEoCm >= VONG_EO_NHO_NHAT && vongEoCm <= VONG_EO_LON_NHAT)) {
       loiMoi.vongEo = `Vòng eo ${vietGioiHan(VONG_EO_NHO_NHAT, VONG_EO_LON_NHAT, 'vong_eo', donViDangDung, heSo)}`;
     }
 
@@ -341,15 +352,21 @@ export default function SuaHoSo() {
         ma_nhom_di_ung: maNhomDiUng,
         di_ung_kieng_an: diUngKiengAn.trim(),
       };
-      // Vòng eo và cân mục tiêu chỉ gửi khi đang sửa phần "Mục tiêu"; phần khác không gửi để server giữ số cũ
-      if (hienMucTieu) {
+      // Vòng eo chỉ gửi khi đang sửa phần "Thông tin cá nhân", cân mục tiêu chỉ gửi khi đang sửa phần "Mục tiêu"; không gửi thì server giữ số cũ
+      if (hienCaNhan) {
         hoSoGuiLen.vong_eo_cm = vongEoCm;
+      }
+      if (hienMucTieu) {
         hoSoGuiLen.can_muc_tieu_kg = null;
         if (mucTieu !== 'giu') {
           hoSoGuiLen.can_muc_tieu_kg = canMucTieuKg;
         }
       }
       await luuHoSo(hoSoGuiLen);
+      // Sửa sau mà đổi cân nặng thì ghi luôn thành lần cân hôm nay, để biểu đồ ở màn Tiến độ có điểm mới
+      if (canNangDaLuuKg !== null && canNangSo !== canNangDaLuuKg) {
+        await ghiCanNang(todayKey(), canNangSo);
+      }
       if (hienOTen && user && tenHienThi.trim() !== user.ten_hien_thi) {
         await changeDisplayName(tenHienThi.trim());
       }
@@ -383,7 +400,7 @@ export default function SuaHoSo() {
 
   return (
     <View style={styles.khung}>
-      <Screen compactBottom>
+      <Screen compactBottom avoidKeyboard>
         {/* Lần đầu thiết lập thì chưa có màn nào để quay lại */}
         <ScreenTitle
           title={tieuDe}
@@ -404,7 +421,7 @@ export default function SuaHoSo() {
           </Card>
         ) : null}
 
-        {/* Thông tin cá nhân: tên (chỉ khi sửa), giới tính, năm sinh, chiều cao; lần đầu có thêm cân nặng */}
+        {/* Thông tin cá nhân: tên (chỉ khi sửa), giới tính, ngày sinh và các số đo cơ thể */}
         {hienCaNhan ? (
           <Card>
             <TieuDeThe bieuTuong={<Ionicons name="person-outline" size={18} color={colors.primary} />} tieuDe="Thông tin cá nhân" />
@@ -433,17 +450,26 @@ export default function SuaHoSo() {
             ) : (
               <TextField label="Chiều cao (cm)" value={chieuCao} onChangeText={setChieuCao} error={loiNhap.chieuCao ?? ''} placeholder="165" isNumber isDisabled={dangLuu} />
             )}
-            {hienOCanNang ? (
-              <TextField
-                label={laAnhMy ? 'Cân nặng (lb)' : 'Cân nặng (kg)'}
-                value={canNang}
-                onChangeText={setCanNang}
-                error={loiNhap.canNang ?? ''}
-                placeholder={laAnhMy ? '121' : '55'}
-                isNumber
-                isDisabled={dangLuu}
-              />
-            ) : null}
+            <TextField
+              label={laAnhMy ? 'Cân nặng (lb)' : 'Cân nặng (kg)'}
+              value={canNang}
+              onChangeText={setCanNang}
+              error={loiNhap.canNang ?? ''}
+              placeholder={laAnhMy ? '121' : '55'}
+              isNumber
+              isDisabled={dangLuu}
+            />
+
+            {/* Vòng eo không bắt buộc, kèm cách đo theo NICE */}
+            <TextField
+              label={laAnhMy ? 'Vòng eo (in, không bắt buộc)' : 'Vòng eo (cm, không bắt buộc)'}
+              value={vongEo}
+              onChangeText={setVongEo}
+              error={loiNhap.vongEo ?? ''}
+              isNumber
+              isDisabled={dangLuu}
+            />
+            <Text style={styles.chuPhu}>Đo ngang giữa xương sườn dưới cùng và đỉnh hông (ngay trên rốn), thở ra tự nhiên rồi đo.</Text>
           </Card>
         ) : null}
 
@@ -490,17 +516,6 @@ export default function SuaHoSo() {
                 isDisabled={dangLuu}
               />
             ) : null}
-
-            {/* Vòng eo không bắt buộc, kèm cách đo theo NICE */}
-            <TextField
-              label={laAnhMy ? 'Vòng eo (in, không bắt buộc)' : 'Vòng eo (cm, không bắt buộc)'}
-              value={vongEo}
-              onChangeText={setVongEo}
-              error={loiNhap.vongEo ?? ''}
-              isNumber
-              isDisabled={dangLuu}
-            />
-            <Text style={styles.chuPhu}>Đo ngang giữa xương sườn dưới cùng và đỉnh hông (ngay trên rốn), thở ra tự nhiên rồi đo.</Text>
           </Card>
         ) : null}
 
@@ -527,7 +542,7 @@ export default function SuaHoSo() {
         {hienDiUng ? (
           <Card>
             <TieuDeThe bieuTuong={<MaterialCommunityIcons name="food-off-outline" size={18} color={colors.primary} />} tieuDe="Kiêng ăn khác" />
-            <Text style={styles.chuPhuDauThe}>Không bắt buộc. Chỉ AI đọc khi gợi ý món, app không tự kiểm.</Text>
+            <Text style={styles.chuPhuDauThe}>Không bắt buộc. AI sẽ tránh khi gợi ý món.</Text>
             <TextField
               label=""
               value={diUngKiengAn}

@@ -107,7 +107,7 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
   }
 
   return (
-    <Screen>
+    <Screen avoidKeyboard>
       <ScreenTitle title="Quét mã vạch" onBack={onDong} />
 
       {/* Chưa có quyền camera thì xin quyền */}

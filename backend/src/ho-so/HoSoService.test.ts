@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { chonCanBatDau, chonMucVanDongTheoTuoi, docMaNhomDiUng, docNgaySinh, kiemTraCanMucTieu, phanLoaiBmi, tinhBmi, tinhChuyenHoaCoBan, tinhMucTieuCalo, tinhTuoi } from './HoSoService.ts';
+import { chonCanBatDau, chonCanGiuQuanh, chonMucVanDongTheoTuoi, docMaNhomDiUng, docNgaySinh, kiemTraCanMucTieu, phanLoaiBmi, tinhBmi, tinhChuyenHoaCoBan, tinhMucTieuCalo, tinhTuoi } from './HoSoService.ts';
 
 // Ngưỡng giống bảng quy_dinh (QĐ 2892, Bảng 4.1)
 const nguong = { thieuCan: 18.5, thuaCan: 23, beoPhiDo1: 25, beoPhiDo2: 30 };
@@ -152,6 +152,7 @@ const hoSoDangGiam = {
   vong_eo_cm: 92,
   can_muc_tieu_kg: 65,
   can_bat_dau_kg: 72,
+  can_giu_quanh_kg: null,
 };
 
 test('chọn cân lúc bắt đầu: giữ số cũ khi không đổi mục tiêu, tính lại khi đổi', () => {
@@ -161,4 +162,15 @@ test('chọn cân lúc bắt đầu: giữ số cũ khi không đổi mục tiê
   assert.equal(chonCanBatDau(hoSoDangGiam, 'giam', 63, 70), 70);
   assert.equal(chonCanBatDau(hoSoDangGiam, 'tang', 62, 55), 55);
   assert.equal(chonCanBatDau({ ...hoSoDangGiam, can_muc_tieu_kg: null, can_bat_dau_kg: null }, 'giam', 65, 72), 72);
+});
+
+// Hồ sơ cũ đang giữ cân quanh 80 kg
+const hoSoDangGiu = { ...hoSoDangGiam, muc_tieu: 'giu' as const, can_muc_tieu_kg: null, can_bat_dau_kg: null, can_giu_quanh_kg: 80 };
+
+test('chọn cân giữ quanh: mới chuyển sang giữ cân thì lấy cân lúc này, đang giữ thì giữ số cũ, không giữ thì không có', () => {
+  assert.equal(chonCanGiuQuanh(hoSoDangGiam, 'giu', 65.2), 65.2);
+  assert.equal(chonCanGiuQuanh(hoSoDangGiu, 'giu', 82), 80);
+  assert.equal(chonCanGiuQuanh({ ...hoSoDangGiu, can_giu_quanh_kg: null }, 'giu', 82), 82);
+  assert.equal(chonCanGiuQuanh(hoSoDangGiu, 'giam', 82), null);
+  assert.equal(chonCanGiuQuanh(hoSoDangGiam, 'tang', 70), null);
 });

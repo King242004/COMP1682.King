@@ -3,6 +3,7 @@ import { phanLoaiBmi, tinhBmi } from '../ho-so/HoSoService.ts';
 import type { MucTieu } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
+import { layCanXuHuongGanNhat, SO_NGAY_XU_HUONG } from '../tien-do/TienDoQueries.ts';
 
 // Mức mỡ bụng theo tỉ lệ vòng eo / chiều cao (NICE NG246)
 export type MucEo = 'trong_khuyen_nghi' | 'cao' | 'rat_cao';
@@ -30,10 +31,22 @@ export type SoThang = {
   nhieu_nhat: number;
 };
 
+// Cân gần đây so với khoảng giữ cân: trong khoảng, cao hơn hay thấp hơn
+type TrangThaiGiuCan = 'trong_khoang' | 'cao_hon' | 'thap_hon';
+
+// Khoảng giữ cân: giữ quanh cân nào, cân thấp nhất và cao nhất của khoảng, cân gần đây đang ở đâu
+export type KhoangGiuCan = {
+  can_giu_quanh_kg: number;
+  thap_nhat_kg: number;
+  cao_nhat_kg: number;
+  trang_thai: TrangThaiGiuCan;
+};
+
 // Lộ trình gửi về app: thể trạng, đích, tiến độ, các mốc và các số để viết phần ưu tiên
 type LoTrinh = {
   muc_tieu: MucTieu;
-  can_nang_kg: number;
+  // Cân theo xu hướng (trung bình 7 ngày tới lần cân gần nhất); chưa cân lần nào thì bằng cân trong hồ sơ
+  can_gan_nhat_kg: number;
   chieu_cao_cm: number;
   bmi: number;
   phan_loai_bmi: string;
@@ -47,12 +60,13 @@ type LoTrinh = {
   can_canh_bao: boolean;
   vong_eo_dich_cm: number;
   can_muc_tieu_kg: number | null;
-  bmi_muc_tieu: number | null;
   can_bat_dau_kg: number | null;
   // Chỉ có khi giảm / tăng và đã đặt cân mục tiêu; số tháng và các mốc chỉ có khi giảm cân
   tien_do: TienDoLoTrinh | null;
   so_thang: SoThang | null;
   cac_moc: MocLoTrinh[];
+  // Chỉ có khi giữ cân
+  khoang_giu: KhoangGiuCan | null;
   kg_moi_thang_thap: number;
   kg_moi_thang_cao: number;
   muc_tieu_calo: number;
@@ -144,6 +158,25 @@ export function tinhTienDo(mucTieu: 'giam' | 'tang', canBatDauKg: number, canMuc
   };
 }
 
+// Khoảng giữ cân = cân giữ quanh cộng trừ tỉ lệ dao động, làm tròn 2 số lẻ; cân gần đây ra ngoài khoảng là cao hơn hoặc thấp hơn
+export function tinhKhoangGiu(canGiuQuanhKg: number, canGanNhatKg: number, tyLeDaoDong: number): KhoangGiuCan {
+  const thapNhatKg = Math.round(canGiuQuanhKg * (1 - tyLeDaoDong) * 100) / 100;
+  const caoNhatKg = Math.round(canGiuQuanhKg * (1 + tyLeDaoDong) * 100) / 100;
+  let trangThai: TrangThaiGiuCan = 'trong_khoang';
+  if (canGanNhatKg > caoNhatKg) {
+    trangThai = 'cao_hon';
+  }
+  if (canGanNhatKg < thapNhatKg) {
+    trangThai = 'thap_hon';
+  }
+  return {
+    can_giu_quanh_kg: canGiuQuanhKg,
+    thap_nhat_kg: thapNhatKg,
+    cao_nhat_kg: caoNhatKg,
+    trang_thai: trangThai,
+  };
+}
+
 // Tính lộ trình của một người từ hồ sơ và các số trong bảng quy_dinh
 export async function xemLoTrinh(nguoiDungId: number): Promise<LoTrinh> {
   const hoSo = await layHoSo(nguoiDungId);
@@ -175,25 +208,36 @@ export async function xemLoTrinh(nguoiDungId: number): Promise<LoTrinh> {
   // Tô màu cảnh báo khi BMI ngoài mức bình thường hoặc mỡ bụng cao
   const canCanhBao = !bmiBinhThuong || mucEo === 'cao' || mucEo === 'rat_cao';
 
+  // Cân gần đây theo xu hướng để tính tiến độ, mốc và giữ cân; chưa cân lần nào thì dùng cân trong hồ sơ
+  let canGanNhatKg = hoSo.can_nang_kg;
+  const canXuHuongKg = await layCanXuHuongGanNhat(nguoiDungId, SO_NGAY_XU_HUONG);
+  if (canXuHuongKg !== null) {
+    canGanNhatKg = canXuHuongKg;
+  }
+
   // Lộ trình chỉ có khi giảm / tăng và đã đặt cân mục tiêu; riêng giảm cân có số tháng và các mốc
   const kgMoiThangThap = await layQuyDinh('giam_can_kg_moi_thang_thap');
   const kgMoiThangCao = await layQuyDinh('giam_can_kg_moi_thang_cao');
-  let bmiMucTieu: number | null = null;
   let tienDo: TienDoLoTrinh | null = null;
   let soThang: SoThang | null = null;
   let cacMoc: MocLoTrinh[] = [];
   if (hoSo.muc_tieu !== 'giu' && hoSo.can_muc_tieu_kg !== null && hoSo.can_bat_dau_kg !== null) {
-    bmiMucTieu = tinhBmi(hoSo.can_muc_tieu_kg, hoSo.chieu_cao_cm);
-    tienDo = tinhTienDo(hoSo.muc_tieu, hoSo.can_bat_dau_kg, hoSo.can_muc_tieu_kg, hoSo.can_nang_kg);
+    tienDo = tinhTienDo(hoSo.muc_tieu, hoSo.can_bat_dau_kg, hoSo.can_muc_tieu_kg, canGanNhatKg);
     if (hoSo.muc_tieu === 'giam') {
       soThang = tinhSoThang(tienDo.so_kg_can_di, kgMoiThangThap, kgMoiThangCao);
-      cacMoc = tinhCacMoc(hoSo.can_bat_dau_kg, hoSo.can_muc_tieu_kg, hoSo.can_nang_kg, kgMoiThangThap);
+      cacMoc = tinhCacMoc(hoSo.can_bat_dau_kg, hoSo.can_muc_tieu_kg, canGanNhatKg, kgMoiThangThap);
     }
+  }
+
+  // Giữ cân: khoảng ±tỉ lệ quanh cân giữ quanh
+  let khoangGiu: KhoangGiuCan | null = null;
+  if (hoSo.muc_tieu === 'giu' && hoSo.can_giu_quanh_kg !== null) {
+    khoangGiu = tinhKhoangGiu(hoSo.can_giu_quanh_kg, canGanNhatKg, await layQuyDinh('giu_can_ty_le_dao_dong'));
   }
 
   return {
     muc_tieu: hoSo.muc_tieu,
-    can_nang_kg: hoSo.can_nang_kg,
+    can_gan_nhat_kg: canGanNhatKg,
     chieu_cao_cm: hoSo.chieu_cao_cm,
     bmi: bmi,
     phan_loai_bmi: phanLoai,
@@ -206,11 +250,11 @@ export async function xemLoTrinh(nguoiDungId: number): Promise<LoTrinh> {
     can_canh_bao: canCanhBao,
     vong_eo_dich_cm: Math.round(hoSo.chieu_cao_cm * eoChieuCaoCao * 10) / 10,
     can_muc_tieu_kg: hoSo.can_muc_tieu_kg,
-    bmi_muc_tieu: bmiMucTieu,
     can_bat_dau_kg: hoSo.can_bat_dau_kg,
     tien_do: tienDo,
     so_thang: soThang,
     cac_moc: cacMoc,
+    khoang_giu: khoangGiu,
     kg_moi_thang_thap: kgMoiThangThap,
     kg_moi_thang_cao: kgMoiThangCao,
     muc_tieu_calo: hoSo.muc_tieu_calo,

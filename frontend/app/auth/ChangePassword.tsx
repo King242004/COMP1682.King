@@ -53,7 +53,7 @@ export default function ChangePassword() {
   }
 
   return (
-    <Screen>
+    <Screen avoidKeyboard>
       <ScreenTitle title="Đổi mật khẩu" subtitle="Các máy khác đang đăng nhập sẽ bị đăng xuất" onBack={() => router.back()} />
 
       {serverError ? <ErrorBox message={serverError} /> : null}

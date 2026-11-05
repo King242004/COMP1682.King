@@ -49,7 +49,15 @@ export function ThemGioNhac({ onThem, onDong }: ThemGioNhacProps) {
               <Text style={styles.chuThem}>Thêm</Text>
             </Pressable>
           </View>
-          <DateTimePicker value={gioDangQuay} mode="time" display="spinner" locale="vi-VN" themeVariant="light" onChange={khiQuay} />
+          <DateTimePicker
+            style={styles.banhXe}
+            value={gioDangQuay}
+            mode="time"
+            display="spinner"
+            locale="vi-VN"
+            themeVariant="light"
+            onChange={khiQuay}
+          />
         </View>
       </View>
     </Modal>
@@ -89,6 +97,9 @@ const styles = StyleSheet.create({
   },
   nutThem: {
     alignItems: 'flex-end',
+  },
+  banhXe: {
+    alignSelf: 'center',
   },
   chuHuy: {
     fontSize: fontSizes.body,

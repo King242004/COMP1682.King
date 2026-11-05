@@ -140,14 +140,14 @@ export default function HoSo() {
         </View>
       ) : null}
 
-      {/* Cài đặt tài khoản (đổi mật khẩu, xóa tài khoản) và đăng xuất */}
+      {/* Cài đặt tài khoản (thông tin cá nhân, đổi mật khẩu) và đăng xuất */}
       <Card>
         <DongBam
           bieuTuong="settings-outline"
           mauBieuTuong={colors.primary}
           mauNenBieuTuong={colors.primaryLight}
           nhan="Cài đặt tài khoản"
-          chuNho="Thông tin cá nhân, đổi mật khẩu, xóa tài khoản"
+          chuNho="Thông tin cá nhân, đổi mật khẩu"
           coMuiTen
           onPress={() => router.push('/ho-so/TaiKhoan')}
         />

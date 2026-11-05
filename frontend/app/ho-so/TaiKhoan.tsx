@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '../../src/auth/AuthContext';
-import { vietChieuCao } from '../../src/don-vi/DoiDonVi';
+import { vietCanNang, vietChieuCao, vietVongEo } from '../../src/don-vi/DoiDonVi';
 import type { DonVi } from '../../src/don-vi/DoiDonVi';
 import { useDonVi } from '../../src/don-vi/DonViContext';
 import { layHoSo } from '../../src/ho-so/HoSoApi';
@@ -20,7 +20,7 @@ import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/sh
 const TEN_GIOI_TINH = { nam: 'Nam', nu: 'Nữ' };
 
 export default function TaiKhoan() {
-  const { user, deleteAccount } = useAuth();
+  const { user } = useAuth();
   const { donVi, heSo, doiDonVi } = useDonVi();
   const [dangLuuDonVi, setDangLuuDonVi] = useState(false);
   const [hoSo, setHoSo] = useState<HoSo | null>(null);
@@ -40,25 +40,6 @@ export default function TaiKhoan() {
     } catch (loiTai) {
       setLoi((loiTai as Error).message);
     }
-  }
-
-  // Hỏi lại trước khi xóa, vì không khôi phục được; xóa xong về màn bắt đầu, màn đó tự chuyển sang đăng nhập
-  function xacNhanXoaTaiKhoan() {
-    Alert.alert('Xóa tài khoản?', 'Toàn bộ dữ liệu của bạn sẽ bị xóa và không khôi phục được.', [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Xóa',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteAccount();
-            router.replace('/');
-          } catch (loiXoa) {
-            setLoi((loiXoa as Error).message);
-          }
-        },
-      },
-    ]);
   }
 
   // Chọn đơn vị: bấm ô nào cũng lưu lên server (kể cả ô đang sáng, để sửa được khi app tải đơn vị bị lỗi); đang lưu thì khóa 2 ô
@@ -96,7 +77,7 @@ export default function TaiKhoan() {
         </View>
       </Card>
 
-      {/* Thông tin cá nhân: giới tính, ngày sinh, chiều cao; "Sửa" mở màn sửa (có cả ô tên) */}
+      {/* Thông tin cá nhân: danh sách giới tính, ngày sinh và các số đo cơ thể; "Sửa" mở màn sửa (có cả ô tên) */}
       {hoSo && hoSo.muc_tieu_calo !== null ? (
         <Card>
           <View style={styles.hangTieuDe}>
@@ -110,11 +91,15 @@ export default function TaiKhoan() {
               <Text style={styles.chuSua}>Sửa</Text>
             </Pressable>
           </View>
-          <View style={styles.hangO}>
-            <OThongTin nhan="Giới tính" giaTri={hoSo.gioi_tinh ? TEN_GIOI_TINH[hoSo.gioi_tinh] : ''} />
-            <OThongTin nhan="Ngày sinh" giaTri={hoSo.ngay_sinh === null ? '' : formatFullDate(hoSo.ngay_sinh)} />
-            <OThongTin nhan="Chiều cao" giaTri={hoSo.chieu_cao_cm === null ? '' : vietChieuCao(hoSo.chieu_cao_cm, donVi, heSo)} />
-          </View>
+          <DongThongTin nhan="Giới tính" giaTri={hoSo.gioi_tinh ? TEN_GIOI_TINH[hoSo.gioi_tinh] : ''} />
+          <View style={styles.duongKe} />
+          <DongThongTin nhan="Ngày sinh" giaTri={hoSo.ngay_sinh === null ? '' : formatFullDate(hoSo.ngay_sinh)} />
+          <View style={styles.duongKe} />
+          <DongThongTin nhan="Chiều cao" giaTri={hoSo.chieu_cao_cm === null ? '' : vietChieuCao(hoSo.chieu_cao_cm, donVi, heSo)} />
+          <View style={styles.duongKe} />
+          <DongThongTin nhan="Cân nặng" giaTri={hoSo.can_nang_kg === null ? '' : vietCanNang(hoSo.can_nang_kg, donVi, heSo)} />
+          <View style={styles.duongKe} />
+          <DongThongTin nhan="Vòng eo" giaTri={hoSo.vong_eo_cm === null ? '' : vietVongEo(hoSo.vong_eo_cm, donVi, heSo)} />
         </Card>
       ) : null}
 
@@ -140,12 +125,6 @@ export default function TaiKhoan() {
           <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </Pressable>
       </Card>
-
-      {/* Xóa tài khoản: nút viền đỏ, để cách xa dòng bên trên */}
-      <Pressable style={({ pressed }) => [styles.nutXoa, pressed ? styles.dangBam : null]} onPress={xacNhanXoaTaiKhoan}>
-        <Ionicons name="trash-outline" size={18} color={colors.error} />
-        <Text style={styles.chuXoa}>Xóa tài khoản</Text>
-      </Pressable>
     </Screen>
   );
 }
@@ -172,12 +151,12 @@ function ODonVi({ ten, chiTiet, laDangChon, biKhoa, onPress }: ODonViProps) {
   );
 }
 
-// Một ô thông tin: nhãn nhỏ xám, giá trị đậm, căn giữa ô
-function OThongTin({ nhan, giaTri }: { nhan: string; giaTri: string }) {
+// Một dòng thông tin: nhãn bên trái, giá trị đậm bên phải; chưa có giá trị thì ghi "Chưa nhập" chữ xám
+function DongThongTin({ nhan, giaTri }: { nhan: string; giaTri: string }) {
   return (
-    <View style={styles.oThongTin}>
-      <Text style={styles.nhanO}>{nhan}</Text>
-      <Text style={styles.giaTriO}>{giaTri}</Text>
+    <View style={styles.dongThongTin}>
+      <Text style={styles.nhanDong}>{nhan}</Text>
+      {giaTri === '' ? <Text style={styles.chuChuaNhap}>Chưa nhập</Text> : <Text style={styles.giaTriDong}>{giaTri}</Text>}
     </View>
   );
 }
@@ -211,26 +190,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.small,
   },
-  oThongTin: {
-    flex: 1,
+  dongThongTin: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    padding: 10,
+    justifyContent: 'space-between',
+    minHeight: 44,
+  },
+  nhanDong: {
+    fontSize: fontSizes.body,
+    color: colors.text,
+  },
+  giaTriDong: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  chuChuaNhap: {
+    fontSize: fontSizes.body,
+    color: colors.textSecondary,
+  },
+  duongKe: {
+    height: 1,
+    backgroundColor: colors.border,
   },
   nhanO: {
     fontSize: fontSizes.label,
     color: colors.textSecondary,
     textAlign: 'center',
-  },
-  giaTriO: {
-    fontSize: fontSizes.body,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
-    marginTop: 2,
   },
   hangTen: {
     flexDirection: 'row',
@@ -281,23 +267,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
-  },
-  nutXoa: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.small,
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: colors.error,
-    borderRadius: radius.input,
-    backgroundColor: colors.surface,
-    marginTop: spacing.xlarge * 2,
-  },
-  chuXoa: {
-    fontSize: fontSizes.body,
-    fontWeight: '600',
-    color: colors.error,
   },
   oDonVi: {
     flex: 1,

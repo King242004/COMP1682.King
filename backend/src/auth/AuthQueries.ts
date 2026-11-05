@@ -90,8 +90,3 @@ export async function updateDisplayName(userId: number, displayName: string): Pr
   );
   return result.rows[0];
 }
-
-// Xóa tài khoản; dữ liệu liên quan tự xóa theo nhờ ON DELETE CASCADE
-export async function deleteUser(userId: number): Promise<void> {
-  await database.query('DELETE FROM nguoi_dung WHERE id = $1', [userId]);
-}

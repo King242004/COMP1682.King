@@ -26,8 +26,8 @@ export function TheLoTrinh({ loTrinh, onPress }: TheLoTrinhProps) {
       }
       dongDich = `${dongDich} · khoảng ${soThang} tháng`;
     }
-  } else if (loTrinh.muc_tieu === 'giu') {
-    dongDich = `Giữ quanh ${vietCanNang(loTrinh.can_nang_kg, donVi, heSo)}`;
+  } else if (loTrinh.khoang_giu !== null) {
+    dongDich = `Giữ quanh ${vietCanNang(loTrinh.khoang_giu.can_giu_quanh_kg, donVi, heSo)}`;
   }
 
   return (

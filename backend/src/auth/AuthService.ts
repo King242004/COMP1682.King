@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 import environment from '../environment.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { deleteUser, findUserByEmail, findUserById, findUserWithLoginById, insertUser, updateDisplayName, updatePassword } from './AuthQueries.ts';
+import { findUserByEmail, findUserById, findUserWithLoginById, insertUser, updateDisplayName, updatePassword } from './AuthQueries.ts';
 import type { User } from './AuthQueries.ts';
 
 // Mật khẩu ngắn nhất được chấp nhận
@@ -106,11 +106,6 @@ export async function changeDisplayName(userId: number, displayName: unknown): P
     throw new HttpError(404, 'Không tìm thấy tài khoản');
   }
   return user;
-}
-
-// Xóa tài khoản của người đang đăng nhập
-export async function deleteAccount(userId: number): Promise<void> {
-  await deleteUser(userId);
 }
 
 // Lấy thông tin người đang đăng nhập

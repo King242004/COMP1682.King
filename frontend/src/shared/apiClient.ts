@@ -68,7 +68,7 @@ export async function callApi(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: s
     throw new ApiError(0, 'Không kết nối được máy chủ');
   }
 
-  // 204 nghĩa là làm xong, không có dữ liệu trả về (ví dụ xóa tài khoản)
+  // 204 nghĩa là làm xong, không có dữ liệu trả về (ví dụ xóa bữa ăn)
   const NO_CONTENT_STATUS = 204;
   if (response.status === NO_CONTENT_STATUS) {
     return null;

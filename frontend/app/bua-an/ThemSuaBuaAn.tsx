@@ -429,7 +429,7 @@ export default function ThemSuaBuaAn() {
 
       {/* Màn thêm món; lúc đang chụp / quét thì chỉ ẩn đi chứ không bỏ, để quay lại vẫn còn chữ đang gõ */}
       <View style={dangMoChupAnh || dangMoQuetMa ? styles.an : styles.khung}>
-        <Screen compactBottom={buoc === 'kiem-tra'}>
+        <Screen compactBottom={buoc === 'kiem-tra'} avoidKeyboard>
           {/* Tiêu đề; món không thuộc hôm nay (ghi bù, sửa món ngày cũ) thì có thêm dòng ngày để khỏi ghi nhầm ngày */}
           <ScreenTitle
             title={dangSua ? 'Sửa món' : `Thêm vào ${TEN_BUA[loaiBua].toLowerCase()}`}

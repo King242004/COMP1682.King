@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { ApiError, deleteToken, readToken, saveToken, setSessionExpiredHandler } from '../shared/apiClient';
-import { changeDisplayNameRequest, changePasswordRequest, deleteAccountRequest, getMeRequest, loginRequest, registerRequest } from './AuthApi';
+import { changeDisplayNameRequest, changePasswordRequest, getMeRequest, loginRequest, registerRequest } from './AuthApi';
 import type { User } from './AuthApi';
 
 // Những gì mọi màn hình lấy được từ useAuth()
@@ -16,7 +16,6 @@ type AuthState = {
   register: (displayName: string, email: string, password: string) => Promise<void>;
   changeDisplayName: (displayName: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  deleteAccount: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -87,12 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await saveToken(result.token);
   }
 
-  // Xóa tài khoản rồi đăng xuất
-  async function deleteAccount() {
-    await deleteAccountRequest();
-    await logout();
-  }
-
   // Đăng xuất: xóa token trên điện thoại
   async function logout() {
     await deleteToken();
@@ -101,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, connectionError, loadSavedSession, refreshUser, login, register, changeDisplayName, changePassword, deleteAccount, logout }}
+      value={{ user, isLoading, connectionError, loadSavedSession, refreshUser, login, register, changeDisplayName, changePassword, logout }}
     >
       {children}
     </AuthContext.Provider>

@@ -159,7 +159,7 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
   }
 
   return (
-    <Screen>
+    <Screen avoidKeyboard>
       <ScreenTitle title={anh ? 'Nhận món từ ảnh' : 'Chụp món'} onBack={onDong} />
 
       {loi ? <ErrorBox message={loi} /> : null}

@@ -24,10 +24,22 @@ export type SoThang = {
   nhieu_nhat: number;
 };
 
+// Cân gần đây so với khoảng giữ cân: trong khoảng, cao hơn hay thấp hơn
+export type TrangThaiGiuCan = 'trong_khoang' | 'cao_hon' | 'thap_hon';
+
+// Khoảng giữ cân: giữ quanh cân nào, cân thấp nhất và cao nhất của khoảng, cân gần đây đang ở đâu
+export type KhoangGiu = {
+  can_giu_quanh_kg: number;
+  thap_nhat_kg: number;
+  cao_nhat_kg: number;
+  trang_thai: TrangThaiGiuCan;
+};
+
 // Lộ trình server gửi về; cân theo kg, vòng eo theo cm
 export type LoTrinh = {
   muc_tieu: MucTieu;
-  can_nang_kg: number;
+  // Cân theo xu hướng (trung bình 7 ngày tới lần cân gần nhất); chưa cân lần nào thì bằng cân trong hồ sơ
+  can_gan_nhat_kg: number;
   chieu_cao_cm: number;
   bmi: number;
   phan_loai_bmi: string;
@@ -41,12 +53,13 @@ export type LoTrinh = {
   can_canh_bao: boolean;
   vong_eo_dich_cm: number;
   can_muc_tieu_kg: number | null;
-  bmi_muc_tieu: number | null;
   can_bat_dau_kg: number | null;
   // Chỉ có khi giảm / tăng và đã đặt cân mục tiêu; số tháng và các mốc chỉ có khi giảm cân
   tien_do: TienDoLoTrinh | null;
   so_thang: SoThang | null;
   cac_moc: MocLoTrinh[];
+  // Chỉ có khi giữ cân
+  khoang_giu: KhoangGiu | null;
   kg_moi_thang_thap: number;
   kg_moi_thang_cao: number;
   muc_tieu_calo: number;

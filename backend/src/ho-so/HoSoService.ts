@@ -2,6 +2,7 @@ import { layNhomDiUng, layNhomDiUngCuaNguoiDung } from '../di-ung/DiUngQueries.t
 import type { NhomDiUng } from '../di-ung/DiUngQueries.ts';
 import { layHeSoVanDong, layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
+import { layCanXuHuongGanNhat, SO_NGAY_XU_HUONG } from '../tien-do/TienDoQueries.ts';
 import { layHoSo, luuHoSo } from './HoSoQueries.ts';
 import type { HoSo, HoSoDeLuu } from './HoSoQueries.ts';
 
@@ -258,6 +259,17 @@ export function chonCanBatDau(
   return canNangHienTaiKg;
 }
 
+// Cân giữ quanh khi giữ cân: đang giữ cân từ trước thì giữ số cũ, mới chuyển sang giữ cân thì lấy cân lúc này; không giữ cân thì không có
+export function chonCanGiuQuanh(hoSoCu: HoSo, mucTieuMoi: MucTieu, canNangHienTaiKg: number): number | null {
+  if (mucTieuMoi !== 'giu') {
+    return null;
+  }
+  if (hoSoCu.muc_tieu === 'giu' && hoSoCu.can_giu_quanh_kg !== null) {
+    return hoSoCu.can_giu_quanh_kg;
+  }
+  return canNangHienTaiKg;
+}
+
 // Lấy hồ sơ kèm BMI, phân loại, BMR, TDEE và các nhóm dị ứng đã chọn; chưa thiết lập thì các số này là null
 export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
   const hoSo = await layHoSo(nguoiDungId);
@@ -402,6 +414,13 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
   const nguongCanMucTieu = { bmiSanGiamCan: nguongGiamCan, bmiLyTuong: bmiLyTuong };
   let mucTieuLuu: MucTieu = mucTieu;
 
+  // Cân theo xu hướng (trung bình 7 ngày tới lần cân gần nhất) để xét chạm đích và cân giữ quanh; chưa cân lần nào thì dùng cân vừa gửi
+  let canXuHuongKg = canNangKg;
+  const canXuHuongDaLuuKg = await layCanXuHuongGanNhat(nguoiDungId, SO_NGAY_XU_HUONG);
+  if (canXuHuongDaLuuKg !== null) {
+    canXuHuongKg = canXuHuongDaLuuKg;
+  }
+
   // Vòng eo không bắt buộc: gửi null là xóa
   let vongEoCm = hoSoCu.vong_eo_cm;
   if (duLieu.vong_eo_cm !== undefined) {
@@ -427,9 +446,9 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     }
   }
 
-  // Cân mục tiêu cũ (không gửi) không còn hợp: chạm đích, đổi chiều cao, qua 65 tuổi; thì về giữ cân như lúc ghi cân
+  // Cân mục tiêu cũ (không gửi) không còn hợp: cân theo xu hướng chạm đích, đổi chiều cao, qua 65 tuổi; thì về giữ cân như lúc ghi cân
   if (duLieu.can_muc_tieu_kg === undefined && mucTieu !== 'giu' && canMucTieuKg !== null) {
-    if (kiemTraCanMucTieu(canMucTieuKg, mucTieu, canNangKg, chieuCaoCm, nguongCanMucTieu) !== null) {
+    if (kiemTraCanMucTieu(canMucTieuKg, mucTieu, canXuHuongKg, chieuCaoCm, nguongCanMucTieu) !== null) {
       mucTieuLuu = 'giu';
     }
   }
@@ -439,6 +458,7 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     canMucTieuKg = null;
   }
   const canBatDauKg = chonCanBatDau(hoSoCu, mucTieuLuu, canMucTieuKg, canNangKg);
+  const canGiuQuanhKg = chonCanGiuQuanh(hoSoCu, mucTieuLuu, canXuHuongKg);
 
   // Bước 3. Tính mục tiêu calo bằng các con số đúng giới, tuổi, mức vận động (ThuatToan.md bước 6-10)
   const mucTieuCalo = tinhMucTieuCalo(
@@ -470,6 +490,7 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     vong_eo_cm: vongEoCm,
     can_muc_tieu_kg: canMucTieuKg,
     can_bat_dau_kg: canBatDauKg,
+    can_giu_quanh_kg: canGiuQuanhKg,
     ma_nhom_di_ung: maNhomDiUng,
   };
   await luuHoSo(nguoiDungId, hoSoDeLuu);

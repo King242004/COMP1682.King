@@ -12,7 +12,7 @@ type CacMocThangProps = {
   loTrinh: LoTrinh;
 };
 
-// Thẻ "Lộ trình": thời gian ước tính, thanh tiến độ và các mốc theo tháng (giảm cân); tăng cân chỉ có thanh tiến độ
+// Thẻ "Lộ trình": đích, thời gian ước tính, thanh tiến độ và các mốc theo tháng (giảm cân); tăng cân chỉ có thanh tiến độ
 export function CacMocThang({ loTrinh }: CacMocThangProps) {
   const { donVi, heSo } = useDonVi();
   const tienDo = loTrinh.tien_do;
@@ -38,9 +38,15 @@ export function CacMocThang({ loTrinh }: CacMocThangProps) {
   }
   const soKgDaDi = doiKgRaDonVi(tienDo.so_kg_da_di, donVi, heSo).toLocaleString('vi-VN');
 
+  // Dòng đích: cân lúc bắt đầu → cân mục tiêu, ví dụ "72 kg → 65 kg"
+  let dongDich = '';
+  if (loTrinh.can_bat_dau_kg !== null && loTrinh.can_muc_tieu_kg !== null) {
+    dongDich = `${vietCanNang(loTrinh.can_bat_dau_kg, donVi, heSo)} → ${vietCanNang(loTrinh.can_muc_tieu_kg, donVi, heSo)}`;
+  }
+
   return (
     <Card>
-      <Text style={styles.tieuDe}>Lộ trình</Text>
+      {dongDich !== '' ? <Text style={styles.dongDich}>{dongDich}</Text> : null}
       {dongThoiGian !== '' ? <Text style={styles.chuPhu}>{dongThoiGian}</Text> : null}
 
       {/* Thanh tiến độ */}
@@ -104,8 +110,8 @@ function DongMoc({ moc, chuCan, laMocCuoi }: DongMocProps) {
 }
 
 const styles = StyleSheet.create({
-  tieuDe: {
-    fontSize: fontSizes.body,
+  dongDich: {
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
@@ -115,9 +121,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   thanhNen: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primaryLight,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
     overflow: 'hidden',
     marginTop: spacing.medium,
   },
@@ -127,7 +133,9 @@ const styles = StyleSheet.create({
   },
   chuTienDo: {
     fontSize: fontSizes.secondary,
+    fontWeight: '600',
     color: colors.primary,
+    textAlign: 'right',
     marginTop: 4,
   },
   danhSachMoc: {
@@ -166,11 +174,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   chuMoc: {
-    flex: 1,
     fontSize: fontSizes.body,
   },
   chuDaDat: {
     color: colors.text,
+    fontWeight: '600',
   },
   chuDangToi: {
     color: colors.primary,

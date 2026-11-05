@@ -74,7 +74,7 @@ export default function TienDo() {
   }
 
   return (
-    <Screen>
+    <Screen avoidKeyboard>
       <ScreenTitle title="Tiến độ" onBack={() => router.back()} />
 
       {/* Ghi cân hôm nay */}

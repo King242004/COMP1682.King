@@ -63,7 +63,7 @@ export default function Register() {
   }
 
   return (
-    <Screen>
+    <Screen avoidKeyboard>
       {/* Dòng logo nhỏ: ô vuông có biểu tượng món ăn, bên cạnh chữ MealMate */}
       <View style={styles.logoRow}>
         <View style={styles.logoBox}>
