@@ -88,7 +88,7 @@ export function ChiTietMon({ mon, onDong, tenNut, bieuTuongNut, onBamNut }: ChiT
   const coBang = thanhPhan !== null && thanhPhan.length > 0;
 
   return (
-    <Modal visible animationType="slide" onRequestClose={onDong}>
+    <Modal visible animationType="none" onRequestClose={onDong}>
       {/* Màn nổi cần lề an toàn riêng, nếu không nội dung sẽ đè lên giờ và pin */}
       <SafeAreaProvider>
         <Screen>
@@ -109,13 +109,13 @@ export function ChiTietMon({ mon, onDong, tenNut, bieuTuongNut, onBamNut }: ChiT
             </View>
           </Card>
 
-          {/* Ba ô đạm, tinh bột, béo của 1 suất (cùng thứ tự Trang chủ), dưới là muối */}
+          {/* Bốn ô đạm, tinh bột, béo (cùng thứ tự Trang chủ) và muối của 1 suất; ô muối nền xám */}
           <View style={styles.hangChat}>
             <OChat ten="Đạm" bieuTuong="food-steak" mau={colors.protein} mauNen={colors.proteinLight} soGam={mon.dam_g} />
             <OChat ten="Tinh bột" bieuTuong="barley" mau={colors.carbs} mauNen={colors.carbsLight} soGam={mon.tinh_bot_g} />
             <OChat ten="Béo" bieuTuong="water-outline" mau={colors.fat} mauNen={colors.fatLight} soGam={mon.beo_g} />
+            <OChat ten="Muối" bieuTuong="shaker-outline" mau={colors.textSecondary} mauNen={colors.card} soGam={mon.muoi_g} />
           </View>
-          <Text style={styles.chuMuoi}>Muối {vietSo(mon.muoi_g)} g</Text>
 
           {/* Bảng "Trong 1 suất có", chép từ bảng thành phần Viện in trong ảnh */}
           {thanhPhan !== null && thanhPhan.length > 0 ? (
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   },
   soCalo: {
     fontSize: fontSizes.bigNumber,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text,
   },
   chuPhu: {
@@ -190,6 +190,7 @@ const styles = StyleSheet.create({
   hangChat: {
     flexDirection: 'row',
     gap: spacing.small,
+    marginBottom: spacing.medium,
   },
   oChat: {
     flex: 1,
@@ -207,15 +208,8 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.body,
     fontWeight: '600',
   },
-  chuMuoi: {
-    fontSize: fontSizes.secondary,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.small,
-    marginBottom: spacing.medium,
-  },
   tieuDeBang: {
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 4,

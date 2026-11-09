@@ -64,8 +64,10 @@ export function VongCacNgay({ cacNgay, duLieuCacNgay, mucTieuCalo, ngayChon, onC
         })}
       </View>
 
-      {/* Chú thích màu */}
-      <Text style={styles.chuThich}>Xanh: chưa vượt · Vàng: vượt · Vòng đứt: không ghi</Text>
+      {/* Chú thích màu: chữ tô đúng màu của vòng */}
+      <Text style={styles.chuThich}>
+        <Text style={styles.chuXanh}>Xanh</Text>: chưa vượt · <Text style={styles.chuVang}>Vàng</Text>: vượt · <Text style={styles.chuVongDut}>Vòng đứt</Text>: không ghi
+      </Text>
     </View>
   );
 }
@@ -132,6 +134,18 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.medium,
+  },
+  chuXanh: {
+    fontWeight: '600',
+    color: colors.textOnPrimaryLight,
+  },
+  chuVang: {
+    fontWeight: '600',
+    color: colors.warningText,
+  },
+  chuVongDut: {
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   dangBam: {
     opacity: pressedOpacity,

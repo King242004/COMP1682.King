@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { docKetQuaNhanMon, docSanPhamMaVach, vietCanhBaoMaVach, vietCanhBaoTheoTenMon } from './QuetMonService.ts';
+import { docKetQuaNhanMon, docSanPhamMaVach, vietCanhBaoMaVach, vietCanhBaoMonAi } from './QuetMonService.ts';
 
 test('ảnh không phải đồ ăn thì không có khả năng nào', () => {
   const ketQua = docKetQuaNhanMon({ la_mon_an: false, kha_nang: [] }, 3);
@@ -60,6 +60,20 @@ test('đọc muối, đường, béo no; số sai hoặc thiếu thì để null
   assert.equal(ketQua.kha_nang[0].duong_g, 5);
   assert.equal(ketQua.kha_nang[1].muoi_g, null);
   assert.equal(ketQua.kha_nang[1].beo_no_g, null);
+});
+
+test('đọc nguyên liệu chính: bỏ khoảng trắng thừa, bỏ phần tử rỗng hoặc không phải chữ; thiếu thì rỗng mà vẫn giữ khả năng', () => {
+  const duLieu = {
+    la_mon_an: true,
+    kha_nang: [
+      { ten_mon: 'Gỏi cuốn', khau_phan: '2 cuốn', so_calo: 140, dam_g: 6, tinh_bot_g: 20, beo_g: 3, do_tin_cay: 0.9, thanh_phan: [' tôm ', 'bánh tráng', '', 5, 'nước chấm'] },
+      { ten_mon: 'Cơm trắng', khau_phan: '1 bát', so_calo: 200, dam_g: 4, tinh_bot_g: 44, beo_g: 0.4, do_tin_cay: 0.5 },
+    ],
+  };
+  const ketQua = docKetQuaNhanMon(duLieu, 3);
+  assert.equal(ketQua.kha_nang.length, 2);
+  assert.deepEqual(ketQua.kha_nang[0].thanh_phan, ['tôm', 'bánh tráng', 'nước chấm']);
+  assert.deepEqual(ketQua.kha_nang[1].thanh_phan, []);
 });
 
 test('không tìm thấy sản phẩm (status 0) thì trả về null', () => {
@@ -123,13 +137,13 @@ test('mã vạch: không có hoặc sai dạng allergens_tags thì danh sách m�
   assert.deepEqual(docSanPhamMaVach({ status: 1, product: { nutriments: { 'energy-kcal_100g': 60 }, allergens_tags: 'en:milk' } })?.ma_di_ung, []);
 });
 
-test('câu cảnh báo theo tên món: chưa chọn nhóm thì rỗng; trùng thì nêu nhóm; không trùng thì chỉ nhắc', () => {
-  assert.equal(vietCanhBaoTheoTenMon([], false), '');
+test('câu cảnh báo món AI: chưa chọn nhóm thì rỗng; trùng thì nêu nhóm và thứ bị bắt; không trùng thì chỉ nhắc', () => {
+  assert.equal(vietCanhBaoMonAi([], [], false), '');
   assert.equal(
-    vietCanhBaoTheoTenMon(['Tôm, cua'], true),
-    '⚠ Tên món có: Tôm, cua. App chỉ kiểm theo tên món, không biết thành phần thật. Hãy tự kiểm.',
+    vietCanhBaoMonAi(['Tôm, cua', 'Cá'], ['tôm', 'nước chấm'], true),
+    '⚠ AI đoán món có: Tôm, cua · Cá (tôm, nước chấm). App không biết thành phần thật. Hãy tự kiểm.',
   );
-  assert.equal(vietCanhBaoTheoTenMon([], true), 'App chỉ kiểm dị ứng theo tên món, không biết thành phần thật. Hãy tự kiểm.');
+  assert.equal(vietCanhBaoMonAi([], [], true), 'App chỉ kiểm theo tên món và nguyên liệu AI đoán, không biết thành phần thật. Hãy tự kiểm.');
 });
 
 test('câu cảnh báo mã vạch: đủ 5 trường hợp', () => {

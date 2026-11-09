@@ -33,7 +33,7 @@ export function SuaSoMl({ tieuDe, giaTriDau, nhoNhat, lonNhat, goiY, onLuu, onDo
   }
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onDong}>
+    <Modal visible transparent animationType="none" onRequestClose={onDong}>
       <KeyboardAvoidingView style={styles.nenToi} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Vùng tối phía trên tấm: bấm vào thì đóng, không lưu */}
         <Pressable style={styles.vungToi} onPress={onDong} />

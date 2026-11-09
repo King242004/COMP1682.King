@@ -51,10 +51,13 @@ const O_NHOM: { giaTri: NhomMon; nhan: string; bieuTuong: TenBieuTuong; mau: str
   { giaTri: 'banh', nhan: 'Bánh', bieuTuong: 'bread-slice-outline', mau: colors.protein, nen: colors.proteinLight },
   { giaTri: 'mon_khac', nhan: 'Món khác', bieuTuong: 'dots-horizontal', mau: colors.textSecondary, nen: colors.card },
 ];
+// Ba ưu tiên xếp 2 hàng (hàng dưới 1 ô); chấm màu theo màu của chất đó trong app
 const O_UU_TIEN: { giaTri: UuTien; nhan: string; mauCham: string }[] = [
   { giaTri: 'giau_dam', nhan: 'Giàu đạm', mauCham: colors.protein },
-  { giaTri: 'it_calo', nhan: 'Ít calo', mauCham: colors.carbs },
+  { giaTri: 'it_calo', nhan: 'Ít calo', mauCham: colors.primary },
+  { giaTri: 'it_tinh_bot', nhan: 'Ít tinh bột', mauCham: colors.carbs },
 ];
+const HANG_UU_TIEN = [O_UU_TIEN.slice(0, 2), O_UU_TIEN.slice(2)];
 
 // Biểu tượng của từng thứ trong mâm (bộ MaterialCommunityIcons); tôm không có trong bộ này nên vẽ riêng
 const BIEU_TUONG_THU_TRONG_MAM: Record<Exclude<ThuTrongMam, 'tom'>, TenBieuTuong> = {
@@ -90,7 +93,7 @@ type TamCaiDatThucDonProps = {
   onDong: () => void;
 };
 
-// Tấm "Tạo thực đơn hôm nay" trượt từ dưới lên (theo bản Stitch): không chọn sẵn gì, bấm lại để bỏ chọn; thân tấm cuộn được, nút "Tạo thực đơn" ghim ở đáy; bấm ✕ hoặc vùng tối thì đóng
+// Tấm "Tạo thực đơn hôm nay" hiện ra trên nền tối, không trượt (bố cục theo bản Stitch): không chọn sẵn gì, bấm lại để bỏ chọn; thân tấm cuộn được, nút "Tạo thực đơn" ghim ở đáy; bấm ✕ hoặc vùng tối thì đóng
 export function TamCaiDatThucDon({ caiDatBanDau, laTaoLai, mucTieuCalo, onTao, onDong }: TamCaiDatThucDonProps) {
   const [buaComNha, setBuaComNha] = useState<BuaChinh[]>(caiDatBanDau.bua_com_nha);
   const [soMon, setSoMon] = useState(caiDatBanDau.so_mon_com_nha);
@@ -160,7 +163,7 @@ export function TamCaiDatThucDon({ caiDatBanDau, laTaoLai, mucTieuCalo, onTao, o
   const caBaBuaComNha = buaComNha.length === O_BUA.length;
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onDong}>
+    <Modal visible transparent animationType="none" onRequestClose={onDong}>
       <KeyboardAvoidingView style={styles.nenToi} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Vùng tối phía trên tấm: bấm vào thì đóng */}
         <Pressable style={styles.vungToi} onPress={onDong} />
@@ -309,25 +312,28 @@ export function TamCaiDatThucDon({ caiDatBanDau, laTaoLai, mucTieuCalo, onTao, o
               )}
             </View>
 
-            {/* 4. Ưu tiên: 2 ô ngang, bấm lại để bỏ */}
+            {/* 4. Ưu tiên: 2 hàng, hàng dưới 1 ô và nửa còn lại để trống cho ô rộng bằng ô hàng trên; chọn 1, bấm lại để bỏ */}
             <View>
               <Text style={[styles.cauHoi, styles.khoangDuoi]}>Ưu tiên</Text>
-              <View style={styles.hangHai}>
-                {O_UU_TIEN.map((o) => {
-                  const daChon = uuTien === o.giaTri;
-                  return (
-                    <Pressable
-                      key={o.giaTri}
-                      style={({ pressed }) => [styles.oUuTien, daChon ? styles.oDaChon : null, pressed ? styles.dangBam : null]}
-                      onPress={() => doiUuTien(o.giaTri)}
-                    >
-                      <View style={[styles.cham, { backgroundColor: o.mauCham }]} />
-                      <Text style={[styles.chuO, daChon ? styles.chuODaChon : null]}>{o.nhan}</Text>
-                      {daChon ? <Ionicons name="checkmark" size={16} color={colors.primary} /> : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {HANG_UU_TIEN.map((hang, viTriHang) => (
+                <View key={`hang-uu-tien-${viTriHang}`} style={[styles.hangHai, styles.khoangDuoiHangUuTien]}>
+                  {hang.map((luaChon) => {
+                    const daChon = uuTien === luaChon.giaTri;
+                    return (
+                      <Pressable
+                        key={luaChon.giaTri}
+                        style={({ pressed }) => [styles.oUuTien, daChon ? styles.oDaChon : null, pressed ? styles.dangBam : null]}
+                        onPress={() => doiUuTien(luaChon.giaTri)}
+                      >
+                        <View style={[styles.cham, { backgroundColor: luaChon.mauCham }]} />
+                        <Text style={[styles.chuO, daChon ? styles.chuODaChon : null]}>{luaChon.nhan}</Text>
+                        {daChon ? <Ionicons name="checkmark" size={16} color={colors.primary} /> : null}
+                      </Pressable>
+                    );
+                  })}
+                  {hang.length === 1 ? <View style={styles.oTrongUuTien} /> : null}
+                </View>
+              ))}
             </View>
 
             {/* 5. Ghi chú cho AI, không bắt buộc; tiêu đề in đậm như các câu hỏi khác */}
@@ -399,7 +405,7 @@ const styles = StyleSheet.create({
   // Tiêu đề to và màu xanh chính cho nổi
   tieuDe: {
     fontSize: fontSizes.screenTitle,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
   },
   nutDong: {
@@ -437,12 +443,12 @@ const styles = StyleSheet.create({
   },
   cauHoi: {
     fontSize: fontSizes.body,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text,
   },
   cauHoiCon: {
     fontSize: fontSizes.secondary,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text,
   },
   chuNho: {
@@ -463,7 +469,7 @@ const styles = StyleSheet.create({
   },
   chuODaChon: {
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   biMo: {
     opacity: 0.4,
@@ -569,7 +575,7 @@ const styles = StyleSheet.create({
   },
   chuSoDaChon: {
     color: colors.textOnPrimary,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   nhanDaDu: {
     fontSize: fontSizes.label,
@@ -689,6 +695,12 @@ const styles = StyleSheet.create({
   hangHai: {
     flexDirection: 'row',
     gap: 10,
+  },
+  khoangDuoiHangUuTien: {
+    marginBottom: 10,
+  },
+  oTrongUuTien: {
+    flex: 1,
   },
   oUuTien: {
     flex: 1,

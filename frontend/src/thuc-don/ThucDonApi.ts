@@ -11,6 +11,8 @@ export type MonThucDon = {
   anh_url: string | null;
   ten_mon: string;
   khau_phan: string;
+  // Số gam 1 suất món Viện (cộng bảng "Trong 1 suất có"); cơm nhà hoặc món có dòng Viện không cân thì null
+  so_gam_1_suat: number | null;
   so_calo: number;
   dam_g: number;
   tinh_bot_g: number;
@@ -39,7 +41,7 @@ export type BuaChinh = 'sang' | 'trua' | 'toi';
 // Những thứ có thể chọn cho mâm cơm nhà
 export type ThuTrongMam = 'ca' | 'thit_heo' | 'thit_bo' | 'ga' | 'tom' | 'trung' | 'dau_phu' | 'rau' | 'canh';
 
-export type UuTien = 'khong' | 'giau_dam' | 'it_calo';
+export type UuTien = 'khong' | 'giau_dam' | 'it_calo' | 'it_tinh_bot';
 
 // Cài đặt người dùng chọn trong tấm "Tạo thực đơn hôm nay"
 export type CaiDatThucDon = {

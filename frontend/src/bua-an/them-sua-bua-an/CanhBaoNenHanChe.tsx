@@ -108,7 +108,7 @@ export function CanhBaoNenHanChe({ monNay, monCu, nhatKy }: CanhBaoNenHanCheProp
 
 const styles = StyleSheet.create({
   tieuDeThe: {
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.small,

@@ -99,6 +99,11 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
 
   // Bấm "Thêm vào nhật ký": đóng chi tiết, mở màn thêm món đã điền sẵn đúng 1 suất để người dùng xem lại, sửa rồi mới lưu
   function moManThemMon(mon: MonTraCuu) {
+    // Món có thứ người dùng dị ứng thì mang câu cảnh báo sang bước xem lại
+    let canhBaoDiUng = '';
+    if (mon.nhom_di_ung.length > 0) {
+      canhBaoDiUng = `⚠ Món này có: ${mon.nhom_di_ung.join(' · ')}`;
+    }
     const monSan: MonDaChon = {
       ten_mon: mon.ten_mon,
       khau_phan: '1 suất',
@@ -110,7 +115,7 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
       duong_g: null,
       beo_no_g: null,
       nguon_so_lieu: 'vien_dinh_duong',
-      canh_bao_di_ung: '',
+      canh_bao_di_ung: canhBaoDiUng,
     };
     setMonDangXem(null);
     router.push({

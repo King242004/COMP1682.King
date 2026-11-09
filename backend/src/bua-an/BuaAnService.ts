@@ -1,5 +1,4 @@
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
-import { lamMoiMucTieuNeuQuaSinhNhat } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { layBuaAnTheoNgay, layMonHayAn, layMotBuaAn, suaBuaAn, themBuaAn, xoaBuaAn } from './BuaAnQueries.ts';
@@ -286,8 +285,6 @@ export async function xemNhatKyNgay(nguoiDungId: number, ngay: string): Promise<
   if (!DANG_NGAY.test(ngay)) {
     throw new HttpError(400, 'Ngày không hợp lệ');
   }
-  // Qua sinh nhật thì tính lại mục tiêu calo trước khi đọc
-  await lamMoiMucTieuNeuQuaSinhNhat(nguoiDungId);
   const danhSachBuaAn = await layBuaAnTheoNgay(nguoiDungId, ngay);
   const hoSo = await layHoSo(nguoiDungId);
 

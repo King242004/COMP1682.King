@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -61,7 +61,7 @@ export default function Coach() {
   const [cauDangGui, setCauDangGui] = useState('');
   const [loi, setLoi] = useState('');
   const khungCuon = useRef<ScrollViewInstance>(null);
-  // Chiều cao vùng tai thỏ để đệm phía trên; phần đáy để thanh tab tự chừa
+  // Chiều cao vùng tai thỏ và thanh home để đệm trên và dưới (màn Coach ẩn thanh tab)
   const insets = useSafeAreaInsets();
 
   // Đang chờ coach thì khóa thùng rác, câu nhanh, ô nhập và nút gửi
@@ -69,11 +69,12 @@ export default function Coach() {
   // Chưa có tin nhắn và không chờ gì: hiện phần giới thiệu với 3 thẻ câu hỏi
   const laManTrong = !dangTai && danhSachTinNhan.length === 0 && !dangCho;
 
-  // Màn khác (ví dụ Tiến độ) mở sang kèm câu hỏi thì điền sẵn vào ô nhập, người dùng tự bấm gửi
+  // Màn khác (ví dụ Tiến độ) mở sang kèm câu hỏi thì điền sẵn vào ô nhập, người dùng tự bấm gửi; điền xong thì xóa câu khỏi đường dẫn để lần sau mở với cùng câu vẫn điền lại
   const thamSo = useLocalSearchParams<{ cauHoi?: string }>();
   useEffect(() => {
     if (thamSo.cauHoi) {
       setCauHoi(thamSo.cauHoi);
+      router.setParams({ cauHoi: '' });
     }
   }, [thamSo.cauHoi]);
 
@@ -131,10 +132,13 @@ export default function Coach() {
   }
 
   return (
-    <View style={[styles.khungTrang, { paddingTop: insets.top }]}>
+    <View style={[styles.khungTrang, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {/* Thanh tiêu đề nền trắng chữ xanh; thùng rác xóa trò chuyện ở góc phải (chỉ khi có tin nhắn) */}
+        {/* Thanh tiêu đề nền trắng chữ xanh; ‹ ở góc trái quay về màn trước; thùng rác xóa trò chuyện ở góc phải (chỉ khi có tin nhắn) */}
         <View style={styles.thanhTieuDe}>
+          <Pressable style={({ pressed }) => [styles.nutQuayLai, pressed ? styles.dangBam : null]} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={28} color={colors.primary} />
+          </Pressable>
           <Text style={styles.tieuDe}>Coach</Text>
           {danhSachTinNhan.length > 0 ? (
             <Pressable
@@ -272,6 +276,14 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.primary,
+  },
+  nutQuayLai: {
+    position: 'absolute',
+    left: spacing.small,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   nutXoa: {
     position: 'absolute',

@@ -57,7 +57,7 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
       setSanPham(sanPhamTimDuoc);
       // Điền sẵn 1 phần theo nhãn, đổi ra oz nếu người dùng chọn Anh-Mỹ
       if (sanPhamTimDuoc.khoi_luong_1_phan_g !== null) {
-        setSoGam(String(doiGamRaDonVi(sanPhamTimDuoc.khoi_luong_1_phan_g, donVi, heSo)));
+        setSoGam(String(doiGamRaDonVi(sanPhamTimDuoc.khoi_luong_1_phan_g, donVi, heSo)).replace('.', ','));
       }
     } catch (loiTra) {
       setLoi((loiTra as Error).message);
@@ -152,7 +152,7 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
             <View style={styles.hangNangLuong}>
               <Text style={styles.chuThuong}>Năng lượng</Text>
               <Text style={styles.nhanNangLuong}>
-                {sanPham.kcal_100g.toLocaleString('vi-VN')} kcal / 100 g{laAnhMy ? ` (${vietKhoiLuong(100, donVi, heSo)})` : ''}
+                {Math.round(sanPham.kcal_100g).toLocaleString('vi-VN')} kcal / 100 g{laAnhMy ? ` (${vietKhoiLuong(100, donVi, heSo)})` : ''}
               </Text>
             </View>
             {sanPham.khoi_luong_1_phan_g !== null ? (
@@ -178,7 +178,7 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
                   <Text style={styles.chuThuong}>kcal</Text>
                 </View>
                 <Text style={styles.chuPhu}>
-                  {vietKhoiLuong(soGamXemTruoc, donVi, heSo)} × {sanPham.kcal_100g.toLocaleString('vi-VN')} kcal / {vietKhoiLuong(100, donVi, heSo)} ≈{' '}
+                  {vietKhoiLuong(soGamXemTruoc, donVi, heSo)} × {Math.round(sanPham.kcal_100g).toLocaleString('vi-VN')} kcal / {vietKhoiLuong(100, donVi, heSo)} ≈{' '}
                   {tongCaloXemTruoc.toLocaleString('vi-VN')} kcal
                 </Text>
               </View>
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   soTong: {
     fontSize: fontSizes.bigNumber,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
   },
   khoangNut: {

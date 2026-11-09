@@ -15,4 +15,9 @@ const database = new pg.Pool({
   connectionString: environment.databaseUrl,
 });
 
+// Database cắt một kết nối đang để sẵn (ví dụ Neon tự ngủ khi lâu không ai dùng) thì chỉ ghi lỗi ra terminal; không có đoạn này thì cả server bị tắt
+database.on('error', (error) => {
+  console.error(error);
+});
+
 export default database;

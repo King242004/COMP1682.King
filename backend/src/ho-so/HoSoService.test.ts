@@ -49,6 +49,13 @@ test('giảm cân người gần cân lý tưởng: không thấp hơn mức QĐ
   assert.equal(tinhMucTieuCalo({ tuoi: 30, chieuCaoCm: 155, canNangKg: 55, mucTieu: 'giam' }, heSoNuVanDongNhe), 1321);
 });
 
+test('giảm cân không cao hơn giữ cân: nữ 90 tuổi, 145 cm, 46 kg, hệ số 1,40 ra 1135 kcal (mức QĐ 2892 là 1156)', () => {
+  // Giữ cân 810,5 x 1,40 = 1135; mức QĐ 2892 là 1,45 x 1,45 x 22 x 25 = 1156, cao hơn giữ cân nên lấy giữ cân
+  const heSoNuTu75Tuoi = { ...heSoNuVanDongNhe, heSoVanDong: 1.4 };
+  assert.equal(tinhMucTieuCalo({ tuoi: 90, chieuCaoCm: 145, canNangKg: 46, mucTieu: 'giu' }, heSoNuTu75Tuoi), 1135);
+  assert.equal(tinhMucTieuCalo({ tuoi: 90, chieuCaoCm: 145, canNangKg: 46, mucTieu: 'giam' }, heSoNuTu75Tuoi), 1135);
+});
+
 test('nam dùng hằng số của nam: 30 tuổi, 170 cm, 100 kg giữ cân 2849, giảm cân 2349 kcal', () => {
   assert.equal(tinhMucTieuCalo({ tuoi: 30, chieuCaoCm: 170, canNangKg: 100, mucTieu: 'giu' }, heSoNamVanDongNhe), 2849);
   assert.equal(tinhMucTieuCalo({ tuoi: 30, chieuCaoCm: 170, canNangKg: 100, mucTieu: 'giam' }, heSoNamVanDongNhe), 2349);
@@ -147,7 +154,6 @@ const hoSoDangGiam = {
   muc_van_dong: 'trung_binh' as const,
   muc_tieu: 'giam' as const,
   muc_tieu_calo: 1900,
-  tuoi_tinh_muc_tieu: 30,
   di_ung_kieng_an: '',
   vong_eo_cm: 92,
   can_muc_tieu_kg: 65,

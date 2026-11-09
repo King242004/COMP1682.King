@@ -36,7 +36,7 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.textSecondary }}>
+    <Tabs backBehavior="history" screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.textSecondary }}>
       <Tabs.Screen
         name="index"
         options={{
@@ -55,6 +55,8 @@ export default function TabsLayout() {
         name="TuVan"
         options={{
           title: 'Coach',
+          // Coach là màn riêng phủ toàn màn: ẩn thanh tab, nút ‹ trong màn quay về tab trước đó (nhờ backBehavior="history")
+          tabBarStyle: { display: 'none' },
           tabBarIcon: ({ focused, size }) => <Ionicons name="chatbubble-ellipses-outline" color={focused ? colors.primary : colors.textSecondary} size={size} />,
         }}
       />

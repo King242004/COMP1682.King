@@ -15,7 +15,7 @@ type BieuDoCanNangProps = {
 };
 
 // Kích thước biểu đồ (điểm ảnh): chiều cao, lề trái cho số kg, lề dưới cho ngày
-const CHIEU_CAO = 150;
+const CHIEU_CAO = 120;
 const LE_TRAI = 38;
 const LE_PHAI = 8;
 const LE_TREN = 10;

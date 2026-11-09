@@ -130,11 +130,12 @@ export function tinhMucTieuCalo(thongTin: ThongTinTinhCalo, heSo: HeSoTinhCalo):
     return Math.round(giuCan);
   }
 
-  // Giảm cân: lấy số lớn hơn giữa mức của QĐ 2892 và mức giữ cân trừ đi phần cắt tối đa
+  // Giảm cân: lấy số lớn hơn giữa mức của QĐ 2892 và mức giữ cân trừ đi phần cắt tối đa, nhưng không cao hơn mức giữ cân
   if (thongTin.mucTieu === 'giam') {
     const mucQd2892 = canNangLyTuong * heSo.giamCanKcalMoiKg;
     const mucCatToiDa = giuCan - heSo.giamCanKcalCatToiDa;
-    return Math.round(Math.max(mucQd2892, mucCatToiDa));
+    const mucGiamCan = Math.max(mucQd2892, mucCatToiDa);
+    return Math.round(Math.min(mucGiamCan, giuCan));
   }
 
   // Tăng cân: ăn như người đã ở cân nặng lý tưởng (chuyển hóa cơ bản tính bằng cân nặng lý tưởng)
@@ -485,7 +486,6 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     muc_van_dong: mucVanDong,
     muc_tieu: mucTieuLuu,
     muc_tieu_calo: mucTieuCalo,
-    tuoi_tinh_muc_tieu: tuoi,
     di_ung_kieng_an: diUngKiengAn,
     vong_eo_cm: vongEoCm,
     can_muc_tieu_kg: canMucTieuKg,
@@ -535,15 +535,4 @@ export async function capNhatCanNangHoSo(nguoiDungId: number, canNangKg: number)
     di_ung_kieng_an: hoSo.di_ung_kieng_an,
     ma_nhom_di_ung: nhomDiUngDaChon.map((nhom) => nhom.ma),
   });
-}
-
-// Qua sinh nhật (tuổi hôm nay khác tuổi đã dùng để tính mục tiêu) thì tính lại mục tiêu calo bằng đúng đường lưu như lúc ghi cân
-export async function lamMoiMucTieuNeuQuaSinhNhat(nguoiDungId: number): Promise<void> {
-  const hoSo = await layHoSo(nguoiDungId);
-  if (hoSo.muc_tieu_calo === null || hoSo.ngay_sinh === null || hoSo.can_nang_kg === null) {
-    return;
-  }
-  if (tinhTuoi(hoSo.ngay_sinh, layNgayHomNay()) !== hoSo.tuoi_tinh_muc_tieu) {
-    await capNhatCanNangHoSo(nguoiDungId, hoSo.can_nang_kg);
-  }
 }

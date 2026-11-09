@@ -9,8 +9,8 @@ export default function RootLayout() {
     <AuthProvider>
       <DonViProvider>
         <Stack screenOptions={{ headerShown: false }}>
-          {/* Màn thêm / sửa món trượt từ dưới lên, phủ toàn màn để lề trên tính đúng như các màn khác */}
-          <Stack.Screen name="bua-an/ThemSuaBuaAn" options={{ presentation: 'fullScreenModal' }} />
+          {/* Màn thêm / sửa món phủ toàn màn để lề trên tính đúng như các màn khác; hiện ra ngay, không trượt */}
+          <Stack.Screen name="bua-an/ThemSuaBuaAn" options={{ presentation: 'fullScreenModal', animation: 'none' }} />
         </Stack>
       </DonViProvider>
     </AuthProvider>

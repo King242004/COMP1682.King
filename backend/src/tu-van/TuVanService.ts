@@ -95,7 +95,7 @@ export async function hoiCoach(nguoiDungId: number, duLieu: Record<string, unkno
   let noiDungTraLoi = CAU_NGOAI_PHAM_VI;
   if (traLoiAi.trong_pham_vi !== false) {
     if (typeof traLoiAi.tra_loi !== 'string' || traLoiAi.tra_loi.trim() === '') {
-      throw new HttpError(503, 'AI trả lời sai định dạng, thử lại sau');
+      throw new HttpError(503, 'AI đang bận, thử lại sau');
     }
     noiDungTraLoi = traLoiAi.tra_loi.trim().slice(0, TRA_LOI_DAI_NHAT);
   }

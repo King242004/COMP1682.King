@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   tieuDe: {
     flex: 1,
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },

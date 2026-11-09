@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   },
   chuCai: {
     fontSize: fontSizes.sectionTitle,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.textOnPrimary,
   },
   cotChu: {
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   soCalo: {
     fontSize: fontSizes.bigNumber,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.primary,
   },
   donVi: {
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   giaTriChiSo: {
     fontSize: fontSizes.body,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.textOnPrimaryLight,
     textAlign: 'center',
     marginVertical: 2,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.medium,
   },
   tieuDeXemBaoCao: {
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.medium,
@@ -349,11 +349,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.small,
-    marginBottom: spacing.medium,
   },
   tieuDeThe: {
     flex: 1,
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },

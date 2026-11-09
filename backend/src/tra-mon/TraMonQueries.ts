@@ -92,6 +92,24 @@ export async function layTenThanhPhanCuaTungMon(): Promise<Map<string, string[]>
   return tenCuaTungMon;
 }
 
+// Tổng số gam 1 suất của từng món, cộng các dòng "Trong 1 suất có"; món có dòng Viện không cân thì null: mã món → số gam
+export async function layTongGamMotSuatCuaTungMon(): Promise<Map<string, number | null>> {
+  const ketQua = await database.query<{ ma_so: string; tong_gam: number | null; du_so: boolean }>(
+    `SELECT ma_so, SUM(so_gam) AS tong_gam, bool_and(so_gam IS NOT NULL) AS du_so
+     FROM thanh_phan_suat
+     GROUP BY ma_so`,
+  );
+  const gamCuaTungMon = new Map<string, number | null>();
+  for (const dong of ketQua.rows) {
+    if (dong.du_so && dong.tong_gam !== null) {
+      gamCuaTungMon.set(dong.ma_so, Math.round(dong.tong_gam));
+    } else {
+      gamCuaTungMon.set(dong.ma_so, null);
+    }
+  }
+  return gamCuaTungMon;
+}
+
 // Lấy bảng "Trong 1 suất có" của một món, theo thứ tự in trong ảnh; món chưa có bảng thì trả mảng rỗng
 export async function layThanhPhanSuat(maSo: string): Promise<ThanhPhanSuat[]> {
   const ketQua = await database.query<ThanhPhanSuat>(

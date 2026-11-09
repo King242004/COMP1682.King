@@ -26,7 +26,7 @@ type ChonCachXepProps = {
 // Menu "Xếp món theo" thả xuống ngay dưới nút xếp, sát mép phải; bấm ra ngoài menu là đóng
 export function ChonCachXep({ cachDangChon, dinhMenu, onChon, onDong }: ChonCachXepProps) {
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onDong}>
+    <Modal visible transparent animationType="none" onRequestClose={onDong}>
       <Pressable style={styles.nenTrong} onPress={onDong}>
         <View style={[styles.menu, { top: dinhMenu + spacing.small }]}>
           {TEN_CACH_XEP.map((cach, viTri) => (

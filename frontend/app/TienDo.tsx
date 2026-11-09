@@ -77,16 +77,17 @@ export default function TienDo() {
     <Screen avoidKeyboard>
       <ScreenTitle title="Tiến độ" onBack={() => router.back()} />
 
-      {/* Ghi cân hôm nay */}
+      {/* Ghi cân hôm nay: nhãn nằm trên cả hàng để ô nhập và nút Ghi thẳng hàng */}
       <Card>
+        <Text style={styles.nhanCan}>Cân hôm nay ({tenDonViCan})</Text>
         <View style={styles.hangGhiCan}>
           <View style={styles.oCan}>
             <TextField
-              label={`Cân hôm nay (${tenDonViCan})`}
+              label=""
               value={canNang}
               onChangeText={setCanNang}
               error={loiCanNang}
-              placeholder={tienDo && tienDo.can_nang_xu_huong !== null ? String(doiKgRaDonVi(tienDo.can_nang_xu_huong, donVi, heSo)) : 'Ví dụ: 55'}
+              placeholder={tienDo && tienDo.can_nang_xu_huong !== null ? String(doiKgRaDonVi(tienDo.can_nang_xu_huong, donVi, heSo)).replace('.', ',') : 'Ví dụ: 55'}
               isNumber
               isDisabled={dangGhi}
             />
@@ -113,11 +114,13 @@ export default function TienDo() {
             ) : null}
             <BieuDoCanNang diemCanNang={tienDo.can_nang} ngayCuoi={tienDo.ngay} soNgay={SO_NGAY_BIEU_DO} />
             {tienDo.can_nang.length > 0 ? (
-              <Text style={styles.chuThich}>Chấm xám: cân từng ngày · Đường xanh: trung bình 7 ngày</Text>
+              <Text style={styles.chuThich}>
+                <Text style={styles.chuChamXam}>Chấm xám</Text>: cân từng ngày · <Text style={styles.chuDuongXanh}>Đường xanh</Text>: trung bình 7 ngày
+              </Text>
             ) : null}
           </Card>
 
-          {/* Thẻ 4 tuần qua */}
+          {/* Thẻ Kết quả 4 tuần */}
           <TheBonTuan tienDo={tienDo} onHoiCoach={moHoiCoach} />
         </>
       ) : null}
@@ -126,6 +129,12 @@ export default function TienDo() {
 }
 
 const styles = StyleSheet.create({
+  nhanCan: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.small,
+  },
   hangGhiCan: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -136,7 +145,6 @@ const styles = StyleSheet.create({
   },
   nutGhi: {
     width: 88,
-    marginTop: spacing.xlarge,
   },
   soCan: {
     fontSize: fontSizes.bigNumber,
@@ -152,5 +160,15 @@ const styles = StyleSheet.create({
   chuThich: {
     fontSize: fontSizes.label,
     color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.medium,
+  },
+  chuChamXam: {
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  chuDuongXanh: {
+    fontWeight: '600',
+    color: colors.primary,
   },
 });

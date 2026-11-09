@@ -27,7 +27,7 @@ function luiNam(soNam: number): Date {
   return ngay;
 }
 
-// Ô ngày sinh: bấm vào thì tấm có bánh xe ngày của iPhone trượt lên; bấm "Xong" mới chọn, bấm vùng tối là bỏ
+// Ô ngày sinh: bấm vào thì tấm có bánh xe ngày của iPhone hiện ra trên nền tối (không trượt); bấm "Xong" mới chọn, bấm vùng tối là bỏ
 export function ChonNgaySinh({ ngaySinh, onChon, loi, isDisabled }: ChonNgaySinhProps) {
   const [dangMo, setDangMo] = useState(false);
   // Ngày đang quay trên bánh xe, chưa chọn cho tới khi bấm "Xong"
@@ -64,7 +64,7 @@ export function ChonNgaySinh({ ngaySinh, onChon, loi, isDisabled }: ChonNgaySinh
       </Pressable>
       {loi ? <Text style={styles.chuLoi}>{loi}</Text> : null}
 
-      <Modal visible={dangMo} animationType="slide" transparent onRequestClose={() => setDangMo(false)}>
+      <Modal visible={dangMo} animationType="none" transparent onRequestClose={() => setDangMo(false)}>
         <View style={styles.nenMo}>
           {/* Bấm vùng tối phía trên là đóng, không chọn */}
           <Pressable style={styles.vungToi} onPress={() => setDangMo(false)} />
@@ -98,8 +98,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.medium,
   },
   nhan: {
-    fontSize: fontSizes.secondary,
-    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 4,
   },
   o: {

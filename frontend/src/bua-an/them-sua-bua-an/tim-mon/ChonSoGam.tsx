@@ -46,6 +46,11 @@ export function ChonSoGam({ thucPham, isDisabled, onChon, onChonKhac }: ChonSoGa
       setLoiSoGam(`Số ${laAnhMy ? 'oz' : 'gam'} ${vietGioiHan(1, SO_GAM_LON_NHAT, 'khoi_luong', donVi, heSo)}`);
       return;
     }
+    // Thực phẩm có thứ người dùng dị ứng thì mang câu cảnh báo sang bước xem lại
+    let canhBaoDiUng = '';
+    if (thucPham.nhom_di_ung.length > 0) {
+      canhBaoDiUng = `⚠ Món này có: ${thucPham.nhom_di_ung.join(' · ')}`;
+    }
     onChon({
       ten_mon: thucPham.ten_thuc_pham,
       khau_phan: vietKhoiLuong(soGamSo, donVi, heSo),
@@ -57,7 +62,7 @@ export function ChonSoGam({ thucPham, isDisabled, onChon, onChonKhac }: ChonSoGa
       duong_g: nhanTheoGam(thucPham.duong_100g, soGamSo),
       beo_no_g: nhanTheoGam(thucPham.beo_no_100g, soGamSo),
       nguon_so_lieu: 'thuc_pham',
-      canh_bao_di_ung: '',
+      canh_bao_di_ung: canhBaoDiUng,
     });
   }
 
@@ -92,7 +97,7 @@ export function ChonSoGam({ thucPham, isDisabled, onChon, onChonKhac }: ChonSoGa
 
 const styles = StyleSheet.create({
   ten: {
-    fontSize: fontSizes.sectionTitle,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
   },

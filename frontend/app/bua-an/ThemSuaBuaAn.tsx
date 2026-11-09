@@ -23,23 +23,17 @@ import { Card } from '../../src/shared/components/Card';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { Screen } from '../../src/shared/components/Screen';
 import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
-import { docKhoiLuong, vietGioiHan, vietKhoiLuong } from '../../src/don-vi/DoiDonVi';
-import { useDonVi } from '../../src/don-vi/DonViContext';
 import { TextField } from '../../src/shared/components/TextField';
 import { formatDateLabel, todayKey } from '../../src/shared/dateKey';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/shared/theme';
 
-// Giới hạn chặn gõ nhầm, giống backend (BuaAnService.ts) và màn mã vạch (QuetMaVach.tsx)
+// Giới hạn chặn gõ nhầm, giống backend (BuaAnService.ts)
 const TEN_MON_DAI_NHAT = 100;
 const KHAU_PHAN_DAI_NHAT = 100;
 const CALO_LON_NHAT = 10000;
-const SO_GAM_LON_NHAT = 5000;
 
 // Hai bước của màn: chọn cách lấy món, rồi xem lại số liệu và lưu
 type BuocThem = 'chon' | 'kiem-tra';
-
-// Lượng đã ăn ghi bằng chữ (khẩu phần) hay bằng số gam
-type DonViLuong = 'khau-phan' | 'gram';
 
 // Đổi chữ trong ô gam thành số: trống là null, sai dạng là NaN
 function docSoGam(chu: string): number | null {
@@ -98,14 +92,9 @@ export default function ThemSuaBuaAn() {
 
   // Các ô nhập của thẻ Nhập số
   const [tenMon, setTenMon] = useState('');
-  // Câu cảnh báo dị ứng đi theo món chọn từ ảnh, mã vạch, thẻ Mô tả hoặc nút AI; rỗng là không có
+  // Câu cảnh báo dị ứng đi theo món chọn từ ảnh, mã vạch, thẻ Mô tả, nút AI, thẻ Tìm món hoặc Khám phá; rỗng là không có
   const [canhBaoDiUng, setCanhBaoDiUng] = useState('');
-  const [donViLuong, setDonViLuong] = useState<DonViLuong>('khau-phan');
   const [khauPhan, setKhauPhan] = useState('');
-  const [soGam, setSoGam] = useState('');
-  // Ô lượng theo số: Mét gõ gam, Anh-Mỹ gõ oz
-  const { donVi, heSo } = useDonVi();
-  const laAnhMy = donVi === 'anh_my' && heSo !== null;
   // Chiều cao thanh home của iPhone, để thanh nút Lưu ở đáy không bị che
   const insets = useSafeAreaInsets();
   const [soCalo, setSoCalo] = useState('');
@@ -156,9 +145,11 @@ export default function ThemSuaBuaAn() {
         setMonCu({ muoi_g: buaAn.muoi_g, duong_g: buaAn.duong_g, beo_no_g: buaAn.beo_no_g });
         setNhatKy(await layNhatKyNgay(buaAn.ngay));
       } else {
-        // Mở từ Khám phá thì điền sẵn món đó để người dùng xem lại rồi mới lưu
+        // Mở từ Khám phá thì điền sẵn món đó (kèm câu cảnh báo dị ứng) để người dùng xem lại rồi mới lưu
         if (thamSo.monSan) {
-          dienSan(JSON.parse(thamSo.monSan) as MonDaChon);
+          const monSan = JSON.parse(thamSo.monSan) as MonDaChon;
+          dienSan(monSan);
+          setCanhBaoDiUng(monSan.canh_bao_di_ung);
         }
         setMonHayAn(await layMonHayAn());
         setNhatKy(await layNhatKyNgay(ngay));
@@ -172,17 +163,15 @@ export default function ThemSuaBuaAn() {
   // Điền các ô của form từ một món có sẵn (món cũ đang sửa, món hay ăn, món từ ảnh / mã vạch / tìm món / AI)
   function dienSan(mon: MonHayAn | MonDaChon) {
     setTenMon(mon.ten_mon);
-    setDonViLuong('khau-phan');
     setKhauPhan(mon.khau_phan);
     setSoCalo(String(mon.so_calo));
-    setDam(mon.dam_g === null ? '' : String(mon.dam_g));
-    setTinhBot(mon.tinh_bot_g === null ? '' : String(mon.tinh_bot_g));
-    setBeo(mon.beo_g === null ? '' : String(mon.beo_g));
+    setDam(mon.dam_g === null ? '' : String(mon.dam_g).replace('.', ','));
+    setTinhBot(mon.tinh_bot_g === null ? '' : String(mon.tinh_bot_g).replace('.', ','));
+    setBeo(mon.beo_g === null ? '' : String(mon.beo_g).replace('.', ','));
     setMuoi(mon.muoi_g);
     setDuong(mon.duong_g);
     setBeoNo(mon.beo_no_g);
     setNguonSoLieu(mon.nguon_so_lieu);
-    setSoGam('');
   }
 
   // Có món từ một trong các cách ở bước chọn: tắt màn chụp / quét nếu đang mở, điền form rồi sang bước xem lại; món hay ăn không có câu cảnh báo
@@ -203,9 +192,7 @@ export default function ThemSuaBuaAn() {
   // Xóa hết các ô của form về trống, như chưa chọn món nào
   function xoaForm() {
     setTenMon('');
-    setDonViLuong('khau-phan');
     setKhauPhan('');
-    setSoGam('');
     setSoCalo('');
     setDam('');
     setTinhBot('');
@@ -242,21 +229,6 @@ export default function ThemSuaBuaAn() {
   const damSo = docSoGam(dam);
   const tinhBotSo = docSoGam(tinhBot);
   const beoSo = docSoGam(beo);
-  // Ô lượng đổi ra gam: trống là null, gõ sai là NaN
-  let soGamSo: number | null = null;
-  if (soGam.trim() !== '') {
-    soGamSo = docKhoiLuong(soGam, donVi, heSo) ?? NaN;
-  }
-
-  // Ô lượng có số mà không nằm trong 1–5.000 g thì sai; Mét phải là số nguyên, Anh-Mỹ được 1 số lẻ
-  const soGamSai = soGamSo !== null && !((laAnhMy || Number.isInteger(soGamSo)) && soGamSo >= 1 && soGamSo <= SO_GAM_LON_NHAT);
-  const loiSoGam = `Số ${laAnhMy ? 'oz' : 'gam'} ${vietGioiHan(1, SO_GAM_LON_NHAT, 'khoi_luong', donVi, heSo)}`;
-
-  // Lượng đã ăn ghi thành chữ để lưu và gửi AI: chế độ Gram ghi kiểu "350 g" (Anh-Mỹ: "12,3 oz")
-  let khauPhanDeLuu = khauPhan.trim();
-  if (donViLuong === 'gram') {
-    khauPhanDeLuu = soGamSo === null ? '' : vietKhoiLuong(soGamSo, donVi, heSo);
-  }
 
   // Nhờ AI ước tính theo tên món và lượng đã ăn; AI chỉ điền ô còn trống, ô người dùng đã gõ giữ nguyên
   async function uocTinhBangAi() {
@@ -264,11 +236,8 @@ export default function ThemSuaBuaAn() {
     if (tenMon.trim() === '') {
       loiMoi.tenMon = 'Hãy nhập tên món';
     }
-    if (donViLuong === 'khau-phan' && khauPhan.trim() === '') {
+    if (khauPhan.trim() === '') {
       loiMoi.luong = 'Hãy nhập khẩu phần để AI ước tính, ví dụ: 1 tô lớn';
-    }
-    if (donViLuong === 'gram' && (soGamSo === null || soGamSai)) {
-      loiMoi.luong = loiSoGam;
     }
     if (soCalo.trim() !== '' && (!Number.isInteger(soCaloSo) || soCaloSo < 0 || soCaloSo > CALO_LON_NHAT)) {
       loiMoi.soCalo = `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT.toLocaleString('vi-VN')}`;
@@ -287,20 +256,20 @@ export default function ThemSuaBuaAn() {
     setLoiServer('');
     setDangUocTinh(true);
     try {
-      const ketQua = await uocTinhTheoTen(tenMon.trim(), khauPhanDeLuu, soCaloDaBiet);
+      const ketQua = await uocTinhTheoTen(tenMon.trim(), khauPhan.trim(), soCaloDaBiet);
       if (ketQua.la_mon_an && ketQua.kha_nang.length > 0) {
         const monCuaAi = ketQua.kha_nang[0];
         if (soCalo.trim() === '') {
           setSoCalo(String(monCuaAi.so_calo));
         }
         if (dam.trim() === '') {
-          setDam(String(monCuaAi.dam_g));
+          setDam(String(monCuaAi.dam_g).replace('.', ','));
         }
         if (tinhBot.trim() === '') {
-          setTinhBot(String(monCuaAi.tinh_bot_g));
+          setTinhBot(String(monCuaAi.tinh_bot_g).replace('.', ','));
         }
         if (beo.trim() === '') {
-          setBeo(String(monCuaAi.beo_g));
+          setBeo(String(monCuaAi.beo_g).replace('.', ','));
         }
         if (muoi === null) {
           setMuoi(monCuaAi.muoi_g);
@@ -329,9 +298,6 @@ export default function ThemSuaBuaAn() {
     if (tenMon.trim() === '') {
       loiMoi.tenMon = 'Hãy nhập tên món';
     }
-    if (donViLuong === 'gram' && soGamSai) {
-      loiMoi.luong = loiSoGam;
-    }
     if (soCalo.trim() === '') {
       loiMoi.soCalo = 'Nhập calo, hoặc bấm AI ước tính';
     } else if (!Number.isInteger(soCaloSo) || soCaloSo < 0 || soCaloSo > CALO_LON_NHAT) {
@@ -352,7 +318,7 @@ export default function ThemSuaBuaAn() {
       ngay: ngay,
       loai_bua: loaiBua,
       ten_mon: tenMon.trim(),
-      khau_phan: khauPhanDeLuu,
+      khau_phan: khauPhan.trim(),
       so_calo: soCaloSo,
       dam_g: damSo,
       tinh_bot_g: tinhBotSo,
@@ -432,7 +398,7 @@ export default function ThemSuaBuaAn() {
         <Screen compactBottom={buoc === 'kiem-tra'} avoidKeyboard>
           {/* Tiêu đề; món không thuộc hôm nay (ghi bù, sửa món ngày cũ) thì có thêm dòng ngày để khỏi ghi nhầm ngày */}
           <ScreenTitle
-            title={dangSua ? 'Sửa món' : `Thêm vào ${TEN_BUA[loaiBua].toLowerCase()}`}
+            title={dangSua ? 'Sửa món' : 'Thêm vào bữa ăn của bạn'}
             subtitle={ngay !== todayKey() ? formatDateLabel(ngay) : undefined}
             onBack={quayLai}
           />
@@ -444,7 +410,6 @@ export default function ThemSuaBuaAn() {
             <DaiNutLien
               luaChon={THU_TU_BUA.map((bua) => ({ giaTri: bua, nhan: TEN_BUA[bua] }))}
               giaTriDangChon={loaiBua}
-              kieu="dam"
               isDisabled={dangChay}
               onChon={(giaTri) => setLoaiBua(giaTri as LoaiBua)}
             />
@@ -468,7 +433,7 @@ export default function ThemSuaBuaAn() {
           {/* Bước xem lại: cảnh báo dị ứng, nguồn số liệu, thẻ tên / lượng / calo / ba chất, thẻ "Nên hạn chế", Xóa món */}
           {buoc === 'kiem-tra' ? (
             <View>
-              {/* Câu cảnh báo dị ứng của món vừa chọn (AI, mã vạch), đặt trên cùng cho dễ thấy */}
+              {/* Câu cảnh báo dị ứng của món vừa chọn (AI, mã vạch, Tìm món, Khám phá), đặt trên cùng cho dễ thấy */}
               {canhBaoDiUng !== '' ? (
                 <View style={styles.khungDiUng}>
                   <Text style={styles.chuDiUng}>{canhBaoDiUng}</Text>
@@ -497,41 +462,17 @@ export default function ThemSuaBuaAn() {
                   isDisabled={dangChay}
                 />
 
-                {/* Lượng đã ăn: ghi bằng chữ (khẩu phần) hay bằng số gam */}
+                {/* Lượng đã ăn: một ô chữ, ghi khẩu phần hay số gam đều được */}
                 <Text style={styles.tieuDeMuc}>Lượng đã ăn</Text>
-                <View style={styles.khoiDaiLuong}>
-                  <DaiNutLien
-                    luaChon={[
-                      { giaTri: 'khau-phan', nhan: 'Khẩu phần' },
-                      { giaTri: 'gram', nhan: laAnhMy ? 'Ounce' : 'Gram' },
-                    ]}
-                    giaTriDangChon={donViLuong}
-                    kieu="nhat"
-                    isDisabled={dangChay}
-                    onChon={(giaTri) => setDonViLuong(giaTri as DonViLuong)}
-                  />
-                </View>
-                {donViLuong === 'khau-phan' ? (
-                  <TextField
-                    label=""
-                    value={khauPhan}
-                    onChangeText={setKhauPhan}
-                    error={loiNhap.luong ?? ''}
-                    placeholder="Ví dụ: 2 chén, 1 tô nhỏ"
-                    maxLength={KHAU_PHAN_DAI_NHAT}
-                    isDisabled={dangChay}
-                  />
-                ) : (
-                  <TextField
-                    label=""
-                    value={soGam}
-                    onChangeText={setSoGam}
-                    error={loiNhap.luong ?? ''}
-                    placeholder={laAnhMy ? 'Số oz, ví dụ: 12,3' : 'Số gam, ví dụ: 350'}
-                    isNumber
-                    isDisabled={dangChay}
-                  />
-                )}
+                <TextField
+                  label=""
+                  value={khauPhan}
+                  onChangeText={setKhauPhan}
+                  error={loiNhap.luong ?? ''}
+                  placeholder="Ví dụ: 2 chén, 1 tô nhỏ, 150 g"
+                  maxLength={KHAU_PHAN_DAI_NHAT}
+                  isDisabled={dangChay}
+                />
 
                 {/* Calo, ngăn với phần trên bằng đường kẻ: ô số và nút AI cùng hàng; AI chỉ điền ô còn trống */}
                 <View style={styles.phanMoi}>
@@ -639,9 +580,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.small,
   },
-  khoiDaiLuong: {
-    marginBottom: spacing.small,
-  },
   hangCalo: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -692,12 +630,12 @@ const styles = StyleSheet.create({
     minWidth: 28,
     minHeight: 44,
     fontSize: fontSizes.sectionTitle,
-    fontWeight: '700',
+    fontWeight: '600',
     textAlign: 'right',
   },
   donViGam: {
     fontSize: fontSizes.sectionTitle,
-    fontWeight: '700',
+    fontWeight: '600',
     marginLeft: 2,
   },
   chuLoi: {

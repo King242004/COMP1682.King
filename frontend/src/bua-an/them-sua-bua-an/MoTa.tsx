@@ -77,7 +77,7 @@ export function MoTa({ isDisabled, onChon, onDangChay }: MoTaProps) {
 
 const styles = StyleSheet.create({
   tieuDeThe: {
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.small,

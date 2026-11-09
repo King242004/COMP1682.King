@@ -1,5 +1,5 @@
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
-import { lamMoiMucTieuNeuQuaSinhNhat } from '../ho-so/HoSoService.ts';
+import { tinhTuoi } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { congNuoc, layCaiDatNuoc, layGioNhac, laySoMlNgay, luuCaiDatNuoc, truNuoc } from './UongNuocQueries.ts';
@@ -111,16 +111,14 @@ function docNgay(duLieu: Record<string, unknown>): string {
   return ngay;
 }
 
-// Lấy mục tiêu nước của một người: tính gợi ý từ cân nặng và tuổi, rồi xem có số tự đặt không
-export async function layMucTieuNuoc(nguoiDungId: number): Promise<MucTieuNuoc> {
-  // Qua sinh nhật thì tính lại trước, để tuổi đã dùng cho mục tiêu là tuổi hôm nay
-  await lamMoiMucTieuNeuQuaSinhNhat(nguoiDungId);
+// Lấy mục tiêu nước của một người: tính gợi ý từ cân nặng và tuổi vào ngày đó, rồi xem có số tự đặt không
+export async function layMucTieuNuoc(nguoiDungId: number, ngay: string): Promise<MucTieuNuoc> {
   const hoSo = await layHoSo(nguoiDungId);
-  if (hoSo.can_nang_kg === null || hoSo.tuoi_tinh_muc_tieu === null) {
+  if (hoSo.can_nang_kg === null || hoSo.ngay_sinh === null) {
     throw new HttpError(400, 'Hãy thiết lập hồ sơ trước để có mục tiêu uống nước');
   }
 
-  const mucTieuGoiY = tinhMucTieuNuoc(hoSo.can_nang_kg, hoSo.tuoi_tinh_muc_tieu, {
+  const mucTieuGoiY = tinhMucTieuNuoc(hoSo.can_nang_kg, tinhTuoi(hoSo.ngay_sinh, ngay), {
     mlMoiKg: await layQuyDinh('nuoc_ml_moi_kg'),
     mlMoiKgTrenMocTuoi: await layQuyDinh('nuoc_ml_moi_kg_tren_moc_tuoi'),
     mocTuoi: await layQuyDinh('nuoc_moc_tuoi'),
@@ -139,7 +137,7 @@ export async function xemUongNuocNgay(nguoiDungId: number, ngay: string): Promis
   if (!DANG_NGAY.test(ngay)) {
     throw new HttpError(400, 'Ngày không hợp lệ');
   }
-  const mucTieu = await layMucTieuNuoc(nguoiDungId);
+  const mucTieu = await layMucTieuNuoc(nguoiDungId, ngay);
   const caiDat = await layCaiDatNuoc(nguoiDungId);
 
   return {

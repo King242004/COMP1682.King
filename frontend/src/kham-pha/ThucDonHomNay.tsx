@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -23,6 +23,14 @@ import { CAI_DAT_MAC_DINH, TamCaiDatThucDon } from './TamCaiDatThucDon';
 import { TheMonThucDon } from './TheMonThucDon';
 import { TheMonVien } from './TheMonVien';
 
+// Nhân số gam của 1 suất theo số suất, làm tròn 1 số lẻ; chất chưa có số thì giữ null
+function nhanTheoSuat(soGam: number | null, soSuat: number): number | null {
+  if (soGam === null) {
+    return null;
+  }
+  return Math.round(soGam * soSuat * 10) / 10;
+}
+
 type ThucDonHomNayProps = {
   // 2 tab của Khám phá, đứng yên trên cùng
   dauMan: ReactNode;
@@ -39,6 +47,8 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
   const [dangTao, setDangTao] = useState(false);
   // Món đang được ghi vào nhật ký (bữa + tên); rỗng là không ghi gì
   const [monDangGhi, setMonDangGhi] = useState('');
+  // Số suất người dùng tự bấm cho từng món (bữa + tên); món chưa bấm là 1 suất. Chỉ nhớ lúc app đang mở
+  const [soSuatTuChon, setSoSuatTuChon] = useState<Record<string, number>>({});
   const [dangMoDiCho, setDangMoDiCho] = useState(false);
   // Lựa chọn của lần tạo gần nhất, để tấm cài đặt chọn sẵn khi tạo lại (chỉ nhớ lúc app đang mở)
   const [caiDat, setCaiDat] = useState<CaiDatThucDon>(CAI_DAT_MAC_DINH);
@@ -48,10 +58,12 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
   const [tatCaMon, setTatCaMon] = useState<MonTraCuu[] | null>(null);
   const [loi, setLoi] = useState('');
 
-  // Mở phần này là tải thực đơn và nhật ký hôm nay
-  useEffect(() => {
-    taiDuLieu();
-  }, []);
+  // Mỗi lần mở phần này (kể cả quay lại tab sau khi sửa nhật ký ở Trang chủ) thì tải thực đơn và nhật ký hôm nay
+  useFocusEffect(
+    useCallback(() => {
+      taiDuLieu();
+    }, []),
+  );
 
   async function taiDuLieu() {
     setLoi('');
@@ -72,6 +84,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
     setDangTao(true);
     try {
       setThucDon(await taoThucDon(ngay, caiDatMoi));
+      setSoSuatTuChon({});
     } catch (loiTao) {
       setLoi((loiTao as Error).message);
     }
@@ -105,13 +118,34 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
     });
   }
 
+  // Số suất đang chọn của một món: người dùng đã bấm thì lấy số đó, chưa bấm thì 1 suất
+  function laySoSuat(mon: MonThucDon): number {
+    return soSuatTuChon[mon.loai_bua + mon.ten_mon] ?? 1;
+  }
+
+  // Bấm chip ½ · 1 · 2 trên thẻ món: nhớ số suất mới của món đó
+  function doiSoSuat(mon: MonThucDon, soSuatMoi: number) {
+    setSoSuatTuChon({ ...soSuatTuChon, [mon.loai_bua + mon.ten_mon]: soSuatMoi });
+  }
+
   // Món đã có trong nhật ký (cùng bữa, cùng tên) thì coi là đã ghi
   function laDaGhi(mon: MonThucDon): boolean {
     return monTrongNhatKy.some((buaAn) => buaAn.loai_bua === mon.loai_bua && buaAn.ten_mon === mon.ten_mon);
   }
 
-  // Bấm "Đã ăn": ghi món vào nhật ký hôm nay, đúng bữa; món Viện ghi nguồn Viện, cơm nhà ghi nguồn AI
+  // Bấm "Đã ăn": ghi món vào nhật ký hôm nay, đúng bữa, số liệu nhân theo số suất đang chọn; món Viện ghi nguồn Viện, cơm nhà ghi nguồn AI
   async function handleDaAn(mon: MonThucDon) {
+    // Món Viện ghi khẩu phần "2 suất"; cơm nhà giữ các món trong mâm
+    const soSuat = laySoSuat(mon);
+    let khauPhan = mon.khau_phan;
+    if (mon.kieu === 'mon_vien') {
+      let chuSuat = String(soSuat);
+      if (soSuat === 0.5) {
+        chuSuat = '½';
+      }
+      khauPhan = `${chuSuat} suất`;
+    }
+
     setLoi('');
     setMonDangGhi(mon.loai_bua + mon.ten_mon);
     try {
@@ -119,14 +153,14 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
         ngay: ngay,
         loai_bua: mon.loai_bua,
         ten_mon: mon.ten_mon,
-        khau_phan: mon.khau_phan,
-        so_calo: mon.so_calo,
-        dam_g: mon.dam_g,
-        tinh_bot_g: mon.tinh_bot_g,
-        beo_g: mon.beo_g,
-        muoi_g: mon.muoi_g,
-        duong_g: mon.duong_g,
-        beo_no_g: mon.beo_no_g,
+        khau_phan: khauPhan,
+        so_calo: Math.round(mon.so_calo * soSuat),
+        dam_g: nhanTheoSuat(mon.dam_g, soSuat),
+        tinh_bot_g: nhanTheoSuat(mon.tinh_bot_g, soSuat),
+        beo_g: nhanTheoSuat(mon.beo_g, soSuat),
+        muoi_g: nhanTheoSuat(mon.muoi_g, soSuat),
+        duong_g: nhanTheoSuat(mon.duong_g, soSuat),
+        beo_no_g: nhanTheoSuat(mon.beo_no_g, soSuat),
         nguon_so_lieu: mon.kieu === 'mon_vien' ? 'vien_dinh_duong' : 'ai',
       });
       setMonTrongNhatKy([...monTrongNhatKy, buaAnMoi]);
@@ -144,16 +178,19 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
     );
   }
 
-  // Tổng đạm, tinh bột, béo của cả thực đơn để hiện ở thẻ tổng; có món có nguyên liệu thì mới có danh sách đi chợ
+  // Tổng calo, đạm, tinh bột, béo của cả thực đơn theo số suất đang chọn để hiện ở thẻ tổng; có món có nguyên liệu thì mới có danh sách đi chợ
+  let tongCalo = 0;
   let tongDam = 0;
   let tongTinhBot = 0;
   let tongBeo = 0;
   let coNguyenLieu = false;
   if (danhSachMon !== null) {
     for (const mon of danhSachMon) {
-      tongDam += mon.dam_g;
-      tongTinhBot += mon.tinh_bot_g;
-      tongBeo += mon.beo_g;
+      const soSuat = laySoSuat(mon);
+      tongCalo += Math.round(mon.so_calo * soSuat);
+      tongDam += mon.dam_g * soSuat;
+      tongTinhBot += mon.tinh_bot_g * soSuat;
+      tongBeo += mon.beo_g * soSuat;
       if (mon.nguyen_lieu.length > 0) {
         coNguyenLieu = true;
       }
@@ -163,7 +200,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
   // Thanh ở thẻ tổng dài theo % calo cả thực đơn so với mục tiêu, đầy thì thôi
   let phanTramCalo = 0;
   if (thucDon !== null && thucDon.muc_tieu_calo !== null) {
-    phanTramCalo = (thucDon.tong_calo / thucDon.muc_tieu_calo) * 100;
+    phanTramCalo = (tongCalo / thucDon.muc_tieu_calo) * 100;
     if (phanTramCalo > 100) {
       phanTramCalo = 100;
     }
@@ -216,7 +253,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
               <View>
                 <Text style={styles.chuNho}>{formatDateLabel(ngay)}</Text>
                 <View style={styles.hangSoCalo}>
-                  <Text style={styles.soCalo}>{thucDon.tong_calo.toLocaleString('vi-VN')}</Text>
+                  <Text style={styles.soCalo}>{tongCalo.toLocaleString('vi-VN')}</Text>
                   <Text style={styles.chuNho}>
                     {thucDon.muc_tieu_calo !== null ? `/ mục tiêu ${thucDon.muc_tieu_calo.toLocaleString('vi-VN')} kcal` : 'kcal'}
                   </Text>
@@ -253,9 +290,6 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
               </View>
             </View>
           </Card>
-          <Text style={styles.chuPhu}>
-            Món quán là suất Viện Dinh dưỡng đã cân; cơm nhà là AI ước tính. App kiểm dị ứng theo tên thành phần; nước dùng, nước chấm chưa kiểm được.
-          </Text>
 
           {/* Món chia theo bữa: tiêu đề bữa (biểu tượng màu và tên bữa), món nằm dưới; bữa không có món thì không hiện */}
           {THU_TU_BUA.map((loaiBua) => {
@@ -275,6 +309,8 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
                     <TheMonVien
                       key={mon.loai_bua + mon.ten_mon}
                       mon={mon}
+                      soSuat={laySoSuat(mon)}
+                      onDoiSoSuat={(soSuatMoi) => doiSoSuat(mon, soSuatMoi)}
                       daGhi={laDaGhi(mon)}
                       dangGhi={monDangGhi === mon.loai_bua + mon.ten_mon}
                       khoa={monDangGhi !== '' || dangTao}
@@ -440,11 +476,6 @@ const styles = StyleSheet.create({
   soChat: {
     fontSize: fontSizes.body,
     fontWeight: '600',
-  },
-  chuPhu: {
-    fontSize: fontSizes.secondary,
-    color: colors.textSecondary,
-    marginBottom: spacing.small,
   },
   tieuDeBua: {
     flexDirection: 'row',

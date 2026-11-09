@@ -1,4 +1,4 @@
-import { xemNhatKyNgay } from '../bua-an/BuaAnService.ts';
+import type { LoaiBua } from '../bua-an/BuaAnQueries.ts';
 import { layNhomDiUngCuaNguoiDung, layTuKhoaDiUng } from '../di-ung/DiUngQueries.ts';
 import { timNhomDiUng, vietDanhSachDiUngChoAi } from '../di-ung/DiUngService.ts';
 import { layDonVi } from '../don-vi/DonViQueries.ts';
@@ -6,7 +6,7 @@ import { vietLoiDanDonViChoAi } from '../don-vi/DonViService.ts';
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { askGeminiForJson } from '../shared/geminiClient.ts';
-import { layTatCaMonTraCuu, layTenThanhPhanCuaTungMon } from '../tra-mon/TraMonQueries.ts';
+import { layTatCaMonTraCuu, layTenThanhPhanCuaTungMon, layTongGamMotSuatCuaTungMon } from '../tra-mon/TraMonQueries.ts';
 import type { MonTraCuu, NhomMon } from '../tra-mon/TraMonQueries.ts';
 import { LUAT_HEALTHY } from '../tu-van/TaoLoiNhac.ts';
 import { layThucDon, layThucDonCacNgayTruoc, luuThucDon } from './ThucDonQueries.ts';
@@ -21,9 +21,6 @@ const THOI_GIAN_CHO_AI_MS = 30000;
 // Dặn AI tránh lặp món đã gợi ý trong 6 ngày trước (cùng hôm nay là 1 tuần); là lựa chọn thiết kế
 const SO_NGAY_TRANH_LAP = 6;
 
-// Dặn AI chọn cho tổng calo lệch mục tiêu không quá khoảng 10%, giống bản cũ; là lựa chọn thiết kế, code không ép
-const LECH_MUC_TIEU_PHAN_TRAM = 10;
-
 // Ghi chú cho AI dài nhất bằng ô dị ứng trong hồ sơ; mâm cơm nhà từ 2 đến 5 món (không tính cơm); là lựa chọn giao diện
 const GHI_CHU_DAI_NHAT = 200;
 const SO_MON_IT_NHAT = 2;
@@ -36,6 +33,9 @@ const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
 type BuaChinh = 'sang' | 'trua' | 'toi';
 const CAC_BUA_CHINH: BuaChinh[] = ['sang', 'trua', 'toi'];
 const TEN_BUA_CHINH: Record<BuaChinh, string> = { sang: 'sang (sáng)', trua: 'trua (trưa)', toi: 'toi (tối)' };
+
+// Các ô món Viện AI điền, theo thứ tự trong ngày
+const CAC_O_MON_VIEN: LoaiBua[] = ['sang', 'trua', 'toi', 'phu'];
 
 // Những thứ người dùng chọn cho mâm cơm nhà, và chữ gửi cho AI
 type ThuTrongMam = 'ca' | 'thit_heo' | 'thit_bo' | 'ga' | 'tom' | 'trung' | 'dau_phu' | 'rau' | 'canh';
@@ -56,8 +56,8 @@ const CAC_THU_TRONG_MAM = Object.keys(CHU_THU_TRONG_MAM) as ThuTrongMam[];
 const NHOM_BUA_CHINH: NhomMon[] = ['bun_pho', 'com_chao_xoi', 'banh', 'mon_khac'];
 const NHOM_BUA_PHU: NhomMon[] = ['che_do_uong', 'banh'];
 
-type UuTien = 'khong' | 'giau_dam' | 'it_calo';
-const CAC_UU_TIEN: UuTien[] = ['khong', 'giau_dam', 'it_calo'];
+type UuTien = 'khong' | 'giau_dam' | 'it_calo' | 'it_tinh_bot';
+const CAC_UU_TIEN: UuTien[] = ['khong', 'giau_dam', 'it_calo', 'it_tinh_bot'];
 
 // Cài đặt người dùng chọn trước khi tạo thực đơn
 export type CaiDatThucDon = {
@@ -71,44 +71,52 @@ export type CaiDatThucDon = {
   ghi_chu: string;
 };
 
-// Khuôn JSON bắt Gemini phải trả về: món Viện chỉ ghi mã, mâm cơm nhà ghi đủ; loai_bua chỉ được là mã bữa (AI từng ghi "sáng" có dấu)
-const KHUON_THUC_DON = {
-  type: 'object',
-  properties: {
-    mon_vien: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: { loai_bua: { type: 'string', enum: ['sang', 'trua', 'toi', 'phu'] }, ma_so: { type: 'string' } },
-        required: ['loai_bua', 'ma_so'],
-      },
-    },
-    com_nha: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          loai_bua: { type: 'string', enum: ['sang', 'trua', 'toi'] },
-          cac_mon: { type: 'array', items: { type: 'string' } },
-          so_calo: { type: 'number' },
-          dam_g: { type: 'number' },
-          tinh_bot_g: { type: 'number' },
-          beo_g: { type: 'number' },
-          muoi_g: { type: 'number' },
-          duong_g: { type: 'number' },
-          beo_no_g: { type: 'number' },
-          nguyen_lieu: { type: 'array', items: { type: 'string' } },
-          cach_nau: { type: 'array', items: { type: 'string' } },
+// Khuôn JSON bắt Gemini phải trả về: mỗi bữa món Viện một ô bắt buộc, chỉ chọn được mã trong danh sách của đúng loại bữa; mâm cơm nhà ghi đủ, loai_bua chỉ được là mã bữa
+function taoKhuonThucDon(caiDat: CaiDatThucDon, maBuaChinh: string[], maBuaPhu: string[]) {
+  // Bữa không ăn cơm gia đình mỗi bữa một ô chọn trong danh sách bữa chính; có bữa phụ thì thêm ô chọn trong danh sách bữa phụ
+  const oMonVien: Record<string, object> = {};
+  for (const bua of CAC_BUA_CHINH) {
+    if (!caiDat.bua_com_nha.includes(bua)) {
+      oMonVien[bua] = { type: 'string', enum: maBuaChinh };
+    }
+  }
+  if (caiDat.co_bua_phu) {
+    oMonVien.phu = { type: 'string', enum: maBuaPhu };
+  }
+
+  return {
+    type: 'object',
+    properties: {
+      mon_vien: { type: 'object', properties: oMonVien, required: Object.keys(oMonVien) },
+      com_nha: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            loai_bua: { type: 'string', enum: ['sang', 'trua', 'toi'] },
+            cac_mon: { type: 'array', items: { type: 'string' } },
+            so_calo: { type: 'number' },
+            dam_g: { type: 'number' },
+            tinh_bot_g: { type: 'number' },
+            beo_g: { type: 'number' },
+            muoi_g: { type: 'number' },
+            duong_g: { type: 'number' },
+            beo_no_g: { type: 'number' },
+            nguyen_lieu: { type: 'array', items: { type: 'string' } },
+            cach_nau: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['loai_bua', 'cac_mon', 'so_calo', 'dam_g', 'tinh_bot_g', 'beo_g', 'muoi_g', 'duong_g', 'beo_no_g', 'nguyen_lieu', 'cach_nau'],
         },
-        required: ['loai_bua', 'cac_mon', 'so_calo', 'dam_g', 'tinh_bot_g', 'beo_g', 'muoi_g', 'duong_g', 'beo_no_g', 'nguyen_lieu', 'cach_nau'],
       },
     },
-  },
-  required: ['mon_vien', 'com_nha'],
-};
+    required: ['mon_vien', 'com_nha'],
+  };
+}
 
 // Món gửi về app kèm dị ứng: tên các nhóm bị trùng và những thứ bị bắt (dòng thành phần, món trong mâm, nguyên liệu)
 type MonThucDonHienThi = MonThucDon & {
+  // Số gam 1 suất món Viện (cộng bảng "Trong 1 suất có"); cơm nhà hoặc món có dòng Viện không cân thì null
+  so_gam_1_suat: number | null;
   nhom_di_ung: string[];
   thu_bi_bat: string[];
 };
@@ -222,17 +230,13 @@ export function docThucDon(duLieu: unknown, boiCanh: BoiCanhThucDon): MonThucDon
   const danhSachMon: MonThucDon[] = [];
   const buaDaCo: string[] = [];
 
-  // Bữa thường: AI chỉ ghi mã món, tên, ảnh và số lấy từ món Viện
+  // Bữa thường: mỗi bữa một ô, AI chỉ ghi mã món; tên, ảnh và số lấy từ món Viện
   const monVienTho = (duLieu as { mon_vien?: unknown }).mon_vien;
-  if (Array.isArray(monVienTho)) {
-    for (const muc of monVienTho) {
-      const mon = muc as Record<string, unknown>;
-      const loaiBua = mon.loai_bua;
-      if (loaiBua !== 'sang' && loaiBua !== 'trua' && loaiBua !== 'toi' && loaiBua !== 'phu') {
-        continue;
-      }
-      // Mỗi bữa 1 món; bữa đã chọn ăn cơm gia đình thì không nhận món Viện
-      if (buaDaCo.includes(loaiBua) || (loaiBua !== 'phu' && caiDat.bua_com_nha.includes(loaiBua))) {
+  if (typeof monVienTho === 'object' && monVienTho !== null) {
+    const oMonVien = monVienTho as Record<string, unknown>;
+    for (const loaiBua of CAC_O_MON_VIEN) {
+      // Bữa đã chọn ăn cơm gia đình hoặc bữa phụ đã tắt thì không nhận món Viện
+      if (loaiBua !== 'phu' && caiDat.bua_com_nha.includes(loaiBua)) {
         continue;
       }
       if (loaiBua === 'phu' && !caiDat.co_bua_phu) {
@@ -240,7 +244,7 @@ export function docThucDon(duLieu: unknown, boiCanh: BoiCanhThucDon): MonThucDon
       }
 
       // Mã phải nằm trong danh sách món của đúng loại bữa, và không trùng món đã chọn
-      const maSo = String(mon.ma_so);
+      const maSo = String(oMonVien[loaiBua]);
       const monGoc = loaiBua === 'phu' ? boiCanh.monBuaPhu.get(maSo) : boiCanh.monBuaChinh.get(maSo);
       if (monGoc === undefined || danhSachMon.some((monDaChon) => monDaChon.ma_so === maSo)) {
         continue;
@@ -263,7 +267,6 @@ export function docThucDon(duLieu: unknown, boiCanh: BoiCanhThucDon): MonThucDon
         nguyen_lieu: [],
         cach_nau: [],
       });
-      buaDaCo.push(loaiBua);
     }
   }
 
@@ -349,15 +352,25 @@ export async function xemThucDon(nguoiDungId: number, ngay: string): Promise<Thu
     tongCalo = tongCalo + mon.so_calo;
   }
 
-  // Dò dị ứng từng món; thứ bị bắt là những tên mà dò riêng từng tên thì trùng
+  // Dò dị ứng từng món (thứ bị bắt là những tên mà dò riêng từng tên thì trùng), kèm số gam 1 suất
   const nhomDaChon = await layNhomDiUngCuaNguoiDung(nguoiDungId);
   const danhSachTuKhoa = await layTuKhoaDiUng();
   const tenThanhPhanCuaTungMon = await layTenThanhPhanCuaTungMon();
+  const gamCuaTungMon = await layTongGamMotSuatCuaTungMon();
   const monHienThi: MonThucDonHienThi[] = [];
   for (const mon of danhSachMon) {
     const danhSachTen = layTenDeKiemDiUng(mon, tenThanhPhanCuaTungMon);
     const thuBiBat = danhSachTen.filter((ten) => timNhomDiUng([ten], danhSachTuKhoa, nhomDaChon).length > 0);
-    monHienThi.push({ ...mon, nhom_di_ung: timNhomDiUng(danhSachTen, danhSachTuKhoa, nhomDaChon), thu_bi_bat: thuBiBat });
+    let soGam1Suat: number | null = null;
+    if (mon.kieu === 'mon_vien' && mon.ma_so) {
+      soGam1Suat = gamCuaTungMon.get(mon.ma_so) ?? null;
+    }
+    monHienThi.push({
+      ...mon,
+      so_gam_1_suat: soGam1Suat,
+      nhom_di_ung: timNhomDiUng(danhSachTen, danhSachTuKhoa, nhomDaChon),
+      thu_bi_bat: thuBiBat,
+    });
   }
 
   return { ngay: ngay, muc_tieu_calo: hoSo.muc_tieu_calo, tong_calo: tongCalo, mon: monHienThi };
@@ -375,12 +388,11 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
     throw new HttpError(400, 'Cài đặt thực đơn không hợp lệ');
   }
 
-  // Bước 2. Lấy mục tiêu từ nhật ký ngày (cùng cách tính với trang chủ), dị ứng từ hồ sơ, thực đơn cũ để tránh lặp
-  const nhatKy = await xemNhatKyNgay(nguoiDungId, ngay);
-  if (nhatKy.muc_tieu_calo === null || nhatKy.muc_tieu_chat === null || nhatKy.gioi_han_nen_han_che === null) {
+  // Bước 2. Lấy hồ sơ (chưa thiết lập thì chưa có mục tiêu để so), dị ứng, thực đơn cũ để tránh lặp
+  const hoSo = await layHoSo(nguoiDungId);
+  if (hoSo.muc_tieu_calo === null) {
     throw new HttpError(400, 'Hãy thiết lập hồ sơ trước để có mục tiêu calo');
   }
-  const hoSo = await layHoSo(nguoiDungId);
   const nhomDiUngDaChon = await layNhomDiUngCuaNguoiDung(nguoiDungId);
   const danhSachTuKhoa = await layTuKhoaDiUng();
   const tenThanhPhanCuaTungMon = await layTenThanhPhanCuaTungMon();
@@ -428,19 +440,18 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
     }
   }
 
-  // Bước 5. Ghép lời nhắc: mục tiêu, bữa thường chọn món Viện, bữa cơm gia đình ghép mâm, ưu tiên, healthy, dị ứng, ghi chú, tránh lặp
+  // Bước 5. Ghép lời nhắc: bữa thường chọn món Viện, bữa cơm gia đình ghép mâm, ưu tiên, healthy, dị ứng, ghi chú, tránh lặp
   const buaThuong = CAC_BUA_CHINH.filter((bua) => !caiDat.bua_com_nha.includes(bua));
   const dong = [
     'Bạn là chuyên gia dinh dưỡng, rành món ăn Việt Nam. Hãy lập thực đơn 1 ngày cho 1 người. Mọi chữ viết tiếng Việt có dấu.',
-    `Mục tiêu: tổng khoảng ${nhatKy.muc_tieu_calo} kcal cả ngày (lệch không quá khoảng ${LECH_MUC_TIEU_PHAN_TRAM}%, không cần khớp đúng); đạm ít nhất ${nhatKy.muc_tieu_chat.dam_g_toi_thieu} g; muối dưới ${nhatKy.gioi_han_nen_han_che.muoi_g_toi_da} g.`,
   ];
   if (buaThuong.length > 0) {
     dong.push(
-      `Bữa ${buaThuong.map((bua) => TEN_BUA_CHINH[bua]).join(', ')}: mỗi bữa chọn đúng 1 món trong DANH SÁCH MÓN BỮA CHÍNH, ghi vào mon_vien bằng ma_so; không ghi các bữa này vào com_nha. Chọn món hợp với bữa đó theo thói quen người Việt; không chọn món ăn chung cho nhiều người (ví dụ pizza cỡ L).`,
+      `Bữa ${buaThuong.map((bua) => TEN_BUA_CHINH[bua]).join(', ')}: mỗi bữa chọn đúng 1 món trong DANH SÁCH MÓN BỮA CHÍNH, ghi ma_so vào ô của bữa đó trong mon_vien; không ghi các bữa này vào com_nha. Chọn món hợp với bữa đó theo thói quen người Việt; không chọn món ăn chung cho nhiều người (ví dụ pizza cỡ L). Các bữa trong ngày không chọn hai món cùng loại (ví dụ cùng là miến lươn, cùng là phở).`,
     );
   }
   if (caiDat.co_bua_phu) {
-    dong.push('Thêm 1 bữa phụ (loai_bua là phu): chọn 1 món trong DANH SÁCH MÓN BỮA PHỤ, ghi vào mon_vien bằng ma_so.');
+    dong.push('Thêm 1 bữa phụ: chọn 1 món trong DANH SÁCH MÓN BỮA PHỤ, ghi ma_so vào ô phu trong mon_vien; không chọn đồ uống (nước ép, nước mía, cà phê, sữa tươi trân châu, sữa chua uống).');
   } else {
     dong.push('Không có bữa phụ.');
   }
@@ -461,6 +472,9 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
   }
   if (caiDat.uu_tien === 'it_calo') {
     dong.push('Ưu tiên món ít calo.');
+  }
+  if (caiDat.uu_tien === 'it_tinh_bot') {
+    dong.push('Ưu tiên món ít tinh bột (ít cơm, bún, phở, bánh); mâm cơm nhà dùng ít cơm.');
   }
   dong.push(LUAT_HEALTHY);
   // Người dùng chọn Anh-Mỹ thì dặn AI ghi lượng nguyên liệu bằng oz
@@ -485,20 +499,21 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
     dong.push(`Mâm cơm nhà tránh lặp các món đã gợi ý gần đây: ${monNhaDaGoiY.join('; ')}.`);
   }
   if (buaThuong.length > 0) {
-    dong.push('DANH SÁCH MÓN BỮA CHÍNH (ma_so | tên | calo | đạm):');
+    dong.push('DANH SÁCH MÓN BỮA CHÍNH (ma_so | tên | calo | đạm | tinh bột):');
     for (const mon of monBuaChinh.values()) {
-      dong.push(`${mon.ma_so} | ${mon.ten_mon} | ${Math.round(mon.so_calo)} kcal | ${mon.dam_g} g`);
+      dong.push(`${mon.ma_so} | ${mon.ten_mon} | ${Math.round(mon.so_calo)} kcal | ${mon.dam_g} g | ${mon.tinh_bot_g} g`);
     }
   }
   if (caiDat.co_bua_phu) {
-    dong.push('DANH SÁCH MÓN BỮA PHỤ (ma_so | tên | calo | đạm):');
+    dong.push('DANH SÁCH MÓN BỮA PHỤ (ma_so | tên | calo | đạm | tinh bột):');
     for (const mon of monBuaPhu.values()) {
-      dong.push(`${mon.ma_so} | ${mon.ten_mon} | ${Math.round(mon.so_calo)} kcal | ${mon.dam_g} g`);
+      dong.push(`${mon.ma_so} | ${mon.ten_mon} | ${Math.round(mon.so_calo)} kcal | ${mon.dam_g} g | ${mon.tinh_bot_g} g`);
     }
   }
 
   // Bước 6. Hỏi AI một lần (không gửi ảnh, chờ lâu hơn mặc định) rồi kiểm; không còn món nào dùng được thì báo để thử lại
-  const traLoi = await askGeminiForJson(dong.join('\n'), KHUON_THUC_DON, undefined, THOI_GIAN_CHO_AI_MS);
+  const khuonThucDon = taoKhuonThucDon(caiDat, Array.from(monBuaChinh.keys()), Array.from(monBuaPhu.keys()));
+  const traLoi = await askGeminiForJson(dong.join('\n'), khuonThucDon, undefined, THOI_GIAN_CHO_AI_MS);
   const danhSachMon = docThucDon(traLoi, { caiDat: caiDat, monBuaChinh: monBuaChinh, monBuaPhu: monBuaPhu, khauPhanDaiNhat: KHAU_PHAN_DAI_NHAT });
   if (danhSachMon.length === 0) {
     throw new HttpError(503, 'AI chưa lập được thực đơn, thử lại sau');

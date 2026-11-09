@@ -19,10 +19,22 @@ export function LichThang({ cacNgay, duLieuCacNgay, mucTieuMl }: LichThangProps)
   const tuanDauThang = weekDateKeys(cacNgay[0]);
   const soOTrong = tuanDauThang.indexOf(cacNgay[0]);
 
-  // Ô trống đầu lịch để ngày 1 đứng đúng cột thứ của nó
-  const danhSachOTrong: number[] = [];
+  // Các ô của lịch: ô trống đầu tháng (null) để ngày 1 đứng đúng cột thứ, rồi các ngày, rồi ô trống cho đủ hàng cuối
+  const cacO: (string | null)[] = [];
   for (let viTri = 0; viTri < soOTrong; viTri++) {
-    danhSachOTrong.push(viTri);
+    cacO.push(null);
+  }
+  for (const ngay of cacNgay) {
+    cacO.push(ngay);
+  }
+  while (cacO.length % 7 !== 0) {
+    cacO.push(null);
+  }
+
+  // Chia các ô thành từng hàng 7 ô, mỗi hàng là một tuần T2…CN
+  const cacHang: (string | null)[][] = [];
+  for (let viTriDau = 0; viTriDau < cacO.length; viTriDau += 7) {
+    cacHang.push(cacO.slice(viTriDau, viTriDau + 7));
   }
 
   return (
@@ -34,7 +46,7 @@ export function LichThang({ cacNgay, duLieuCacNgay, mucTieuMl }: LichThangProps)
       </View>
 
       {/* Hàng tên thứ */}
-      <View style={styles.luoi}>
+      <View style={styles.hang}>
         {tuanDauThang.map((ngay) => (
           <Text key={ngay} style={styles.tenThu}>
             {shortWeekdayName(ngay)}
@@ -42,48 +54,49 @@ export function LichThang({ cacNgay, duLieuCacNgay, mucTieuMl }: LichThangProps)
         ))}
       </View>
 
-      {/* Các ô ngày, xuống hàng sau mỗi 7 ô */}
-      <View style={styles.luoi}>
-        {danhSachOTrong.map((viTri) => (
-          <View key={`o-trong-${viTri}`} style={styles.oLich} />
-        ))}
+      {/* Các hàng tuần, mỗi hàng 7 ô */}
+      {cacHang.map((hang, viTriHang) => (
+        <View key={`hang-${viTriHang}`} style={styles.hang}>
+          {hang.map((ngay, viTriO) => {
+            if (ngay === null) {
+              return <View key={`o-trong-${viTriO}`} style={styles.oLich} />;
+            }
+            const duLieu = duLieuCacNgay.find((motNgay) => motNgay.ngay === ngay);
+            const chuaToi = ngay > homNay;
 
-        {cacNgay.map((ngay) => {
-          const duLieu = duLieuCacNgay.find((motNgay) => motNgay.ngay === ngay);
-          const chuaToi = ngay > homNay;
+            // Kiểu ô theo trạng thái ngày: không ghi, chưa tới, đạt hoặc chưa đủ
+            let kieuO: ViewStyle = styles.nenKhongGhi;
+            let mauChu: string = colors.textSecondary;
+            if (chuaToi) {
+              kieuO = styles.nenChuaToi;
+              mauChu = colors.border;
+            } else if (duLieu !== undefined && duLieu.so_ml >= mucTieuMl) {
+              kieuO = styles.nenDat;
+              mauChu = colors.textOnPrimaryLight;
+            } else if (duLieu !== undefined) {
+              kieuO = styles.nenChuaDu;
+              mauChu = colors.textOnPrimaryLight;
+            }
 
-          // Kiểu ô theo trạng thái ngày: không ghi, chưa tới, đạt hoặc chưa đủ
-          let kieuO: ViewStyle = styles.nenKhongGhi;
-          let mauChu: string = colors.textSecondary;
-          if (chuaToi) {
-            kieuO = styles.nenChuaToi;
-            mauChu = colors.border;
-          } else if (duLieu !== undefined && duLieu.so_ml >= mucTieuMl) {
-            kieuO = styles.nenDat;
-            mauChu = colors.textOnPrimaryLight;
-          } else if (duLieu !== undefined) {
-            kieuO = styles.nenChuaDu;
-            mauChu = colors.textOnPrimaryLight;
-          }
-
-          return (
-            <View key={ngay} style={styles.oLich}>
-              <View style={[styles.nenO, kieuO]}>
-                <Text style={[styles.soNgay, { color: mauChu }]}>{dayOfMonth(ngay)}</Text>
+            return (
+              <View key={ngay} style={styles.oLich}>
+                <View style={[styles.nenO, kieuO]}>
+                  <Text style={[styles.soNgay, { color: mauChu }]}>{dayOfMonth(ngay)}</Text>
+                </View>
               </View>
-            </View>
-          );
-        })}
-      </View>
+            );
+          })}
+        </View>
+      ))}
 
-      {/* Chú thích màu */}
+      {/* Chú thích màu: chữ tô đúng màu của ô */}
       <View style={styles.hangChuThich}>
         <View style={[styles.oMau, styles.nenDat]} />
-        <Text style={styles.chuNho}>Đạt</Text>
+        <Text style={[styles.chuNho, styles.chuXanh]}>Đạt</Text>
         <View style={[styles.oMau, styles.nenChuaDu]} />
-        <Text style={styles.chuNho}>Chưa đủ</Text>
+        <Text style={[styles.chuNho, styles.chuXanh]}>Chưa đủ</Text>
         <View style={[styles.oMau, styles.nenKhongGhi]} />
-        <Text style={styles.chuNho}>Không ghi</Text>
+        <Text style={[styles.chuNho, styles.chuDam]}>Không ghi</Text>
       </View>
     </View>
   );
@@ -105,13 +118,19 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
-  luoi: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  chuXanh: {
+    fontWeight: '600',
+    color: colors.textOnPrimaryLight,
   },
-  // Mỗi cột rộng 1/7 hàng
+  chuDam: {
+    fontWeight: '600',
+  },
+  // Một hàng 7 cột chia đều
+  hang: {
+    flexDirection: 'row',
+  },
   tenThu: {
-    width: `${100 / 7}%`,
+    flex: 1,
     textAlign: 'center',
     fontSize: fontSizes.label,
     color: colors.textSecondary,
@@ -119,7 +138,7 @@ const styles = StyleSheet.create({
   },
   // Ô vuông 1/7 hàng; nền màu nằm lùi vào 2 để các ô có khe hở
   oLich: {
-    width: `${100 / 7}%`,
+    flex: 1,
     aspectRatio: 1,
     padding: 2,
   },

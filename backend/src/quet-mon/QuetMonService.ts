@@ -43,8 +43,14 @@ const KHUON_KET_QUA = {
           duong_g: { type: 'number' },
           beo_no_g: { type: 'number' },
           do_tin_cay: { type: 'number' },
+          thanh_phan: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Nguyên liệu chính của món theo cách nấu phổ biến ở Việt Nam, mỗi phần tử một nguyên liệu, tiếng Việt. Ghi cả nước chấm, nước mắm, mắm tôm, lạc, vừng, trứng, sữa, bơ, phô mai, bột mì, tôm, cua, mực nếu món thường có.',
+          },
         },
-        required: ['ten_mon', 'khau_phan', 'so_calo', 'dam_g', 'tinh_bot_g', 'beo_g', 'muoi_g', 'duong_g', 'beo_no_g', 'do_tin_cay'],
+        required: ['ten_mon', 'khau_phan', 'so_calo', 'dam_g', 'tinh_bot_g', 'beo_g', 'muoi_g', 'duong_g', 'beo_no_g', 'do_tin_cay', 'thanh_phan'],
       },
     },
   },
@@ -62,7 +68,7 @@ function docChuKhongBatBuoc(giaTri: unknown, doDaiToiDa: number, tenO: string): 
   return giaTri.trim();
 }
 
-// Một khả năng AI đoán: món gì, khẩu phần nhìn thấy, số liệu, độ chắc chắn (0 tới 1)
+// Một khả năng AI đoán: món gì, khẩu phần nhìn thấy, số liệu, độ chắc chắn (0 tới 1), nguyên liệu chính để dò dị ứng
 export type KhaNang = {
   ten_mon: string;
   khau_phan: string;
@@ -74,6 +80,7 @@ export type KhaNang = {
   duong_g: number | null;
   beo_no_g: number | null;
   do_tin_cay: number;
+  thanh_phan: string[];
 };
 
 // Kết quả đã kiểm: la_mon_an = false nghĩa là AI thấy ảnh không phải đồ ăn
@@ -128,6 +135,15 @@ export function docKetQuaNhanMon(duLieu: unknown, soKhaNangToiDa: number): KetQu
     if (typeof khaNang.khau_phan === 'string') {
       khauPhan = khaNang.khau_phan.trim();
     }
+    // Nguyên liệu chính: chỉ giữ chữ không rỗng; AI không trả thì để rỗng, vẫn giữ khả năng này
+    const thanhPhan: string[] = [];
+    if (Array.isArray(khaNang.thanh_phan)) {
+      for (const nguyenLieu of khaNang.thanh_phan) {
+        if (typeof nguyenLieu === 'string' && nguyenLieu.trim() !== '') {
+          thanhPhan.push(nguyenLieu.trim());
+        }
+      }
+    }
     danhSachHopLe.push({
       ten_mon: khaNang.ten_mon.trim(),
       khau_phan: khauPhan,
@@ -139,6 +155,7 @@ export function docKetQuaNhanMon(duLieu: unknown, soKhaNangToiDa: number): KetQu
       duong_g: docSoGamPhu(khaNang.duong_g),
       beo_no_g: docSoGamPhu(khaNang.beo_no_g),
       do_tin_cay: doTinCay,
+      thanh_phan: thanhPhan,
     });
   }
 
@@ -239,15 +256,15 @@ export function docSanPhamMaVach(duLieu: unknown): SanPhamMaVach | null {
   };
 }
 
-// Câu cảnh báo cho món AI nhận (ảnh, tên, mô tả): chỉ kiểm được theo tên món nên luôn nhắc tự kiểm; chưa chọn nhóm thì rỗng
-export function vietCanhBaoTheoTenMon(nhomTrung: string[], coChonNhom: boolean): string {
+// Câu cảnh báo cho món AI nhận (ảnh, tên, mô tả): kiểm theo tên món và nguyên liệu AI đoán nên luôn nhắc tự kiểm; chưa chọn nhóm thì rỗng
+export function vietCanhBaoMonAi(nhomTrung: string[], thuBiBat: string[], coChonNhom: boolean): string {
   if (!coChonNhom) {
     return '';
   }
   if (nhomTrung.length > 0) {
-    return `⚠ Tên món có: ${nhomTrung.join(' · ')}. App chỉ kiểm theo tên món, không biết thành phần thật. Hãy tự kiểm.`;
+    return `⚠ AI đoán món có: ${nhomTrung.join(' · ')} (${thuBiBat.join(', ')}). App không biết thành phần thật. Hãy tự kiểm.`;
   }
-  return 'App chỉ kiểm dị ứng theo tên món, không biết thành phần thật. Hãy tự kiểm.';
+  return 'App chỉ kiểm theo tên món và nguyên liệu AI đoán, không biết thành phần thật. Hãy tự kiểm.';
 }
 
 // Câu cảnh báo cho sản phẩm mã vạch: trùng thì nêu nhóm; không có dữ liệu dị ứng thì nhắc xem bao bì; chưa chọn nhóm thì rỗng
@@ -277,16 +294,20 @@ async function themLoiDanDonVi(loiNhac: string, nguoiDungId: number): Promise<st
   return `${loiNhac}\n${loiDanDonVi}`;
 }
 
-// Gắn câu cảnh báo dị ứng cho từng khả năng AI trả về, dò theo tên món
+// Gắn câu cảnh báo dị ứng cho từng khả năng AI trả về, dò theo tên món và nguyên liệu AI đoán (thứ bị bắt là những tên mà dò riêng từng tên thì trùng)
 async function ganCanhBaoDiUng(ketQua: KetQuaNhanMon, nguoiDungId: number): Promise<KetQuaNhanMonCoCanhBao> {
   const nhomDaChon = await layNhomDiUngCuaNguoiDung(nguoiDungId);
   const danhSachTuKhoa = await layTuKhoaDiUng();
   return {
     la_mon_an: ketQua.la_mon_an,
-    kha_nang: ketQua.kha_nang.map((khaNang) => ({
-      ...khaNang,
-      canh_bao_di_ung: vietCanhBaoTheoTenMon(timNhomDiUng([khaNang.ten_mon], danhSachTuKhoa, nhomDaChon), nhomDaChon.length > 0),
-    })),
+    kha_nang: ketQua.kha_nang.map((khaNang) => {
+      const danhSachTen = [khaNang.ten_mon, ...khaNang.thanh_phan];
+      const thuBiBat = danhSachTen.filter((ten) => timNhomDiUng([ten], danhSachTuKhoa, nhomDaChon).length > 0);
+      return {
+        ...khaNang,
+        canh_bao_di_ung: vietCanhBaoMonAi(timNhomDiUng(danhSachTen, danhSachTuKhoa, nhomDaChon), thuBiBat, nhomDaChon.length > 0),
+      };
+    }),
   };
 }
 

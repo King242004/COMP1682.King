@@ -20,10 +20,22 @@ export function LichThang({ cacNgay, duLieuCacNgay, mucTieuCalo, ngayChon, onCho
   const tuanDauThang = weekDateKeys(cacNgay[0]);
   const soOTrong = tuanDauThang.indexOf(cacNgay[0]);
 
-  // Ô trống đầu lịch để ngày 1 đứng đúng cột thứ của nó
-  const danhSachOTrong: number[] = [];
+  // Các ô của lịch: ô trống đầu tháng (null) để ngày 1 đứng đúng cột thứ, rồi các ngày, rồi ô trống cho đủ hàng cuối
+  const cacO: (string | null)[] = [];
   for (let viTri = 0; viTri < soOTrong; viTri++) {
-    danhSachOTrong.push(viTri);
+    cacO.push(null);
+  }
+  for (const ngay of cacNgay) {
+    cacO.push(ngay);
+  }
+  while (cacO.length % 7 !== 0) {
+    cacO.push(null);
+  }
+
+  // Chia các ô thành từng hàng 7 ô, mỗi hàng là một tuần T2…CN
+  const cacHang: (string | null)[][] = [];
+  for (let viTriDau = 0; viTriDau < cacO.length; viTriDau += 7) {
+    cacHang.push(cacO.slice(viTriDau, viTriDau + 7));
   }
 
   return (
@@ -35,7 +47,7 @@ export function LichThang({ cacNgay, duLieuCacNgay, mucTieuCalo, ngayChon, onCho
       </View>
 
       {/* Hàng tên thứ */}
-      <View style={styles.luoi}>
+      <View style={styles.hang}>
         {tuanDauThang.map((ngay) => (
           <Text key={ngay} style={styles.tenThu}>
             {shortWeekdayName(ngay)}
@@ -43,54 +55,55 @@ export function LichThang({ cacNgay, duLieuCacNgay, mucTieuCalo, ngayChon, onCho
         ))}
       </View>
 
-      {/* Các ô ngày, xuống hàng sau mỗi 7 ô */}
-      <View style={styles.luoi}>
-        {danhSachOTrong.map((viTri) => (
-          <View key={`o-trong-${viTri}`} style={styles.oLich} />
-        ))}
+      {/* Các hàng tuần, mỗi hàng 7 ô */}
+      {cacHang.map((hang, viTriHang) => (
+        <View key={`hang-${viTriHang}`} style={styles.hang}>
+          {hang.map((ngay, viTriO) => {
+            if (ngay === null) {
+              return <View key={`o-trong-${viTriO}`} style={styles.oLich} />;
+            }
+            const duLieu = duLieuCacNgay.find((motNgay) => motNgay.ngay === ngay);
+            const chuaToi = ngay > homNay;
+            const dangChon = ngay === ngayChon;
 
-        {cacNgay.map((ngay) => {
-          const duLieu = duLieuCacNgay.find((motNgay) => motNgay.ngay === ngay);
-          const chuaToi = ngay > homNay;
-          const dangChon = ngay === ngayChon;
+            // Màu nền và màu chữ theo trạng thái ngày: không ghi, chưa tới, vượt hoặc đạt
+            let mauNen: string = colors.card;
+            let mauChu: string = colors.textSecondary;
+            if (chuaToi) {
+              mauNen = colors.surface;
+              mauChu = colors.border;
+            } else if (duLieu !== undefined && duLieu.vuot_calo) {
+              mauNen = colors.warningBackground;
+              mauChu = colors.warningText;
+            } else if (duLieu !== undefined) {
+              mauNen = colors.primaryLight;
+              mauChu = colors.textOnPrimaryLight;
+            }
 
-          // Màu nền và màu chữ theo trạng thái ngày: không ghi, chưa tới, vượt hoặc đạt
-          let mauNen: string = colors.card;
-          let mauChu: string = colors.textSecondary;
-          if (chuaToi) {
-            mauNen = colors.surface;
-            mauChu = colors.border;
-          } else if (duLieu !== undefined && duLieu.vuot_calo) {
-            mauNen = colors.warningBackground;
-            mauChu = colors.warningText;
-          } else if (duLieu !== undefined) {
-            mauNen = colors.primaryLight;
-            mauChu = colors.textOnPrimaryLight;
-          }
+            return (
+              <Pressable
+                key={ngay}
+                style={({ pressed }) => [styles.oLich, pressed ? styles.dangBam : null]}
+                disabled={chuaToi}
+                onPress={() => onChon(ngay)}
+              >
+                <View style={[styles.nenO, { backgroundColor: mauNen }, dangChon ? styles.nenODangChon : null]}>
+                  <Text style={[styles.soNgay, { color: mauChu }]}>{dayOfMonth(ngay)}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
 
-          return (
-            <Pressable
-              key={ngay}
-              style={({ pressed }) => [styles.oLich, pressed ? styles.dangBam : null]}
-              disabled={chuaToi}
-              onPress={() => onChon(ngay)}
-            >
-              <View style={[styles.nenO, { backgroundColor: mauNen }, dangChon ? styles.nenODangChon : null]}>
-                <Text style={[styles.soNgay, { color: mauChu }]}>{dayOfMonth(ngay)}</Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Chú thích màu */}
+      {/* Chú thích màu: chữ tô đúng màu của ô */}
       <View style={styles.hangChuThich}>
         <View style={[styles.oMau, styles.oMauDat]} />
-        <Text style={styles.chuNho}>Đạt</Text>
+        <Text style={[styles.chuNho, styles.chuDat]}>Đạt</Text>
         <View style={[styles.oMau, styles.oMauVuot]} />
-        <Text style={styles.chuNho}>Vượt</Text>
+        <Text style={[styles.chuNho, styles.chuVuot]}>Vượt</Text>
         <View style={[styles.oMau, styles.oMauKhongGhi]} />
-        <Text style={styles.chuNho}>Không ghi</Text>
+        <Text style={[styles.chuNho, styles.chuDam]}>Không ghi</Text>
       </View>
     </View>
   );
@@ -112,13 +125,12 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.label,
     color: colors.textSecondary,
   },
-  luoi: {
+  // Một hàng 7 cột chia đều
+  hang: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
   },
-  // Mỗi cột rộng 1/7 hàng
   tenThu: {
-    width: `${100 / 7}%`,
+    flex: 1,
     textAlign: 'center',
     fontSize: fontSizes.label,
     color: colors.textSecondary,
@@ -126,7 +138,7 @@ const styles = StyleSheet.create({
   },
   // Ô vuông 1/7 hàng là chỗ bấm; nền màu nằm lùi vào 2 để các ô có khe hở
   oLich: {
-    width: `${100 / 7}%`,
+    flex: 1,
     aspectRatio: 1,
     padding: 2,
   },
@@ -166,6 +178,17 @@ const styles = StyleSheet.create({
   },
   oMauKhongGhi: {
     backgroundColor: colors.card,
+  },
+  chuDat: {
+    fontWeight: '600',
+    color: colors.textOnPrimaryLight,
+  },
+  chuVuot: {
+    fontWeight: '600',
+    color: colors.warningText,
+  },
+  chuDam: {
+    fontWeight: '600',
   },
   dangBam: {
     opacity: pressedOpacity,

@@ -1,13 +1,13 @@
 import { layTongCaloCacNgay } from '../bua-an/BuaAnQueries.ts';
 import type { CaloMotNgay } from '../bua-an/BuaAnQueries.ts';
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
-import { capNhatCanNangHoSo, lamMoiMucTieuNeuQuaSinhNhat } from '../ho-so/HoSoService.ts';
+import { capNhatCanNangHoSo } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { layCanNangCacNgay, luuCanNang, SO_NGAY_XU_HUONG } from './TienDoQueries.ts';
 import type { LanCan } from './TienDoQueries.ts';
 
-// Số ngày của biểu đồ, của thẻ "4 tuần qua" (số ngày của đường xu hướng ở TienDoQueries.ts); là lựa chọn giao diện, không phải luật dinh dưỡng
+// Số ngày của biểu đồ, của thẻ "Kết quả 4 tuần" (số ngày của đường xu hướng ở TienDoQueries.ts); là lựa chọn giao diện, không phải luật dinh dưỡng
 const SO_NGAY_BIEU_DO = 30;
 const SO_NGAY_TOM_TAT = 28;
 
@@ -84,7 +84,7 @@ export function tinhXuHuongCanNang(danhSachLanCan: LanCan[], soNgayXuHuong: numb
   return danhSachDiem;
 }
 
-// Ba con số của thẻ "4 tuần qua", gửi thẳng về app
+// Ba con số của thẻ "Kết quả 4 tuần", gửi thẳng về app
 export type TomTatBonTuan = {
   so_ngay: number;
   so_ngay_co_ghi: number;
@@ -157,9 +157,6 @@ export async function xemTienDo(nguoiDungId: number, ngay: string): Promise<Tien
   if (!DANG_NGAY.test(ngay)) {
     throw new HttpError(400, 'Ngày không hợp lệ');
   }
-  // Qua sinh nhật thì tính lại mục tiêu calo trước khi đọc
-  await lamMoiMucTieuNeuQuaSinhNhat(nguoiDungId);
-
   // Lấy thêm 6 ngày trước biểu đồ để điểm đầu tiên cũng đủ 7 ngày tính trung bình
   const danhSachLanCan = await layCanNangCacNgay(nguoiDungId, ngay, SO_NGAY_BIEU_DO + SO_NGAY_XU_HUONG - 1);
   const tatCaDiem = tinhXuHuongCanNang(danhSachLanCan, SO_NGAY_XU_HUONG);

@@ -1,12 +1,11 @@
 import { Router } from 'express';
 
-import { capNhatHoSo, lamMoiMucTieuNeuQuaSinhNhat, xemHoSo, xemLuaChonHoSo } from './HoSoService.ts';
+import { capNhatHoSo, xemHoSo, xemLuaChonHoSo } from './HoSoService.ts';
 
 const hoSoRoutes = Router();
 
-// Xem hồ sơ của người đang đăng nhập (qua sinh nhật thì tính lại mục tiêu trước)
+// Xem hồ sơ của người đang đăng nhập
 hoSoRoutes.get('/', async (request, response) => {
-  await lamMoiMucTieuNeuQuaSinhNhat(response.locals.userId);
   const hoSo = await xemHoSo(response.locals.userId);
   response.json(hoSo);
 });

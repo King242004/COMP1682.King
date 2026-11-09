@@ -39,6 +39,11 @@ export function ChonSoSuat({ mon, isDisabled, onChon, onChonKhac }: ChonSoSuatPr
     if (phanAn !== 1 && luaChonPhan) {
       khauPhan = `${luaChonPhan.nhan} suất`;
     }
+    // Món có thứ người dùng dị ứng thì mang câu cảnh báo sang bước xem lại
+    let canhBaoDiUng = '';
+    if (mon.nhom_di_ung.length > 0) {
+      canhBaoDiUng = `⚠ Món này có: ${mon.nhom_di_ung.join(' · ')}`;
+    }
     onChon({
       ten_mon: mon.ten_mon,
       khau_phan: khauPhan,
@@ -50,7 +55,7 @@ export function ChonSoSuat({ mon, isDisabled, onChon, onChonKhac }: ChonSoSuatPr
       duong_g: null,
       beo_no_g: null,
       nguon_so_lieu: 'vien_dinh_duong',
-      canh_bao_di_ung: '',
+      canh_bao_di_ung: canhBaoDiUng,
     });
   }
 
@@ -80,7 +85,7 @@ export function ChonSoSuat({ mon, isDisabled, onChon, onChonKhac }: ChonSoSuatPr
 
 const styles = StyleSheet.create({
   ten: {
-    fontSize: fontSizes.sectionTitle,
+    fontSize: fontSizes.body,
     fontWeight: '600',
     color: colors.text,
   },

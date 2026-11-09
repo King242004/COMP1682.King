@@ -103,15 +103,15 @@ export default function TaiKhoan() {
         </Card>
       ) : null}
 
-      {/* Đơn vị: Mét hoặc Anh-Mỹ, bấm là lưu */}
+      {/* Đơn vị: kg, cm hoặc lb, ft-in; bấm là lưu */}
       <Card>
         <View style={styles.hangTieuDe}>
           <Ionicons name="options-outline" size={18} color={colors.primary} />
           <Text style={styles.tieuDeThe}>Đơn vị</Text>
         </View>
         <View style={styles.hangO}>
-          <ODonVi ten="Mét" chiTiet="kg, cm, g" laDangChon={donVi === 'met'} biKhoa={dangLuuDonVi} onPress={() => chonDonVi('met')} />
-          <ODonVi ten="Anh-Mỹ" chiTiet="lb, ft-in, oz" laDangChon={donVi === 'anh_my'} biKhoa={dangLuuDonVi} onPress={() => chonDonVi('anh_my')} />
+          <ODonVi ten="kg, cm" laDangChon={donVi === 'met'} biKhoa={dangLuuDonVi} onPress={() => chonDonVi('met')} />
+          <ODonVi ten="lb, ft-in" laDangChon={donVi === 'anh_my'} biKhoa={dangLuuDonVi} onPress={() => chonDonVi('anh_my')} />
         </View>
       </Card>
 
@@ -131,14 +131,13 @@ export default function TaiKhoan() {
 
 type ODonViProps = {
   ten: string;
-  chiTiet: string;
   laDangChon: boolean;
   biKhoa: boolean;
   onPress: () => void;
 };
 
-// Một ô chọn đơn vị: tên đậm, dòng nhỏ các đơn vị; đang chọn thì nền xanh nhạt, viền xanh
-function ODonVi({ ten, chiTiet, laDangChon, biKhoa, onPress }: ODonViProps) {
+// Một ô chọn đơn vị ghi tên các đơn vị bằng chữ đậm; đang chọn thì nền xanh nhạt, viền xanh
+function ODonVi({ ten, laDangChon, biKhoa, onPress }: ODonViProps) {
   return (
     <Pressable
       style={({ pressed }) => [styles.oDonVi, laDangChon ? styles.oDonViDangChon : null, biKhoa ? styles.mo : null, pressed ? styles.dangBam : null]}
@@ -146,7 +145,6 @@ function ODonVi({ ten, chiTiet, laDangChon, biKhoa, onPress }: ODonViProps) {
       onPress={onPress}
     >
       <Text style={[styles.tenDonVi, laDangChon ? styles.tenDonViDangChon : null]}>{ten}</Text>
-      <Text style={styles.nhanO}>{chiTiet}</Text>
     </Pressable>
   );
 }
@@ -170,7 +168,7 @@ const styles = StyleSheet.create({
   },
   tieuDeThe: {
     flex: 1,
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
@@ -213,11 +211,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
   },
-  nhanO: {
-    fontSize: fontSizes.label,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
   hangTen: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,7 +226,7 @@ const styles = StyleSheet.create({
   },
   chuCai: {
     fontSize: fontSizes.sectionTitle,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.textOnPrimary,
   },
   cotChu: {

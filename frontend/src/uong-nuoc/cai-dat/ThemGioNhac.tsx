@@ -34,7 +34,7 @@ export function ThemGioNhac({ onThem, onDong }: ThemGioNhacProps) {
   }
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onDong}>
+    <Modal visible transparent animationType="none" onRequestClose={onDong}>
       <View style={styles.nenToi}>
         {/* Vùng tối phía trên tấm: bấm vào thì đóng, không thêm */}
         <Pressable style={styles.vungToi} onPress={onDong} />

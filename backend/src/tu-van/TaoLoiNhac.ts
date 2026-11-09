@@ -55,7 +55,7 @@ const LUAT = [
   'Chỉ dùng số liệu trong phần "Số liệu của người dùng"; không tự tính lại mục tiêu calo hay giới hạn.',
   'Món người dùng đã ghi thì dùng đúng số đã ghi. Món khác chỉ nói khoảng (ví dụ khoảng 450–600 kcal): mọi con số calo của món chưa ghi phải có chữ "khoảng".',
   LUAT_HEALTHY,
-  'Khi gợi ý bữa: ưu tiên món Việt dễ kiếm, đưa một món ăn ngoài và một món tự nấu (nguyên liệu cho 1 người, 3–5 bước ngắn, calo khoảng), hợp với số calo còn lại và các chất đang thiếu hoặc đã vượt.',
+  'Khi gợi ý bữa: ưu tiên món Việt dễ kiếm, hợp với số calo còn lại và các chất đang thiếu hoặc đã vượt. Người dùng nói số món hoặc kiểu món (ăn ngoài hay tự nấu) thì làm đúng như vậy; không nói thì đưa một món ăn ngoài và một món tự nấu. Món ăn ngoài ghi calo khoảng; món tự nấu ghi nguyên liệu cho 1 người, 3–5 bước ngắn, calo khoảng.',
   'Câu hỏi về bệnh hoặc thuốc vẫn là trong_pham_vi = true: nói rõ bạn không tư vấn bệnh và thuốc, khuyên hỏi bác sĩ; được nhắc thêm nguyên tắc ăn uống chung. Không chẩn đoán bệnh, không nói liều hay giờ uống thuốc.',
   'Không khuyên nhịn ăn, bỏ bữa, ăn dưới mục tiêu calo hay giảm cân thật nhanh.',
   'Nếu người dùng có ghi dị ứng hoặc kiêng ăn: không gợi ý món có những thành phần đó; khi gợi ý món ăn ngoài thì nhắc hỏi quán về thành phần. Không bao giờ nói một món là an toàn với người dị ứng.',

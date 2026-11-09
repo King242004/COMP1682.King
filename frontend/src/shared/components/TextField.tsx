@@ -107,8 +107,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.medium,
   },
   label: {
-    fontSize: fontSizes.secondary,
-    color: colors.textSecondary,
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
     marginBottom: 4,
   },
   input: {

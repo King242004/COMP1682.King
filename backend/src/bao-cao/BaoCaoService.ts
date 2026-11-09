@@ -1,7 +1,6 @@
 import { layMucTieuVaGioiHan, tongHopNgay } from '../bua-an/BuaAnService.ts';
 import type { GioiHanNenHanChe, TongHop } from '../bua-an/BuaAnService.ts';
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
-import { lamMoiMucTieuNeuQuaSinhNhat } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
 import { doiRaSoNgay } from '../tien-do/TienDoService.ts';
@@ -191,8 +190,6 @@ export function tomTatBaoCao(cacNgay: NgayBaoCao[], damGToiThieu: number, quyDin
 // Lấy báo cáo dinh dưỡng từ tuNgay tới denNgay: từng ngày có ghi món và phần tóm tắt cả khoảng
 export async function xemBaoCaoDinhDuong(nguoiDungId: number, tuNgay: string, denNgay: string): Promise<BaoCaoDinhDuong> {
   kiemTraKhoangNgay(tuNgay, denNgay, SO_NGAY_TOI_DA);
-  // Qua sinh nhật thì tính lại mục tiêu calo trước khi đọc
-  await lamMoiMucTieuNeuQuaSinhNhat(nguoiDungId);
   const hoSo = await layHoSo(nguoiDungId);
   if (hoSo.muc_tieu_calo === null || hoSo.can_nang_kg === null) {
     throw new HttpError(400, 'Hãy thiết lập hồ sơ trước để có mục tiêu calo');
@@ -280,7 +277,7 @@ export function tomTatUongNuoc(cacNgay: NuocMotNgay[], mucTieuMl: number): TomTa
 // Lấy báo cáo uống nước từ tuNgay tới denNgay: từng ngày có uống, mục tiêu hiện tại và phần tóm tắt
 export async function xemBaoCaoUongNuoc(nguoiDungId: number, tuNgay: string, denNgay: string): Promise<BaoCaoUongNuoc> {
   kiemTraKhoangNgay(tuNgay, denNgay, SO_NGAY_TOI_DA);
-  const mucTieu = await layMucTieuNuoc(nguoiDungId);
+  const mucTieu = await layMucTieuNuoc(nguoiDungId, denNgay);
   const cacNgay = await layNuocTrongKhoang(nguoiDungId, tuNgay, denNgay);
 
   return {

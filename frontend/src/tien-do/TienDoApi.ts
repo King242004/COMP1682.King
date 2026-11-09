@@ -7,7 +7,7 @@ export type DiemCanNang = {
   xu_huong_kg: number;
 };
 
-// Ba con số của thẻ "4 tuần qua"
+// Ba con số của thẻ "Kết quả 4 tuần"
 export type TomTatBonTuan = {
   so_ngay: number;
   so_ngay_co_ghi: number;

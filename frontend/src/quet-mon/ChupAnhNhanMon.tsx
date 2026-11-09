@@ -60,6 +60,8 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
   // Tay cầm của camera, cần để gọi lệnh chụp
   const camera = useRef<CameraView>(null);
 
+  // Đèn flash khi chụp: mặc định tắt, bấm nút flash để bật / tắt
+  const [batFlash, setBatFlash] = useState(false);
   const [anh, setAnh] = useState<AnhVuaChup | null>(null);
   const [ghiChu, setGhiChu] = useState('');
   const [dangGui, setDangGui] = useState(false);
@@ -186,7 +188,7 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
           {/* Camera, trên có 4 góc ngắm màu trắng */}
           {coQuyenCamera ? (
             <View style={styles.khungCamera}>
-              <CameraView ref={camera} style={styles.camera} />
+              <CameraView ref={camera} style={styles.camera} flash={batFlash ? 'on' : 'off'} />
               <View style={[styles.gocNgam, styles.gocTrenTrai]} />
               <View style={[styles.gocNgam, styles.gocTrenPhai]} />
               <View style={[styles.gocNgam, styles.gocDuoiTrai]} />
@@ -194,7 +196,7 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
             </View>
           ) : null}
 
-          {/* Thư viện bên trái, nút chụp ở giữa; ô trống bên phải rộng bằng nút Thư viện để nút chụp nằm đúng giữa */}
+          {/* Thư viện bên trái, nút chụp ở giữa, nút flash bên phải (rộng bằng nút Thư viện để nút chụp nằm đúng giữa) */}
           <View style={styles.hangNut}>
             <Pressable style={({ pressed }) => [styles.nutThuVien, pressed ? styles.dangBam : null]} onPress={chonAnhTuThuVien}>
               <Ionicons name="images-outline" size={26} color={colors.primary} />
@@ -207,7 +209,14 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
             >
               <View style={styles.loiNutChup} />
             </Pressable>
-            <View style={styles.nutThuVien} />
+            <Pressable
+              style={({ pressed }) => [styles.nutThuVien, !coQuyenCamera ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
+              disabled={!coQuyenCamera}
+              onPress={() => setBatFlash(!batFlash)}
+            >
+              <Ionicons name={batFlash ? 'flash' : 'flash-off-outline'} size={26} color={colors.primary} />
+              <Text style={styles.chuNutThuVien}>{batFlash ? 'Flash bật' : 'Flash tắt'}</Text>
+            </Pressable>
           </View>
         </View>
       ) : null}

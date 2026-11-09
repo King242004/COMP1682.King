@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Card } from '../../shared/components/Card';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../shared/theme';
@@ -18,42 +18,39 @@ export function MonBanHayAn({ monHayAn, isDisabled, onChon }: MonBanHayAnProps) 
   return (
     <Card>
       <Text style={styles.tieuDeThe}>Món bạn hay ăn</Text>
-      <View style={styles.hangChip}>
-        {monHayAn.map((mon) => (
-          <Pressable
-            key={mon.ten_mon}
-            style={({ pressed }) => [styles.vien, isDisabled ? styles.khoa : null, pressed ? styles.dangBam : null]}
-            disabled={isDisabled}
-            onPress={() => onChon(mon)}
-          >
-            <Text style={styles.tenMon}>
-              {mon.ten_mon} <Text style={styles.soCalo}>· {mon.so_calo.toLocaleString('vi-VN')} kcal</Text>
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      {/* Mỗi món một dòng rộng hết thẻ: tên bên trái, kcal bên phải (giống dòng trong thẻ Tìm món) */}
+      {monHayAn.map((mon) => (
+        <Pressable
+          key={mon.ten_mon}
+          style={({ pressed }) => [styles.dong, isDisabled ? styles.khoa : null, pressed ? styles.dangBam : null]}
+          disabled={isDisabled}
+          onPress={() => onChon(mon)}
+        >
+          <Text style={styles.tenMon}>{mon.ten_mon}</Text>
+          <Text style={styles.soCalo}>{mon.so_calo.toLocaleString('vi-VN')} kcal</Text>
+        </Pressable>
+      ))}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   tieuDeThe: {
-    fontSize: fontSizes.body,
+    fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.small,
   },
-  hangChip: {
+  dong: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.small,
-  },
-  vien: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.medium,
     minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.medium,
+    padding: spacing.medium,
     borderRadius: radius.input,
     backgroundColor: colors.card,
+    marginBottom: spacing.small,
   },
   khoa: {
     opacity: 0.5,
@@ -62,10 +59,12 @@ const styles = StyleSheet.create({
     opacity: pressedOpacity,
   },
   tenMon: {
+    flex: 1,
     fontSize: fontSizes.body,
     color: colors.text,
   },
   soCalo: {
+    fontSize: fontSizes.secondary,
     color: colors.textSecondary,
   },
 });

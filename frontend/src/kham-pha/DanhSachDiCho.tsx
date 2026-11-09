@@ -11,7 +11,7 @@ type DanhSachDiChoProps = {
   onDong: () => void;
 };
 
-// Tấm đi chợ trượt từ dưới lên: nguyên liệu của từng món, ghi theo món (không cộng dồn vì lượng ghi bằng chữ); bấm một dòng để tick
+// Tấm đi chợ hiện ra trên nền tối (không trượt): nguyên liệu của từng món, ghi theo món (không cộng dồn vì lượng ghi bằng chữ); bấm một dòng để tick
 export function DanhSachDiCho({ danhSachMon, onDong }: DanhSachDiChoProps) {
   // Các dòng đã tick, khóa là "bữa|tên món|nguyên liệu"; chỉ nhớ lúc tấm đang mở, không lưu
   const [daTick, setDaTick] = useState<string[]>([]);
@@ -29,7 +29,7 @@ export function DanhSachDiCho({ danhSachMon, onDong }: DanhSachDiChoProps) {
   }
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onDong}>
+    <Modal visible transparent animationType="none" onRequestClose={onDong}>
       <View style={styles.nenToi}>
         <View style={styles.tam}>
           {/* Tiêu đề và nút ✕ đóng */}
