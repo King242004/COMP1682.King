@@ -4,15 +4,11 @@ import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Card } from '../shared/components/Card';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
-import { SuaSoMl } from './cai-dat/SuaSoMl';
+import { SuaLuongNuoc } from './cai-dat/SuaLuongNuoc';
 import { ThemGioNhac } from './cai-dat/ThemGioNhac';
 import type { CaiDatNuoc, UongNuocNgay } from './UongNuocApi';
 
-// Giới hạn chặn gõ nhầm, giống backend (UongNuocService.ts)
-const ML_MOI_LAN_NHO_NHAT = 50;
-const ML_MOI_LAN_LON_NHAT = 1000;
-const MUC_TIEU_NHO_NHAT = 500;
-const MUC_TIEU_LON_NHAT = 5000;
+// Số giờ nhắc tối đa, giống backend (UongNuocService.ts)
 const SO_GIO_NHAC_TOI_DA = 12;
 
 type CaiDatProps = {
@@ -25,8 +21,8 @@ type CaiDatProps = {
 
 // Thẻ "Cài đặt": mỗi lần ghi, mục tiêu, công tắc nhắc và các giờ nhắc; sửa xong là lưu ngay
 export function CaiDat({ uongNuoc, dangLuu, loiQuyen, onLuu }: CaiDatProps) {
-  // Tấm nổi đang mở: sửa mỗi lần ghi, sửa mục tiêu, thêm giờ, hoặc không mở tấm nào
-  const [tamDangMo, setTamDangMo] = useState<'moi-lan' | 'muc-tieu' | 'gio' | null>(null);
+  // Tấm nổi đang mở: sửa lượng nước (mỗi lần ghi và mục tiêu), thêm giờ, hoặc không mở tấm nào
+  const [tamDangMo, setTamDangMo] = useState<'luong-nuoc' | 'gio' | null>(null);
 
   // Cài đặt đang có, để mỗi lần sửa chỉ đổi một thứ rồi gửi cả bộ lên server
   let mucTieuTuDat: number | null = null;
@@ -40,18 +36,10 @@ export function CaiDat({ uongNuoc, dangLuu, loiQuyen, onLuu }: CaiDatProps) {
     gio_nhac: uongNuoc.gio_nhac,
   };
 
-  // Lưu số ml mỗi lần ghi (tấm này không có nút gợi ý nên luôn có số)
-  function luuMoiLan(soMl: number | null) {
+  // Lưu số ml mỗi lần ghi và mục tiêu; mục tiêu null là dùng gợi ý
+  function luuLuongNuoc(mlMoiLan: number, mucTieu: number | null) {
     setTamDangMo(null);
-    if (soMl !== null) {
-      onLuu({ ...caiDat, nuoc_ml_moi_lan: soMl });
-    }
-  }
-
-  // Lưu mục tiêu tự đặt; null là quay về dùng gợi ý
-  function luuMucTieu(soMl: number | null) {
-    setTamDangMo(null);
-    onLuu({ ...caiDat, muc_tieu_ml: soMl });
+    onLuu({ ...caiDat, nuoc_ml_moi_lan: mlMoiLan, muc_tieu_ml: mucTieu });
   }
 
   // Thêm một giờ nhắc; giờ đã có thì chỉ đóng tấm
@@ -75,7 +63,7 @@ export function CaiDat({ uongNuoc, dangLuu, loiQuyen, onLuu }: CaiDatProps) {
       <Pressable
         style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
         disabled={dangLuu}
-        onPress={() => setTamDangMo('moi-lan')}
+        onPress={() => setTamDangMo('luong-nuoc')}
       >
         <Text style={[styles.nhan, styles.cotNhan]}>Mỗi lần ghi</Text>
         <Text style={styles.giaTri}>{uongNuoc.nuoc_ml_moi_lan.toLocaleString('vi-VN')} ml</Text>
@@ -87,7 +75,7 @@ export function CaiDat({ uongNuoc, dangLuu, loiQuyen, onLuu }: CaiDatProps) {
       <Pressable
         style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
         disabled={dangLuu}
-        onPress={() => setTamDangMo('muc-tieu')}
+        onPress={() => setTamDangMo('luong-nuoc')}
       >
         <View style={styles.cotNhan}>
           <Text style={styles.nhan}>Mục tiêu</Text>
@@ -140,25 +128,13 @@ export function CaiDat({ uongNuoc, dangLuu, loiQuyen, onLuu }: CaiDatProps) {
       ) : null}
 
       {/* Tấm nổi đang mở */}
-      {tamDangMo === 'moi-lan' ? (
-        <SuaSoMl
-          tieuDe="Mỗi lần ghi"
-          giaTriDau={uongNuoc.nuoc_ml_moi_lan}
-          nhoNhat={ML_MOI_LAN_NHO_NHAT}
-          lonNhat={ML_MOI_LAN_LON_NHAT}
-          goiY={null}
-          onLuu={luuMoiLan}
-          onDong={() => setTamDangMo(null)}
-        />
-      ) : null}
-      {tamDangMo === 'muc-tieu' ? (
-        <SuaSoMl
-          tieuDe="Mục tiêu"
-          giaTriDau={uongNuoc.muc_tieu_ml}
-          nhoNhat={MUC_TIEU_NHO_NHAT}
-          lonNhat={MUC_TIEU_LON_NHAT}
-          goiY={uongNuoc.muc_tieu_goi_y_ml}
-          onLuu={luuMucTieu}
+      {tamDangMo === 'luong-nuoc' ? (
+        <SuaLuongNuoc
+          mlMoiLanDau={uongNuoc.nuoc_ml_moi_lan}
+          mucTieuDau={uongNuoc.muc_tieu_ml}
+          mucTieuGoiY={uongNuoc.muc_tieu_goi_y_ml}
+          laMucTieuTuDat={uongNuoc.la_muc_tieu_tu_dat}
+          onLuu={luuLuongNuoc}
           onDong={() => setTamDangMo(null)}
         />
       ) : null}
@@ -210,7 +186,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.small,
-    marginTop: spacing.small,
   },
   vienGio: {
     flexDirection: 'row',

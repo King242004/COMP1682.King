@@ -84,13 +84,14 @@ test('có sản phẩm nhưng không có kcal trên 100 g thì trả về null',
   assert.equal(docSanPhamMaVach({ status: 1, product: { product_name: 'Nước', nutriments: {} } }), null);
 });
 
-test('đọc đủ tên, nhãn hiệu, số liệu và khối lượng 1 phần dạng chữ', () => {
+test('đọc đủ tên, nhãn hiệu, số liệu và khối lượng cả bao bì dạng chữ', () => {
   const sanPham = docSanPhamMaVach({
     status: 1,
     product: {
       product_name: 'Sữa chua có đường',
       brands: 'Vinamilk',
-      serving_quantity: '100',
+      product_quantity: '100',
+      serving_quantity: '50',
       nutriments: {
         'energy-kcal_100g': 95,
         proteins_100g: 3.2,
@@ -116,11 +117,17 @@ test('đọc đủ tên, nhãn hiệu, số liệu và khối lượng 1 phần 
   });
 });
 
-test('thiếu tên, thiếu chất và thiếu khối lượng 1 phần thì để mặc định', () => {
-  const sanPham = docSanPhamMaVach({ status: 1, product: { nutriments: { 'energy-kcal_100g': 400 } } });
+test('thiếu tên và thiếu chất thì để mặc định', () => {
+  const sanPham = docSanPhamMaVach({ status: 1, product: { product_quantity: 75, nutriments: { 'energy-kcal_100g': 400 } } });
   assert.equal(sanPham?.ten_san_pham, 'Sản phẩm chưa có tên');
   assert.equal(sanPham?.dam_100g, null);
   assert.equal(sanPham?.muoi_100g, null);
+  assert.equal(sanPham?.khoi_luong_1_phan_g, 75);
+});
+
+test('thiếu khối lượng cả bao bì thì vẫn dùng được, khối lượng 1 phần để null', () => {
+  const sanPham = docSanPhamMaVach({ status: 1, product: { serving_quantity: 30, nutriments: { 'energy-kcal_100g': 400 } } });
+  assert.equal(sanPham?.kcal_100g, 400);
   assert.equal(sanPham?.khoi_luong_1_phan_g, null);
 });
 

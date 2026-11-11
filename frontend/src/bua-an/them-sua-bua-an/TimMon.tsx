@@ -95,6 +95,7 @@ export function TimMon({ biKhoa, onChon }: TimMonProps) {
           <View style={styles.thanhTim}>
             <Ionicons name="search-outline" size={20} color={colors.textSecondary} />
             <TextInput
+              autoCapitalize="none"
               style={styles.oTim}
               value={tuKhoa}
               onChangeText={setTuKhoa}

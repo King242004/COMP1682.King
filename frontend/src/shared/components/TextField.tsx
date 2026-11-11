@@ -34,17 +34,6 @@ function chooseKeyboard(isEmail?: boolean, isNumber?: boolean): 'email-address' 
   return 'default';
 }
 
-// Chọn cách viết hoa: email và mật khẩu không viết hoa, ô viết câu chỉ hoa đầu câu, ô tên hoa mỗi chữ
-function chooseCapitalize(isEmail?: boolean, isPassword?: boolean, isMultiline?: boolean): 'none' | 'sentences' | 'words' {
-  if (isEmail || isPassword) {
-    return 'none';
-  }
-  if (isMultiline) {
-    return 'sentences';
-  }
-  return 'words';
-}
-
 // Ô nhập có nhãn ở trên, có lỗi thì viền đỏ và hiện chữ đỏ ở dưới, bị khóa thì mờ đi
 export function TextField({
   label,
@@ -79,7 +68,7 @@ export function TextField({
           placeholderTextColor={colors.textSecondary}
           secureTextEntry={isPassword}
           keyboardType={chooseKeyboard(isEmail, isNumber)}
-          autoCapitalize={chooseCapitalize(isEmail, isPassword, isMultiline)}
+          autoCapitalize="none"
           maxLength={maxLength}
           editable={!isDisabled}
           multiline={isMultiline}

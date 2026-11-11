@@ -173,16 +173,16 @@ export type SanPhamMaVach = {
   muoi_100g: number | null;
   duong_100g: number | null;
   beo_no_100g: number | null;
-  // Khối lượng 1 phần theo nhãn (ví dụ 1 hộp = 100 g); nhãn không ghi thì null
+  // Khối lượng 1 phần = cả gói, hộp hoặc lon (ví dụ gói mì 75 g); Open Food Facts không ghi thì null
   khoi_luong_1_phan_g: number | null;
   // Mã dị ứng ghi trên nhãn theo Open Food Facts, ví dụ "en:milk"; rỗng là không có dữ liệu
   ma_di_ung: string[];
 };
 
-// Kết quả AI gửi về app: mỗi khả năng kèm câu cảnh báo dị ứng do server viết sẵn (rỗng khi người dùng chưa chọn nhóm)
+// Kết quả AI gửi về app: mỗi khả năng kèm câu cảnh báo dị ứng do server viết sẵn (rỗng khi người dùng chưa chọn nhóm) và tên các nhóm bị trùng (cho nhãn vàng ngắn)
 type KetQuaNhanMonCoCanhBao = {
   la_mon_an: boolean;
-  kha_nang: (KhaNang & { canh_bao_di_ung: string })[];
+  kha_nang: (KhaNang & { canh_bao_di_ung: string; nhom_di_ung: string[] })[];
 };
 
 // Sản phẩm mã vạch gửi về app kèm câu cảnh báo dị ứng
@@ -225,8 +225,8 @@ export function docSanPhamMaVach(duLieu: unknown): SanPhamMaVach | null {
     tenSanPham = `${tenSanPham} (${sanPham.brands.trim()})`;
   }
 
-  // Open Food Facts có lúc ghi khối lượng 1 phần là chữ "100", nên đổi sang số
-  let khoiLuong1Phan = docSo(Number(sanPham.serving_quantity));
+  // 1 phần là cả bao bì; Open Food Facts có lúc ghi khối lượng là chữ "320", nên đổi sang số; không có hoặc bằng 0 thì để null
+  let khoiLuong1Phan = docSo(Number(sanPham.product_quantity));
   if (khoiLuong1Phan === 0) {
     khoiLuong1Phan = null;
   }
@@ -302,9 +302,11 @@ async function ganCanhBaoDiUng(ketQua: KetQuaNhanMon, nguoiDungId: number): Prom
     kha_nang: ketQua.kha_nang.map((khaNang) => {
       const danhSachTen = [khaNang.ten_mon, ...khaNang.thanh_phan];
       const thuBiBat = danhSachTen.filter((ten) => timNhomDiUng([ten], danhSachTuKhoa, nhomDaChon).length > 0);
+      const nhomTrung = timNhomDiUng(danhSachTen, danhSachTuKhoa, nhomDaChon);
       return {
         ...khaNang,
-        canh_bao_di_ung: vietCanhBaoMonAi(timNhomDiUng(danhSachTen, danhSachTuKhoa, nhomDaChon), thuBiBat, nhomDaChon.length > 0),
+        canh_bao_di_ung: vietCanhBaoMonAi(nhomTrung, thuBiBat, nhomDaChon.length > 0),
+        nhom_di_ung: nhomTrung,
       };
     }),
   };
@@ -401,8 +403,8 @@ export async function traMaVach(maVach: string, nguoiDungId: number): Promise<Sa
     throw new HttpError(400, 'Mã vạch không hợp lệ');
   }
 
-  // Chỉ lấy những trường cần dùng; User-Agent theo yêu cầu của Open Food Facts
-  const duongDan = `${environment.openFoodFactsUrl}/api/v2/product/${maVach}.json?fields=product_name,brands,nutriments,serving_quantity,allergens_tags`;
+  // Chỉ lấy những trường cần dùng (phải xin cả quantity thì Open Food Facts mới trả product_quantity); User-Agent theo yêu cầu của Open Food Facts
+  const duongDan = `${environment.openFoodFactsUrl}/api/v2/product/${maVach}.json?fields=product_name,brands,nutriments,quantity,product_quantity,allergens_tags`;
   let traLoi: unknown;
   try {
     const phanHoi = await fetch(duongDan, {

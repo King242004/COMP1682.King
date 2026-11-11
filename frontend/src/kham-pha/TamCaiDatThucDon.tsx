@@ -342,6 +342,7 @@ export function TamCaiDatThucDon({ caiDatBanDau, laTaoLai, mucTieuCalo, onTao, o
                 Ghi chú cho AI <Text style={styles.chuNho}>(không bắt buộc)</Text>
               </Text>
               <TextInput
+                autoCapitalize="none"
                 style={styles.oGhiChu}
                 value={ghiChu}
                 onChangeText={setGhiChu}

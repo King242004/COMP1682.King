@@ -232,6 +232,7 @@ export default function Coach() {
         {/* Ô nhập và nút gửi; đang chờ coach thì khóa cả hai */}
         <View style={styles.hangNhap}>
           <TextInput
+            autoCapitalize="none"
             style={[styles.oNhap, dangCho ? styles.mo : null]}
             value={cauHoi}
             onChangeText={setCauHoi}

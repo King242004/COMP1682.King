@@ -102,9 +102,6 @@ export default function TrangChu() {
           <>
             <TheCalo nhatKy={nhatKy} />
             <NhomNenHanChe nhatKy={nhatKy} />
-            {nhatKy.tong_hop.so_mon_thieu_so_lieu > 0 ? (
-              <Text style={styles.chuNho}>Một số món chưa đủ số liệu nên tổng có thể thấp hơn</Text>
-            ) : null}
 
             {/* Uống nước của ngày đang xem, bấm vào mở màn Uống nước để ghi */}
             {uongNuoc ? <TheUongNuoc uongNuoc={uongNuoc} onPress={() => router.push('/UongNuoc')} /> : null}
@@ -120,6 +117,11 @@ export default function TrangChu() {
                 onSuaMon={moSuaMon}
               />
             ))}
+
+            {/* Nhắc tổng có thể thấp hơn khi có món chưa đủ số liệu */}
+            {nhatKy.tong_hop.so_mon_thieu_so_lieu > 0 ? (
+              <Text style={styles.chuNho}>Một số món chưa đủ số liệu nên tổng có thể thấp hơn</Text>
+            ) : null}
           </>
         ) : null}
       </Screen>
@@ -150,6 +152,7 @@ const styles = StyleSheet.create({
   chuNho: {
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
+    textAlign: 'center',
     marginBottom: spacing.small,
   },
   dangBam: {

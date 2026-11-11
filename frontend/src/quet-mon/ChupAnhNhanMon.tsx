@@ -4,9 +4,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { NhanDiUng } from '../di-ung/NhanDiUng';
 import { Button } from '../shared/components/Button';
 import { Chip } from '../shared/components/Chip';
-import { ErrorBox } from '../shared/components/ErrorBox';
 import { Screen } from '../shared/components/Screen';
 import { ScreenTitle } from '../shared/components/ScreenTitle';
 import { TextField } from '../shared/components/TextField';
@@ -164,8 +164,6 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
     <Screen avoidKeyboard>
       <ScreenTitle title={anh ? 'Nhận món từ ảnh' : 'Chụp món'} onBack={onDong} />
 
-      {loi ? <ErrorBox message={loi} /> : null}
-
       {/* Chưa có ảnh: mẹo chụp, camera, hàng nút Thư viện và nút chụp */}
       {!anh ? (
         <View>
@@ -195,6 +193,9 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
               <View style={[styles.gocNgam, styles.gocDuoiPhai]} />
             </View>
           ) : null}
+
+          {/* Lỗi chụp hoặc lỗi đọc ảnh thư viện: chữ đỏ ngay dưới camera */}
+          {loi ? <Text style={styles.chuLoi}>{loi}</Text> : null}
 
           {/* Thư viện bên trái, nút chụp ở giữa, nút flash bên phải (rộng bằng nút Thư viện để nút chụp nằm đúng giữa) */}
           <View style={styles.hangNut}>
@@ -238,6 +239,8 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
                 maxLength={GHI_CHU_DAI_NHAT}
                 isDisabled={dangGui}
               />
+              {/* Lỗi khi gửi AI: chữ đỏ ngay trên nút, ảnh và ghi chú vẫn giữ để gửi lại */}
+              {loi ? <Text style={styles.chuLoi}>{loi}</Text> : null}
               <Button title="Nhận món" loadingTitle="AI đang xem ảnh…" isLoading={dangGui} onPress={guiChoAi} />
             </View>
           ) : null}
@@ -268,8 +271,8 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
                     <View style={styles.cotTen}>
                       <Text style={styles.tenMon}>{khaNang.ten_mon}</Text>
                       <Text style={styles.chuPhu}>{khaNang.khau_phan}</Text>
-                      {/* Câu cảnh báo dị ứng theo tên món (chỉ khi người dùng có chọn nhóm dị ứng) */}
-                      {khaNang.canh_bao_di_ung !== '' ? <Text style={styles.chuCanhBaoDiUng}>{khaNang.canh_bao_di_ung}</Text> : null}
+                      {/* Nhãn vàng ngắn "⚠ Tôm, cua" khi món có nhóm người dùng dị ứng */}
+                      <NhanDiUng danhSachNhom={khaNang.nhom_di_ung} />
                     </View>
                     <Text style={[styles.soCalo, dangChon ? styles.soCaloDangChon : null]}>{khaNang.so_calo.toLocaleString('vi-VN')} kcal</Text>
                   </Pressable>
@@ -285,7 +288,12 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
                   </View>
                 ))}
               </View>
-              <Text style={styles.chuPhu}>Kết quả do AI ước tính, không chính xác 100%. Bạn kiểm tra và sửa lại được ở bước sau.</Text>
+              {/* Dòng nhắc chung; người dùng có chọn nhóm dị ứng thì nhắc luôn nhãn ⚠ cũng là AI đoán */}
+              {ketQuaNhanMon.kha_nang.some((khaNang) => khaNang.canh_bao_di_ung !== '') ? (
+                <Text style={styles.chuPhu}>Kết quả và nhãn ⚠ do AI đoán theo tên món và nguyên liệu, không chính xác 100%. Bạn kiểm tra và sửa lại được ở bước sau.</Text>
+              ) : (
+                <Text style={styles.chuPhu}>Kết quả do AI ước tính, không chính xác 100%. Bạn kiểm tra và sửa lại được ở bước sau.</Text>
+              )}
 
               <View style={styles.khoangNut}>
                 <Button title="Chọn món này" loadingTitle="" isLoading={false} onPress={chonMon} />
@@ -293,8 +301,8 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
             </View>
           ) : null}
 
-          {/* Chụp lại; khóa khi đang chờ AI */}
-          <View style={styles.khoangNut}>
+          {/* Chụp lại, sát dưới nút chính; khóa khi đang chờ AI */}
+          <View style={styles.khoangNutPhu}>
             <Button title="Chụp lại" loadingTitle="" isLoading={false} isDisabled={dangGui} onPress={chupLai} isSecondary />
           </View>
         </View>
@@ -304,6 +312,11 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
 }
 
 const styles = StyleSheet.create({
+  chuLoi: {
+    fontSize: fontSizes.secondary,
+    color: colors.error,
+    marginBottom: spacing.small,
+  },
   khungMeo: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -454,11 +467,6 @@ const styles = StyleSheet.create({
   oChip: {
     flex: 1,
   },
-  chuCanhBaoDiUng: {
-    fontSize: fontSizes.secondary,
-    color: colors.warningText,
-    marginTop: 4,
-  },
   chuPhu: {
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
@@ -466,6 +474,9 @@ const styles = StyleSheet.create({
   },
   khoangNut: {
     marginTop: spacing.large,
+  },
+  khoangNutPhu: {
+    marginTop: spacing.small,
   },
   dangBam: {
     opacity: pressedOpacity,

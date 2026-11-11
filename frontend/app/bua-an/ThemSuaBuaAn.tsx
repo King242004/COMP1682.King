@@ -62,6 +62,7 @@ function OChatNhap({ ten, mau, mauNen, giaTri, onDoi, biKhoa }: OChatNhapProps) 
       </View>
       <View style={styles.hangSoChat}>
         <TextInput
+          autoCapitalize="none"
           style={[styles.oSoChat, { color: mau }]}
           value={giaTri}
           onChangeText={onDoi}

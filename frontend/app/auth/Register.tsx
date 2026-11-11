@@ -82,7 +82,7 @@ export default function Register() {
         value={displayName}
         onChangeText={setDisplayName}
         error={displayNameError}
-        placeholder="Hoàng King"
+        placeholder="Tên của bạn"
         maxLength={MAX_DISPLAY_NAME_LENGTH}
         isDisabled={isSubmitting}
       />

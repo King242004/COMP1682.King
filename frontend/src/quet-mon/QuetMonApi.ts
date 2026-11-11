@@ -14,6 +14,8 @@ export type KhaNang = {
   do_tin_cay: number;
   // Câu cảnh báo dị ứng do server viết theo tên món; rỗng khi người dùng chưa chọn nhóm dị ứng
   canh_bao_di_ung: string;
+  // Tên các nhóm dị ứng bị trùng, cho nhãn vàng ngắn ở màn kết quả chụp ảnh
+  nhom_di_ung: string[];
 };
 
 // Kết quả nhận món; la_mon_an = false là AI thấy không phải đồ ăn
