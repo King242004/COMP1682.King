@@ -8,7 +8,7 @@ import type { CaiDatNuoc } from './UongNuocQueries.ts';
 // Ngày phải có dạng 2026-11-03 (ngày trên điện thoại người dùng)
 const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
 
-// Giới hạn chặn gõ nhầm; là lựa chọn giao diện, không phải luật dinh dưỡng (giống CHECK trong 035_uong_nuoc.sql)
+// Giới hạn chặn gõ nhầm; là lựa chọn giao diện, không phải luật dinh dưỡng (giống CHECK trong 002_nguoi_dung.sql)
 const ML_MOI_LAN_NHO_NHAT = 50;
 const ML_MOI_LAN_LON_NHAT = 1000;
 const MUC_TIEU_NHO_NHAT = 500;
@@ -41,7 +41,7 @@ export function kiemTraCaiDatNuoc(duLieu: Record<string, unknown>): CaiDatNuoc {
     typeof nuocMlMoiLan !== 'number' || !Number.isInteger(nuocMlMoiLan) ||
     nuocMlMoiLan < ML_MOI_LAN_NHO_NHAT || nuocMlMoiLan > ML_MOI_LAN_LON_NHAT
   ) {
-    throw new HttpError(400, `Mỗi lần ghi từ ${ML_MOI_LAN_NHO_NHAT} đến ${ML_MOI_LAN_LON_NHAT} ml`);
+    throw new HttpError(400, `Mỗi lần ghi từ ${ML_MOI_LAN_NHO_NHAT.toLocaleString('vi-VN')} đến ${ML_MOI_LAN_LON_NHAT.toLocaleString('vi-VN')} ml`);
   }
 
   // Mục tiêu để trống là dùng gợi ý; có thì phải nằm trong giới hạn
@@ -49,7 +49,7 @@ export function kiemTraCaiDatNuoc(duLieu: Record<string, unknown>): CaiDatNuoc {
   if (duLieu.muc_tieu_ml !== null && duLieu.muc_tieu_ml !== undefined) {
     const mucTieu = duLieu.muc_tieu_ml;
     if (typeof mucTieu !== 'number' || !Number.isInteger(mucTieu) || mucTieu < MUC_TIEU_NHO_NHAT || mucTieu > MUC_TIEU_LON_NHAT) {
-      throw new HttpError(400, `Mục tiêu từ ${MUC_TIEU_NHO_NHAT} đến ${MUC_TIEU_LON_NHAT} ml`);
+      throw new HttpError(400, `Mục tiêu từ ${MUC_TIEU_NHO_NHAT.toLocaleString('vi-VN')} đến ${MUC_TIEU_LON_NHAT.toLocaleString('vi-VN')} ml`);
     }
     mucTieuMl = mucTieu;
   }

@@ -11,8 +11,10 @@ import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { TextField } from '../../src/shared/components/TextField';
 import { colors, fontSizes, radius, spacing } from '../../src/shared/theme';
 
-// Mật khẩu ngắn nhất, giống luật ở backend (AuthService.ts)
+// Mật khẩu ngắn nhất, tên hiển thị và email dài nhất, giống luật ở backend (AuthService.ts)
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_DISPLAY_NAME_LENGTH = 50;
+const MAX_EMAIL_LENGTH = 254;
 
 export default function Register() {
   const { register } = useAuth();
@@ -81,6 +83,7 @@ export default function Register() {
         onChangeText={setDisplayName}
         error={displayNameError}
         placeholder="Hoàng King"
+        maxLength={MAX_DISPLAY_NAME_LENGTH}
         isDisabled={isSubmitting}
       />
       <TextField
@@ -90,6 +93,7 @@ export default function Register() {
         error={emailError}
         placeholder="ten@gmail.com"
         isEmail
+        maxLength={MAX_EMAIL_LENGTH}
         isDisabled={isSubmitting}
       />
       <TextField

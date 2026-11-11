@@ -12,7 +12,7 @@ import { taoLoiNhac } from './TaoLoiNhac.ts';
 import { layTinNhanGanNhat, themTinNhan, xoaTinNhan } from './TuVanQueries.ts';
 import type { TinNhan } from './TuVanQueries.ts';
 
-// Giới hạn và số lượng; là lựa chọn giao diện, không phải luật dinh dưỡng (giống CHECK trong 008_tin_nhan_tu_van.sql)
+// Giới hạn và số lượng; là lựa chọn giao diện, không phải luật dinh dưỡng (giống CHECK trong 002_nguoi_dung.sql)
 const CAU_HOI_DAI_NHAT = 500;
 const TRA_LOI_DAI_NHAT = 2000;
 const SO_TIN_HIEN_THI = 50;

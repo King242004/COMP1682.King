@@ -18,6 +18,8 @@ export type MonTraCuu = {
   hien_o_kham_pha: boolean;
   // Nhóm để lọc ở Khám phá, xếp theo chữ đầu tên món
   nhom_mon: NhomMon;
+  // Món uống bằng ly (nước ép, cà phê…); thực đơn không chọn cho bữa phụ
+  la_do_uong: boolean;
 };
 
 export type NhomMon = 'bun_pho' | 'com_chao_xoi' | 'che_do_uong' | 'banh' | 'mon_khac';
@@ -33,7 +35,7 @@ export type ThanhPhanSuat = {
 // Lấy tất cả món, xếp theo tên không dấu (chữ không dấu xếp giống nhau trên mọi máy chủ)
 export async function layTatCaMonTraCuu(): Promise<MonTraCuu[]> {
   const ketQua = await database.query<MonTraCuu>(
-    `SELECT ma_so, ten_mon, ten_khong_dau, so_calo, dam_g, tinh_bot_g, beo_g, muoi_g, anh_url, ten_goc, ghi_chu_suat, hien_o_kham_pha, nhom_mon
+    `SELECT ma_so, ten_mon, ten_khong_dau, so_calo, dam_g, tinh_bot_g, beo_g, muoi_g, anh_url, ten_goc, ghi_chu_suat, hien_o_kham_pha, nhom_mon, la_do_uong
      FROM mon_tra_cuu
      ORDER BY ten_khong_dau`,
   );

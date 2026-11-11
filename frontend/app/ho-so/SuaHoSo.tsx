@@ -32,7 +32,7 @@ const TIEU_DE_THEO_PHAN: Record<PhanSua, string> = {
   'di-ung': 'Dị ứng, kiêng ăn',
 };
 
-// Giới hạn chiều cao, cân nặng: giống ràng buộc CHECK trong 004_ho_so.sql
+// Giới hạn chiều cao, cân nặng: giống ràng buộc CHECK trong 002_nguoi_dung.sql
 const CHIEU_CAO_NHO_NHAT = 100;
 const CHIEU_CAO_LON_NHAT = 250;
 const CAN_NANG_NHO_NHAT = 30;
@@ -44,6 +44,9 @@ const VONG_EO_LON_NHAT = 200;
 
 // Ô kiêng ăn khác tối đa bao nhiêu ký tự (giống backend)
 const DI_UNG_KIENG_AN_DAI_NHAT = 200;
+
+// Tên hiển thị tối đa bao nhiêu ký tự (giống backend)
+const TEN_HIEN_THI_DAI_NHAT = 50;
 
 // Ba mức vận động, mô tả theo Bảng 5 của Chuẩn dinh dưỡng người Nhật 2025 (ThuatToan.md bước 4)
 const LUA_CHON_MUC_VAN_DONG: { giaTri: MucVanDong; ten: string; moTa: string }[] = [
@@ -433,7 +436,7 @@ export default function SuaHoSo() {
           <Card>
             <TieuDeThe bieuTuong={<Ionicons name="person-outline" size={18} color={colors.primary} />} tieuDe="Thông tin cá nhân" />
             {hienOTen ? (
-              <TextField label="Tên hiển thị" value={tenHienThi} onChangeText={setTenHienThi} error={loiNhap.ten ?? ''} isDisabled={dangLuu} />
+              <TextField label="Tên hiển thị" value={tenHienThi} onChangeText={setTenHienThi} error={loiNhap.ten ?? ''} maxLength={TEN_HIEN_THI_DAI_NHAT} isDisabled={dangLuu} />
             ) : null}
             <Text style={styles.nhanO}>Giới tính</Text>
             <View style={styles.hangHaiNut}>

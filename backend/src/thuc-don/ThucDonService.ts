@@ -12,7 +12,7 @@ import { LUAT_HEALTHY } from '../tu-van/TaoLoiNhac.ts';
 import { layThucDon, layThucDonCacNgayTruoc, luuThucDon } from './ThucDonQueries.ts';
 import type { MonThucDon } from './ThucDonQueries.ts';
 
-// Giới hạn khẩu phần, giống CHECK trong 005_bua_an.sql, để bấm "Đã ăn" lưu được
+// Giới hạn khẩu phần, giống CHECK trong 002_nguoi_dung.sql, để bấm "Đã ăn" lưu được
 const KHAU_PHAN_DAI_NHAT = 100;
 
 // Thực đơn là câu trả lời dài (danh sách món Viện, mâm cơm nhà kèm nguyên liệu, cách nấu) nên chờ AI tối đa 30 giây; các tính năng AI khác chờ 15 giây
@@ -399,7 +399,7 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
   const thucDonCu = await layThucDon(nguoiDungId, ngay);
   const thucDonCacNgayTruoc = await layThucDonCacNgayTruoc(nguoiDungId, ngay, SO_NGAY_TRANH_LAP);
 
-  // Bước 3. Danh sách món Viện được chọn: món đang hiện ở Khám phá, không có thứ người dùng dị ứng, bữa chính theo nhóm người dùng thích (không chọn nhóm nào là thích tất cả)
+  // Bước 3. Danh sách món Viện được chọn: món đang hiện ở Khám phá, không có thứ người dùng dị ứng, bữa chính theo nhóm người dùng thích (không chọn nhóm nào là thích tất cả), bữa phụ không lấy đồ uống
   let nhomBuaChinh = NHOM_BUA_CHINH;
   if (caiDat.nhom_mon.length > 0) {
     nhomBuaChinh = caiDat.nhom_mon;
@@ -417,7 +417,7 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
     if (nhomBuaChinh.includes(mon.nhom_mon)) {
       monBuaChinh.set(mon.ma_so, mon);
     }
-    if (NHOM_BUA_PHU.includes(mon.nhom_mon)) {
+    if (NHOM_BUA_PHU.includes(mon.nhom_mon) && !mon.la_do_uong) {
       monBuaPhu.set(mon.ma_so, mon);
     }
   }
@@ -451,7 +451,7 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
     );
   }
   if (caiDat.co_bua_phu) {
-    dong.push('Thêm 1 bữa phụ: chọn 1 món trong DANH SÁCH MÓN BỮA PHỤ, ghi ma_so vào ô phu trong mon_vien; không chọn đồ uống (nước ép, nước mía, cà phê, sữa tươi trân châu, sữa chua uống).');
+    dong.push('Thêm 1 bữa phụ: chọn 1 món trong DANH SÁCH MÓN BỮA PHỤ, ghi ma_so vào ô phu trong mon_vien.');
   } else {
     dong.push('Không có bữa phụ.');
   }
@@ -462,7 +462,7 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
     }
     dong.push(
       `Bữa ${caiDat.bua_com_nha.map((bua) => TEN_BUA_CHINH[bua]).join(', ')}: ăn cơm gia đình, chỉ ghi các bữa này vào com_nha, không ghi vào mon_vien. Mỗi bữa 1 mâm cơm nhà gồm cơm trắng và đúng ${caiDat.so_mon_com_nha} món ăn kèm; cac_mon chỉ ghi ${caiDat.so_mon_com_nha} món đó (không ghi cơm), mỗi tên tối đa 4 chữ.${canCo}`,
-      'Số liệu của mâm cơm nhà tính cho phần của 1 người, gồm cả 1 bát cơm; muoi_g tính cả nước mắm, bột ngọt, hạt nêm quy ra muối. nguyen_lieu kèm lượng cho 1 người (ví dụ "Cá rô phi 150 g"); cach_nau 3-5 bước ngắn cho cả mâm, không ghi bước bày ra bàn. Món Việt thường ngày, nguyên liệu dễ mua ở chợ.',
+      'Số liệu của mâm cơm nhà tính cho phần của 1 người, gồm cả 1 bát cơm; muoi_g tính cả nước mắm, bột ngọt, hạt nêm quy ra muối. nguyen_lieu kèm lượng cho 1 người, thứ ra chợ mua theo bó, miếng thì ghi thêm đơn vị đó trong ngoặc, thịt và cá ghi thêm số lạng (1 lạng = 100 g), thứ mua theo quả (cà chua, dưa chuột, trứng, mướp) chỉ ghi số quả không ghi gam (ví dụ "Cà chua 1 quả", "Trứng gà 2 quả"), không dùng chữ "khoảng" (ví dụ "Cá rô phi 150 g (1 lạng rưỡi)", "Thịt ba chỉ 100 g (1 lạng)", "Rau muống 150 g (nửa bó)", "Đậu phụ 100 g (1 miếng)"); cach_nau 3-5 bước ngắn cho cả mâm, không ghi bước bày ra bàn. Món Việt thường ngày, nguyên liệu dễ mua ở chợ.',
     );
   } else {
     dong.push('Không có bữa cơm gia đình: com_nha là mảng rỗng.');

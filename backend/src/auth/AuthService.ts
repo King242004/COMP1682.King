@@ -9,6 +9,10 @@ import type { User } from './AuthQueries.ts';
 // Mật khẩu ngắn nhất được chấp nhận
 const MIN_PASSWORD_LENGTH = 8;
 
+// Tên hiển thị và email dài nhất, để chặn gõ nhầm (giống CHECK trong 007_gioi_han_nhap.sql)
+const MAX_DISPLAY_NAME_LENGTH = 50;
+const MAX_EMAIL_LENGTH = 254;
+
 // Token hết hạn sau 30 ngày, phải đăng nhập lại
 const TOKEN_LIFETIME = '30d';
 
@@ -28,8 +32,14 @@ export async function register(displayName: unknown, email: unknown, password: u
   if (typeof displayName !== 'string' || displayName.trim() === '') {
     throw new HttpError(400, 'Hãy nhập tên hiển thị');
   }
+  if (displayName.trim().length > MAX_DISPLAY_NAME_LENGTH) {
+    throw new HttpError(400, `Tên hiển thị tối đa ${MAX_DISPLAY_NAME_LENGTH} ký tự`);
+  }
   if (typeof email !== 'string' || !email.includes('@')) {
     throw new HttpError(400, 'Email chưa đúng định dạng');
+  }
+  if (email.trim().length > MAX_EMAIL_LENGTH) {
+    throw new HttpError(400, `Email tối đa ${MAX_EMAIL_LENGTH} ký tự`);
   }
   if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
     throw new HttpError(400, `Mật khẩu cần ít nhất ${MIN_PASSWORD_LENGTH} ký tự`);
@@ -96,10 +106,13 @@ export async function changePassword(userId: number, currentPassword: unknown, n
   return { token: createToken(userId, newTokenVersion) };
 }
 
-// Đổi tên hiển thị: kiểm giống lúc đăng ký (không để trống), bỏ khoảng trắng hai đầu
+// Đổi tên hiển thị: kiểm giống lúc đăng ký (không để trống, không quá dài), bỏ khoảng trắng hai đầu
 export async function changeDisplayName(userId: number, displayName: unknown): Promise<User> {
   if (typeof displayName !== 'string' || displayName.trim() === '') {
     throw new HttpError(400, 'Hãy nhập tên hiển thị');
+  }
+  if (displayName.trim().length > MAX_DISPLAY_NAME_LENGTH) {
+    throw new HttpError(400, `Tên hiển thị tối đa ${MAX_DISPLAY_NAME_LENGTH} ký tự`);
   }
   const user = await updateDisplayName(userId, displayName.trim());
   if (!user) {

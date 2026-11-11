@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { tinhGioiHanNenHanChe, tinhMucTieuChat, tongHopNgay } from './BuaAnService.ts';
+import { docSoGam, tinhGioiHanNenHanChe, tinhMucTieuChat, tongHopNgay } from './BuaAnService.ts';
 
 // Giống bảng quy_dinh: Viện Dinh dưỡng 2026 (đạm 0,93 g/kg, bột đường 50-65%, béo 20-25%, chia 4 và 9)
 const quyDinhChat = {
@@ -111,4 +111,13 @@ test('cộng muối, đường, béo no; món nhập tay thiếu số liệu th�
   assert.equal(ketQua.tong_duong_g, 60);
   assert.equal(ketQua.tong_beo_no_g, 13);
   assert.equal(ketQua.so_mon_thieu_so_lieu, 1);
+});
+
+test('ô số gam: để trống là null, nhận từ 0 đến 2500 g, ngoài khoảng đó báo 400', () => {
+  assert.equal(docSoGam(null, 'Đạm'), null);
+  assert.equal(docSoGam(0, 'Đạm'), 0);
+  assert.equal(docSoGam(2500, 'Đạm'), 2500);
+  assert.throws(() => docSoGam(2500.1, 'Đạm'), { status: 400, message: 'Đạm phải từ 0 đến 2.500 g' });
+  assert.throws(() => docSoGam(-1, 'Đạm'), { status: 400 });
+  assert.throws(() => docSoGam('30', 'Đạm'), { status: 400 });
 });

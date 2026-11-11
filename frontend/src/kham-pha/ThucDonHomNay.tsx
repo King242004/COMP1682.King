@@ -12,7 +12,7 @@ import { Card } from '../shared/components/Card';
 import { ErrorBox } from '../shared/components/ErrorBox';
 import { Screen } from '../shared/components/Screen';
 import { formatDateLabel, todayKey } from '../shared/dateKey';
-import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
+import { colors, fontSizes, pressedOpacity, radius, shadows, spacing } from '../shared/theme';
 import { layThucDon, taoThucDon } from '../thuc-don/ThucDonApi';
 import type { CaiDatThucDon, MonThucDon, ThucDonNgay } from '../thuc-don/ThucDonApi';
 import { layTatCaMon } from '../tra-mon/TraMonApi';
@@ -178,12 +178,12 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
     );
   }
 
-  // Tổng calo, đạm, tinh bột, béo của cả thực đơn theo số suất đang chọn để hiện ở thẻ tổng; có món có nguyên liệu thì mới có danh sách đi chợ
+  // Tổng calo, đạm, tinh bột, béo của cả thực đơn theo số suất đang chọn để hiện ở thẻ tổng; gom nguyên liệu (dòng giống hệt chỉ tính một lần) cho thẻ đi chợ
   let tongCalo = 0;
   let tongDam = 0;
   let tongTinhBot = 0;
   let tongBeo = 0;
-  let coNguyenLieu = false;
+  const cacNguyenLieu: string[] = [];
   if (danhSachMon !== null) {
     for (const mon of danhSachMon) {
       const soSuat = laySoSuat(mon);
@@ -191,8 +191,10 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
       tongDam += mon.dam_g * soSuat;
       tongTinhBot += mon.tinh_bot_g * soSuat;
       tongBeo += mon.beo_g * soSuat;
-      if (mon.nguyen_lieu.length > 0) {
-        coNguyenLieu = true;
+      for (const nguyenLieu of mon.nguyen_lieu) {
+        if (!cacNguyenLieu.includes(nguyenLieu)) {
+          cacNguyenLieu.push(nguyenLieu);
+        }
       }
     }
   }
@@ -332,9 +334,18 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
             );
           })}
 
-          {/* Có món có nguyên liệu thì có nút mở danh sách đi chợ */}
-          {coNguyenLieu ? (
-            <Button title="Danh sách đi chợ" loadingTitle="" isLoading={false} onPress={() => setDangMoDiCho(true)} isSecondary iconName="basket-outline" />
+          {/* Có nguyên liệu thì có thẻ mở danh sách đi chợ: giỏ trong vòng tròn xanh nhạt, tên, số nguyên liệu, mũi tên */}
+          {cacNguyenLieu.length > 0 ? (
+            <Pressable style={({ pressed }) => [styles.theDiCho, pressed ? styles.dangBam : null]} onPress={() => setDangMoDiCho(true)}>
+              <View style={styles.vongDiCho}>
+                <Ionicons name="basket-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.cotDiCho}>
+                <Text style={styles.tenDiCho}>Danh sách đi chợ</Text>
+                <Text style={styles.chuPhuDiCho}>{cacNguyenLieu.length} nguyên liệu cho bữa cơm nhà</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            </Pressable>
           ) : null}
           {dangMoDiCho ? <DanhSachDiCho danhSachMon={danhSachMon} onDong={() => setDangMoDiCho(false)} /> : null}
         </>
@@ -463,6 +474,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.small,
     marginTop: spacing.medium,
+  },
+  // Thẻ trắng bấm được mở danh sách đi chợ
+  theDiCho: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.medium,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    ...shadows.card,
+    borderRadius: radius.card,
+    padding: spacing.medium,
+    marginBottom: spacing.medium,
+  },
+  vongDiCho: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cotDiCho: {
+    flex: 1,
+    gap: 2,
+  },
+  tenDiCho: {
+    fontSize: fontSizes.body,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  chuPhuDiCho: {
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
   },
   oChat: {
     flex: 1,

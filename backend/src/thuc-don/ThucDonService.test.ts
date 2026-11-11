@@ -20,11 +20,11 @@ const caiDatDung = {
 // Hai món Viện mẫu (số như trong database)
 const phoBo: MonTraCuu = {
   ma_so: 'HAN-113090', ten_mon: 'Phở bò tái chín', ten_khong_dau: 'pho bo tai chin', so_calo: 503.6, dam_g: 36.4, tinh_bot_g: 62.6,
-  beo_g: 11.9, muoi_g: 3.3, anh_url: 'https://anh/pho.png', ten_goc: 'Phở bò tái chín', ghi_chu_suat: null, hien_o_kham_pha: true, nhom_mon: 'bun_pho',
+  beo_g: 11.9, muoi_g: 3.3, anh_url: 'https://anh/pho.png', ten_goc: 'Phở bò tái chín', ghi_chu_suat: null, hien_o_kham_pha: true, nhom_mon: 'bun_pho', la_do_uong: false,
 };
 const cheDoXanh: MonTraCuu = {
   ma_so: 'HAN-121002', ten_mon: 'Chè đỗ xanh trân châu', ten_khong_dau: 'che do xanh tran chau', so_calo: 300.4, dam_g: 8, tinh_bot_g: 60,
-  beo_g: 2, muoi_g: 0.1, anh_url: 'https://anh/che.png', ten_goc: 'Chè đỗ xanh trân châu', ghi_chu_suat: null, hien_o_kham_pha: true, nhom_mon: 'che_do_uong',
+  beo_g: 2, muoi_g: 0.1, anh_url: 'https://anh/che.png', ten_goc: 'Chè đỗ xanh trân châu', ghi_chu_suat: null, hien_o_kham_pha: true, nhom_mon: 'che_do_uong', la_do_uong: false,
 };
 
 // Bối cảnh kiểm: phở chỉ cho bữa chính, chè chỉ cho bữa phụ

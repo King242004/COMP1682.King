@@ -327,7 +327,7 @@ export async function uocTinhTheoTen(duLieu: Record<string, unknown>, nguoiDungI
   if (duLieu.so_calo !== undefined && duLieu.so_calo !== null) {
     const soCalo = duLieu.so_calo;
     if (typeof soCalo !== 'number' || !Number.isInteger(soCalo) || soCalo < 0 || soCalo > CALO_LON_NHAT) {
-      throw new HttpError(400, `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT}`);
+      throw new HttpError(400, `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT.toLocaleString('vi-VN')}`);
     }
     soCaloDaBiet = soCalo;
   }

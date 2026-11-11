@@ -11,20 +11,42 @@ type DanhSachDiChoProps = {
   onDong: () => void;
 };
 
-// Tấm đi chợ hiện ra trên nền tối (không trượt): nguyên liệu của từng món, ghi theo món (không cộng dồn vì lượng ghi bằng chữ); bấm một dòng để tick
+// Một dòng của danh sách tổng: nguyên liệu và số bữa có đúng dòng đó
+type DongDiCho = {
+  nguyenLieu: string;
+  soLan: number;
+};
+
+// Tấm đi chợ hiện ra trên nền tối (không trượt): một danh sách tổng nguyên liệu của mọi mâm cơm nhà; dòng giống hệt nhau gộp làm một kèm "× 2" (không cộng lượng vì lượng ghi bằng chữ); bấm một dòng để tick
 export function DanhSachDiCho({ danhSachMon, onDong }: DanhSachDiChoProps) {
-  // Các dòng đã tick, khóa là "bữa|tên món|nguyên liệu"; chỉ nhớ lúc tấm đang mở, không lưu
+  // Các dòng đã tick, khóa là chữ nguyên liệu; chỉ nhớ lúc tấm đang mở, không lưu
   const [daTick, setDaTick] = useState<string[]>([]);
 
   // Chỉ món có nguyên liệu (cơm nhà) mới cần đi chợ; món Viện là món quán, không có nguyên liệu
   const monCanMua = danhSachMon.filter((mon) => mon.nguyen_lieu.length > 0);
 
+  // Gom nguyên liệu mọi mâm thành một danh sách; gặp dòng đã có thì tăng số lần
+  const cacDong: DongDiCho[] = [];
+  for (const mon of monCanMua) {
+    for (const nguyenLieu of mon.nguyen_lieu) {
+      const dongDaCo = cacDong.find((dong) => dong.nguyenLieu === nguyenLieu);
+      if (dongDaCo !== undefined) {
+        dongDaCo.soLan = dongDaCo.soLan + 1;
+      } else {
+        cacDong.push({ nguyenLieu: nguyenLieu, soLan: 1 });
+      }
+    }
+  }
+
+  // Dòng nhỏ dưới tiêu đề: cho những bữa nào và có bao nhiêu nguyên liệu
+  const tenCacBua = monCanMua.map((mon) => TEN_BUA[mon.loai_bua].toLowerCase()).join(', ');
+
   // Bấm một dòng: chưa tick thì tick, đã tick thì bỏ
-  function doiTick(khoa: string) {
-    if (daTick.includes(khoa)) {
-      setDaTick(daTick.filter((khoaCu) => khoaCu !== khoa));
+  function doiTick(nguyenLieu: string) {
+    if (daTick.includes(nguyenLieu)) {
+      setDaTick(daTick.filter((nguyenLieuCu) => nguyenLieuCu !== nguyenLieu));
     } else {
-      setDaTick([...daTick, khoa]);
+      setDaTick([...daTick, nguyenLieu]);
     }
   }
 
@@ -39,34 +61,26 @@ export function DanhSachDiCho({ danhSachMon, onDong }: DanhSachDiChoProps) {
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </Pressable>
           </View>
+          <Text style={styles.chuPhu}>
+            Cho {tenCacBua} · {cacDong.length} nguyên liệu
+          </Text>
 
-          {/* Nguyên liệu nhóm theo món; dòng đã tick thì có dấu tick và gạch ngang */}
+          {/* Một danh sách chung; dòng có ở nhiều bữa thì có nhãn "× 2"; dòng đã tick thì có dấu tick và gạch ngang */}
           <ScrollView showsVerticalScrollIndicator={false}>
-            {monCanMua.map((mon) => (
-              <View key={mon.loai_bua + mon.ten_mon} style={styles.nhom}>
-                <Text style={styles.tenMon}>
-                  {TEN_BUA[mon.loai_bua]} · {mon.ten_mon}
-                </Text>
-                {mon.nguyen_lieu.map((nguyenLieu, thuTu) => {
-                  const khoa = `${mon.loai_bua}|${mon.ten_mon}|${nguyenLieu}`;
-                  const daMua = daTick.includes(khoa);
-                  return (
-                    <Pressable
-                      key={thuTu}
-                      style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
-                      onPress={() => doiTick(khoa)}
-                    >
-                      <Ionicons
-                        name={daMua ? 'checkbox' : 'square-outline'}
-                        size={20}
-                        color={daMua ? colors.protein : colors.textSecondary}
-                      />
-                      <Text style={[styles.nguyenLieu, daMua ? styles.nguyenLieuDaMua : null]}>{nguyenLieu}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ))}
+            {cacDong.map((dong) => {
+              const daMua = daTick.includes(dong.nguyenLieu);
+              return (
+                <Pressable
+                  key={dong.nguyenLieu}
+                  style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
+                  onPress={() => doiTick(dong.nguyenLieu)}
+                >
+                  <Ionicons name={daMua ? 'checkbox' : 'square-outline'} size={20} color={daMua ? colors.protein : colors.textSecondary} />
+                  <Text style={[styles.nguyenLieu, daMua ? styles.nguyenLieuDaMua : null]}>{dong.nguyenLieu}</Text>
+                  {dong.soLan > 1 ? <Text style={styles.nhanSoLan}>× {dong.soLan}</Text> : null}
+                </Pressable>
+              );
+            })}
           </ScrollView>
         </View>
       </View>
@@ -92,24 +106,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.medium,
   },
   tieuDe: {
     fontSize: fontSizes.sectionTitle,
     fontWeight: '600',
     color: colors.text,
   },
-  dangBam: {
-    opacity: pressedOpacity,
-  },
-  nhom: {
+  chuPhu: {
+    fontSize: fontSizes.secondary,
+    color: colors.textSecondary,
+    marginTop: 2,
     marginBottom: spacing.medium,
   },
-  tenMon: {
-    fontSize: fontSizes.secondary,
-    fontWeight: '600',
-    color: colors.primary,
-    marginBottom: 4,
+  dangBam: {
+    opacity: pressedOpacity,
   },
   dong: {
     flexDirection: 'row',
@@ -125,5 +135,15 @@ const styles = StyleSheet.create({
   nguyenLieuDaMua: {
     textDecorationLine: 'line-through',
     color: colors.textSecondary,
+  },
+  // Nhãn xanh nhạt nhỏ "× 2" cho dòng có ở nhiều bữa
+  nhanSoLan: {
+    fontSize: fontSizes.label,
+    color: colors.textOnPrimaryLight,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.small,
+    paddingVertical: 2,
+    overflow: 'hidden',
   },
 });

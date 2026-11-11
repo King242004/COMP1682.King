@@ -31,6 +31,7 @@ import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/sh
 const TEN_MON_DAI_NHAT = 100;
 const KHAU_PHAN_DAI_NHAT = 100;
 const CALO_LON_NHAT = 10000;
+const SO_GAM_LON_NHAT = 2500;
 
 // Hai bước của màn: chọn cách lấy món, rồi xem lại số liệu và lưu
 type BuocThem = 'chon' | 'kiem-tra';
@@ -304,8 +305,8 @@ export default function ThemSuaBuaAn() {
       loiMoi.soCalo = `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT.toLocaleString('vi-VN')}`;
     }
     for (const soGamCuaChat of [damSo, tinhBotSo, beoSo]) {
-      if (soGamCuaChat !== null && (Number.isNaN(soGamCuaChat) || soGamCuaChat < 0)) {
-        loiMoi.chiTiet = 'Đạm, tinh bột, béo phải là số không âm';
+      if (soGamCuaChat !== null && (Number.isNaN(soGamCuaChat) || soGamCuaChat < 0 || soGamCuaChat > SO_GAM_LON_NHAT)) {
+        loiMoi.chiTiet = `Đạm, tinh bột, béo phải từ 0 đến ${SO_GAM_LON_NHAT.toLocaleString('vi-VN')} g`;
       }
     }
     setLoiNhap(loiMoi);

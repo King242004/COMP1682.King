@@ -273,11 +273,11 @@ export function TamCaiDatThucDon({ caiDatBanDau, laTaoLai, mucTieuCalo, onTao, o
             {/* 2. Thêm bữa phụ: thẻ có biểu tượng cốc và công tắc */}
             <View style={styles.theBuaPhu}>
               <View style={styles.oBieuTuongVang}>
-                <Ionicons name="cafe-outline" size={20} color={colors.carbs} />
+                <MaterialCommunityIcons name="cake-variant-outline" size={20} color={colors.carbs} />
               </View>
               <View style={styles.cotGiua}>
                 <Text style={styles.cauHoi}>Thêm bữa phụ</Text>
-                <Text style={styles.chuNho}>Chè, sữa chua, đồ uống hoặc bánh</Text>
+                <Text style={styles.chuNho}>Chè, sữa chua hoặc bánh</Text>
               </View>
               <Switch value={coBuaPhu} onValueChange={setCoBuaPhu} trackColor={{ true: colors.primary, false: colors.border }} />
             </View>

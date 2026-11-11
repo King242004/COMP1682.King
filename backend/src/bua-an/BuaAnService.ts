@@ -4,10 +4,11 @@ import { HttpError } from '../shared/errorHandler.ts';
 import { layBuaAnTheoNgay, layMonHayAn, layMotBuaAn, suaBuaAn, themBuaAn, xoaBuaAn } from './BuaAnQueries.ts';
 import type { BuaAn, DuLieuBuaAn, MonHayAn } from './BuaAnQueries.ts';
 
-// Giới hạn độ dài và calo để chặn gõ nhầm; là lựa chọn giao diện, không phải luật dinh dưỡng (giống CHECK trong 005_bua_an.sql)
+// Giới hạn độ dài, calo và số gam để chặn gõ nhầm; là lựa chọn giao diện, không phải luật dinh dưỡng (giống CHECK trong 002_nguoi_dung.sql và 007_gioi_han_nhap.sql)
 const TEN_MON_DAI_NHAT = 100;
 const KHAU_PHAN_DAI_NHAT = 100;
 const CALO_LON_NHAT = 10000;
+const SO_GAM_LON_NHAT = 2500;
 
 // Số món hiện trong danh sách "món hay ăn"
 const SO_MON_HAY_AN = 6;
@@ -34,13 +35,13 @@ function docBuaAnId(buaAnIdChu: string): number {
   return buaAnId;
 }
 
-// Đọc một ô số gam (đạm, tinh bột, béo, muối, đường, béo no): để trống là null, có thì phải là số không âm
-function docSoGam(giaTri: unknown, tenO: string): number | null {
+// Đọc một ô số gam (đạm, tinh bột, béo, muối, đường, béo no): để trống là null, có thì phải là số từ 0 đến SO_GAM_LON_NHAT
+export function docSoGam(giaTri: unknown, tenO: string): number | null {
   if (giaTri === null || giaTri === undefined) {
     return null;
   }
-  if (typeof giaTri !== 'number' || giaTri < 0) {
-    throw new HttpError(400, `${tenO} phải là số không âm`);
+  if (typeof giaTri !== 'number' || giaTri < 0 || giaTri > SO_GAM_LON_NHAT) {
+    throw new HttpError(400, `${tenO} phải từ 0 đến ${SO_GAM_LON_NHAT.toLocaleString('vi-VN')} g`);
   }
   return giaTri;
 }
@@ -72,7 +73,7 @@ function kiemTraDuLieuBuaAn(duLieu: Record<string, unknown>): DuLieuBuaAn {
 
   const soCalo = duLieu.so_calo;
   if (typeof soCalo !== 'number' || !Number.isInteger(soCalo) || soCalo < 0 || soCalo > CALO_LON_NHAT) {
-    throw new HttpError(400, `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT}`);
+    throw new HttpError(400, `Calo là số nguyên từ 0 đến ${CALO_LON_NHAT.toLocaleString('vi-VN')}`);
   }
 
   // Không gửi nguồn số liệu thì coi là tự nhập

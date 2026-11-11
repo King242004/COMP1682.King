@@ -15,7 +15,7 @@ const SO_NGAY_TOM_TAT = 28;
 const SO_NGAY_TOI_THIEU_TINH_TOC_DO = 14;
 const SO_NGAY_MOT_THANG = 30;
 
-// Giới hạn cân nặng, giống hồ sơ (CHECK trong 004_ho_so.sql và 010_can_nang.sql)
+// Giới hạn cân nặng, giống hồ sơ (CHECK trong 002_nguoi_dung.sql)
 const CAN_NANG_NHO_NHAT = 30;
 const CAN_NANG_LON_NHAT = 300;
 

@@ -10,20 +10,20 @@ import type { HoSo, HoSoDeLuu } from './HoSoQueries.ts';
 const TUOI_TOI_THIEU = 18;
 const TUOI_TOI_DA = 100;
 
-// Giới hạn chiều cao, cân nặng để chặn gõ nhầm (giống CHECK trong 004_ho_so.sql)
+// Giới hạn chiều cao, cân nặng để chặn gõ nhầm (giống CHECK trong 002_nguoi_dung.sql)
 const CHIEU_CAO_NHO_NHAT = 100;
 const CHIEU_CAO_LON_NHAT = 250;
 const CAN_NANG_NHO_NHAT = 30;
 const CAN_NANG_LON_NHAT = 300;
 
-// Giới hạn vòng eo để chặn gõ nhầm (giống CHECK trong 036_lo_trinh.sql)
+// Giới hạn vòng eo để chặn gõ nhầm (giống CHECK trong 002_nguoi_dung.sql)
 const VONG_EO_NHO_NHAT = 40;
 const VONG_EO_LON_NHAT = 200;
 
 // Dạng ngày năm-tháng-ngày, ví dụ 2004-11-24
 const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
 
-// Ô kiêng ăn khác tối đa bao nhiêu ký tự (giống CHECK trong 009_di_ung_kieng_an.sql)
+// Ô kiêng ăn khác tối đa bao nhiêu ký tự (giống CHECK trong 002_nguoi_dung.sql)
 const DI_UNG_KIENG_AN_DAI_NHAT = 200;
 
 // Hồ sơ gửi về app: các cột đã lưu, kèm nhóm dị ứng đã chọn, BMI, BMR (chuyển hóa cơ bản) và TDEE (năng lượng giữ cân)
