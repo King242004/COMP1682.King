@@ -158,8 +158,8 @@ test('câu cảnh báo mã vạch: đủ 5 trường hợp', () => {
   assert.equal(vietCanhBaoMaVach(['Sữa'], true, true), '⚠ Có: Sữa.');
   assert.equal(
     vietCanhBaoMaVach(['Sữa'], false, true),
-    '⚠ Có: Sữa. Sản phẩm chưa có dữ liệu dị ứng trên Open Food Facts, hãy xem bao bì.',
+    '⚠ Có: Sữa. Chưa rõ thành phần dị ứng, hãy xem kĩ bao bì.',
   );
-  assert.equal(vietCanhBaoMaVach([], false, true), 'Sản phẩm chưa có dữ liệu dị ứng trên Open Food Facts, hãy xem bao bì.');
+  assert.equal(vietCanhBaoMaVach([], false, true), 'Chưa rõ thành phần dị ứng, hãy xem kĩ bao bì.');
   assert.equal(vietCanhBaoMaVach([], true, true), 'Nhãn không ghi nhóm bạn đã chọn.');
 });

@@ -562,6 +562,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.secondary,
     fontWeight: '600',
     color: colors.warningText,
+    textAlign: 'center',
   },
   chuNguon: {
     fontSize: fontSizes.secondary,

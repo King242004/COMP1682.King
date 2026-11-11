@@ -281,7 +281,7 @@ export function vietCanhBaoMaVach(nhomTrung: string[], coDuLieu: boolean, coChon
     cacCau.push(`⚠ Có: ${nhomTrung.join(' · ')}.`);
   }
   if (!coDuLieu) {
-    cacCau.push('Sản phẩm chưa có dữ liệu dị ứng trên Open Food Facts, hãy xem bao bì.');
+    cacCau.push('Chưa rõ thành phần dị ứng, hãy xem kĩ bao bì.');
   }
   if (coDuLieu && nhomTrung.length === 0) {
     cacCau.push('Nhãn không ghi nhóm bạn đã chọn.');
