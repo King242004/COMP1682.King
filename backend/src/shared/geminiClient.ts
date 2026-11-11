@@ -66,6 +66,6 @@ export async function askGeminiForJson(
     return JSON.parse(response.text);
   } catch (error) {
     console.error(error);
-    throw new HttpError(503, 'AI đang bận, thử lại sau');
+    throw new HttpError(503, 'AI chưa trả lời được, hãy thử lại');
   }
 }

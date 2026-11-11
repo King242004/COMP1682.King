@@ -21,7 +21,7 @@ const environment = {
   port: Number(readRequiredVariable('PORT')),
   databaseUrl: readRequiredVariable('DATABASE_URL'),
   jwtSecret: readRequiredVariable('JWT_SECRET'),
-  // Chưa có khóa Gemini thì app vẫn chạy, chỉ các nút AI báo "AI đang bận" (lỗi thật ghi ra terminal)
+  // Chưa có khóa Gemini thì app vẫn chạy, chỉ các nút AI báo "AI chưa trả lời được" (lỗi thật ghi ra terminal)
   geminiApiKey: readOptionalVariable('GEMINI_API_KEY'),
   geminiModel: readOptionalVariable('GEMINI_MODEL'),
   openFoodFactsUrl: readRequiredVariable('OPEN_FOOD_FACTS_URL'),

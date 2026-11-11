@@ -22,6 +22,9 @@ const DANG_MA_VACH = /^\d{8,14}$/;
 // Tra Open Food Facts chờ tối đa 10 giây
 const THOI_GIAN_CHO_MA_VACH_MS = 10000;
 
+// Mọi lỗi mã vạch (mã sai, không gọi được, không có sản phẩm, thiếu calo) báo chung một câu; lỗi gọi Open Food Facts ghi ra log
+const CAU_LOI_MA_VACH = 'Chưa tìm được thông tin sản phẩm, hãy thử lại';
+
 // Khuôn JSON bắt Gemini phải trả về
 const KHUON_KET_QUA = {
   type: 'object',
@@ -400,7 +403,7 @@ Nếu ảnh không có đồ ăn hoặc đồ uống, trả về la_mon_an = fal
 // Tra mã vạch trên Open Food Facts, kèm câu cảnh báo dị ứng (theo nhãn và theo tên sản phẩm)
 export async function traMaVach(maVach: string, nguoiDungId: number): Promise<SanPhamMaVachCoCanhBao> {
   if (!DANG_MA_VACH.test(maVach)) {
-    throw new HttpError(400, 'Mã vạch không hợp lệ');
+    throw new HttpError(400, CAU_LOI_MA_VACH);
   }
 
   // Chỉ lấy những trường cần dùng (phải xin cả quantity thì Open Food Facts mới trả product_quantity); User-Agent theo yêu cầu của Open Food Facts
@@ -414,12 +417,12 @@ export async function traMaVach(maVach: string, nguoiDungId: number): Promise<Sa
     traLoi = await phanHoi.json();
   } catch (loi) {
     console.error(loi);
-    throw new HttpError(503, 'Không tra được mã vạch lúc này, thử lại sau hoặc gõ tên món');
+    throw new HttpError(503, CAU_LOI_MA_VACH);
   }
 
   const sanPham = docSanPhamMaVach(traLoi);
   if (!sanPham) {
-    throw new HttpError(404, 'Chưa có sản phẩm này hoặc thiếu số calo, hãy gõ tên món');
+    throw new HttpError(404, CAU_LOI_MA_VACH);
   }
 
   // Nhóm trùng = nhóm dò được theo tên sản phẩm, cộng nhóm có mã ghi trên nhãn

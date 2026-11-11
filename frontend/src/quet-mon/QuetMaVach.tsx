@@ -293,6 +293,7 @@ const styles = StyleSheet.create({
   chuLoi: {
     fontSize: fontSizes.secondary,
     color: colors.error,
+    textAlign: 'center',
     marginBottom: spacing.small,
   },
   tenSanPham: {

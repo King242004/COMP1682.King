@@ -516,7 +516,7 @@ export async function taoThucDon(nguoiDungId: number, duLieu: Record<string, unk
   const traLoi = await askGeminiForJson(dong.join('\n'), khuonThucDon, undefined, THOI_GIAN_CHO_AI_MS);
   const danhSachMon = docThucDon(traLoi, { caiDat: caiDat, monBuaChinh: monBuaChinh, monBuaPhu: monBuaPhu, khauPhanDaiNhat: KHAU_PHAN_DAI_NHAT });
   if (danhSachMon.length === 0) {
-    throw new HttpError(503, 'AI chưa lập được thực đơn, thử lại sau');
+    throw new HttpError(503, 'AI chưa trả lời được, hãy thử lại');
   }
 
   // Bước 7. Lưu (ngày đã có thì ghi đè) rồi trả về thực đơn mới
