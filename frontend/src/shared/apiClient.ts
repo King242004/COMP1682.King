@@ -91,8 +91,15 @@ export async function callApi(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: s
     }
   }
 
+  // Đọc câu trả lời; không phải JSON (ví dụ trang lỗi của Render khi server sập) thì báo câu chung
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new ApiError(response.status, 'Lỗi máy chủ, thử lại sau');
+  }
+
   // Server trả mã lỗi thì lấy câu báo trong { message }
-  const data = await response.json();
   if (!response.ok) {
     throw new ApiError(response.status, data.message);
   }

@@ -37,6 +37,8 @@ export type SanPhamMaVach = {
   khoi_luong_1_phan_g: number | null;
   // Câu cảnh báo dị ứng do server viết theo nhãn và tên sản phẩm; rỗng khi người dùng chưa chọn nhóm dị ứng
   canh_bao_di_ung: string;
+  // Tên các nhóm dị ứng bị trùng, cho nhãn vàng ngắn ở màn kết quả quét mã
+  nhom_di_ung: string[];
 };
 
 // Nhờ AI ước tính theo tên món, khẩu phần và calo đã biết (null là chưa biết)

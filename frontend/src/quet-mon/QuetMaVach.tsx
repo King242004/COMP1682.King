@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { NhanDiUng } from '../di-ung/NhanDiUng';
 import { docKhoiLuong, doiGamRaDonVi, vietGioiHan, vietKhoiLuong } from '../don-vi/DoiDonVi';
 import { useDonVi } from '../don-vi/DonViContext';
 import { Button } from '../shared/components/Button';
@@ -197,9 +198,9 @@ export function QuetMaVach({ onChon, onDong }: QuetMaVachProps) {
             {/* Thẻ sản phẩm: tên, nhãn dị ứng và nguồn, năng lượng trên 100 g, khối lượng 1 phần */}
             <Card>
               <Text style={styles.tenSanPham}>{sanPham.ten_san_pham}</Text>
-              {/* Nhãn vàng cảnh báo dị ứng theo nhãn và tên sản phẩm (chỉ khi người dùng có chọn nhóm dị ứng), cạnh dòng nguồn */}
+              {/* Nhãn vàng ngắn "⚠ Tôm, cua" khi sản phẩm có nhóm người dùng dị ứng, cạnh dòng nguồn */}
               <View style={styles.hangNguon}>
-                {sanPham.canh_bao_di_ung !== '' ? <Text style={styles.nhanDiUng}>{sanPham.canh_bao_di_ung}</Text> : null}
+                <NhanDiUng danhSachNhom={sanPham.nhom_di_ung} />
                 <Text style={styles.chuPhu}>Nguồn: Open Food Facts</Text>
               </View>
               <View style={styles.hangNangLuong}>
@@ -307,16 +308,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.small,
     marginTop: 4,
-  },
-  // Nhãn vàng nhỏ, giống nhãn dị ứng ở Khám phá
-  nhanDiUng: {
-    fontSize: fontSizes.label,
-    color: colors.warningText,
-    backgroundColor: colors.warningBackground,
-    borderRadius: radius.input,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    overflow: 'hidden',
   },
   hangNangLuong: {
     flexDirection: 'row',

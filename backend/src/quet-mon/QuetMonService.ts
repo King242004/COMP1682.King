@@ -191,6 +191,8 @@ type KetQuaNhanMonCoCanhBao = {
 // Sản phẩm mã vạch gửi về app kèm câu cảnh báo dị ứng
 type SanPhamMaVachCoCanhBao = SanPhamMaVach & {
   canh_bao_di_ung: string;
+  // Tên các nhóm dị ứng bị trùng, cho nhãn vàng ngắn ở màn kết quả quét mã
+  nhom_di_ung: string[];
 };
 
 // Lấy một số không âm, sai hoặc thiếu thì trả về null
@@ -435,5 +437,5 @@ export async function traMaVach(maVach: string, nguoiDungId: number): Promise<Sa
     }
   }
   const coDuLieu = sanPham.ma_di_ung.length > 0;
-  return { ...sanPham, canh_bao_di_ung: vietCanhBaoMaVach(nhomTrung, coDuLieu, nhomDaChon.length > 0) };
+  return { ...sanPham, canh_bao_di_ung: vietCanhBaoMaVach(nhomTrung, coDuLieu, nhomDaChon.length > 0), nhom_di_ung: nhomTrung };
 }
