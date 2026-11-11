@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
 
-import { doiKgRaDonVi } from '../don-vi/DoiDonVi';
-import { useDonVi } from '../don-vi/DonViContext';
-import { daysBetween, formatShortDate, shiftDateKey } from '../shared/dateKey';
-import { colors, fontSizes, spacing } from '../shared/theme';
-import type { DiemCanNang } from './TienDoApi';
+import { doiKgRaDonVi } from '../../don-vi/DoiDonVi';
+import { useDonVi } from '../../don-vi/DonViContext';
+import { daysBetween, formatShortDate, shiftDateKey } from '../../shared/dateKey';
+import { colors, fontSizes, spacing } from '../../shared/theme';
+import type { DiemCanNang } from '../../can-nang/CanNangApi';
 
 type BieuDoCanNangProps = {
   diemCanNang: DiemCanNang[];

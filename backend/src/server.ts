@@ -11,7 +11,7 @@ import hoSoRoutes from './ho-so/HoSoRoutes.ts';
 import loTrinhRoutes from './lo-trinh/LoTrinhRoutes.ts';
 import quetMonRoutes from './quet-mon/QuetMonRoutes.ts';
 import { errorHandler } from './shared/errorHandler.ts';
-import tienDoRoutes from './tien-do/TienDoRoutes.ts';
+import canNangRoutes from './can-nang/CanNangRoutes.ts';
 import thucDonRoutes from './thuc-don/ThucDonRoutes.ts';
 import traMonRoutes from './tra-mon/TraMonRoutes.ts';
 import tuVanRoutes from './tu-van/TuVanRoutes.ts';
@@ -54,7 +54,7 @@ app.use('/tra-mon', requireAuth, traMonRoutes);
 app.use('/tu-van', requireAuth, tuVanRoutes);
 
 // Cân nặng và tiến độ (cần đăng nhập)
-app.use('/tien-do', requireAuth, tienDoRoutes);
+app.use('/can-nang', requireAuth, canNangRoutes);
 
 // Báo cáo dinh dưỡng theo tuần hoặc tháng (cần đăng nhập)
 app.use('/bao-cao', requireAuth, baoCaoRoutes);

@@ -35,7 +35,7 @@ export default function UongNuoc() {
   }
 
   // Bấm "+": lấy ngày lúc bấm, để qua nửa đêm vẫn ghi đúng ngày; đang ghi thì khóa nút
-  async function handleThem() {
+  async function themMotLanUong() {
     setLoi('');
     setDangGhi(true);
     try {
@@ -47,7 +47,7 @@ export default function UongNuoc() {
   }
 
   // Bấm "−": giống "+" nhưng trừ bớt
-  async function handleBot() {
+  async function botMotLanUong() {
     setLoi('');
     setDangGhi(true);
     try {
@@ -91,7 +91,7 @@ export default function UongNuoc() {
       {uongNuoc ? (
         <>
           {/* Thẻ "Hôm nay": bình nước và nút − / + */}
-          <HomNay uongNuoc={uongNuoc} dangGhi={dangGhi} onThem={handleThem} onBot={handleBot} />
+          <HomNay uongNuoc={uongNuoc} dangGhi={dangGhi} onThem={themMotLanUong} onBot={botMotLanUong} />
 
           {/* Thẻ "Cài đặt": mỗi lần ghi, mục tiêu, nhắc giờ */}
           <CaiDat uongNuoc={uongNuoc} dangLuu={dangLuu} loiQuyen={loiQuyen} onLuu={luuCaiDat} />

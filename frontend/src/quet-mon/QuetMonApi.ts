@@ -47,12 +47,6 @@ export async function uocTinhTheoTen(tenMon: string, khauPhan: string, soCaloDaB
   return ketQua as KetQuaNhanMon;
 }
 
-// Nhờ AI ước tính từ một câu người dùng tả bữa vừa ăn, gộp thành một món
-export async function uocTinhTheoMoTa(moTa: string): Promise<KetQuaNhanMon> {
-  const ketQua = await callApi('POST', '/quet-mon/mo-ta', { mo_ta: moTa });
-  return ketQua as KetQuaNhanMon;
-}
-
 // Gửi ảnh cho AI nhận món, kèm ghi chú không bắt buộc
 export async function nhanMonTuAnh(anhBase64: string, kieuAnh: string, ghiChu: string): Promise<KetQuaNhanMon> {
   const ketQua = await callApi('POST', '/quet-mon/anh', { anh_base64: anhBase64, kieu_anh: kieuAnh, ghi_chu: ghiChu });

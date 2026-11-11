@@ -61,13 +61,13 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
   const camera = useRef<CameraView>(null);
 
   // Đèn flash khi chụp: mặc định tắt, bấm nút flash để bật / tắt
-  const [batFlash, setBatFlash] = useState(false);
+  const [dangBatFlash, setDangBatFlash] = useState(false);
   const [anh, setAnh] = useState<AnhVuaChup | null>(null);
   const [ghiChu, setGhiChu] = useState('');
   const [dangGui, setDangGui] = useState(false);
   const [loi, setLoi] = useState('');
-  const [ketQua, setKetQua] = useState<KetQuaNhanMon | null>(null);
-  const [viTriDangChon, setViTriDangChon] = useState(0);
+  const [ketQuaNhanMon, setKetQuaNhanMon] = useState<KetQuaNhanMon | null>(null);
+  const [soThuTuDangChon, setSoThuTuDangChon] = useState(0);
   const [phanAn, setPhanAn] = useState(1);
 
   // Bấm nút chụp: chụp bằng camera trong app, nén rồi giữ lại để gửi AI
@@ -113,8 +113,8 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
     setAnh(null);
     setGhiChu('');
     setLoi('');
-    setKetQua(null);
-    setViTriDangChon(0);
+    setKetQuaNhanMon(null);
+    setSoThuTuDangChon(0);
     setPhanAn(1);
   }
 
@@ -126,8 +126,8 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
     setLoi('');
     setDangGui(true);
     try {
-      setKetQua(await nhanMonTuAnh(anh.base64, anh.mimeType, ghiChu.trim()));
-      setViTriDangChon(0);
+      setKetQuaNhanMon(await nhanMonTuAnh(anh.base64, anh.mimeType, ghiChu.trim()));
+      setSoThuTuDangChon(0);
     } catch (loiGui) {
       setLoi((loiGui as Error).message);
     }
@@ -136,10 +136,10 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
 
   // Nhân số liệu khả năng đang chọn theo phần đã ăn rồi đưa về form
   function chonMon() {
-    if (!ketQua) {
+    if (!ketQuaNhanMon) {
       return;
     }
-    const khaNang = ketQua.kha_nang[viTriDangChon];
+    const khaNang = ketQuaNhanMon.kha_nang[soThuTuDangChon];
     const luaChonPhan = LUA_CHON_PHAN_AN.find((luaChon) => luaChon.giaTri === phanAn);
     let khauPhan = khaNang.khau_phan;
     if (phanAn !== 1 && luaChonPhan) {
@@ -188,7 +188,7 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
           {/* Camera, trên có 4 góc ngắm màu trắng */}
           {coQuyenCamera ? (
             <View style={styles.khungCamera}>
-              <CameraView ref={camera} style={styles.camera} flash={batFlash ? 'on' : 'off'} />
+              <CameraView ref={camera} style={styles.camera} flash={dangBatFlash ? 'on' : 'off'} />
               <View style={[styles.gocNgam, styles.gocTrenTrai]} />
               <View style={[styles.gocNgam, styles.gocTrenPhai]} />
               <View style={[styles.gocNgam, styles.gocDuoiTrai]} />
@@ -212,10 +212,10 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
             <Pressable
               style={({ pressed }) => [styles.nutThuVien, !coQuyenCamera ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
               disabled={!coQuyenCamera}
-              onPress={() => setBatFlash(!batFlash)}
+              onPress={() => setDangBatFlash(!dangBatFlash)}
             >
-              <Ionicons name={batFlash ? 'flash' : 'flash-off-outline'} size={26} color={colors.primary} />
-              <Text style={styles.chuNutThuVien}>{batFlash ? 'Flash bật' : 'Flash tắt'}</Text>
+              <Ionicons name={dangBatFlash ? 'flash' : 'flash-off-outline'} size={26} color={colors.primary} />
+              <Text style={styles.chuNutThuVien}>{dangBatFlash ? 'Flash bật' : 'Flash tắt'}</Text>
             </Pressable>
           </View>
         </View>
@@ -227,7 +227,7 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
           <Image source={{ uri: anh.uri }} style={styles.anh} />
 
           {/* Bước 1: chưa gửi thì cho ghi thêm rồi gửi */}
-          {!ketQua ? (
+          {!ketQuaNhanMon ? (
             <View>
               <TextField
                 label="Ghi thêm (không bắt buộc)"
@@ -243,21 +243,21 @@ export function ChupAnhNhanMon({ onChon, onDong }: ChupAnhNhanMonProps) {
           ) : null}
 
           {/* Bước 2a: AI thấy không phải đồ ăn */}
-          {ketQua && !ketQua.la_mon_an ? (
+          {ketQuaNhanMon && !ketQuaNhanMon.la_mon_an ? (
             <Text style={styles.chuPhu}>Không nhận ra món ăn trong ảnh. Hãy chụp lại hoặc nhập tay.</Text>
           ) : null}
 
           {/* Bước 2b: chọn 1 trong các khả năng và phần đã ăn */}
-          {ketQua && ketQua.la_mon_an ? (
+          {ketQuaNhanMon && ketQuaNhanMon.la_mon_an ? (
             <View>
               <Text style={styles.nhanNhom}>AI đoán là</Text>
-              {ketQua.kha_nang.map((khaNang, viTri) => {
-                const dangChon = viTri === viTriDangChon;
+              {ketQuaNhanMon.kha_nang.map((khaNang, viTri) => {
+                const dangChon = viTri === soThuTuDangChon;
                 return (
                   <Pressable
                     key={`${khaNang.ten_mon}-${viTri}`}
                     style={({ pressed }) => [styles.theKhaNang, dangChon ? styles.theDangChon : null, pressed ? styles.dangBam : null]}
-                    onPress={() => setViTriDangChon(viTri)}
+                    onPress={() => setSoThuTuDangChon(viTri)}
                   >
                     {/* Vòng chọn: đang chọn là dấu tích tròn màu chính, chưa chọn là vòng rỗng */}
                     <Ionicons

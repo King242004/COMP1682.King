@@ -6,7 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 
 import { layNhatKyNgay, themBuaAn } from '../bua-an/BuaAnApi';
 import type { BuaAn } from '../bua-an/BuaAnApi';
-import { BIEU_TUONG_BUA, MAU_BUA, TEN_BUA, THU_TU_BUA } from '../bua-an/TenBua';
+import { BIEU_TUONG_BUA, MAU_BUA, TEN_BUA, THU_TU_BUA } from '../bua-an/ThongTinBua';
 import { Button } from '../shared/components/Button';
 import { Card } from '../shared/components/Card';
 import { ErrorBox } from '../shared/components/ErrorBox';
@@ -77,7 +77,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
   }
 
   // Bấm "Tạo thực đơn" trong tấm cài đặt: đóng tấm, nhớ lựa chọn, nhờ AI tạo (hoặc tạo lại) thực đơn
-  async function handleTao(caiDatMoi: CaiDatThucDon) {
+  async function taoThucDonMoi(caiDatMoi: CaiDatThucDon) {
     setDangMoCaiDat(false);
     setCaiDat(caiDatMoi);
     setLoi('');
@@ -134,7 +134,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
   }
 
   // Bấm "Đã ăn": ghi món vào nhật ký hôm nay, đúng bữa, số liệu nhân theo số suất đang chọn; món Viện ghi nguồn Viện, cơm nhà ghi nguồn AI
-  async function handleDaAn(mon: MonThucDon) {
+  async function ghiMonDaAn(mon: MonThucDon) {
     // Món Viện ghi khẩu phần "2 suất"; cơm nhà giữ các món trong mâm
     const soSuat = laySoSuat(mon);
     let khauPhan = mon.khau_phan;
@@ -315,8 +315,8 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
                       onDoiSoSuat={(soSuatMoi) => doiSoSuat(mon, soSuatMoi)}
                       daGhi={laDaGhi(mon)}
                       dangGhi={monDangGhi === mon.loai_bua + mon.ten_mon}
-                      khoa={monDangGhi !== '' || dangTao}
-                      onDaAn={() => handleDaAn(mon)}
+                      biKhoa={monDangGhi !== '' || dangTao}
+                      onDaAn={() => ghiMonDaAn(mon)}
                       onXemChiTiet={() => moChiTiet(mon)}
                     />
                   ) : (
@@ -325,8 +325,8 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
                       mon={mon}
                       daGhi={laDaGhi(mon)}
                       dangGhi={monDangGhi === mon.loai_bua + mon.ten_mon}
-                      khoa={monDangGhi !== '' || dangTao}
-                      onDaAn={() => handleDaAn(mon)}
+                      biKhoa={monDangGhi !== '' || dangTao}
+                      onDaAn={() => ghiMonDaAn(mon)}
                     />
                   ),
                 )}
@@ -357,7 +357,7 @@ export function ThucDonHomNay({ dauMan }: ThucDonHomNayProps) {
           caiDatBanDau={caiDat}
           laTaoLai={danhSachMon !== null}
           mucTieuCalo={thucDon.muc_tieu_calo}
-          onTao={handleTao}
+          onTao={taoThucDonMoi}
           onDong={() => setDangMoCaiDat(false)}
         />
       ) : null}

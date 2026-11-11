@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { doiKgRaDonVi, vietCanNang, vietVongEo } from '../don-vi/DoiDonVi';
+import { vietCanNang, vietVongEo } from '../don-vi/DoiDonVi';
 import { useDonVi } from '../don-vi/DonViContext';
 import { Card } from '../shared/components/Card';
 import { colors, fontSizes, radius, spacing } from '../shared/theme';
@@ -21,10 +21,9 @@ export function UuTien({ loTrinh }: UuTienProps) {
 
   // Dòng theo mục tiêu: tốc độ giảm cân, ăn đủ calo khi tăng cân, ăn quanh mức calo giữ cân
   if (loTrinh.muc_tieu === 'giam') {
-    const kgThap = doiKgRaDonVi(loTrinh.kg_moi_thang_thap, donVi, heSo).toLocaleString('vi-VN');
     cacDong.push({
       bieuTuong: 'scale-bathroom',
-      chu: `Giảm ${kgThap}–${vietCanNang(loTrinh.kg_moi_thang_cao, donVi, heSo)} mỗi tháng, không nhanh hơn`,
+      chu: `Giảm khoảng ${vietCanNang(loTrinh.kg_moi_thang, donVi, heSo)} mỗi tháng`,
     });
   }
   if (loTrinh.muc_tieu === 'tang') {

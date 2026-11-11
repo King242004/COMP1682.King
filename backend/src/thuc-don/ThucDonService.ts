@@ -148,7 +148,7 @@ function lamTronMotSoLe(so: number): number {
 }
 
 // Muối, đường, béo no: hợp lệ thì làm tròn, sai hoặc thiếu thì null (vẫn giữ món)
-function docSoGamPhu(giaTri: unknown): number | null {
+function docSoGamKhongBatBuoc(giaTri: unknown): number | null {
   if (laSoKhongAm(giaTri)) {
     return lamTronMotSoLe(giaTri);
   }
@@ -231,9 +231,9 @@ export function docThucDon(duLieu: unknown, boiCanh: BoiCanhThucDon): MonThucDon
   const buaDaCo: string[] = [];
 
   // Bữa thường: mỗi bữa một ô, AI chỉ ghi mã món; tên, ảnh và số lấy từ món Viện
-  const monVienTho = (duLieu as { mon_vien?: unknown }).mon_vien;
-  if (typeof monVienTho === 'object' && monVienTho !== null) {
-    const oMonVien = monVienTho as Record<string, unknown>;
+  const monVienAiTraVe = (duLieu as { mon_vien?: unknown }).mon_vien;
+  if (typeof monVienAiTraVe === 'object' && monVienAiTraVe !== null) {
+    const oMonVien = monVienAiTraVe as Record<string, unknown>;
     for (const loaiBua of CAC_O_MON_VIEN) {
       // Bữa đã chọn ăn cơm gia đình hoặc bữa phụ đã tắt thì không nhận món Viện
       if (loaiBua !== 'phu' && caiDat.bua_com_nha.includes(loaiBua)) {
@@ -271,9 +271,9 @@ export function docThucDon(duLieu: unknown, boiCanh: BoiCanhThucDon): MonThucDon
   }
 
   // Bữa cơm gia đình: mâm AI ghép, khẩu phần ghi các món trong mâm
-  const comNhaTho = (duLieu as { com_nha?: unknown }).com_nha;
-  if (Array.isArray(comNhaTho)) {
-    for (const muc of comNhaTho) {
+  const comNhaAiTraVe = (duLieu as { com_nha?: unknown }).com_nha;
+  if (Array.isArray(comNhaAiTraVe)) {
+    for (const muc of comNhaAiTraVe) {
       const mam = muc as Record<string, unknown>;
       const loaiBua = mam.loai_bua;
       if (loaiBua !== 'sang' && loaiBua !== 'trua' && loaiBua !== 'toi') {
@@ -311,9 +311,9 @@ export function docThucDon(duLieu: unknown, boiCanh: BoiCanhThucDon): MonThucDon
         dam_g: lamTronMotSoLe(mam.dam_g),
         tinh_bot_g: lamTronMotSoLe(mam.tinh_bot_g),
         beo_g: lamTronMotSoLe(mam.beo_g),
-        muoi_g: docSoGamPhu(mam.muoi_g),
-        duong_g: docSoGamPhu(mam.duong_g),
-        beo_no_g: docSoGamPhu(mam.beo_no_g),
+        muoi_g: docSoGamKhongBatBuoc(mam.muoi_g),
+        duong_g: docSoGamKhongBatBuoc(mam.duong_g),
+        beo_no_g: docSoGamKhongBatBuoc(mam.beo_no_g),
         nguyen_lieu: nguyenLieu,
         cach_nau: cachNau,
       });

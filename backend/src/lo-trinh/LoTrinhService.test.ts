@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { phanLoaiEo, tinhCacMoc, tinhKhoangGiu, tinhSoThang, tinhTienDo, vietCauNhanXet } from './LoTrinhService.ts';
+import { phanLoaiEo, tinhCacMoc, tinhKhoangGiu, tinhSoThang, tinhTienDo, tinhSoKgGiamMoiThang, vietCauNhanXet } from './LoTrinhService.ts';
 
 // Mốc vòng eo / chiều cao giống bảng quy_dinh (NICE NG246, khuyến nghị 1.9.14)
 const nguongEo = { cao: 0.5, ratCao: 0.6 };
@@ -21,11 +21,23 @@ test('câu nhận xét ghép nhãn BMI và nhãn eo', () => {
   assert.equal(vietCauNhanXet('Bình thường', null), 'Cân nặng bình thường');
 });
 
-test('số tháng giảm cân với 2–3 kg mỗi tháng', () => {
-  assert.deepEqual(tinhSoThang(7, 2, 3), { it_nhat: 3, nhieu_nhat: 4 });
-  assert.deepEqual(tinhSoThang(12, 2, 3), { it_nhat: 4, nhieu_nhat: 6 });
-  assert.deepEqual(tinhSoThang(6, 2, 3), { it_nhat: 2, nhieu_nhat: 3 });
-  assert.deepEqual(tinhSoThang(1, 2, 3), { it_nhat: 1, nhieu_nhat: 1 });
+test('số tháng giảm cân: số kg chia tốc độ, làm tròn lên', () => {
+  assert.equal(tinhSoThang(7, 2), 4);
+  assert.equal(tinhSoThang(12, 2), 6);
+  assert.equal(tinhSoThang(5, 3), 2);
+  assert.equal(tinhSoThang(6, 1.6), 4);
+  assert.equal(tinhSoThang(1, 2), 1);
+});
+
+test('không chia cho 0 khi không bớt được calo nào', () => {
+  assert.equal(tinhSoThang(5, 0), null);
+});
+
+test('tốc độ thật tính từ phần calo bớt thật, 250 kcal mỗi kg/tháng', () => {
+  assert.equal(tinhSoKgGiamMoiThang(2544, 2044, 250), 2);
+  assert.equal(tinhSoKgGiamMoiThang(2544, 1794, 250), 3);
+  assert.equal(tinhSoKgGiamMoiThang(1751, 1321, 250), 1.7);
+  assert.equal(tinhSoKgGiamMoiThang(1135, 1135, 250), 0);
 });
 
 test('các mốc theo tháng: trừ 2 kg mỗi tháng, mốc cuối là cân mục tiêu', () => {

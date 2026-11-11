@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { doiRaSoNgay, lamTronCanNang, tinhXuHuongCanNang, tomTatBonTuan } from './TienDoService.ts';
-import type { DauVaoTomTat } from './TienDoService.ts';
+import { doiRaSoNgay, lamTronCanNang, tinhXuHuongCanNang, tomTatBonTuan } from './CanNangService.ts';
+import type { DauVaoTomTat } from './CanNangService.ts';
 
 test('hai ngày liền nhau cách nhau 1, qua tháng vẫn đúng', () => {
   assert.equal(doiRaSoNgay('2026-10-07') - doiRaSoNgay('2026-10-06'), 1);

@@ -85,7 +85,7 @@ export default function TaiKhoan() {
             <Text style={styles.tieuDeThe}>Thông tin cá nhân</Text>
             <Pressable
               style={({ pressed }) => [styles.nutSua, pressed ? styles.dangBam : null]}
-              onPress={() => router.push('/ho-so/SuaHoSo?phan=ca-nhan')}
+              onPress={() => router.push('/ho-so/TaoSuaHoSo?phan=ca-nhan')}
             >
               <Ionicons name="pencil-outline" size={15} color={colors.primary} />
               <Text style={styles.chuSua}>Sửa</Text>

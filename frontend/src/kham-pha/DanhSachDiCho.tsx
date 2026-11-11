@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { TEN_BUA } from '../bua-an/TenBua';
+import { TEN_BUA } from '../bua-an/ThongTinBua';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { MonThucDon } from '../thuc-don/ThucDonApi';
 

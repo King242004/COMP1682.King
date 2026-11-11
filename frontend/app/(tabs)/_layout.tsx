@@ -15,14 +15,14 @@ export default function TabsLayout() {
   // Đăng nhập (hoặc mở app khi đã đăng nhập) thì hẹn lại lời nhắc uống nước theo cài đặt trên server; đăng xuất thì hủy hết
   useEffect(() => {
     if (user) {
-      henLaiTheoServer();
+      henLaiGioNhacUongNuoc();
     } else {
       huyHetNhacUongNuoc();
     }
   }, [user]);
 
   // Đọc cài đặt nhắc trên server rồi hẹn lại; không tải được (chưa có hồ sơ, mất mạng) thì thôi, lần mở app sau hẹn lại
-  async function henLaiTheoServer() {
+  async function henLaiGioNhacUongNuoc() {
     try {
       const uongNuoc = await layUongNuocNgay(todayKey());
       await henLaiNhacUongNuoc(uongNuoc.nhac_uong_nuoc, uongNuoc.gio_nhac);

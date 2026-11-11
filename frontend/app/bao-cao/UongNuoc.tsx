@@ -14,19 +14,19 @@ import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
 import { formatShortDate, fromDateKey, monthDateKeys, shiftDateKey, todayKey, weekDateKeys } from '../../src/shared/dateKey';
 import { colors, fontSizes, pressedOpacity, radius, shadows, spacing } from '../../src/shared/theme';
 
-type NutCheDoProps = {
+type NutXemTheoProps = {
   nhan: string;
   dangChon: boolean;
-  isDisabled: boolean;
+  biKhoa: boolean;
   onPress: () => void;
 };
 
 // Một nút trong thanh "Tuần / Tháng": nút đang chọn nền trắng chữ đậm
-function NutCheDo({ nhan, dangChon, isDisabled, onPress }: NutCheDoProps) {
+function NutXemTheo({ nhan, dangChon, biKhoa, onPress }: NutXemTheoProps) {
   return (
     <Pressable
       style={({ pressed }) => [styles.nutCheDo, dangChon ? styles.nutCheDoDangChon : null, pressed ? styles.dangBam : null]}
-      disabled={isDisabled}
+      disabled={biKhoa}
       onPress={onPress}
     >
       <Text style={[styles.chuCheDo, dangChon ? styles.chuCheDoDangChon : null]}>{nhan}</Text>
@@ -35,17 +35,17 @@ function NutCheDo({ nhan, dangChon, isDisabled, onPress }: NutCheDoProps) {
 }
 
 export default function UongNuoc() {
-  const [cheDo, setCheDo] = useState<'tuan' | 'thang'>('tuan');
-  const [ngayMoc, setNgayMoc] = useState(todayKey());
+  const [xemTheo, setXemTheo] = useState<'tuan' | 'thang'>('tuan');
+  const [ngayDangXem, setNgayDangXem] = useState(todayKey());
   const [baoCao, setBaoCao] = useState<BaoCaoUongNuoc | null>(null);
   const [loi, setLoi] = useState('');
   const [dangTai, setDangTai] = useState(false);
 
   // Các ngày đang xem: 7 ngày của tuần, hoặc mọi ngày của tháng, chứa ngày mốc
   const homNay = todayKey();
-  let cacNgayHien = weekDateKeys(ngayMoc);
-  if (cheDo === 'thang') {
-    cacNgayHien = monthDateKeys(ngayMoc);
+  let cacNgayHien = weekDateKeys(ngayDangXem);
+  if (xemTheo === 'thang') {
+    cacNgayHien = monthDateKeys(ngayDangXem);
   }
   const ngayDau = cacNgayHien[0];
   const ngayCuoi = cacNgayHien[cacNgayHien.length - 1];
@@ -55,7 +55,7 @@ export default function UongNuoc() {
 
   // Chữ giữa hàng ‹ ›: "27/10 – 2/11" hoặc "Tháng 10, 2026"
   let nhanKhoang = `${formatShortDate(ngayDau)} – ${formatShortDate(ngayCuoi)}`;
-  if (cheDo === 'thang') {
+  if (xemTheo === 'thang') {
     const ngayDauThang = fromDateKey(ngayDau);
     nhanKhoang = `Tháng ${ngayDauThang.getMonth() + 1}, ${ngayDauThang.getFullYear()}`;
   }
@@ -63,7 +63,7 @@ export default function UongNuoc() {
   // Đổi Tuần / Tháng hoặc lùi / tiến thì tải lại báo cáo
   useEffect(() => {
     taiBaoCao();
-  }, [cheDo, ngayMoc]);
+  }, [xemTheo, ngayDangXem]);
 
   // Tải báo cáo của khoảng đang xem
   async function taiBaoCao() {
@@ -84,8 +84,8 @@ export default function UongNuoc() {
 
       {/* Thanh 2 nút Tuần / Tháng; đang tải thì khóa */}
       <View style={styles.thanhCheDo}>
-        <NutCheDo nhan="Tuần" dangChon={cheDo === 'tuan'} isDisabled={dangTai} onPress={() => setCheDo('tuan')} />
-        <NutCheDo nhan="Tháng" dangChon={cheDo === 'thang'} isDisabled={dangTai} onPress={() => setCheDo('thang')} />
+        <NutXemTheo nhan="Tuần" dangChon={xemTheo === 'tuan'} biKhoa={dangTai} onPress={() => setXemTheo('tuan')} />
+        <NutXemTheo nhan="Tháng" dangChon={xemTheo === 'thang'} biKhoa={dangTai} onPress={() => setXemTheo('thang')} />
       </View>
 
       {/* Hàng ‹ khoảng ngày ›; › mờ khi đang xem khoảng có hôm nay */}
@@ -93,7 +93,7 @@ export default function UongNuoc() {
         <Pressable
           style={({ pressed }) => [styles.nutMuiTen, pressed ? styles.dangBam : null]}
           disabled={dangTai}
-          onPress={() => setNgayMoc(shiftDateKey(ngayDau, -1))}
+          onPress={() => setNgayDangXem(shiftDateKey(ngayDau, -1))}
         >
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </Pressable>
@@ -104,7 +104,7 @@ export default function UongNuoc() {
         <Pressable
           style={({ pressed }) => [styles.nutMuiTen, pressed ? styles.dangBam : null]}
           disabled={!choTien || dangTai}
-          onPress={() => setNgayMoc(shiftDateKey(ngayCuoi, 1))}
+          onPress={() => setNgayDangXem(shiftDateKey(ngayCuoi, 1))}
         >
           <Ionicons name="chevron-forward" size={24} color={choTien ? colors.primary : colors.border} />
         </Pressable>
@@ -141,7 +141,7 @@ export default function UongNuoc() {
 
           {/* Thẻ lượng nước: 7 cột (Tuần) hoặc lịch (Tháng) */}
           <Card>
-            {cheDo === 'tuan' ? (
+            {xemTheo === 'tuan' ? (
               <CotCacNgay cacNgay={cacNgayHien} duLieuCacNgay={baoCao.cac_ngay} mucTieuMl={baoCao.muc_tieu_ml} />
             ) : (
               <LichThang cacNgay={cacNgayHien} duLieuCacNgay={baoCao.cac_ngay} mucTieuMl={baoCao.muc_tieu_ml} />

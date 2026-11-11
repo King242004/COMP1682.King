@@ -7,11 +7,11 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "node --watch --env-file=.env src/server.ts",
-    "start": "node --env-file=.env src/server.ts",
-    "migrate": "node --env-file=.env src/database/migrate.ts",
+    "dev": "node --watch --env-file-if-exists=.env src/server.ts",
+    "start": "node --env-file-if-exists=.env src/server.ts",
+    "migrate": "node --env-file-if-exists=.env src/database/migrate.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --env-file=.env --test"
+    "test": "node --env-file-if-exists=.env --test"
   },
   "dependencies": {
     "@google/genai": "^2.27.0",

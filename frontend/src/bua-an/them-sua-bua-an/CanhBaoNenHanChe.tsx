@@ -20,7 +20,7 @@ type CanhBaoNenHanCheProps = {
 };
 
 // Số liệu một chất để vẽ: của món này, cả ngày nếu thêm món này, giới hạn, có vượt không
-type MotChat = {
+type TongSauKhiThem = {
   ten: string;
   soCuaMon: number | null;
   caNgay: number | null;
@@ -34,13 +34,13 @@ function vietSoGam(so: number): string {
 }
 
 // Tính cả ngày sẽ là bao nhiêu nếu thêm món này, và có vượt giới hạn không
-function gomMotChat(ten: string, soCuaMon: number | null, soCuaMonCu: number | null, tongCuaNgay: number | null, gioiHan: number | null): MotChat {
+function tinhTongSauKhiThem(ten: string, soCuaMon: number | null, soTruocKhiSua: number | null, tongCuaNgay: number | null, gioiHan: number | null): TongSauKhiThem {
   if (soCuaMon === null || tongCuaNgay === null || gioiHan === null) {
     return { ten: ten, soCuaMon: soCuaMon, caNgay: null, gioiHan: gioiHan, vuot: false };
   }
   let caNgay = tongCuaNgay + soCuaMon;
-  if (soCuaMonCu !== null) {
-    caNgay = caNgay - soCuaMonCu;
+  if (soTruocKhiSua !== null) {
+    caNgay = caNgay - soTruocKhiSua;
   }
   return { ten: ten, soCuaMon: soCuaMon, caNgay: caNgay, gioiHan: gioiHan, vuot: caNgay > gioiHan };
 }
@@ -69,9 +69,9 @@ export function CanhBaoNenHanChe({ monNay, monCu, nhatKy }: CanhBaoNenHanCheProp
   }
 
   const cacChat = [
-    gomMotChat('Muối', monNay.muoi_g, monCu ? monCu.muoi_g : null, tongMuoi, gioiHanMuoi),
-    gomMotChat('Đường', monNay.duong_g, monCu ? monCu.duong_g : null, tongDuong, gioiHanDuong),
-    gomMotChat('Béo no', monNay.beo_no_g, monCu ? monCu.beo_no_g : null, tongBeoNo, gioiHanBeoNo),
+    tinhTongSauKhiThem('Muối', monNay.muoi_g, monCu ? monCu.muoi_g : null, tongMuoi, gioiHanMuoi),
+    tinhTongSauKhiThem('Đường', monNay.duong_g, monCu ? monCu.duong_g : null, tongDuong, gioiHanDuong),
+    tinhTongSauKhiThem('Béo no', monNay.beo_no_g, monCu ? monCu.beo_no_g : null, tongBeoNo, gioiHanBeoNo),
   ];
 
   // Dòng cảnh báo: "muối 9,2 / 5 g · đường 63 / 43 g"

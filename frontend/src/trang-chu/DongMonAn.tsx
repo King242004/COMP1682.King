@@ -4,13 +4,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { BuaAn } from '../bua-an/BuaAnApi';
 
-type TheBuaAnProps = {
+type DongMonAnProps = {
   buaAn: BuaAn;
   onPress: () => void;
 };
 
 // Một dòng món ăn nền kem trong hộp bữa: tên, khẩu phần, calo, dấu ›; bấm vào để sửa
-export function TheBuaAn({ buaAn, onPress }: TheBuaAnProps) {
+export function DongMonAn({ buaAn, onPress }: DongMonAnProps) {
   return (
     <Pressable style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]} onPress={onPress}>
       <View style={styles.cotTen}>

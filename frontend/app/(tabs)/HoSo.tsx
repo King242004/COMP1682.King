@@ -7,10 +7,9 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useAuth } from '../../src/auth/AuthContext';
 import { layHoSo } from '../../src/ho-so/HoSoApi';
 import type { HoSo } from '../../src/ho-so/HoSoApi';
-import { TheLoTrinh } from '../../src/ho-so/TheLoTrinh';
+import { TheMucTieu } from '../../src/ho-so/TheMucTieu';
 import { layLoTrinh } from '../../src/lo-trinh/LoTrinhApi';
 import type { LoTrinh } from '../../src/lo-trinh/LoTrinhApi';
-import { Button } from '../../src/shared/components/Button';
 import { Card } from '../../src/shared/components/Card';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { Screen } from '../../src/shared/components/Screen';
@@ -18,10 +17,6 @@ import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../src/sh
 
 type TenBieuTuong = ComponentProps<typeof Ionicons>['name'];
 type TenBieuTuongMaterial = ComponentProps<typeof MaterialCommunityIcons>['name'];
-
-// Chữ hiển thị cho các giá trị lưu trong database
-const TEN_MUC_VAN_DONG = { nhe: 'Nhẹ', trung_binh: 'Trung bình', nang: 'Nặng' };
-const TEN_MUC_TIEU = { giam: 'Giảm cân', giu: 'Giữ cân', tang: 'Tăng cân' };
 
 export default function HoSo() {
   const { user, logout } = useAuth();
@@ -41,7 +36,7 @@ export default function HoSo() {
     try {
       const hoSoMoi = await layHoSo();
       setHoSo(hoSoMoi);
-      // Đã thiết lập hồ sơ thì tải thêm lộ trình cho thẻ "Lộ trình"
+      // Đã thiết lập hồ sơ thì tải thêm lộ trình cho thẻ "Mục tiêu"
       if (hoSoMoi.muc_tieu_calo !== null) {
         setLoTrinh(await layLoTrinh());
       }
@@ -74,50 +69,25 @@ export default function HoSo() {
 
       {hoSo && hoSo.muc_tieu_calo !== null ? (
         <View>
-          {/* Lộ trình: câu nhận xét, đích, thanh tiến độ; bấm mở màn Lộ trình */}
-          {loTrinh ? <TheLoTrinh loTrinh={loTrinh} onPress={() => router.push('/LoTrinh')} /> : null}
-
-          {/* Mục tiêu calo, 3 ô BMI · BMR · TDEE, mức vận động và mục tiêu, nút "Sửa mục tiêu" */}
-          <Card>
-            <Text style={styles.chuPhu}>Mục tiêu mỗi ngày</Text>
-            <Text style={styles.soCalo}>
-              {hoSo.muc_tieu_calo.toLocaleString('vi-VN')} <Text style={styles.donVi}>kcal</Text>
-            </Text>
-            <Text style={styles.chuNho}>Ước tính từ giới tính, tuổi, chiều cao, cân nặng và mức vận động</Text>
-            <View style={styles.duongKe} />
-            <View style={styles.hangChiSo}>
-              <OChiSo nhan="BMI" giaTri={hoSo.bmi?.toLocaleString('vi-VN') ?? ''} chuNho={hoSo.phan_loai_bmi ?? ''} />
-              <OChiSo nhan="BMR" giaTri={`${hoSo.chuyen_hoa_co_ban?.toLocaleString('vi-VN')} kcal`} chuNho="Đốt khi nghỉ" />
-              <OChiSo nhan="TDEE" giaTri={`${hoSo.nang_luong_giu_can?.toLocaleString('vi-VN')} kcal`} chuNho="Để giữ cân" />
-            </View>
-
-            {/* Mức vận động và mục tiêu; "Sửa mục tiêu" chỉ sửa 2 thứ này */}
-            <View style={styles.dongThongTin}>
-              <Text style={styles.chuPhu}>Mức vận động:</Text>
-              <Text style={styles.giaTriDong}>{hoSo.muc_van_dong ? TEN_MUC_VAN_DONG[hoSo.muc_van_dong] : ''}</Text>
-            </View>
-            <View style={styles.dongThongTin}>
-              <Text style={styles.chuPhu}>Mục tiêu:</Text>
-              <Text style={[styles.giaTriDong, styles.chuXanh]}>{hoSo.muc_tieu ? TEN_MUC_TIEU[hoSo.muc_tieu] : ''}</Text>
-            </View>
-            <View style={styles.nutSuaMucTieu}>
-              <Button title="Sửa mục tiêu" loadingTitle="" isLoading={false} onPress={() => router.push('/ho-so/SuaHoSo?phan=muc-tieu')} isSecondary />
-            </View>
-          </Card>
+          {/* Mục tiêu: phần cân nặng và phần calo; bấm cả thẻ mở màn Lộ trình */}
+          <TheMucTieu hoSo={hoSo} loTrinh={loTrinh} onPress={() => router.push('/LoTrinh')} />
 
           {/* Xem báo cáo: Dinh dưỡng mở Báo cáo dinh dưỡng, Cân nặng mở màn Tiến độ, Uống nước mở Báo cáo uống nước */}
           <Card>
-            <Text style={styles.tieuDeXemBaoCao}>Xem báo cáo</Text>
+            <View style={styles.hangTieuDeXemBaoCao}>
+              <MaterialCommunityIcons name="chart-box-outline" size={18} color={colors.primary} />
+              <Text style={styles.tieuDeThe}>Xem báo cáo</Text>
+            </View>
             <View style={styles.hangNutBaoCao}>
               <NutBaoCao bieuTuong="food-apple-outline" nhan="Dinh dưỡng" onPress={() => router.push('/bao-cao/DinhDuong')} />
-              <NutBaoCao bieuTuong="scale-bathroom" nhan="Cân nặng" onPress={() => router.push('/TienDo')} />
+              <NutBaoCao bieuTuong="scale-bathroom" nhan="Cân nặng" onPress={() => router.push('/bao-cao/CanNang')} />
               <NutBaoCao bieuTuong="water-outline" nhan="Uống nước" onPress={() => router.push('/bao-cao/UongNuoc')} />
             </View>
           </Card>
 
           {/* Dị ứng (mỗi nhóm một nhãn vàng) và kiêng ăn khác; "Sửa" chỉ sửa phần này */}
           <Card>
-            <TieuDeThe bieuTuong="food-off-outline" tieuDe="Dị ứng, kiêng ăn" phanSua="di-ung" />
+            <TieuDeThe bieuTuong="food-off-outline" tieuDe="Dị ứng, kiêng ăn" />
             <Text style={styles.nhanNho}>Dị ứng</Text>
             {hoSo.nhom_di_ung_da_chon.length === 0 ? (
               <Text style={styles.chuThuong}>Không có</Text>
@@ -166,18 +136,7 @@ export default function HoSo() {
   );
 }
 
-// Một ô trong hàng BMI · BMR · TDEE: tên chỉ số, số đậm, chữ nhỏ giải thích
-function OChiSo({ nhan, giaTri, chuNho }: { nhan: string; giaTri: string; chuNho: string }) {
-  return (
-    <View style={styles.oChiSo}>
-      <Text style={styles.nhanNhoGiua}>{nhan}</Text>
-      <Text style={styles.giaTriChiSo}>{giaTri}</Text>
-      <Text style={styles.nhanNhoGiua}>{chuNho}</Text>
-    </View>
-  );
-}
-
-// Một nút trong thẻ "Xem báo cáo": biểu tượng trong vòng tròn xanh nhạt, chữ nhỏ ở dưới; mỗi nút rộng một phần tư thẻ
+// Một nút trong thẻ "Xem báo cáo": biểu tượng trong vòng tròn xanh nhạt, chữ nhỏ ở dưới; 3 nút chia đều chiều ngang thẻ
 function NutBaoCao({ bieuTuong, nhan, onPress }: { bieuTuong: TenBieuTuongMaterial; nhan: string; onPress: () => void }) {
   return (
     <Pressable style={({ pressed }) => [styles.nutBaoCao, pressed ? styles.dangBam : null]} onPress={onPress}>
@@ -189,13 +148,13 @@ function NutBaoCao({ bieuTuong, nhan, onPress }: { bieuTuong: TenBieuTuongMateri
   );
 }
 
-// Tiêu đề trong thẻ: biểu tượng nhỏ màu xanh, chữ đậm, bên phải chữ "Sửa" mở màn sửa đúng phần của thẻ
-function TieuDeThe({ bieuTuong, tieuDe, phanSua }: { bieuTuong: TenBieuTuongMaterial; tieuDe: string; phanSua: 'muc-tieu' | 'di-ung' }) {
+// Tiêu đề thẻ Dị ứng: biểu tượng nhỏ màu xanh, chữ đậm, bên phải chữ "Sửa" mở màn sửa dị ứng
+function TieuDeThe({ bieuTuong, tieuDe }: { bieuTuong: TenBieuTuongMaterial; tieuDe: string }) {
   return (
     <View style={styles.hangTieuDe}>
       <MaterialCommunityIcons name={bieuTuong} size={18} color={colors.primary} />
       <Text style={styles.tieuDeThe}>{tieuDe}</Text>
-      <Pressable style={({ pressed }) => [styles.nutSua, pressed ? styles.dangBam : null]} onPress={() => router.push(`/ho-so/SuaHoSo?phan=${phanSua}`)}>
+      <Pressable style={({ pressed }) => [styles.nutSua, pressed ? styles.dangBam : null]} onPress={() => router.push('/ho-so/TaoSuaHoSo?phan=di-ung')}>
         <Ionicons name="pencil-outline" size={15} color={colors.primary} />
         <Text style={styles.chuSua}>Sửa</Text>
       </Pressable>
@@ -260,68 +219,17 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.secondary,
     color: colors.textSecondary,
   },
-  chuNho: {
-    fontSize: fontSizes.label,
-    color: colors.textSecondary,
-  },
-  soCalo: {
-    fontSize: fontSizes.bigNumber,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  donVi: {
-    fontSize: fontSizes.body,
-    fontWeight: '600',
-  },
-  hangChiSo: {
+  hangTieuDeXemBaoCao: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.small,
-  },
-  oChiSo: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryLight,
-    borderRadius: 16,
-    padding: spacing.medium,
-  },
-  nhanNhoGiua: {
-    fontSize: fontSizes.label,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  giaTriChiSo: {
-    fontSize: fontSizes.body,
-    fontWeight: '600',
-    color: colors.textOnPrimaryLight,
-    textAlign: 'center',
-    marginVertical: 2,
-  },
-  dongThongTin: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.small,
-  },
-  giaTriDong: {
-    fontSize: fontSizes.body,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  nutSuaMucTieu: {
-    marginTop: spacing.medium,
-  },
-  tieuDeXemBaoCao: {
-    fontSize: fontSizes.sectionTitle,
-    fontWeight: '600',
-    color: colors.text,
     marginBottom: spacing.medium,
   },
   hangNutBaoCao: {
     flexDirection: 'row',
   },
   nutBaoCao: {
-    width: '25%',
+    flex: 1,
     alignItems: 'center',
     gap: 6,
   },
@@ -366,9 +274,6 @@ const styles = StyleSheet.create({
   chuSua: {
     fontSize: fontSizes.secondary,
     fontWeight: '600',
-    color: colors.primary,
-  },
-  chuXanh: {
     color: colors.primary,
   },
   nhanNho: {

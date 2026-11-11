@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { ComponentProps } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
-import { BIEU_TUONG_BUA } from '../bua-an/TenBua';
+import { BIEU_TUONG_BUA } from '../bua-an/ThongTinBua';
 import { Button } from '../shared/components/Button';
 import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
 import type { BuaChinh, CaiDatThucDon, ThuTrongMam, UuTien } from '../thuc-don/ThucDonApi';
@@ -146,7 +146,7 @@ export function TamCaiDatThucDon({ caiDatBanDau, laTaoLai, mucTieuCalo, onTao, o
   }
 
   // Bấm "Tạo thực đơn": gửi các lựa chọn cho màn thực đơn
-  function handleTao() {
+  function taoThucDonMoi() {
     onTao({
       bua_com_nha: buaComNha,
       so_mon_com_nha: soMon,
@@ -356,7 +356,7 @@ export function TamCaiDatThucDon({ caiDatBanDau, laTaoLai, mucTieuCalo, onTao, o
           {/* Đáy tấm nền trắng: tạo lại thì nhắc thực đơn sẽ bị thay; nút chính ghim ở đây */}
           <View style={styles.dayTam}>
             {laTaoLai ? <Text style={styles.chuDo}>Thực đơn hôm nay sẽ được thay bằng thực đơn mới.</Text> : null}
-            <Button title="Tạo thực đơn" loadingTitle="" isLoading={false} onPress={handleTao} iconName="sparkles-outline" />
+            <Button title="Tạo thực đơn" loadingTitle="" isLoading={false} onPress={taoThucDonMoi} iconName="sparkles-outline" />
           </View>
         </View>
       </KeyboardAvoidingView>

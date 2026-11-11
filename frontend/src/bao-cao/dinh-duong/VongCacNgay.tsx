@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { VongTienDo } from '../../shared/components/VongTienDo';
+import { ProgressRing } from '../../shared/components/ProgressRing';
 import { shortWeekdayName, todayKey } from '../../shared/dateKey';
 import { colors, fontSizes, pressedOpacity, spacing } from '../../shared/theme';
 import type { NgayBaoCao } from '../BaoCaoApi';
@@ -53,7 +53,7 @@ export function VongCacNgay({ cacNgay, duLieuCacNgay, mucTieuCalo, ngayChon, onC
                 {duLieu === undefined && !chuaToi ? (
                   <View style={styles.vongDut} />
                 ) : (
-                  <VongTienDo kichThuoc={36} doDay={4} phanTram={phanTram} mau={mauCung} />
+                  <ProgressRing size={36} thickness={4} percent={phanTram} color={mauCung} />
                 )}
               </View>
               <Text style={[styles.chuThu, dangChon ? styles.chuThuDangChon : null, chuaToi ? styles.chuChuaToi : null]}>

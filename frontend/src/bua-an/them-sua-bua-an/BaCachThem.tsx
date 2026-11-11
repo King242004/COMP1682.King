@@ -8,16 +8,16 @@ type TheCachProps = {
   bieuTuong: ComponentProps<typeof Ionicons>['name'];
   ten: string;
   moTa: string;
-  isDisabled: boolean;
+  biKhoa: boolean;
   onPress: () => void;
 };
 
 // Một thẻ trắng: ô biểu tượng nền xanh nhạt, tên cách thêm, dòng mô tả ngắn
-function TheCach({ bieuTuong, ten, moTa, isDisabled, onPress }: TheCachProps) {
+function TheCach({ bieuTuong, ten, moTa, biKhoa, onPress }: TheCachProps) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.the, isDisabled ? styles.khoa : null, pressed ? styles.dangBam : null]}
-      disabled={isDisabled}
+      style={({ pressed }) => [styles.the, biKhoa ? styles.khoa : null, pressed ? styles.dangBam : null]}
+      disabled={biKhoa}
       onPress={onPress}
     >
       <View style={styles.oBieuTuong}>
@@ -30,19 +30,19 @@ function TheCach({ bieuTuong, ten, moTa, isDisabled, onPress }: TheCachProps) {
 }
 
 type BaCachThemProps = {
-  isDisabled: boolean;
+  biKhoa: boolean;
   onChupAnh: () => void;
   onQuetMa: () => void;
   onNhapTay: () => void;
 };
 
 // Ba thẻ cùng hàng ở đầu bước 1: chụp ảnh để AI nhận món, quét mã vạch hàng đóng gói, tự gõ số liệu
-export function BaCachThem({ isDisabled, onChupAnh, onQuetMa, onNhapTay }: BaCachThemProps) {
+export function BaCachThem({ biKhoa, onChupAnh, onQuetMa, onNhapTay }: BaCachThemProps) {
   return (
     <View style={styles.hang}>
-      <TheCach bieuTuong="camera-outline" ten="Chụp ảnh" moTa="AI nhận món" isDisabled={isDisabled} onPress={onChupAnh} />
-      <TheCach bieuTuong="barcode-outline" ten="Quét mã vạch" moTa="Hàng đóng gói" isDisabled={isDisabled} onPress={onQuetMa} />
-      <TheCach bieuTuong="create-outline" ten="Nhập tay" moTa="Tự gõ số liệu" isDisabled={isDisabled} onPress={onNhapTay} />
+      <TheCach bieuTuong="camera-outline" ten="Chụp ảnh" moTa="AI nhận món" biKhoa={biKhoa} onPress={onChupAnh} />
+      <TheCach bieuTuong="barcode-outline" ten="Quét mã vạch" moTa="Hàng đóng gói" biKhoa={biKhoa} onPress={onQuetMa} />
+      <TheCach bieuTuong="create-outline" ten="Gõ tên món" moTa="AI ước tính hoặc tự gõ" biKhoa={biKhoa} onPress={onNhapTay} />
     </View>
   );
 }

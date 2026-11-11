@@ -2,7 +2,7 @@ import type { CaloMotNgay, MonHayAn } from '../bua-an/BuaAnQueries.ts';
 import type { NhatKyNgay } from '../bua-an/BuaAnService.ts';
 import { vietCanNang, vietChieuCao, vietLoiDanDonViChoAi, vietThayDoiCanNang } from '../don-vi/DonViService.ts';
 import type { DonVi, HeSoDonVi } from '../don-vi/DonViService.ts';
-import type { TienDo } from '../tien-do/TienDoService.ts';
+import type { BaoCaoCanNang } from '../can-nang/CanNangService.ts';
 
 // Hồ sơ rút gọn để coach biết đang nói chuyện với ai
 export type HoSoCoach = {
@@ -34,7 +34,7 @@ export type DuLieuLoiNhac = {
   nhatKy: NhatKyNgay;
   bayNgay: CaloMotNgay[];
   monHayAn: MonHayAn[];
-  tienDo: TienDo;
+  tienDo: BaoCaoCanNang;
   lichSu: TinNhanCu[];
   cauHoi: string;
 };
@@ -119,7 +119,7 @@ function vietHomNay(nhatKy: NhatKyNgay): string[] {
 }
 
 // Các dòng tiến độ: cân theo xu hướng, tóm tắt 4 tuần, tốc độ giảm cân nên có (chỉ khi đang giảm cân); số cân viết theo đơn vị người dùng
-function vietTienDo(tienDo: TienDo, hoSo: HoSoCoach): string[] {
+function vietTienDo(tienDo: BaoCaoCanNang, hoSo: HoSoCoach): string[] {
   const tomTat = tienDo.tom_tat;
   const dong: string[] = [];
   dong.push(`- Cân nặng theo đường xu hướng 7 ngày: ${tienDo.can_nang_xu_huong === null ? 'chưa ghi cân lần nào' : vietCanNang(tienDo.can_nang_xu_huong, hoSo.don_vi, hoSo.he_so_don_vi)}`);

@@ -16,8 +16,8 @@ export type TomTatBonTuan = {
   danh_gia_toc_do: 'nhanh_qua' | 'trong_khoang' | 'cham_hon' | null;
 };
 
-// Mọi thứ tab Tiến độ cần
-export type TienDo = {
+// Mọi thứ màn Báo cáo cân nặng cần
+export type BaoCaoCanNang = {
   ngay: string;
   can_nang: DiemCanNang[];
   can_nang_xu_huong: number | null;
@@ -28,14 +28,14 @@ export type TienDo = {
   giam_can_kg_moi_thang_cao: number;
 };
 
-// Lấy tiến độ tính tới một ngày, ví dụ ngay = "2026-10-06"
-export async function layTienDo(ngay: string): Promise<TienDo> {
-  const ketQua = await callApi('GET', `/tien-do/ngay/${ngay}`);
-  return ketQua as TienDo;
+// Lấy báo cáo cân nặng tính tới một ngày, ví dụ ngay = "2026-10-06"
+export async function layBaoCaoCanNang(ngay: string): Promise<BaoCaoCanNang> {
+  const ketQua = await callApi('GET', `/can-nang/ngay/${ngay}`);
+  return ketQua as BaoCaoCanNang;
 }
 
-// Ghi cân của một ngày (ghi lại trong ngày thì đè), nhận lại tiến độ mới
-export async function ghiCanNang(ngay: string, canNangKg: number): Promise<TienDo> {
-  const ketQua = await callApi('PUT', '/tien-do/can-nang', { ngay: ngay, can_nang_kg: canNangKg });
-  return ketQua as TienDo;
+// Ghi cân của một ngày (ghi lại trong ngày thì đè), nhận lại báo cáo cân nặng mới
+export async function ghiCanNang(ngay: string, canNangKg: number): Promise<BaoCaoCanNang> {
+  const ketQua = await callApi('PUT', '/can-nang', { ngay: ngay, can_nang_kg: canNangKg });
+  return ketQua as BaoCaoCanNang;
 }

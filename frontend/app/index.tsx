@@ -31,7 +31,7 @@ export default function StartScreen() {
     return <Redirect href="/auth/Login" />;
   }
   if (!user.da_co_ho_so) {
-    return <Redirect href="/ho-so/SuaHoSo" />;
+    return <Redirect href="/ho-so/TaoSuaHoSo" />;
   }
   return <Redirect href="/(tabs)" />;
 }

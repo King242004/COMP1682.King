@@ -1,9 +1,8 @@
-import { layHoSo } from '../ho-so/HoSoQueries.ts';
-import { phanLoaiBmi, tinhBmi } from '../ho-so/HoSoService.ts';
+import { phanLoaiBmi, tinhBmi, xemHoSo } from '../ho-so/HoSoService.ts';
 import type { MucTieu } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { layCanXuHuongGanNhat, SO_NGAY_XU_HUONG } from '../tien-do/TienDoQueries.ts';
+import { layCanXuHuongGanNhat, SO_NGAY_XU_HUONG } from '../can-nang/CanNangQueries.ts';
 
 // Mức mỡ bụng theo tỉ lệ vòng eo / chiều cao (NICE NG246)
 export type MucEo = 'trong_khuyen_nghi' | 'cao' | 'rat_cao';
@@ -23,12 +22,6 @@ export type TienDoLoTrinh = {
   so_kg_da_di: number;
   so_kg_can_di: number;
   phan_tram: number;
-};
-
-// Khoảng số tháng ước tính: đi nhanh nhất cho phép và đi chậm nhất
-export type SoThang = {
-  it_nhat: number;
-  nhieu_nhat: number;
 };
 
 // Cân gần đây so với khoảng giữ cân: trong khoảng, cao hơn hay thấp hơn
@@ -63,12 +56,11 @@ type LoTrinh = {
   can_bat_dau_kg: number | null;
   // Chỉ có khi giảm / tăng và đã đặt cân mục tiêu; số tháng và các mốc chỉ có khi giảm cân
   tien_do: TienDoLoTrinh | null;
-  so_thang: SoThang | null;
+  so_thang: number | null;
   cac_moc: MocLoTrinh[];
   // Chỉ có khi giữ cân
   khoang_giu: KhoangGiuCan | null;
-  kg_moi_thang_thap: number;
-  kg_moi_thang_cao: number;
+  kg_moi_thang: number;
   muc_tieu_calo: number;
   phut_van_dong_moi_ngay: number;
 };
@@ -103,12 +95,18 @@ export function vietCauNhanXet(phanLoaiBmi: string, mucEo: MucEo | null): string
   return `${nhanBmi}, ${CHU_MUC_EO[mucEo]}`;
 }
 
-// Số tháng giảm cân: chia cho mức nhanh nhất ra số tháng ít nhất, chia cho mức chậm nhất ra số tháng nhiều nhất
-export function tinhSoThang(soKg: number, kgMoiThangThap: number, kgMoiThangCao: number): SoThang {
-  return {
-    it_nhat: Math.ceil(soKg / kgMoiThangCao),
-    nhieu_nhat: Math.ceil(soKg / kgMoiThangThap),
-  };
+// Tốc độ giảm cân thật (kg mỗi tháng): phần calo bớt so với giữ cân chia số kcal ứng với 1 kg/tháng, làm tròn 1 số lẻ
+export function tinhSoKgGiamMoiThang(giuCan: number, mucTieuCalo: number, soKcalBotChoMoiKg: number): number {
+  const kcalBot = Math.max(giuCan - mucTieuCalo, 0);
+  return Math.round((kcalBot / soKcalBotChoMoiKg) * 10) / 10;
+}
+
+// Số tháng giảm cân: số kg cần giảm chia tốc độ, làm tròn lên; tốc độ bằng 0 thì không tính được
+export function tinhSoThang(soKg: number, kgMoiThang: number): number | null {
+  if (kgMoiThang <= 0) {
+    return null;
+  }
+  return Math.ceil(soKg / kgMoiThang);
 }
 
 // Các mốc giảm cân theo tháng: mỗi tháng trừ kgMoiThang, mốc cuối là cân mục tiêu
@@ -179,7 +177,8 @@ export function tinhKhoangGiu(canGiuQuanhKg: number, canGanNhatKg: number, tyLeD
 
 // Tính lộ trình của một người từ hồ sơ và các số trong bảng quy_dinh
 export async function xemLoTrinh(nguoiDungId: number): Promise<LoTrinh> {
-  const hoSo = await layHoSo(nguoiDungId);
+  // Hồ sơ kèm TDEE (năng lượng giữ cân) để tính tốc độ thật
+  const hoSo = await xemHoSo(nguoiDungId);
   if (hoSo.chieu_cao_cm === null || hoSo.can_nang_kg === null || hoSo.muc_tieu === null || hoSo.muc_tieu_calo === null) {
     throw new HttpError(400, 'Hãy thiết lập hồ sơ trước để có lộ trình');
   }
@@ -216,16 +215,21 @@ export async function xemLoTrinh(nguoiDungId: number): Promise<LoTrinh> {
   }
 
   // Lộ trình chỉ có khi giảm / tăng và đã đặt cân mục tiêu; riêng giảm cân có số tháng và các mốc
-  const kgMoiThangThap = await layQuyDinh('giam_can_kg_moi_thang_thap');
-  const kgMoiThangCao = await layQuyDinh('giam_can_kg_moi_thang_cao');
+  // Tốc độ thật lấy từ phần calo bớt thật, nên luôn khớp mục tiêu calo (kể cả khi mức tối thiểu QĐ 2892 chặn)
+  let kgMoiThang = 0;
+  if (hoSo.muc_tieu === 'giam' && hoSo.nang_luong_giu_can !== null) {
+    kgMoiThang = tinhSoKgGiamMoiThang(hoSo.nang_luong_giu_can, hoSo.muc_tieu_calo, await layQuyDinh('giam_can_kcal_bot_cho_moi_kg'));
+  }
   let tienDo: TienDoLoTrinh | null = null;
-  let soThang: SoThang | null = null;
+  let soThang: number | null = null;
   let cacMoc: MocLoTrinh[] = [];
   if (hoSo.muc_tieu !== 'giu' && hoSo.can_muc_tieu_kg !== null && hoSo.can_bat_dau_kg !== null) {
     tienDo = tinhTienDo(hoSo.muc_tieu, hoSo.can_bat_dau_kg, hoSo.can_muc_tieu_kg, canGanNhatKg);
     if (hoSo.muc_tieu === 'giam') {
-      soThang = tinhSoThang(tienDo.so_kg_can_di, kgMoiThangThap, kgMoiThangCao);
-      cacMoc = tinhCacMoc(hoSo.can_bat_dau_kg, hoSo.can_muc_tieu_kg, canGanNhatKg, kgMoiThangThap);
+      soThang = tinhSoThang(tienDo.so_kg_can_di, kgMoiThang);
+      if (kgMoiThang > 0) {
+        cacMoc = tinhCacMoc(hoSo.can_bat_dau_kg, hoSo.can_muc_tieu_kg, canGanNhatKg, kgMoiThang);
+      }
     }
   }
 
@@ -255,8 +259,7 @@ export async function xemLoTrinh(nguoiDungId: number): Promise<LoTrinh> {
     so_thang: soThang,
     cac_moc: cacMoc,
     khoang_giu: khoangGiu,
-    kg_moi_thang_thap: kgMoiThangThap,
-    kg_moi_thang_cao: kgMoiThangCao,
+    kg_moi_thang: kgMoiThang,
     muc_tieu_calo: hoSo.muc_tieu_calo,
     phut_van_dong_moi_ngay: await layQuyDinh('phut_van_dong_moi_ngay'),
   };

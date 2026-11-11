@@ -10,10 +10,9 @@ import { askGeminiForJson } from '../shared/geminiClient.ts';
 const TEN_MON_DAI_NHAT = 100;
 const KHAU_PHAN_DAI_NHAT = 100;
 const GHI_CHU_DAI_NHAT = 200;
-const MO_TA_DAI_NHAT = 200;
 const CALO_LON_NHAT = 10000;
 
-// Ảnh nhận món đưa 3 khả năng; ước tính theo tên hoặc câu mô tả chỉ cần 1
+// Ảnh nhận món đưa 3 khả năng; ước tính theo tên chỉ cần 1
 const SO_KHA_NANG_ANH = 3;
 const SO_KHA_NANG_TEN = 1;
 
@@ -100,7 +99,7 @@ function lamTronMotSoLe(so: number): number {
 }
 
 // Muối, đường, béo no: hợp lệ thì làm tròn, sai hoặc thiếu thì null (vẫn giữ khả năng đó)
-function docSoGamPhu(giaTri: unknown): number | null {
+function docSoGamKhongBatBuoc(giaTri: unknown): number | null {
   if (laSoKhongAm(giaTri)) {
     return lamTronMotSoLe(giaTri);
   }
@@ -151,9 +150,9 @@ export function docKetQuaNhanMon(duLieu: unknown, soKhaNangToiDa: number): KetQu
       dam_g: lamTronMotSoLe(khaNang.dam_g),
       tinh_bot_g: lamTronMotSoLe(khaNang.tinh_bot_g),
       beo_g: lamTronMotSoLe(khaNang.beo_g),
-      muoi_g: docSoGamPhu(khaNang.muoi_g),
-      duong_g: docSoGamPhu(khaNang.duong_g),
-      beo_no_g: docSoGamPhu(khaNang.beo_no_g),
+      muoi_g: docSoGamKhongBatBuoc(khaNang.muoi_g),
+      duong_g: docSoGamKhongBatBuoc(khaNang.duong_g),
+      beo_no_g: docSoGamKhongBatBuoc(khaNang.beo_no_g),
       do_tin_cay: doTinCay,
       thanh_phan: thanhPhan,
     });
@@ -360,31 +359,6 @@ Nếu tên không phải đồ ăn hoặc đồ uống, trả về la_mon_an = f
     }
   }
   return ganCanhBaoDiUng(ketQua, nguoiDungId);
-}
-
-// Ước tính số liệu từ một câu người dùng tả bữa vừa ăn, gộp thành một món
-export async function uocTinhTheoMoTa(duLieu: Record<string, unknown>, nguoiDungId: number): Promise<KetQuaNhanMonCoCanhBao> {
-  const moTa = duLieu.mo_ta;
-  if (typeof moTa !== 'string' || moTa.trim() === '') {
-    throw new HttpError(400, 'Hãy ghi bạn đã ăn gì');
-  }
-  if (moTa.trim().length > MO_TA_DAI_NHAT) {
-    throw new HttpError(400, `Câu mô tả tối đa ${MO_TA_DAI_NHAT} ký tự`);
-  }
-
-  const loiNhac = `Bạn là chuyên gia dinh dưỡng, rành món ăn Việt Nam.
-Người dùng tả bữa vừa ăn: "${moTa.trim()}".
-Hãy gộp tất cả những gì người dùng tả thành MỘT món (nhiều thứ thì gộp tên, ví dụ "Phở bò, thêm trứng") và ước tính theo cách nấu phổ biến ở Việt Nam.
-Trả về la_mon_an = true và đúng 1 khả năng trong kha_nang:
-- ten_mon: tên món ngắn gọn bằng tiếng Việt
-- khau_phan: lượng người dùng ghi, bằng tiếng Việt; nếu người dùng không ghi lượng thì coi là 1 phần thường và ghi đúng "1 phần (AI giả định)"
-- so_calo (kcal), dam_g, tinh_bot_g, beo_g (gam) cho cả lượng đó
-- muoi_g (gam muối, tính cả nước mắm, bột ngọt, hạt nêm quy ra muối), duong_g (gam đường), beo_no_g (gam chất béo no) cho cả lượng đó
-- do_tin_cay: từ 0 đến 1, mức bạn chắc chắn về con số
-Nếu câu không nói về đồ ăn hoặc đồ uống, trả về la_mon_an = false và kha_nang rỗng.`;
-
-  const traLoi = await askGeminiForJson(await themLoiDanDonVi(loiNhac, nguoiDungId), KHUON_KET_QUA);
-  return ganCanhBaoDiUng(docKetQuaNhanMon(traLoi, SO_KHA_NANG_TEN), nguoiDungId);
 }
 
 // Nhận món từ ảnh chụp, trả tối đa 3 khả năng

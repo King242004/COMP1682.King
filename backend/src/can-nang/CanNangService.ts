@@ -4,10 +4,10 @@ import { layHoSo } from '../ho-so/HoSoQueries.ts';
 import { capNhatCanNangHoSo } from '../ho-so/HoSoService.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { layCanNangCacNgay, luuCanNang, SO_NGAY_XU_HUONG } from './TienDoQueries.ts';
-import type { LanCan } from './TienDoQueries.ts';
+import { layCanNangCacNgay, luuCanNang, SO_NGAY_XU_HUONG } from './CanNangQueries.ts';
+import type { LanCan } from './CanNangQueries.ts';
 
-// Số ngày của biểu đồ, của thẻ "Kết quả 4 tuần" (số ngày của đường xu hướng ở TienDoQueries.ts); là lựa chọn giao diện, không phải luật dinh dưỡng
+// Số ngày của biểu đồ, của thẻ "Kết quả 4 tuần" (số ngày của đường xu hướng ở CanNangQueries.ts); là lựa chọn giao diện, không phải luật dinh dưỡng
 const SO_NGAY_BIEU_DO = 30;
 const SO_NGAY_TOM_TAT = 28;
 
@@ -23,7 +23,7 @@ const CAN_NANG_LON_NHAT = 300;
 const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
 
 // Mọi thứ tab Tiến độ và coach cần
-export type TienDo = {
+export type BaoCaoCanNang = {
   ngay: string;
   can_nang: DiemCanNang[];
   can_nang_xu_huong: number | null;
@@ -152,8 +152,8 @@ export function tomTatBonTuan(dauVao: DauVaoTomTat): TomTatBonTuan {
   };
 }
 
-// Lấy tiến độ tính tới một ngày: các điểm cân 30 ngày, cân theo xu hướng, tóm tắt 4 tuần
-export async function xemTienDo(nguoiDungId: number, ngay: string): Promise<TienDo> {
+// Lấy báo cáo cân nặng tính tới một ngày: các điểm cân 30 ngày, cân theo xu hướng, tóm tắt 4 tuần
+export async function xemBaoCaoCanNang(nguoiDungId: number, ngay: string): Promise<BaoCaoCanNang> {
   if (!DANG_NGAY.test(ngay)) {
     throw new HttpError(400, 'Ngày không hợp lệ');
   }
@@ -203,8 +203,8 @@ export function lamTronCanNang(kg: number): number {
   return Math.round(kg * 100) / 100;
 }
 
-// Ghi cân của một ngày, cập nhật hồ sơ và mục tiêu calo, rồi trả về tiến độ mới
-export async function ghiCanNang(nguoiDungId: number, duLieu: Record<string, unknown>): Promise<TienDo> {
+// Ghi cân của một ngày, cập nhật hồ sơ và mục tiêu calo, rồi trả về báo cáo cân nặng mới
+export async function ghiCanNang(nguoiDungId: number, duLieu: Record<string, unknown>): Promise<BaoCaoCanNang> {
   const ngay = duLieu.ngay;
   if (typeof ngay !== 'string' || !DANG_NGAY.test(ngay)) {
     throw new HttpError(400, 'Ngày không hợp lệ');
@@ -217,5 +217,5 @@ export async function ghiCanNang(nguoiDungId: number, duLieu: Record<string, unk
   const canNangLamTron = lamTronCanNang(canNangKg);
   await luuCanNang(nguoiDungId, ngay, canNangLamTron);
   await capNhatCanNangHoSo(nguoiDungId, canNangLamTron);
-  return xemTienDo(nguoiDungId, ngay);
+  return xemBaoCaoCanNang(nguoiDungId, ngay);
 }

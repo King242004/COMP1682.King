@@ -6,7 +6,7 @@ import { layHeSoDonVi } from '../don-vi/DonViService.ts';
 import { vietDanhSachDiUngChoAi } from '../di-ung/DiUngService.ts';
 import { tinhTuoi, xemHoSo } from '../ho-so/HoSoService.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { xemTienDo } from '../tien-do/TienDoService.ts';
+import { xemBaoCaoCanNang } from '../can-nang/CanNangService.ts';
 import { askGeminiForJson } from '../shared/geminiClient.ts';
 import { taoLoiNhac } from './TaoLoiNhac.ts';
 import { layTinNhanGanNhat, themTinNhan, xoaTinNhan } from './TuVanQueries.ts';
@@ -58,7 +58,7 @@ export async function hoiCoach(nguoiDungId: number, duLieu: Record<string, unkno
   const nhatKy = await xemNhatKyNgay(nguoiDungId, ngay);
   const bayNgay = await layTongCaloCacNgay(nguoiDungId, ngay, SO_NGAY_NHAN_XET);
   const monHayAn = await layMonHayAn(nguoiDungId, SO_MON_HAY_AN);
-  const tienDo = await xemTienDo(nguoiDungId, ngay);
+  const tienDo = await xemBaoCaoCanNang(nguoiDungId, ngay);
   const lichSu = await layTinNhanGanNhat(nguoiDungId, SO_TIN_GUI_AI);
 
   // Tuổi tính từ ngày sinh tới ngày đang hỏi

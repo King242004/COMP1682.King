@@ -20,15 +20,10 @@ export function CacMocThang({ loTrinh }: CacMocThangProps) {
     return null;
   }
 
-  // Dòng thời gian: "Khoảng 3–4 tháng · giảm 2–3 kg mỗi tháng"; hai số tháng bằng nhau thì ghi một số
+  // Dòng thời gian: "Khoảng 4 tháng · giảm khoảng 2 kg mỗi tháng"
   let dongThoiGian = '';
   if (loTrinh.so_thang !== null) {
-    let soThang = `${loTrinh.so_thang.it_nhat}–${loTrinh.so_thang.nhieu_nhat}`;
-    if (loTrinh.so_thang.it_nhat === loTrinh.so_thang.nhieu_nhat) {
-      soThang = `${loTrinh.so_thang.it_nhat}`;
-    }
-    const kgThap = doiKgRaDonVi(loTrinh.kg_moi_thang_thap, donVi, heSo).toLocaleString('vi-VN');
-    dongThoiGian = `Khoảng ${soThang} tháng · giảm ${kgThap}–${vietCanNang(loTrinh.kg_moi_thang_cao, donVi, heSo)} mỗi tháng`;
+    dongThoiGian = `Khoảng ${loTrinh.so_thang} tháng · giảm khoảng ${vietCanNang(loTrinh.kg_moi_thang, donVi, heSo)} mỗi tháng`;
   }
 
   // Chữ dưới thanh: "Đã giảm 2 / 7 kg" hoặc "Đã tăng 1 / 7 kg"
@@ -57,6 +52,9 @@ export function CacMocThang({ loTrinh }: CacMocThangProps) {
         {chuDaDi} {soKgDaDi} / {vietCanNang(tienDo.so_kg_can_di, donVi, heSo)}
       </Text>
 
+      {/* Cân theo xu hướng, giống dòng ở thẻ Giữ cân */}
+      <Text style={styles.chuCanGanDay}>Cân gần đây {vietCanNang(loTrinh.can_gan_nhat_kg, donVi, heSo)}</Text>
+
       {/* Các mốc theo tháng nối bằng đường mảnh; mốc cuối (cân mục tiêu) có cờ */}
       {loTrinh.cac_moc.length > 0 ? (
         <View style={styles.danhSachMoc}>
@@ -70,6 +68,11 @@ export function CacMocThang({ loTrinh }: CacMocThangProps) {
           ))}
         </View>
       ) : null}
+
+      {/* Dòng nguồn (chỉ khi giảm cân): tốc độ lấy theo đâu, và đây chỉ là ước tính */}
+      {loTrinh.muc_tieu === 'giam' ? (
+        <Text style={styles.chuNguon}>Ước tính theo mức giảm cân từ từ của Bộ Y tế (2022). Cân thật có thể nhanh hoặc chậm hơn.</Text>
+      ) : null}
     </Card>
   );
 }
@@ -80,17 +83,26 @@ type DongMocProps = {
   laMocCuoi: boolean;
 };
 
-// Một mốc: chấm theo trạng thái (đầy có ✓ / viền / xám), đường nối xuống mốc sau, chữ "Tháng n · cân"
+// Một mốc: chấm theo trạng thái (đầy có ✓ / viền / xám), đường nối xuống mốc sau, chữ "Tháng n · cân", viên chữ trạng thái bên phải
 function DongMoc({ moc, chuCan, laMocCuoi }: DongMocProps) {
   let kieuCham: ViewStyle = styles.chamChuaToi;
   let kieuChu: TextStyle = styles.chuChuaToi;
+  let chuVien = 'Dự kiến';
+  let kieuVien: ViewStyle | null = null;
+  let kieuChuVien: TextStyle = styles.chuVienChuaToi;
   if (moc.trang_thai === 'da_dat') {
     kieuCham = styles.chamDaDat;
     kieuChu = styles.chuDaDat;
+    chuVien = 'Đạt';
+    kieuVien = styles.vienDaDat;
+    kieuChuVien = styles.chuVienDaDat;
   }
   if (moc.trang_thai === 'dang_toi') {
     kieuCham = styles.chamDangToi;
     kieuChu = styles.chuDangToi;
+    chuVien = 'Hiện tại';
+    kieuVien = styles.vienDangToi;
+    kieuChuVien = styles.chuVienDangToi;
   }
 
   return (
@@ -105,6 +117,9 @@ function DongMoc({ moc, chuCan, laMocCuoi }: DongMocProps) {
         Tháng {moc.thang} · {chuCan}
       </Text>
       {laMocCuoi ? <MaterialCommunityIcons name="flag-outline" size={16} color={colors.primary} /> : null}
+      <View style={[styles.vien, kieuVien]}>
+        <Text style={[styles.chuVien, kieuChuVien]}>{chuVien}</Text>
+      </View>
     </View>
   );
 }
@@ -136,6 +151,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     textAlign: 'right',
+    marginTop: 4,
+  },
+  chuCanGanDay: {
+    fontSize: fontSizes.secondary,
+    color: colors.text,
     marginTop: 4,
   },
   danhSachMoc: {
@@ -185,6 +205,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chuChuaToi: {
+    color: colors.textSecondary,
+  },
+  chuNguon: {
+    fontSize: fontSizes.label,
+    color: colors.textSecondary,
+    marginTop: spacing.medium,
+  },
+  vien: {
+    marginLeft: 'auto',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.small,
+    paddingVertical: 2,
+  },
+  vienDaDat: {
+    backgroundColor: colors.proteinLight,
+  },
+  vienDangToi: {
+    backgroundColor: colors.primaryLight,
+  },
+  chuVien: {
+    fontSize: fontSizes.label,
+  },
+  chuVienDaDat: {
+    color: colors.protein,
+  },
+  chuVienDangToi: {
+    color: colors.textOnPrimaryLight,
+  },
+  chuVienChuaToi: {
     color: colors.textSecondary,
   },
 });

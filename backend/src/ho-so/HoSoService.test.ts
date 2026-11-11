@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { chonCanBatDau, chonCanGiuQuanh, chonMucVanDongTheoTuoi, docMaNhomDiUng, docNgaySinh, kiemTraCanMucTieu, phanLoaiBmi, tinhBmi, tinhChuyenHoaCoBan, tinhMucTieuCalo, tinhTuoi } from './HoSoService.ts';
+import { chonCanBatDau, chonCanGiuQuanh, chonMucVanDongTheoTuoi, chonTocDoGiamCan, docMaNhomDiUng, docNgaySinh, kiemTraCanMucTieu, duocChonNhanh, phanLoaiBmi, tinhBmi, tinhChuyenHoaCoBan, tinhMucTieuCalo, tinhTuoi } from './HoSoService.ts';
 
 // Ngưỡng giống bảng quy_dinh (QĐ 2892, Bảng 4.1)
 const nguong = { thieuCan: 18.5, thuaCan: 23, beoPhiDo1: 25, beoPhiDo2: 30 };
@@ -19,7 +19,7 @@ test('phân loại đúng ở từng ngưỡng', () => {
   assert.equal(phanLoaiBmi(30, nguong), 'Béo phì độ II');
 });
 
-// Giống bảng quy_dinh: Ganpule (Chuẩn Nhật 2025), hằng số của nữ, hệ số vận động nhẹ 1,50, QĐ 2892 (22 và 25 kcal/kg), cắt tối đa 500 (KSSO 2022)
+// Giống bảng quy_dinh: Ganpule (Chuẩn Nhật 2025), hằng số của nữ, hệ số vận động nhẹ 1,50, QĐ 2892 (22 và 25 kcal/kg), tốc độ Vừa 2 kg/tháng, 250 kcal mỗi kg/tháng (KSSO 2022)
 const heSoNuVanDongNhe = {
   ganpuleHeSoCan: 0.0481,
   ganpuleHeSoChieuCao: 0.0234,
@@ -29,7 +29,8 @@ const heSoNuVanDongNhe = {
   heSoVanDong: 1.5,
   bmiLyTuong: 22,
   giamCanKcalMoiKg: 25,
-  giamCanKcalCatToiDa: 500,
+  soKgGiamMoiThang: 2,
+  soKcalBotChoMoiKg: 250,
 };
 
 // Giống trên nhưng là hằng số của nam
@@ -59,6 +60,23 @@ test('giảm cân không cao hơn giữ cân: nữ 90 tuổi, 145 cm, 46 kg, h�
 test('nam dùng hằng số của nam: 30 tuổi, 170 cm, 100 kg giữ cân 2849, giảm cân 2349 kcal', () => {
   assert.equal(tinhMucTieuCalo({ tuoi: 30, chieuCaoCm: 170, canNangKg: 100, mucTieu: 'giu' }, heSoNamVanDongNhe), 2849);
   assert.equal(tinhMucTieuCalo({ tuoi: 30, chieuCaoCm: 170, canNangKg: 100, mucTieu: 'giam' }, heSoNamVanDongNhe), 2349);
+});
+
+test('giảm nhanh 3 kg/tháng cắt 750 kcal: nam 30 tuổi, 170 cm, 100 kg ra 2849 − 750 = 2099 kcal', () => {
+  const heSoNamGiamNhanh = { ...heSoNamVanDongNhe, soKgGiamMoiThang: 3 };
+  assert.equal(tinhMucTieuCalo({ tuoi: 30, chieuCaoCm: 170, canNangKg: 100, mucTieu: 'giam' }, heSoNamGiamNhanh), 2099);
+});
+
+test('giảm nhanh vẫn không thấp hơn mức QĐ 2892: nữ 30 tuổi, 155 cm, 55 kg vẫn ra 1321 kcal', () => {
+  const heSoNuGiamNhanh = { ...heSoNuVanDongNhe, soKgGiamMoiThang: 3 };
+  assert.equal(tinhMucTieuCalo({ tuoi: 30, chieuCaoCm: 155, canNangKg: 55, mucTieu: 'giam' }, heSoNuGiamNhanh), 1321);
+});
+
+test('nút Nhanh chỉ chọn được khi bớt đủ 750 kcal mà vẫn trên mức tối thiểu', () => {
+  assert.equal(duocChonNhanh(2849, 1590, 3, 250), true);
+  assert.equal(duocChonNhanh(1751, 1321, 3, 250), false);
+  assert.equal(duocChonNhanh(2340, 1590, 3, 250), true);
+  assert.equal(duocChonNhanh(2339, 1590, 3, 250), false);
 });
 
 test('tăng cân: nam 25 tuổi, 165 cm, 50 kg ăn theo cân lý tưởng 59,9 kg, ra 2141 kcal (giữ cân là 1970)', () => {
@@ -159,6 +177,7 @@ const hoSoDangGiam = {
   can_muc_tieu_kg: 65,
   can_bat_dau_kg: 72,
   can_giu_quanh_kg: null,
+  toc_do_giam_can: 'vua' as const,
 };
 
 test('chọn cân lúc bắt đầu: giữ số cũ khi không đổi mục tiêu, tính lại khi đổi', () => {
@@ -179,4 +198,22 @@ test('chọn cân giữ quanh: mới chuyển sang giữ cân thì lấy cân l�
   assert.equal(chonCanGiuQuanh({ ...hoSoDangGiu, can_giu_quanh_kg: null }, 'giu', 82), 82);
   assert.equal(chonCanGiuQuanh(hoSoDangGiu, 'giam', 82), null);
   assert.equal(chonCanGiuQuanh(hoSoDangGiam, 'tang', 70), null);
+});
+
+test('tốc độ giảm cân: gửi Nhanh khi đang giảm cân thì lưu Nhanh', () => {
+  assert.equal(chonTocDoGiamCan('vua', 'nhanh', 'giam', 'giam'), 'nhanh');
+});
+
+test('tốc độ giảm cân: không gửi thì giữ tốc độ cũ, chưa có thì Vừa', () => {
+  assert.equal(chonTocDoGiamCan('nhanh', undefined, 'giam', 'giam'), 'nhanh');
+  assert.equal(chonTocDoGiamCan(null, undefined, 'giam', 'giam'), 'vua');
+});
+
+test('tốc độ giảm cân: mục tiêu lưu không phải giảm cân thì không có tốc độ', () => {
+  assert.equal(chonTocDoGiamCan('nhanh', 'nhanh', 'giam', 'giu'), null);
+  assert.equal(chonTocDoGiamCan('vua', undefined, 'tang', 'tang'), null);
+});
+
+test('tốc độ giảm cân: gửi giá trị lạ thì báo lỗi', () => {
+  assert.throws(() => chonTocDoGiamCan('vua', 'cham', 'giam', 'giam'), /Tốc độ giảm cân không hợp lệ/);
 });

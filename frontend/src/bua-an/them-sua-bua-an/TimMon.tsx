@@ -18,17 +18,17 @@ import { ChonSoSuat } from './tim-mon/ChonSoSuat';
 const SO_DONG_MOI_NHOM = 5;
 
 type TimMonProps = {
-  isDisabled: boolean;
+  biKhoa: boolean;
   onChon: (mon: MonDaChon) => void;
 };
 
 // Đưa chữ về dạng để so: chữ thường, bỏ dấu phẩy (gõ "khoai lang luộc" vẫn ra "Khoai lang, luộc")
-function chuDeSo(chu: string): string {
+function chuanBiChuDeTim(chu: string): string {
   return chu.trim().toLowerCase().replaceAll(',', '');
 }
 
 // Thẻ "Tìm món" ở bước 1 của màn thêm món: 2 nhóm món của Viện (theo suất) và thực phẩm (trên 100 g)
-export function TimMon({ isDisabled, onChon }: TimMonProps) {
+export function TimMon({ biKhoa, onChon }: TimMonProps) {
   const { donVi, heSo } = useDonVi();
   // Cả 2 kho tải một lần; null là đang tải
   const [tatCaMon, setTatCaMon] = useState<MonTraCuu[] | null>(null);
@@ -41,10 +41,10 @@ export function TimMon({ isDisabled, onChon }: TimMonProps) {
 
   // Mở màn là tải cả 2 kho
   useEffect(() => {
-    taiHaiKho();
+    taiMonVaThucPham();
   }, []);
 
-  async function taiHaiKho() {
+  async function taiMonVaThucPham() {
     setLoi('');
     try {
       setTatCaMon(await layTatCaMon());
@@ -61,17 +61,17 @@ export function TimMon({ isDisabled, onChon }: TimMonProps) {
   }
 
   // Lọc 2 kho theo từ khóa: so với tên có dấu và tên không dấu
-  const tuKhoaDeSo = chuDeSo(tuKhoa);
+  const tuKhoaDeSo = chuanBiChuDeTim(tuKhoa);
   let monPhuHop: MonTraCuu[] = [];
   if (tatCaMon !== null) {
     monPhuHop = tatCaMon.filter(
-      (mon) => chuDeSo(mon.ten_mon).includes(tuKhoaDeSo) || chuDeSo(mon.ten_khong_dau).includes(tuKhoaDeSo),
+      (mon) => chuanBiChuDeTim(mon.ten_mon).includes(tuKhoaDeSo) || chuanBiChuDeTim(mon.ten_khong_dau).includes(tuKhoaDeSo),
     );
   }
   let thucPhamPhuHop: ThucPham[] = [];
   if (tatCaThucPham !== null) {
     thucPhamPhuHop = tatCaThucPham.filter(
-      (thucPham) => chuDeSo(thucPham.ten_thuc_pham).includes(tuKhoaDeSo) || thucPham.ten_khong_dau.includes(tuKhoaDeSo),
+      (thucPham) => chuanBiChuDeTim(thucPham.ten_thuc_pham).includes(tuKhoaDeSo) || thucPham.ten_khong_dau.includes(tuKhoaDeSo),
     );
   }
   const daTaiXong = tatCaMon !== null && tatCaThucPham !== null;
@@ -81,13 +81,13 @@ export function TimMon({ isDisabled, onChon }: TimMonProps) {
   return (
     <Card>
       <Text style={styles.tieuDeThe}>Tìm món</Text>
-      {loi ? <ErrorBox message={loi} onRetry={taiHaiKho} /> : null}
+      {loi ? <ErrorBox message={loi} onRetry={taiMonVaThucPham} /> : null}
 
       {/* Đã bấm một món: chọn số suất */}
-      {monDangChon ? <ChonSoSuat mon={monDangChon} isDisabled={isDisabled} onChon={onChon} onChonKhac={chonMonKhac} /> : null}
+      {monDangChon ? <ChonSoSuat mon={monDangChon} biKhoa={biKhoa} onChon={onChon} onChonKhac={chonMonKhac} /> : null}
 
       {/* Đã bấm một thực phẩm: gõ số gam */}
-      {thucPhamDangChon ? <ChonSoGam thucPham={thucPhamDangChon} isDisabled={isDisabled} onChon={onChon} onChonKhac={chonMonKhac} /> : null}
+      {thucPhamDangChon ? <ChonSoGam thucPham={thucPhamDangChon} biKhoa={biKhoa} onChon={onChon} onChonKhac={chonMonKhac} /> : null}
 
       {/* Chưa bấm dòng nào: ô tìm, dòng nguồn và 2 nhóm */}
       {!monDangChon && !thucPhamDangChon ? (
@@ -100,7 +100,7 @@ export function TimMon({ isDisabled, onChon }: TimMonProps) {
               onChangeText={setTuKhoa}
               placeholder="Ví dụ: phở bò, khoai lang"
               placeholderTextColor={colors.textSecondary}
-              editable={!isDisabled}
+              editable={!biKhoa}
             />
           </View>
           <Text style={styles.chuNguon}>Dữ liệu Viện Dinh dưỡng Quốc gia</Text>
@@ -122,7 +122,7 @@ export function TimMon({ isDisabled, onChon }: TimMonProps) {
                 <Pressable
                   key={mon.ma_so}
                   style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
-                  disabled={isDisabled}
+                  disabled={biKhoa}
                   onPress={() => setMonDangChon(mon)}
                 >
                   {/* Tên món, dưới là nhãn ⚠ nếu món có thứ người dùng dị ứng */}
@@ -148,7 +148,7 @@ export function TimMon({ isDisabled, onChon }: TimMonProps) {
                 <Pressable
                   key={thucPham.ma_so}
                   style={({ pressed }) => [styles.dong, pressed ? styles.dangBam : null]}
-                  disabled={isDisabled}
+                  disabled={biKhoa}
                   onPress={() => setThucPhamDangChon(thucPham)}
                 >
                   {/* Tên thực phẩm, dưới là nhãn ⚠ nếu có thứ người dùng dị ứng */}

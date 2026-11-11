@@ -18,12 +18,6 @@ export type TienDoLoTrinh = {
   phan_tram: number;
 };
 
-// Khoảng số tháng ước tính khi giảm cân
-export type SoThang = {
-  it_nhat: number;
-  nhieu_nhat: number;
-};
-
 // Cân gần đây so với khoảng giữ cân: trong khoảng, cao hơn hay thấp hơn
 export type TrangThaiGiuCan = 'trong_khoang' | 'cao_hon' | 'thap_hon';
 
@@ -56,12 +50,12 @@ export type LoTrinh = {
   can_bat_dau_kg: number | null;
   // Chỉ có khi giảm / tăng và đã đặt cân mục tiêu; số tháng và các mốc chỉ có khi giảm cân
   tien_do: TienDoLoTrinh | null;
-  so_thang: SoThang | null;
+  so_thang: number | null;
   cac_moc: MocLoTrinh[];
   // Chỉ có khi giữ cân
   khoang_giu: KhoangGiu | null;
-  kg_moi_thang_thap: number;
-  kg_moi_thang_cao: number;
+  // Số kg giảm mỗi tháng app ước tính khi giảm cân
+  kg_moi_thang: number;
   muc_tieu_calo: number;
   phut_van_dong_moi_ngay: number;
 };

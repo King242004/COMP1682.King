@@ -6,12 +6,12 @@ import type { MonHayAn } from '../BuaAnApi';
 
 type MonBanHayAnProps = {
   monHayAn: MonHayAn[];
-  isDisabled: boolean;
+  biKhoa: boolean;
   onChon: (mon: MonHayAn) => void;
 };
 
 // Thẻ các món người dùng hay ăn, bấm là điền sẵn; người mới chưa có món nào thì không hiện
-export function MonBanHayAn({ monHayAn, isDisabled, onChon }: MonBanHayAnProps) {
+export function MonBanHayAn({ monHayAn, biKhoa, onChon }: MonBanHayAnProps) {
   if (monHayAn.length === 0) {
     return null;
   }
@@ -22,8 +22,8 @@ export function MonBanHayAn({ monHayAn, isDisabled, onChon }: MonBanHayAnProps) 
       {monHayAn.map((mon) => (
         <Pressable
           key={mon.ten_mon}
-          style={({ pressed }) => [styles.dong, isDisabled ? styles.khoa : null, pressed ? styles.dangBam : null]}
-          disabled={isDisabled}
+          style={({ pressed }) => [styles.dong, biKhoa ? styles.khoa : null, pressed ? styles.dangBam : null]}
+          disabled={biKhoa}
           onPress={() => onChon(mon)}
         >
           <Text style={styles.tenMon}>{mon.ten_mon}</Text>

@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  canNangLamTronLen,
-  canNangLamTronXuong,
+  lamTronCanNangLen,
+  lamTronCanNangXuong,
   docCanNang,
   docChieuCaoFeetInch,
   docKhoiLuong,
@@ -121,8 +121,8 @@ test('giới hạn vòng eo theo đơn vị', () => {
 });
 
 test('làm tròn cân cho lời lỗi: sàn làm tròn lên, trần làm tròn xuống', () => {
-  assert.equal(canNangLamTronLen(53.465, 'met', HE_SO), 53.5);
-  assert.equal(canNangLamTronLen(53.465, 'anh_my', HE_SO), 117.9);
-  assert.equal(canNangLamTronXuong(67.375, 'met', HE_SO), 67.3);
-  assert.equal(canNangLamTronXuong(67.375, 'anh_my', HE_SO), 148.5);
+  assert.equal(lamTronCanNangLen(53.465, 'met', HE_SO), 53.5);
+  assert.equal(lamTronCanNangLen(53.465, 'anh_my', HE_SO), 117.9);
+  assert.equal(lamTronCanNangXuong(67.375, 'met', HE_SO), 67.3);
+  assert.equal(lamTronCanNangXuong(67.375, 'anh_my', HE_SO), 148.5);
 });

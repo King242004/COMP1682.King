@@ -2,7 +2,7 @@ import { layNhomDiUng, layNhomDiUngCuaNguoiDung } from '../di-ung/DiUngQueries.t
 import type { NhomDiUng } from '../di-ung/DiUngQueries.ts';
 import { layHeSoVanDong, layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { layCanXuHuongGanNhat, SO_NGAY_XU_HUONG } from '../tien-do/TienDoQueries.ts';
+import { layCanXuHuongGanNhat, SO_NGAY_XU_HUONG } from '../can-nang/CanNangQueries.ts';
 import { layHoSo, luuHoSo } from './HoSoQueries.ts';
 import type { HoSo, HoSoDeLuu } from './HoSoQueries.ts';
 
@@ -27,12 +27,18 @@ const DANG_NGAY = /^\d{4}-\d{2}-\d{2}$/;
 const DI_UNG_KIENG_AN_DAI_NHAT = 200;
 
 // Hồ sơ gửi về app: các cột đã lưu, kèm nhóm dị ứng đã chọn, BMI, BMR (chuyển hóa cơ bản) và TDEE (năng lượng giữ cân)
+// Kèm các cờ cho màn Lộ trình làm mờ lựa chọn không hợp (giống rào khi lưu) và cân lý tưởng để điền sẵn cân mục tiêu
 type HoSoHienThi = HoSo & {
   nhom_di_ung_da_chon: NhomDiUng[];
   bmi: number | null;
   phan_loai_bmi: string | null;
   chuyen_hoa_co_ban: number | null;
   nang_luong_giu_can: number | null;
+  duoc_chon_giam: boolean;
+  duoc_chon_tang: boolean;
+  duoc_chon_nang: boolean;
+  duoc_chon_nhanh_theo_muc: Record<MucVanDong, boolean>;
+  can_ly_tuong_kg: number | null;
 };
 
 // Những thứ màn hồ sơ cần: ngưỡng BMI và ngưỡng tuổi để làm mờ lựa chọn, 9 nhóm dị ứng để chọn
@@ -42,6 +48,8 @@ type LuaChonHoSo = {
   tuoi_cao_tuoi: number;
   bmi_thieu_can_cao_tuoi: number;
   tuoi_khong_co_muc_nang: number;
+  giam_can_kg_moi_thang_thap: number;
+  giam_can_kg_moi_thang_cao: number;
   danh_sach_nhom_di_ung: NhomDiUng[];
 };
 
@@ -96,7 +104,7 @@ export type HeSoGanpule = {
   kjMoiKcal: number;
 };
 
-// Các con số lấy từ database, đã chọn đúng theo giới, tuổi và mức vận động của người này
+// Các con số lấy từ database, đã chọn đúng theo giới, tuổi, mức vận động và tốc độ giảm cân của người này
 export type HeSoTinhCalo = {
   ganpuleHeSoCan: number;
   ganpuleHeSoChieuCao: number;
@@ -106,7 +114,9 @@ export type HeSoTinhCalo = {
   heSoVanDong: number;
   bmiLyTuong: number;
   giamCanKcalMoiKg: number;
-  giamCanKcalCatToiDa: number;
+  // Số kg giảm mỗi tháng theo tốc độ đã chọn (Vừa 2, Nhanh 3) và số kcal bớt mỗi ngày cho mỗi kg/tháng
+  soKgGiamMoiThang: number;
+  soKcalBotChoMoiKg: number;
 };
 
 // Chuyển hóa cơ bản theo công thức Ganpule (kcal/ngày); công thức ra MJ nên nhân 1000 ra kJ rồi đổi sang kcal
@@ -130,11 +140,11 @@ export function tinhMucTieuCalo(thongTin: ThongTinTinhCalo, heSo: HeSoTinhCalo):
     return Math.round(giuCan);
   }
 
-  // Giảm cân: lấy số lớn hơn giữa mức của QĐ 2892 và mức giữ cân trừ đi phần cắt tối đa, nhưng không cao hơn mức giữ cân
+  // Giảm cân: lấy số lớn hơn giữa mức của QĐ 2892 và mức giữ cân trừ phần bớt theo tốc độ, nhưng không cao hơn mức giữ cân
   if (thongTin.mucTieu === 'giam') {
     const mucQd2892 = canNangLyTuong * heSo.giamCanKcalMoiKg;
-    const mucCatToiDa = giuCan - heSo.giamCanKcalCatToiDa;
-    const mucGiamCan = Math.max(mucQd2892, mucCatToiDa);
+    const caloSauKhiBot = giuCan - heSo.soKcalBotChoMoiKg * heSo.soKgGiamMoiThang;
+    const mucGiamCan = Math.max(mucQd2892, caloSauKhiBot);
     return Math.round(Math.min(mucGiamCan, giuCan));
   }
 
@@ -144,6 +154,28 @@ export function tinhMucTieuCalo(thongTin: ThongTinTinhCalo, heSo: HeSoTinhCalo):
 }
 
 export type MucVanDong = 'nhe' | 'trung_binh' | 'nang';
+
+export type TocDoGiamCan = 'vua' | 'nhanh';
+
+// Chọn tốc độ giảm cân để lưu: không gửi thì giữ tốc độ cũ (chưa có thì Vừa); mục tiêu lưu không phải giảm cân thì không có tốc độ
+export function chonTocDoGiamCan(tocDoCu: TocDoGiamCan | null, tocDoGuiLen: unknown, mucTieuGuiLen: MucTieu, mucTieuLuu: MucTieu): TocDoGiamCan | null {
+  let tocDo: TocDoGiamCan = tocDoCu ?? 'vua';
+  if (tocDoGuiLen !== undefined && mucTieuGuiLen === 'giam') {
+    if (tocDoGuiLen !== 'vua' && tocDoGuiLen !== 'nhanh') {
+      throw new HttpError(400, 'Tốc độ giảm cân không hợp lệ');
+    }
+    tocDo = tocDoGuiLen;
+  }
+  if (mucTieuLuu !== 'giam') {
+    return null;
+  }
+  return tocDo;
+}
+
+// Nút "Nhanh" chọn được khi bớt đủ số kcal của tốc độ nhanh mà vẫn ăn từ mức tối thiểu (QĐ 2892) trở lên
+export function duocChonNhanh(giuCan: number, mucToiThieu: number, kgMoiThangNhanh: number, soKcalBotChoMoiKg: number): boolean {
+  return giuCan - mucToiThieu >= kgMoiThangNhanh * soKcalBotChoMoiKg;
+}
 
 // Số năm tròn từ ngày sinh tới một ngày (cả hai dạng năm-tháng-ngày); chưa tới sinh nhật năm đó thì trừ 1
 export function tinhTuoi(ngaySinh: string, ngay: string): number {
@@ -169,9 +201,9 @@ export function docNgaySinh(giaTri: unknown): string | null {
   return giaTri;
 }
 
-// Ngày hôm nay của server dạng năm-tháng-ngày (giờ UTC)
+// Ngày hôm nay của server dạng năm-tháng-ngày, theo múi giờ ở biến TZ (giờ Việt Nam)
 function layNgayHomNay(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('sv-SE');
 }
 
 // Đã tới tuổi không còn mức vận động nặng thì tính như trung bình; mức khác giữ nguyên
@@ -287,6 +319,11 @@ export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
       phan_loai_bmi: null,
       chuyen_hoa_co_ban: null,
       nang_luong_giu_can: null,
+      duoc_chon_giam: true,
+      duoc_chon_tang: true,
+      duoc_chon_nang: true,
+      duoc_chon_nhanh_theo_muc: { nhe: true, trung_binh: true, nang: true },
+      can_ly_tuong_kg: null,
     };
   }
 
@@ -309,8 +346,28 @@ export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
   });
 
   // TDEE = BMR x hệ số vận động; đã tới tuổi không còn mức nặng thì tính như trung bình (giống lúc ghi cân)
-  const mucVanDong = chonMucVanDongTheoTuoi(hoSo.muc_van_dong, tuoi, await layQuyDinh('tuoi_khong_co_muc_nang'));
+  const tuoiKhongCoMucNang = await layQuyDinh('tuoi_khong_co_muc_nang');
+  const mucVanDong = chonMucVanDongTheoTuoi(hoSo.muc_van_dong, tuoi, tuoiKhongCoMucNang);
   const nangLuongGiuCan = chuyenHoaCoBan * (await layHeSoVanDong(mucVanDong, tuoi));
+
+  // Cờ làm mờ lựa chọn, cùng rào với lúc lưu hồ sơ
+  const bmiLyTuong = await layQuyDinh('bmi_ly_tuong');
+  const chieuCaoMet = hoSo.chieu_cao_cm / 100;
+  const canLyTuongKg = chieuCaoMet * chieuCaoMet * bmiLyTuong;
+
+  // Nút "Nhanh" theo từng mức vận động, vì đổi mức vận động thì giữ cân và mức tối thiểu cùng đổi
+  const kgMoiThangNhanh = await layQuyDinh('giam_can_kg_moi_thang_cao');
+  const soKcalBotChoMoiKg = await layQuyDinh('giam_can_kcal_bot_cho_moi_kg');
+  const duocChonNhanhTheoMuc: Record<MucVanDong, boolean> = { nhe: false, trung_binh: false, nang: false };
+  const cacMucVanDong: MucVanDong[] = ['nhe', 'trung_binh', 'nang'];
+  for (const muc of cacMucVanDong) {
+    if (muc === 'nang' && tuoi >= tuoiKhongCoMucNang) {
+      continue;
+    }
+    const giuCanTheoMuc = chuyenHoaCoBan * (await layHeSoVanDong(muc, tuoi));
+    const mucToiThieu = canLyTuongKg * (await layQuyDinh(`giam_can_kcal_moi_kg_${muc}`));
+    duocChonNhanhTheoMuc[muc] = duocChonNhanh(giuCanTheoMuc, mucToiThieu, kgMoiThangNhanh, soKcalBotChoMoiKg);
+  }
 
   return {
     ...hoSo,
@@ -319,6 +376,11 @@ export async function xemHoSo(nguoiDungId: number): Promise<HoSoHienThi> {
     phan_loai_bmi: phanLoaiBmi(bmi, nguong),
     chuyen_hoa_co_ban: Math.round(chuyenHoaCoBan),
     nang_luong_giu_can: Math.round(nangLuongGiuCan),
+    duoc_chon_giam: bmi >= (await layNguongGiamCan(tuoi)),
+    duoc_chon_tang: bmi < bmiLyTuong,
+    duoc_chon_nang: tuoi < tuoiKhongCoMucNang,
+    duoc_chon_nhanh_theo_muc: duocChonNhanhTheoMuc,
+    can_ly_tuong_kg: Math.round(canLyTuongKg * 10) / 10,
   };
 }
 
@@ -330,6 +392,8 @@ export async function xemLuaChonHoSo(): Promise<LuaChonHoSo> {
     tuoi_cao_tuoi: await layQuyDinh('tuoi_cao_tuoi'),
     bmi_thieu_can_cao_tuoi: await layQuyDinh('bmi_thieu_can_cao_tuoi'),
     tuoi_khong_co_muc_nang: await layQuyDinh('tuoi_khong_co_muc_nang'),
+    giam_can_kg_moi_thang_thap: await layQuyDinh('giam_can_kg_moi_thang_thap'),
+    giam_can_kg_moi_thang_cao: await layQuyDinh('giam_can_kg_moi_thang_cao'),
     danh_sach_nhom_di_ung: await layNhomDiUng(),
   };
 }
@@ -458,6 +522,13 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
   if (mucTieuLuu === 'giu') {
     canMucTieuKg = null;
   }
+
+  // Tốc độ giảm cân: không gửi thì giữ tốc độ cũ, chưa có thì Vừa; mục tiêu khác giảm cân thì không có tốc độ
+  const tocDoGiamCan = chonTocDoGiamCan(hoSoCu.toc_do_giam_can, duLieu.toc_do_giam_can, mucTieu, mucTieuLuu);
+  let kgMoiThang = await layQuyDinh('giam_can_kg_moi_thang_thap');
+  if (tocDoGiamCan === 'nhanh') {
+    kgMoiThang = await layQuyDinh('giam_can_kg_moi_thang_cao');
+  }
   const canBatDauKg = chonCanBatDau(hoSoCu, mucTieuLuu, canMucTieuKg, canNangKg);
   const canGiuQuanhKg = chonCanGiuQuanh(hoSoCu, mucTieuLuu, canXuHuongKg);
 
@@ -473,7 +544,8 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
       heSoVanDong: await layHeSoVanDong(mucVanDong, tuoi),
       bmiLyTuong: bmiLyTuong,
       giamCanKcalMoiKg: await layQuyDinh(`giam_can_kcal_moi_kg_${mucVanDong}`),
-      giamCanKcalCatToiDa: await layQuyDinh('giam_can_kcal_cat_toi_da'),
+      soKgGiamMoiThang: kgMoiThang,
+      soKcalBotChoMoiKg: await layQuyDinh('giam_can_kcal_bot_cho_moi_kg'),
     },
   );
 
@@ -491,6 +563,7 @@ export async function capNhatHoSo(nguoiDungId: number, duLieu: Record<string, un
     can_muc_tieu_kg: canMucTieuKg,
     can_bat_dau_kg: canBatDauKg,
     can_giu_quanh_kg: canGiuQuanhKg,
+    toc_do_giam_can: tocDoGiamCan,
     ma_nhom_di_ung: maNhomDiUng,
   };
   await luuHoSo(nguoiDungId, hoSoDeLuu);

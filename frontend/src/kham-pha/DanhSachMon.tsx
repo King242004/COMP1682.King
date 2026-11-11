@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { ViewInstance } from 'react-native';
 
-import { buaTheoGio } from '../bua-an/TenBua';
+import { chonBuaTheoGio } from '../bua-an/ThongTinBua';
 import { NhanDiUng } from '../di-ung/NhanDiUng';
 import type { MonDaChon } from '../quet-mon/MonDaChon';
 import { Chip } from '../shared/components/Chip';
@@ -93,7 +93,7 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
   }
 
   // Số gam đạm trong mỗi 100 kcal của món: càng cao là ăn ít calo mà được nhiều đạm
-  function damTrongMoi100Kcal(mon: MonTraCuu): number {
+  function tinhDamTrong100Kcal(mon: MonTraCuu): number {
     return (mon.dam_g / mon.so_calo) * 100;
   }
 
@@ -120,7 +120,7 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
     setMonDangXem(null);
     router.push({
       pathname: '/bua-an/ThemSuaBuaAn',
-      params: { ngay: todayKey(), loaiBua: buaTheoGio(new Date().getHours()), monSan: JSON.stringify(monSan) },
+      params: { ngay: todayKey(), loaiBua: chonBuaTheoGio(new Date().getHours()), monSan: JSON.stringify(monSan) },
     });
   }
 
@@ -144,7 +144,7 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
   } else if (cachXep === 'it_calo') {
     monPhuHop.sort((monTruoc, monSau) => monTruoc.so_calo - monSau.so_calo);
   } else if (cachXep === 'giau_dam') {
-    monPhuHop.sort((monTruoc, monSau) => damTrongMoi100Kcal(monSau) - damTrongMoi100Kcal(monTruoc));
+    monPhuHop.sort((monTruoc, monSau) => tinhDamTrong100Kcal(monSau) - tinhDamTrong100Kcal(monTruoc));
   } else if (cachXep === 'it_tinh_bot') {
     monPhuHop.sort((monTruoc, monSau) => monTruoc.tinh_bot_g - monSau.tinh_bot_g);
   }
@@ -225,7 +225,7 @@ export function DanhSachMon({ dauMan }: DanhSachMonProps) {
               {/* Xếp giàu đạm hoặc ít tinh bột thì thêm một dòng xanh là số đang dùng để xếp */}
               {cachXep === 'giau_dam' ? (
                 <Text style={[styles.chuSoLieu, styles.soDangXep]}>
-                  {damTrongMoi100Kcal(mon).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} g đạm / 100 kcal
+                  {tinhDamTrong100Kcal(mon).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} g đạm / 100 kcal
                 </Text>
               ) : null}
               {cachXep === 'it_tinh_bot' ? (

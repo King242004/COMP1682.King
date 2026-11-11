@@ -8,12 +8,11 @@ import type { LoaiBua, MonHayAn, NguonSoLieu, NhatKyNgay } from '../../src/bua-a
 import { CanhBaoNenHanChe } from '../../src/bua-an/them-sua-bua-an/CanhBaoNenHanChe';
 import type { SoNenHanChe } from '../../src/bua-an/them-sua-bua-an/CanhBaoNenHanChe';
 import { BaCachThem } from '../../src/bua-an/them-sua-bua-an/BaCachThem';
-import { DaiNutLien } from '../../src/bua-an/them-sua-bua-an/DaiNutLien';
+import { ChonBua } from '../../src/bua-an/them-sua-bua-an/ChonBua';
 import { MonBanHayAn } from '../../src/bua-an/them-sua-bua-an/MonBanHayAn';
-import { MoTa } from '../../src/bua-an/them-sua-bua-an/MoTa';
 import { NutAi } from '../../src/bua-an/them-sua-bua-an/NutAi';
 import { TimMon } from '../../src/bua-an/them-sua-bua-an/TimMon';
-import { TEN_BUA, THU_TU_BUA } from '../../src/bua-an/TenBua';
+import { TEN_BUA, THU_TU_BUA } from '../../src/bua-an/ThongTinBua';
 import { ChupAnhNhanMon } from '../../src/quet-mon/ChupAnhNhanMon';
 import { QuetMaVach } from '../../src/quet-mon/QuetMaVach';
 import type { MonDaChon } from '../../src/quet-mon/MonDaChon';
@@ -50,13 +49,13 @@ type OChatNhapProps = {
   mauNen: string;
   giaTri: string;
   onDoi: (chu: string) => void;
-  isDisabled: boolean;
+  biKhoa: boolean;
 };
 
 // Một ô đạm, tinh bột hoặc béo: nền nhạt của chất, chấm màu và tên ở trên, ô gõ số gam ở dưới (cùng màu Trang chủ và màn chi tiết món)
-function OChatNhap({ ten, mau, mauNen, giaTri, onDoi, isDisabled }: OChatNhapProps) {
+function OChatNhap({ ten, mau, mauNen, giaTri, onDoi, biKhoa }: OChatNhapProps) {
   return (
-    <View style={[styles.oChat, { backgroundColor: mauNen }, isDisabled ? styles.oKhoa : null]}>
+    <View style={[styles.oChat, { backgroundColor: mauNen }, biKhoa ? styles.oKhoa : null]}>
       <View style={styles.hangTenChat}>
         <View style={[styles.chamMau, { backgroundColor: mau }]} />
         <Text style={[styles.tenChat, { color: mau }]}>{ten}</Text>
@@ -69,7 +68,7 @@ function OChatNhap({ ten, mau, mauNen, giaTri, onDoi, isDisabled }: OChatNhapPro
           keyboardType="decimal-pad"
           placeholder="—"
           placeholderTextColor={colors.textSecondary}
-          editable={!isDisabled}
+          editable={!biKhoa}
         />
         <Text style={[styles.donViGam, { color: mau }]}>g</Text>
       </View>
@@ -113,11 +112,10 @@ export default function ThemSuaBuaAn() {
   const [nhatKy, setNhatKy] = useState<NhatKyNgay | null>(null);
   const [monCu, setMonCu] = useState<SoNenHanChe | null>(null);
 
-  // Màn chụp và màn quét mã vạch (mở từ 2 thẻ ở bước chọn), và trạng thái đang nhờ AI ở từng chỗ
+  // Màn chụp và màn quét mã vạch (mở từ 2 thẻ ở bước chọn), và trạng thái đang nhờ AI ước tính
   const [dangMoChupAnh, setDangMoChupAnh] = useState(false);
   const [dangMoQuetMa, setDangMoQuetMa] = useState(false);
   const [dangUocTinh, setDangUocTinh] = useState(false);
-  const [dangUocTinhMoTa, setDangUocTinhMoTa] = useState(false);
 
   // Dữ liệu tải từ server và trạng thái màn hình
   const [monHayAn, setMonHayAn] = useState<MonHayAn[]>([]);
@@ -128,7 +126,7 @@ export default function ThemSuaBuaAn() {
   const [dangXoa, setDangXoa] = useState(false);
 
   // Đang chờ AI, đang lưu hoặc đang xóa thì khóa cả form để không ai sửa giữa chừng
-  const dangChay = dangUocTinh || dangUocTinhMoTa || dangLuu || dangXoa;
+  const dangChay = dangUocTinh || dangLuu || dangXoa;
 
   // Mở màn: sửa thì tải món cũ để điền sẵn, thêm thì tải danh sách món hay ăn; cả hai đều tải nhật ký của ngày
   useEffect(() => {
@@ -191,7 +189,7 @@ export default function ThemSuaBuaAn() {
   }
 
   // Xóa hết các ô của form về trống, như chưa chọn món nào
-  function xoaForm() {
+  function xoaHetCacO() {
     setTenMon('');
     setKhauPhan('');
     setSoCalo('');
@@ -207,9 +205,9 @@ export default function ThemSuaBuaAn() {
     setLoiServer('');
   }
 
-  // Bấm thẻ "Nhập tay": form trống rồi sang bước xem lại
-  function tuNhapTay() {
-    xoaForm();
+  // Bấm thẻ "Gõ tên món": form trống rồi sang bước xem lại
+  function chuyenSangGoTenMon() {
+    xoaHetCacO();
     setBuoc('kiem-tra');
   }
 
@@ -293,7 +291,7 @@ export default function ThemSuaBuaAn() {
   }
 
   // Kiểm các ô, đúng thì gửi lên server
-  async function handleLuu() {
+  async function luuMon() {
     // Bước 1. Kiểm từng ô, gom lỗi theo tên ô
     const loiMoi: Record<string, string> = {};
     if (tenMon.trim() === '') {
@@ -408,10 +406,10 @@ export default function ThemSuaBuaAn() {
 
           {/* Chọn bữa; trang chủ đã chọn sẵn, người dùng đổi được */}
           <View style={styles.khoiDai}>
-            <DaiNutLien
+            <ChonBua
               luaChon={THU_TU_BUA.map((bua) => ({ giaTri: bua, nhan: TEN_BUA[bua] }))}
               giaTriDangChon={loaiBua}
-              isDisabled={dangChay}
+              biKhoa={dangChay}
               onChon={(giaTri) => setLoaiBua(giaTri as LoaiBua)}
             />
           </View>
@@ -420,14 +418,13 @@ export default function ThemSuaBuaAn() {
           {!dangSua && !thamSo.monSan ? (
             <View style={buoc === 'chon' ? null : styles.an}>
               <BaCachThem
-                isDisabled={dangChay}
+                biKhoa={dangChay}
                 onChupAnh={() => setDangMoChupAnh(true)}
                 onQuetMa={() => setDangMoQuetMa(true)}
-                onNhapTay={tuNhapTay}
+                onNhapTay={chuyenSangGoTenMon}
               />
-              <MoTa isDisabled={dangChay} onChon={chonMon} onDangChay={setDangUocTinhMoTa} />
-              <TimMon isDisabled={dangChay} onChon={chonMon} />
-              <MonBanHayAn monHayAn={monHayAn} isDisabled={dangChay} onChon={chonMon} />
+              <TimMon biKhoa={dangChay} onChon={chonMon} />
+              <MonBanHayAn monHayAn={monHayAn} biKhoa={dangChay} onChon={chonMon} />
             </View>
           ) : null}
 
@@ -490,7 +487,7 @@ export default function ThemSuaBuaAn() {
                         isDisabled={dangChay}
                       />
                     </View>
-                    <NutAi isLoading={dangUocTinh} isDisabled={dangLuu || dangXoa} onPress={uocTinhBangAi} />
+                    <NutAi isLoading={dangUocTinh} biKhoa={dangLuu || dangXoa} onPress={uocTinhBangAi} />
                   </View>
                   <Text style={styles.chuPhu}>AI chỉ điền ô còn trống. Muốn AI đoán lại thì xóa số ô đó.</Text>
                 </View>
@@ -499,9 +496,9 @@ export default function ThemSuaBuaAn() {
                 <View style={styles.phanMoi}>
                   <Text style={styles.tieuDeMuc}>Chỉ số macro</Text>
                   <View style={styles.hangChat}>
-                    <OChatNhap ten="Đạm" mau={colors.protein} mauNen={colors.proteinLight} giaTri={dam} onDoi={setDam} isDisabled={dangChay} />
-                    <OChatNhap ten="Tinh bột" mau={colors.carbs} mauNen={colors.carbsLight} giaTri={tinhBot} onDoi={setTinhBot} isDisabled={dangChay} />
-                    <OChatNhap ten="Béo" mau={colors.fat} mauNen={colors.fatLight} giaTri={beo} onDoi={setBeo} isDisabled={dangChay} />
+                    <OChatNhap ten="Đạm" mau={colors.protein} mauNen={colors.proteinLight} giaTri={dam} onDoi={setDam} biKhoa={dangChay} />
+                    <OChatNhap ten="Tinh bột" mau={colors.carbs} mauNen={colors.carbsLight} giaTri={tinhBot} onDoi={setTinhBot} biKhoa={dangChay} />
+                    <OChatNhap ten="Béo" mau={colors.fat} mauNen={colors.fatLight} giaTri={beo} onDoi={setBeo} biKhoa={dangChay} />
                   </View>
                   {loiNhap.chiTiet ? <Text style={styles.chuLoi}>{loiNhap.chiTiet}</Text> : null}
                 </View>
@@ -532,7 +529,7 @@ export default function ThemSuaBuaAn() {
               loadingTitle="Đang lưu…"
               isLoading={dangLuu}
               isDisabled={dangUocTinh || dangXoa}
-              onPress={handleLuu}
+              onPress={luuMon}
             />
           </View>
         ) : null}

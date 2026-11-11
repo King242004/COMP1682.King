@@ -7,6 +7,9 @@ const laptopIp = Constants.expoConfig?.hostUri?.split(':')[0];
 // Cổng backend, lấy từ file frontend/.env
 const API_PORT = process.env.EXPO_PUBLIC_API_PORT;
 
+// Địa chỉ backend đã deploy (Render), lấy từ file frontend/.env; để trống thì gọi backend trên laptop
+const DEPLOYED_API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 // Tên ô lưu token trong bộ nhớ an toàn của điện thoại
 const TOKEN_KEY = 'token';
 
@@ -45,8 +48,13 @@ export async function deleteToken(): Promise<void> {
 
 // Gọi backend: tự gắn token, server báo lỗi thì ném ApiError kèm câu báo tiếng Việt
 export async function callApi(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: object): Promise<unknown> {
-  if (!laptopIp || !API_PORT) {
-    throw new Error('Thiếu EXPO_PUBLIC_API_PORT trong file frontend/.env, hoặc app không mở bằng Expo');
+  // Có địa chỉ Render thì gọi Render; không thì gọi backend trên laptop (IP lấy từ Expo, cổng trong .env)
+  let baseUrl = DEPLOYED_API_URL;
+  if (!baseUrl) {
+    if (!laptopIp || !API_PORT) {
+      throw new Error('Thiếu EXPO_PUBLIC_API_URL hoặc EXPO_PUBLIC_API_PORT trong file frontend/.env, hoặc app không mở bằng Expo');
+    }
+    baseUrl = `http://${laptopIp}:${API_PORT}`;
   }
 
   // Có token thì gửi kèm để server biết ai đang gọi
@@ -59,7 +67,7 @@ export async function callApi(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: s
   // Mất mạng hoặc server tắt thì fetch tự ném lỗi
   let response: Response;
   try {
-    response = await fetch(`http://${laptopIp}:${API_PORT}${path}`, {
+    response = await fetch(`${baseUrl}${path}`, {
       method: method,
       headers: headers,
       body: body ? JSON.stringify(body) : undefined,

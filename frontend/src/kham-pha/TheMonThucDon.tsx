@@ -11,13 +11,13 @@ type TheMonThucDonProps = {
   daGhi: boolean;
   dangGhi: boolean;
   // Đang ghi món khác hoặc đang tạo thực đơn mới thì khóa nút "Đã ăn"
-  khoa: boolean;
+  biKhoa: boolean;
   onDaAn: () => void;
 };
 
 // Thẻ mâm cơm nhà AI ghép trong thực đơn: "Cơm nhà" và nhãn "AI ước tính"; mỗi món một hàng; tổng calo và ba chất; nút "Xem cách nấu" và "Đã ăn". Món đã ghi thì cả thẻ mờ
-export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucDonProps) {
-  const [moCachNau, setMoCachNau] = useState(false);
+export function TheMonThucDon({ mon, daGhi, dangGhi, biKhoa, onDaAn }: TheMonThucDonProps) {
+  const [dangMoCachNau, setDangMoCachNau] = useState(false);
 
   // Các món trong mâm nằm trong khẩu phần, cách nhau bằng dấu phẩy
   const cacMonTrongMam = mon.khau_phan.split(',').map((tenMon) => tenMon.trim()).filter((tenMon) => tenMon !== '');
@@ -69,9 +69,9 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucD
 
       {/* Hàng 2 nút chia đôi: mở hoặc gập cách nấu; đã ghi thì dấu tick tròn, chưa ghi thì nút "✓ Đã ăn" ghi món vào nhật ký hôm nay */}
       <View style={styles.hangNut}>
-        <Pressable style={({ pressed }) => [styles.nutCachNau, pressed ? styles.dangBam : null]} onPress={() => setMoCachNau(!moCachNau)}>
+        <Pressable style={({ pressed }) => [styles.nutCachNau, pressed ? styles.dangBam : null]} onPress={() => setDangMoCachNau(!dangMoCachNau)}>
           <MaterialCommunityIcons name="chef-hat" size={16} color={colors.text} />
-          <Text style={styles.chuNutCachNau}>{moCachNau ? 'Ẩn cách nấu' : 'Xem cách nấu'}</Text>
+          <Text style={styles.chuNutCachNau}>{dangMoCachNau ? 'Ẩn cách nấu' : 'Xem cách nấu'}</Text>
         </Pressable>
         {daGhi ? (
           <View style={styles.daGhi}>
@@ -80,8 +80,8 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucD
           </View>
         ) : (
           <Pressable
-            style={({ pressed }) => [styles.nut, khoa ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
-            disabled={dangGhi || khoa}
+            style={({ pressed }) => [styles.nut, biKhoa ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
+            disabled={dangGhi || biKhoa}
             onPress={onDaAn}
           >
             {!dangGhi ? <Ionicons name="checkmark" size={16} color={colors.protein} /> : null}
@@ -91,7 +91,7 @@ export function TheMonThucDon({ mon, daGhi, dangGhi, khoa, onDaAn }: TheMonThucD
       </View>
 
       {/* Khi đã mở: nguyên liệu cho 1 người của mâm này, rồi các bước nấu */}
-      {moCachNau ? (
+      {dangMoCachNau ? (
         <View style={styles.phanCachNau}>
           <Text style={styles.chuNho}>Nguyên liệu (1 người)</Text>
           {mon.nguyen_lieu.map((nguyenLieu, thuTu) => (

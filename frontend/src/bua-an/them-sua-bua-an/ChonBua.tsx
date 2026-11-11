@@ -2,17 +2,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontSizes, pressedOpacity, radius } from '../../shared/theme';
 
-type DaiNutLienProps = {
+type ChonBuaProps = {
   luaChon: { giaTri: string; nhan: string }[];
   giaTriDangChon: string;
-  isDisabled: boolean;
+  biKhoa: boolean;
   onChon: (giaTri: string) => void;
 };
 
 // Dải nút liền nhau trên nền xám, nút đang chọn nền xanh chữ trắng; dùng cho 4 bữa
-export function DaiNutLien({ luaChon, giaTriDangChon, isDisabled, onChon }: DaiNutLienProps) {
+export function ChonBua({ luaChon, giaTriDangChon, biKhoa, onChon }: ChonBuaProps) {
   return (
-    <View style={[styles.dai, isDisabled ? styles.khoa : null]}>
+    <View style={[styles.dai, biKhoa ? styles.khoa : null]}>
       {luaChon.map((motLuaChon) => (
         <Pressable
           key={motLuaChon.giaTri}
@@ -21,7 +21,7 @@ export function DaiNutLien({ luaChon, giaTriDangChon, isDisabled, onChon }: DaiN
             motLuaChon.giaTri === giaTriDangChon ? styles.nutDangChon : null,
             pressed ? styles.dangBam : null,
           ]}
-          disabled={isDisabled}
+          disabled={biKhoa}
           onPress={() => onChon(motLuaChon.giaTri)}
         >
           <Text style={[styles.chu, motLuaChon.giaTri === giaTriDangChon ? styles.chuDangChon : null]}>

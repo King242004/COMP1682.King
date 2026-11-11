@@ -88,7 +88,7 @@ export function BanDangODau({ loTrinh }: BanDangODauProps) {
           so={soEo}
           chuDuoi={chuDuoiEo}
           kieuChuDuoi={kieuChuDuoiEo}
-          onPress={() => router.push('/ho-so/SuaHoSo?phan=ca-nhan')}
+          onPress={() => router.push('/ho-so/TaoSuaHoSo?phan=ca-nhan')}
         />
       </View>
 

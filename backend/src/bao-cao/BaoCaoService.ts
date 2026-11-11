@@ -3,7 +3,7 @@ import type { GioiHanNenHanChe, TongHop } from '../bua-an/BuaAnService.ts';
 import { layHoSo } from '../ho-so/HoSoQueries.ts';
 import { layQuyDinh } from '../quy-dinh/QuyDinhQueries.ts';
 import { HttpError } from '../shared/errorHandler.ts';
-import { doiRaSoNgay } from '../tien-do/TienDoService.ts';
+import { doiRaSoNgay } from '../can-nang/CanNangService.ts';
 import { layMucTieuNuoc } from '../uong-nuoc/UongNuocService.ts';
 import { layMonTrongKhoang, layNuocTrongKhoang } from './BaoCaoQueries.ts';
 import type { MonTrongKhoang, NuocMotNgay } from './BaoCaoQueries.ts';

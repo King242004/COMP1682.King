@@ -103,7 +103,7 @@ export function doiKgRaDonVi(kg: number, donVi: DonVi, heSo: HeSoDonVi | null): 
 }
 
 // Cân theo đơn vị làm tròn lên 1 số lẻ, để viết cân thấp nhất trong lời lỗi (số hiện ra luôn hợp lệ)
-export function canNangLamTronLen(kg: number, donVi: DonVi, heSo: HeSoDonVi | null): number {
+export function lamTronCanNangLen(kg: number, donVi: DonVi, heSo: HeSoDonVi | null): number {
   if (donVi === 'anh_my' && heSo !== null) {
     return Math.ceil((kg / heSo.kgMoiPound) * 10) / 10;
   }
@@ -111,7 +111,7 @@ export function canNangLamTronLen(kg: number, donVi: DonVi, heSo: HeSoDonVi | nu
 }
 
 // Cân theo đơn vị làm tròn xuống 1 số lẻ, để viết cân cao nhất trong lời lỗi và điền sẵn ô (số hiện ra luôn hợp lệ)
-export function canNangLamTronXuong(kg: number, donVi: DonVi, heSo: HeSoDonVi | null): number {
+export function lamTronCanNangXuong(kg: number, donVi: DonVi, heSo: HeSoDonVi | null): number {
   if (donVi === 'anh_my' && heSo !== null) {
     return Math.floor((kg / heSo.kgMoiPound) * 10) / 10;
   }

@@ -17,7 +17,7 @@ type ChonNgaySinhProps = {
   onChon: (ngaySinh: string) => void;
   loi: string;
   // Khóa ô khi màn đang lưu
-  isDisabled?: boolean;
+  biKhoa?: boolean;
 };
 
 // Ngày cách hôm nay một số năm về trước
@@ -28,7 +28,7 @@ function luiNam(soNam: number): Date {
 }
 
 // Ô ngày sinh: bấm vào thì tấm có bánh xe ngày của iPhone hiện ra trên nền tối (không trượt); bấm "Xong" mới chọn, bấm vùng tối là bỏ
-export function ChonNgaySinh({ ngaySinh, onChon, loi, isDisabled }: ChonNgaySinhProps) {
+export function ChonNgaySinh({ ngaySinh, onChon, loi, biKhoa }: ChonNgaySinhProps) {
   const [dangMo, setDangMo] = useState(false);
   // Ngày đang quay trên bánh xe, chưa chọn cho tới khi bấm "Xong"
   const [ngayDangQuay, setNgayDangQuay] = useState<Date>(luiNam(TUOI_MO_SAN));
@@ -56,8 +56,8 @@ export function ChonNgaySinh({ ngaySinh, onChon, loi, isDisabled }: ChonNgaySinh
     <View style={styles.wrapper}>
       <Text style={styles.nhan}>Ngày sinh</Text>
       <Pressable
-        style={({ pressed }) => [styles.o, loi ? styles.oLoi : null, isDisabled ? styles.oKhoa : null, pressed ? styles.dangBam : null]}
-        disabled={isDisabled}
+        style={({ pressed }) => [styles.o, loi ? styles.oLoi : null, biKhoa ? styles.oKhoa : null, pressed ? styles.dangBam : null]}
+        disabled={biKhoa}
         onPress={moTam}
       >
         <Text style={ngaySinh ? styles.giaTri : styles.goiY}>{ngaySinh ? formatFullDate(ngaySinh) : 'Chọn ngày sinh'}</Text>

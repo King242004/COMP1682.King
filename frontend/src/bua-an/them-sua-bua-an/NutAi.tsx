@@ -5,16 +5,16 @@ import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../shared
 
 type NutAiProps = {
   isLoading: boolean;
-  isDisabled: boolean;
+  biKhoa: boolean;
   onPress: () => void;
 };
 
-// Nút "AI ước tính" nền xanh nhạt chữ xanh, cao bằng ô nhập đứng cạnh nó; dùng ở ô "Bạn đã ăn gì?" và cạnh ô Calo
-export function NutAi({ isLoading, isDisabled, onPress }: NutAiProps) {
+// Nút "AI ước tính" nền xanh nhạt chữ xanh, cao bằng ô nhập đứng cạnh nó; dùng cạnh ô Calo
+export function NutAi({ isLoading, biKhoa, onPress }: NutAiProps) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.nut, isLoading || isDisabled ? styles.khoa : null, pressed ? styles.dangBam : null]}
-      disabled={isLoading || isDisabled}
+      style={({ pressed }) => [styles.nut, isLoading || biKhoa ? styles.khoa : null, pressed ? styles.dangBam : null]}
+      disabled={isLoading || biKhoa}
       onPress={onPress}
     >
       {!isLoading ? <Ionicons name="sparkles-outline" size={16} color={colors.textOnPrimaryLight} /> : null}

@@ -28,7 +28,7 @@ const GIO_BAT_DAU_BUA_TRUA = 11;
 const GIO_BAT_DAU_BUA_TOI = 16;
 
 // Đoán bữa theo giờ trên máy: trước 11 giờ là sáng, trước 16 giờ là trưa, còn lại là tối
-export function buaTheoGio(gio: number): LoaiBua {
+export function chonBuaTheoGio(gio: number): LoaiBua {
   if (gio < GIO_BAT_DAU_BUA_TRUA) {
     return 'sang';
   }

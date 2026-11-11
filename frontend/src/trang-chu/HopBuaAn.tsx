@@ -3,10 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontSizes, pressedOpacity, radius, shadows, spacing } from '../shared/theme';
 import type { BuaAn, LoaiBua } from '../bua-an/BuaAnApi';
-import { BIEU_TUONG_BUA, MAU_BUA, TEN_BUA } from '../bua-an/TenBua';
-import { TheBuaAn } from './TheBuaAn';
+import { BIEU_TUONG_BUA, MAU_BUA, TEN_BUA } from '../bua-an/ThongTinBua';
+import { DongMonAn } from './DongMonAn';
 
-type TheBuaProps = {
+type HopBuaAnProps = {
   loaiBua: LoaiBua;
   danhSachMon: BuaAn[];
   onThem: () => void;
@@ -14,7 +14,7 @@ type TheBuaProps = {
 };
 
 // Hộp một bữa trên trang chủ: ô biểu tượng, tên bữa, tổng kcal, nút +; từng món; thanh 3 chất theo số gam
-export function TheBua({ loaiBua, danhSachMon, onThem, onSuaMon }: TheBuaProps) {
+export function HopBuaAn({ loaiBua, danhSachMon, onThem, onSuaMon }: HopBuaAnProps) {
   const mauBua = MAU_BUA[loaiBua];
 
   // Cộng calo cả bữa; đạm, tinh bột, béo chỉ cộng món có đủ 3 số (món thiếu đã có nhãn "Chưa đủ số" trên dòng món)
@@ -61,7 +61,7 @@ export function TheBua({ loaiBua, danhSachMon, onThem, onSuaMon }: TheBuaProps) 
 
       {/* Mỗi món một dòng, bấm để sửa */}
       {danhSachMon.map((buaAn) => (
-        <TheBuaAn key={buaAn.id} buaAn={buaAn} onPress={() => onSuaMon(buaAn.id)} />
+        <DongMonAn key={buaAn.id} buaAn={buaAn} onPress={() => onSuaMon(buaAn.id)} />
       ))}
 
       {/* Thanh 3 màu dài theo số gam đạm / tinh bột / béo, số gam ghi ngay dưới; làm tròn ra 0 cả ba (cà phê, trà) thì không hiện gì */}

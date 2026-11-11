@@ -3,6 +3,7 @@ import { callApi } from '../shared/apiClient';
 export type GioiTinh = 'nam' | 'nu';
 export type MucVanDong = 'nhe' | 'trung_binh' | 'nang';
 export type MucTieu = 'giam' | 'giu' | 'tang';
+export type TocDoGiamCan = 'vua' | 'nhanh';
 
 // Hồ sơ server gửi về; chưa thiết lập thì các trường là null
 export type HoSo = {
@@ -25,6 +26,14 @@ export type HoSo = {
   vong_eo_cm: number | null;
   can_muc_tieu_kg: number | null;
   can_bat_dau_kg: number | null;
+  // Tốc độ giảm cân: chỉ có khi giảm cân
+  toc_do_giam_can: TocDoGiamCan | null;
+  // Các cờ để làm mờ lựa chọn không hợp (cùng rào với lúc lưu) và cân lý tưởng để điền sẵn cân mục tiêu
+  duoc_chon_giam: boolean;
+  duoc_chon_tang: boolean;
+  duoc_chon_nang: boolean;
+  duoc_chon_nhanh_theo_muc: Record<MucVanDong, boolean>;
+  can_ly_tuong_kg: number | null;
 };
 
 // Một nhóm dị ứng chọn được ở hồ sơ
@@ -43,9 +52,10 @@ export type HoSoGuiLen = {
   muc_tieu: MucTieu;
   ma_nhom_di_ung: string[];
   di_ung_kieng_an: string;
-  // Chỉ gửi từ phần "Mục tiêu"; không gửi thì server giữ số cũ
+  // Không gửi thì server giữ số cũ
   vong_eo_cm?: number | null;
   can_muc_tieu_kg?: number | null;
+  toc_do_giam_can?: TocDoGiamCan;
 };
 
 // Những thứ màn hồ sơ cần: ngưỡng BMI và ngưỡng tuổi để làm mờ lựa chọn, 9 nhóm dị ứng để chọn
@@ -55,6 +65,9 @@ export type LuaChonHoSo = {
   tuoi_cao_tuoi: number;
   bmi_thieu_can_cao_tuoi: number;
   tuoi_khong_co_muc_nang: number;
+  // Số kg giảm mỗi tháng của nút Vừa và nút Nhanh (QĐ 2892)
+  giam_can_kg_moi_thang_thap: number;
+  giam_can_kg_moi_thang_cao: number;
   danh_sach_nhom_di_ung: NhomDiUng[];
 };
 

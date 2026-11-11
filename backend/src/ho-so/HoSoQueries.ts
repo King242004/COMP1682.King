@@ -17,6 +17,8 @@ export type HoSo = {
   can_bat_dau_kg: number | null;
   // Cân giữ quanh: chỉ có khi giữ cân
   can_giu_quanh_kg: number | null;
+  // Tốc độ giảm cân: chỉ có khi giảm cân
+  toc_do_giam_can: 'vua' | 'nhanh' | null;
 };
 
 // Hồ sơ cần lưu, đã kiểm tra và đã tính xong
@@ -33,6 +35,7 @@ export type HoSoDeLuu = {
   can_muc_tieu_kg: number | null;
   can_bat_dau_kg: number | null;
   can_giu_quanh_kg: number | null;
+  toc_do_giam_can: 'vua' | 'nhanh' | null;
   // Mã các nhóm dị ứng đã chọn, lưu ở bảng nguoi_dung_nhom_di_ung
   ma_nhom_di_ung: string[];
 };
@@ -41,7 +44,7 @@ export type HoSoDeLuu = {
 export async function layHoSo(nguoiDungId: number): Promise<HoSo> {
   const ketQua = await database.query<HoSo>(
     `SELECT gioi_tinh, ngay_sinh, chieu_cao_cm, can_nang_kg, muc_van_dong, muc_tieu, muc_tieu_calo, di_ung_kieng_an,
-            vong_eo_cm, can_muc_tieu_kg, can_bat_dau_kg, can_giu_quanh_kg
+            vong_eo_cm, can_muc_tieu_kg, can_bat_dau_kg, can_giu_quanh_kg, toc_do_giam_can
      FROM nguoi_dung WHERE id = $1`,
     [nguoiDungId],
   );
@@ -57,12 +60,14 @@ export async function luuHoSo(nguoiDungId: number, hoSo: HoSoDeLuu): Promise<voi
       `UPDATE nguoi_dung SET
          gioi_tinh = $2, ngay_sinh = $3, chieu_cao_cm = $4, can_nang_kg = $5,
          muc_van_dong = $6, muc_tieu = $7, muc_tieu_calo = $8, di_ung_kieng_an = $9,
-         vong_eo_cm = $10, can_muc_tieu_kg = $11, can_bat_dau_kg = $12, can_giu_quanh_kg = $13
+         vong_eo_cm = $10, can_muc_tieu_kg = $11, can_bat_dau_kg = $12, can_giu_quanh_kg = $13,
+         toc_do_giam_can = $14
        WHERE id = $1`,
       [
         nguoiDungId, hoSo.gioi_tinh, hoSo.ngay_sinh, hoSo.chieu_cao_cm, hoSo.can_nang_kg,
         hoSo.muc_van_dong, hoSo.muc_tieu, hoSo.muc_tieu_calo, hoSo.di_ung_kieng_an,
         hoSo.vong_eo_cm, hoSo.can_muc_tieu_kg, hoSo.can_bat_dau_kg, hoSo.can_giu_quanh_kg,
+        hoSo.toc_do_giam_can,
       ],
     );
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import type { NhatKyNgay } from '../bua-an/BuaAnService.ts';
-import type { TienDo } from '../tien-do/TienDoService.ts';
+import type { BaoCaoCanNang } from '../can-nang/CanNangService.ts';
 import { vietLoiDanDonViChoAi } from '../don-vi/DonViService.ts';
 import { taoLoiNhac } from './TaoLoiNhac.ts';
 import type { DuLieuLoiNhac } from './TaoLoiNhac.ts';
@@ -26,7 +26,7 @@ const nhatKyMau: NhatKyNgay = {
 };
 
 // Tiến độ mẫu: đang giảm cân, giảm khoảng 1 kg mỗi tháng
-const tienDoMau: TienDo = {
+const tienDoMau: BaoCaoCanNang = {
   ngay: '2026-10-06',
   can_nang: [],
   can_nang_xu_huong: 51.9,

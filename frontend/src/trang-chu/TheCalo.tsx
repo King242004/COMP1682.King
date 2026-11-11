@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { VongTienDo } from '../shared/components/VongTienDo';
+import { ProgressRing } from '../shared/components/ProgressRing';
 import { colors, fontSizes, radius, shadows, spacing } from '../shared/theme';
 import type { NhatKyNgay } from '../bua-an/BuaAnApi';
 
@@ -9,23 +9,23 @@ type VongChatProps = {
   mau: string;
   mauNen: string;
   daAn: number;
-  mucDay: number;
+  soGamDeDayVong: number;
   chuMucTieu: string;
 };
 
-// Một ô nền nhạt cho đạm, tinh bột hoặc béo: số gam nằm giữa vòng, vòng đầy khi ăn tới mucDay, dưới vòng ghi tên chất và mục tiêu
-function VongChat({ ten, mau, mauNen, daAn, mucDay, chuMucTieu }: VongChatProps) {
+// Một ô nền nhạt cho đạm, tinh bột hoặc béo: số gam nằm giữa vòng, vòng đầy khi ăn tới soGamDeDayVong, dưới vòng ghi tên chất và mục tiêu
+function VongChat({ ten, mau, mauNen, daAn, soGamDeDayVong, chuMucTieu }: VongChatProps) {
   // Làm tròn số gam một lần, vòng và chữ dùng chung số này (0,2 g thành 0, vòng không hiện chấm)
   const daAnLamTron = Math.round(daAn);
   let phanTram = 0;
-  if (mucDay > 0) {
-    phanTram = (daAnLamTron / mucDay) * 100;
+  if (soGamDeDayVong > 0) {
+    phanTram = (daAnLamTron / soGamDeDayVong) * 100;
   }
   return (
     <View style={[styles.oChat, { backgroundColor: mauNen }]}>
-      <VongTienDo kichThuoc={56} doDay={6} phanTram={phanTram} mau={mau}>
+      <ProgressRing size={56} thickness={6} percent={phanTram} color={mau}>
         <Text style={[styles.soGam, { color: mau }]}>{daAnLamTron.toLocaleString('vi-VN')} g</Text>
-      </VongTienDo>
+      </ProgressRing>
       <Text style={styles.tenChat}>{ten}</Text>
       <Text style={styles.khoang}>{chuMucTieu}</Text>
     </View>
@@ -46,18 +46,18 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
   return (
     <View style={styles.the}>
       <View style={styles.hangTren}>
-        <VongTienDo
-          kichThuoc={132}
-          doDay={12}
-          phanTram={phanTramDaAn}
-          mau={daVuot ? colors.overOnPrimary : colors.textOnPrimary}
-          mauNen={colors.trackOnPrimary}
+        <ProgressRing
+          size={132}
+          thickness={12}
+          percent={phanTramDaAn}
+          color={daVuot ? colors.overOnPrimary : colors.textOnPrimary}
+          trackColor={colors.trackOnPrimary}
         >
           <Text style={[styles.soConLai, daVuot ? styles.chuVuot : null]}>
             {Math.abs(tongHop.con_lai ?? 0).toLocaleString('vi-VN')}
           </Text>
           <Text style={styles.nhanConLai}>{daVuot ? 'kcal đã vượt' : 'kcal còn lại'}</Text>
-        </VongTienDo>
+        </ProgressRing>
 
         <View style={styles.cotSo}>
           <View style={styles.dongSo}>
@@ -83,7 +83,7 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
             mau={colors.protein}
             mauNen={colors.proteinLight}
             daAn={tongHop.tong_dam_g}
-            mucDay={nhatKy.muc_tieu_chat.dam_g_toi_thieu}
+            soGamDeDayVong={nhatKy.muc_tieu_chat.dam_g_toi_thieu}
             chuMucTieu={`ít nhất ${nhatKy.muc_tieu_chat.dam_g_toi_thieu.toLocaleString('vi-VN')} g`}
           />
           <VongChat
@@ -91,7 +91,7 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
             mau={colors.carbs}
             mauNen={colors.carbsLight}
             daAn={tongHop.tong_tinh_bot_g}
-            mucDay={nhatKy.muc_tieu_chat.tinh_bot_g_cao}
+            soGamDeDayVong={nhatKy.muc_tieu_chat.tinh_bot_g_cao}
             chuMucTieu={`${nhatKy.muc_tieu_chat.tinh_bot_g_thap.toLocaleString('vi-VN')}–${nhatKy.muc_tieu_chat.tinh_bot_g_cao.toLocaleString('vi-VN')} g`}
           />
           <VongChat
@@ -99,7 +99,7 @@ export function TheCalo({ nhatKy }: { nhatKy: NhatKyNgay }) {
             mau={colors.fat}
             mauNen={colors.fatLight}
             daAn={tongHop.tong_beo_g}
-            mucDay={nhatKy.muc_tieu_chat.beo_g_cao}
+            soGamDeDayVong={nhatKy.muc_tieu_chat.beo_g_cao}
             chuMucTieu={`${nhatKy.muc_tieu_chat.beo_g_thap.toLocaleString('vi-VN')}–${nhatKy.muc_tieu_chat.beo_g_cao.toLocaleString('vi-VN')} g`}
           />
         </View>

@@ -15,8 +15,8 @@ const SO_GAM_LON_NHAT = 5000;
 
 type ChonSoGamProps = {
   thucPham: ThucPham;
-  // Màn đang chạy việc khác (ví dụ AI ở ô "Bạn đã ăn gì?") thì khóa ô và nút
-  isDisabled: boolean;
+  // Màn đang chạy việc khác (ví dụ đang lưu) thì khóa ô và nút
+  biKhoa: boolean;
   onChon: (mon: MonDaChon) => void;
   onChonKhac: () => void;
 };
@@ -30,7 +30,7 @@ function nhanTheoGam(soLieu100g: number | null, soGam: number): number | null {
 }
 
 // Đã bấm một thực phẩm ở thẻ Tìm món: gõ số gam đã ăn rồi trả món về để sang bước xem lại
-export function ChonSoGam({ thucPham, isDisabled, onChon, onChonKhac }: ChonSoGamProps) {
+export function ChonSoGam({ thucPham, biKhoa, onChon, onChonKhac }: ChonSoGamProps) {
   const { donVi, heSo } = useDonVi();
   const laAnhMy = donVi === 'anh_my' && heSo !== null;
   const [soGam, setSoGam] = useState('');
@@ -38,11 +38,11 @@ export function ChonSoGam({ thucPham, isDisabled, onChon, onChonKhac }: ChonSoGa
 
   // Đổi số người dùng gõ (g hoặc oz) ra g; Mét phải là số nguyên, Anh-Mỹ được 1 số lẻ; đều từ 1 đến 5.000 g
   const soGamSo = docKhoiLuong(soGam, donVi, heSo) ?? 0;
-  const soGamDung = (laAnhMy || Number.isInteger(soGamSo)) && soGamSo >= 1 && soGamSo <= SO_GAM_LON_NHAT;
+  const laSoGamHopLe = (laAnhMy || Number.isInteger(soGamSo)) && soGamSo >= 1 && soGamSo <= SO_GAM_LON_NHAT;
 
   // Kiểm số gam rồi trả món về, số liệu đã nhân theo số gam
   function chonMon() {
-    if (!soGamDung) {
+    if (!laSoGamHopLe) {
       setLoiSoGam(`Số ${laAnhMy ? 'oz' : 'gam'} ${vietGioiHan(1, SO_GAM_LON_NHAT, 'khoi_luong', donVi, heSo)}`);
       return;
     }
@@ -79,17 +79,17 @@ export function ChonSoGam({ thucPham, isDisabled, onChon, onChonKhac }: ChonSoGa
         error={loiSoGam}
         placeholder={laAnhMy ? 'Ví dụ: 5,3' : 'Ví dụ: 150'}
         isNumber
-        isDisabled={isDisabled}
+        isDisabled={biKhoa}
       />
-      {soGamDung ? (
+      {laSoGamHopLe ? (
         <Text style={styles.tong}>Tổng: {Math.round((thucPham.kcal_100g * soGamSo) / 100).toLocaleString('vi-VN')} kcal</Text>
       ) : null}
 
       <View style={styles.khoangNut}>
-        <Button title="Chọn món này" loadingTitle="" isLoading={false} isDisabled={isDisabled} onPress={chonMon} />
+        <Button title="Chọn món này" loadingTitle="" isLoading={false} isDisabled={biKhoa} onPress={chonMon} />
       </View>
       <View style={styles.khoangNut}>
-        <Button title="Chọn món khác" loadingTitle="" isLoading={false} isDisabled={isDisabled} onPress={onChonKhac} isSecondary />
+        <Button title="Chọn món khác" loadingTitle="" isLoading={false} isDisabled={biKhoa} onPress={onChonKhac} isSecondary />
       </View>
     </View>
   );

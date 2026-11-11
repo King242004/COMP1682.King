@@ -26,13 +26,13 @@ type TheMonVienProps = {
   daGhi: boolean;
   dangGhi: boolean;
   // Đang ghi món khác hoặc đang tạo thực đơn mới thì khóa nút "Đã ăn"
-  khoa: boolean;
+  biKhoa: boolean;
   onDaAn: () => void;
   onXemChiTiet: () => void;
 };
 
 // Thẻ một món Viện Dinh dưỡng đã cân trong thực đơn: ảnh suất to ở trên, dưới là tên, số suất và số liệu đã nhân theo số suất, chip chọn suất, nút "Đã ăn"; bấm thẻ mở chi tiết món. Món đã ghi thì cả thẻ mờ
-export function TheMonVien({ mon, soSuat, onDoiSoSuat, daGhi, dangGhi, khoa, onDaAn, onXemChiTiet }: TheMonVienProps) {
+export function TheMonVien({ mon, soSuat, onDoiSoSuat, daGhi, dangGhi, biKhoa, onDaAn, onXemChiTiet }: TheMonVienProps) {
   // Dòng số liệu: "2 suất · 1.190 g · 950 kcal · đạm …"; món có dòng Viện không cân thì không có số gam
   const luaChonSuat = LUA_CHON_SUAT.find((luaChon) => luaChon.giaTri === soSuat);
   let chuSoLieu = `${luaChonSuat ? luaChonSuat.nhan : soSuat} suất`;
@@ -63,8 +63,8 @@ export function TheMonVien({ mon, soSuat, onDoiSoSuat, daGhi, dangGhi, khoa, onD
           </View>
         ) : (
           <Pressable
-            style={({ pressed }) => [styles.nut, khoa ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
-            disabled={dangGhi || khoa}
+            style={({ pressed }) => [styles.nut, biKhoa ? styles.nutKhoa : null, pressed ? styles.dangBam : null]}
+            disabled={dangGhi || biKhoa}
             onPress={onDaAn}
           >
             {!dangGhi ? <Ionicons name="checkmark" size={16} color={colors.protein} /> : null}
@@ -80,7 +80,7 @@ export function TheMonVien({ mon, soSuat, onDoiSoSuat, daGhi, dangGhi, khoa, onD
             key={luaChon.nhan}
             label={`${luaChon.nhan} suất`}
             isSelected={soSuat === luaChon.giaTri}
-            isDisabled={daGhi || dangGhi || khoa}
+            isDisabled={daGhi || dangGhi || biKhoa}
             onPress={() => onDoiSoSuat(luaChon.giaTri)}
           />
         ))}

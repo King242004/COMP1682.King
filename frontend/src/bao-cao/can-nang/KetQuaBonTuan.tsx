@@ -1,32 +1,32 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { vietCanNang, vietThayDoiCanNang } from '../don-vi/DoiDonVi';
-import { useDonVi } from '../don-vi/DonViContext';
-import { Card } from '../shared/components/Card';
-import { colors, fontSizes, pressedOpacity, radius, spacing } from '../shared/theme';
-import type { TienDo } from './TienDoApi';
+import { vietCanNang, vietThayDoiCanNang } from '../../don-vi/DoiDonVi';
+import { useDonVi } from '../../don-vi/DonViContext';
+import { Card } from '../../shared/components/Card';
+import { colors, fontSizes, pressedOpacity, radius, spacing } from '../../shared/theme';
+import type { BaoCaoCanNang } from '../../can-nang/CanNangApi';
 
-type TheBonTuanProps = {
-  tienDo: TienDo;
+type KetQuaBonTuanProps = {
+  baoCaoCanNang: BaoCaoCanNang;
   onHoiCoach: () => void;
 };
 
 // Thẻ "Kết quả 4 tuần": hàng calo trung bình có thanh so với mục tiêu, 2 ô số ngày ghi và cân thay đổi mỗi tháng (giảm nhanh hơn QĐ 2892 thì ô vàng)
-export function TheBonTuan({ tienDo, onHoiCoach }: TheBonTuanProps) {
+export function KetQuaBonTuan({ baoCaoCanNang, onHoiCoach }: KetQuaBonTuanProps) {
   const { donVi, heSo } = useDonVi();
-  const tomTat = tienDo.tom_tat;
+  const tomTat = baoCaoCanNang.tom_tat;
   const giamNhanhQua = tomTat.danh_gia_toc_do === 'nhanh_qua';
 
   // Chữ nhỏ sau số calo: có mục tiêu thì ghi kèm mục tiêu
   let chuSauSoCalo = ' kcal/ngày';
-  if (tienDo.muc_tieu_calo !== null) {
-    chuSauSoCalo = ` / mục tiêu ${tienDo.muc_tieu_calo.toLocaleString('vi-VN')} kcal`;
+  if (baoCaoCanNang.muc_tieu_calo !== null) {
+    chuSauSoCalo = ` / mục tiêu ${baoCaoCanNang.muc_tieu_calo.toLocaleString('vi-VN')} kcal`;
   }
 
   // Độ dài thanh calo: trung bình chia mục tiêu, ăn quá mục tiêu thì đầy thanh; thiếu một trong hai số thì không vẽ thanh
   let phanTramCalo: number | null = null;
-  if (tomTat.calo_trung_binh !== null && tienDo.muc_tieu_calo !== null) {
-    phanTramCalo = (tomTat.calo_trung_binh / tienDo.muc_tieu_calo) * 100;
+  if (tomTat.calo_trung_binh !== null && baoCaoCanNang.muc_tieu_calo !== null) {
+    phanTramCalo = (tomTat.calo_trung_binh / baoCaoCanNang.muc_tieu_calo) * 100;
     if (phanTramCalo > 100) {
       phanTramCalo = 100;
     }
@@ -34,8 +34,8 @@ export function TheBonTuan({ tienDo, onHoiCoach }: TheBonTuanProps) {
 
   // Dòng phụ của ô cân: đang giảm cân thì nhắc mức nên có
   let chuPhuCan = 'mỗi tháng';
-  if (tienDo.muc_tieu === 'giam') {
-    chuPhuCan = `mỗi tháng\nnên ${vietCanNang(tienDo.giam_can_kg_moi_thang_thap, donVi, heSo)}–${vietCanNang(tienDo.giam_can_kg_moi_thang_cao, donVi, heSo)}`;
+  if (baoCaoCanNang.muc_tieu === 'giam') {
+    chuPhuCan = `mỗi tháng\nnên ${vietCanNang(baoCaoCanNang.giam_can_kg_moi_thang_thap, donVi, heSo)}–${vietCanNang(baoCaoCanNang.giam_can_kg_moi_thang_cao, donVi, heSo)}`;
   }
 
   return (

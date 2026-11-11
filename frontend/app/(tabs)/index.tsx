@@ -8,10 +8,10 @@ import type { LoaiBua, NhatKyNgay } from '../../src/bua-an/BuaAnApi';
 import { DaiNgay } from '../../src/trang-chu/DaiNgay';
 import { NhomNenHanChe } from '../../src/trang-chu/NhomNenHanChe';
 import { NutThemMon } from '../../src/trang-chu/NutThemMon';
-import { TheBua } from '../../src/trang-chu/TheBua';
+import { HopBuaAn } from '../../src/trang-chu/HopBuaAn';
 import { TheCalo } from '../../src/trang-chu/TheCalo';
 import { TheUongNuoc } from '../../src/trang-chu/TheUongNuoc';
-import { buaTheoGio, THU_TU_BUA } from '../../src/bua-an/TenBua';
+import { chonBuaTheoGio, THU_TU_BUA } from '../../src/bua-an/ThongTinBua';
 import { ErrorBox } from '../../src/shared/components/ErrorBox';
 import { Screen } from '../../src/shared/components/Screen';
 import { ScreenTitle } from '../../src/shared/components/ScreenTitle';
@@ -112,7 +112,7 @@ export default function TrangChu() {
             {/* Bốn bữa, luôn hiện */}
             <SectionTitle title="Bữa ăn" />
             {THU_TU_BUA.map((loaiBua) => (
-              <TheBua
+              <HopBuaAn
                 key={loaiBua}
                 loaiBua={loaiBua}
                 danhSachMon={nhatKy.bua_an.filter((buaAn) => buaAn.loai_bua === loaiBua)}
@@ -125,7 +125,7 @@ export default function TrangChu() {
       </Screen>
 
       {/* Nút + nổi: mở màn thêm món cho bữa đoán theo giờ hiện tại */}
-      <NutThemMon onPress={() => moThemMon(buaTheoGio(new Date().getHours()))} />
+      <NutThemMon onPress={() => moThemMon(chonBuaTheoGio(new Date().getHours()))} />
     </View>
   );
 }
